@@ -13,7 +13,28 @@
 
 #include <boost/ptr_container/ptr_vector.hpp>
 
-namespace theta{ 
+namespace theta{
+
+/** \brief A callback class called by the run to signal progress.
+ *
+ * User interfaces can derive their classes from  ProgressListener and implement
+ * a visual feedback of the current state of the execution ("progress bar").
+ */
+class ProgressListener{
+public:
+   /** \brief Indicate progress.
+    *
+    * This function will be called by Run to indicate the current progress.
+    * \param done how many units of work have been done
+    * \param total total units of work
+    *
+    * While Run objects should try to provide accurate feedback it is not guaranteed
+    * that all "units of work" require the same time, nor it is guaranteed 
+    * that the "total" amount of work units stays the same over time (actually, I assume you are
+    * familiar with this from your own work).
+    */
+    virtual void progress(int done, int total) = 0;
+};
 
 /** \brief Represents a single run, i.e., a type="run" setting block in the configuration.
  *  
@@ -46,6 +67,15 @@ namespace theta{
 template<typename rndtype>
 class RunT {
 public:
+
+   /** \brief Register progress listener.
+    *
+    */
+    void set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
+        progress_listener = l;
+    }
+
+
     /** \brief The pre-run, to be executed before the \c run routine.
      * 
      * This routine performs common pre-run tasks like populating the informational
@@ -196,6 +226,8 @@ protected:
     //the current eventid:
     int eventid;
     const int n_event;
+    
+    boost::shared_ptr<ProgressListener> progress_listener;
     
     /** The \c pre_run, \c run and \c post_run methods will call
      * their *_impl counterpart which should be overriden in the derived classes.

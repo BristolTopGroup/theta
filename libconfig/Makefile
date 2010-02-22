@@ -6,5 +6,7 @@ objects := $(patsubst %.c,%.o,$(sources)) libconfigcpp.o
 all: ../lib/libconfig.so
 
 ../lib/libconfig.so: $(objects)
-	$(LINK_SO) -o $@ $+
+	@$(LINK_SO) -o $@ $+
 
+clean-subdir:
+	@rm -f ../lib/libconfig.so

@@ -4,9 +4,16 @@ DIRS = src libconfig liblbfgs plugins root bin
 #dependency on no_existent will always force re-build.
 
 all:
-	for d in $(DIRS); do make -C $$d; done
+	@for d in $(DIRS); do make -C $$d; done
 
 clean:
-	for d in $(DIRS); do make -C $$d clean; done
+	@for d in $(DIRS); do make -C $$d clean; done
+	@make -C test clean
 
-.PHONY: clean all
+test:
+	@make -C test
+
+run-test: test
+	@test/test
+
+.PHONY: clean all test

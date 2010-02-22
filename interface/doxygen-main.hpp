@@ -110,16 +110,18 @@
  * </ol>
  *
  * Having configured the model and a statistical method, we have to glue them together. In this case, we want to make
- * pseudo experiments. This is done by the "toy-run" settings block. It defines a plain run
+ * pseudo experiments. This is done by the "main" settings block. It defines a plain run
  * ("plain" means: throw pseudo data from the model and run the producers, nothing more
  * complicated. Other types of runs can do parameter scans). We have to specify which model to use, which producers
  * to run and how many pseudo experiments you wish to perform. The results will be written
  * as SQL %database to a file with the path specified with "result-file".
  *
- * You can execute the run by specifying the configuration filename and the run name:
+ * You can execute the run by specifying the configuration filename:
  * <pre>
- * bin/theta examples/gaussoverflat.cfg toy-run
+ * bin/theta examples/gaussoverflat.cfg
  * </pre>
+ * theta will execute the "main" run by default. You can also specify the run name 
+ * as the second command line argument.
  *
  * \section config Configuration file format
  *

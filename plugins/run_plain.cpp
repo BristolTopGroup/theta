@@ -19,6 +19,7 @@ void PlainRun::run_impl() {
             }
         }
         log_event_end();
+        if(progress_listener)progress_listener->progress(eventid, n_event);
     }
 }
 

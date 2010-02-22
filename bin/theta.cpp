@@ -11,10 +11,36 @@ using namespace theta::utils;
 using namespace theta::plugin;
 using namespace libconfig;
 
+class MyProgressListener: public ProgressListener{
+public:
+    virtual void progress(int done, int total){
+      if(isatty(1)){
+          //move back to beginning of terminal line:
+          printf("\033[%dD", chars_written);
+          chars_written = 0;
+          double d = 100.0 * done / total;
+          chars_written += printf("%6d / %-6d [%5.1f%%] ", done, total, d);
+          cout.flush();
+        }
+    }
+
+    MyProgressListener(): chars_written(0){}
+private:
+   int chars_written;
+};
+
 int main(int argc, char** argv) {
-    if (argc < 3) {
-        cerr << "Usage: " << argv[0] << " <configuration file> <run name>" << endl;
+    if (argc < 2 || strcmp("-h", argv[1])==0 || strcmp("--help", argv[1])==0) {
+        cerr << "Usage: " << argv[0] << " <configuration file> [run name]" << endl;
+        cerr << "If no run name is given, 'main' is assumed." << endl;
         exit(1);
+    }
+    string run_name;
+    if(argc == 2){
+       run_name = "main";
+    }
+    else{
+       run_name = argv[2];
     }
 
     Config cfg;
@@ -42,10 +68,12 @@ int main(int argc, char** argv) {
             PluginLoader::execute(root["plugins"], rec);
             //rec.remove_used(root);
         }
-        Setting & runsetting = root[(const char*) argv[2]];
+        Setting & runsetting = root[run_name];
         ConfigurationContext run_context(vm, root, runsetting, rec);
 
         run = PluginManager<RunFactory>::get_instance()->build(run_context);
+        boost::shared_ptr<ProgressListener> l(new MyProgressListener());
+        run->set_progress_listener(l);
         //std::auto_ptr<Model> model = ExceptionWrapper<std::auto_ptr<Model> >(boost::bind<std::auto_ptr<Model> >(&ModelFactory::buildModel, modelsetting, vm));
     } catch (ConfigurationException & ex) {
         cerr << "Error while building Model from config: " << ex.message << "." << endl;
@@ -84,6 +112,7 @@ int main(int argc, char** argv) {
         cerr << "An exception ocurred: " << ex.what() << endl;
         return 1;
     }
+    cout << endl;
 
     return 0;
 }

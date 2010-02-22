@@ -10,8 +10,12 @@ objects := $(patsubst %.cpp,%.o,$(sources))
 all: ../lib/root.so histos
 
 histos: histos.o
-	$(LINK_EXE) -o $@ $<
+	@$(LINK_EXE) -o $@ $<
 
 ../lib/root.so: $(objects)
-	$(LINK_SO) -o $@ $+
+	@$(LINK_SO) -o $@ $+
+
+clean-subdir:
+	@rm -f histos ../lib/root.so
+
 

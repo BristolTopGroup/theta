@@ -82,8 +82,4 @@ public:
    }
 };
 
-
-void get_histogram_function_factories(boost::ptr_vector<theta::plugin::HistogramFunctionFactory> & factories){
-    factories.push_back(new RootHistogramFactory());
-}
-
+REGISTER_FACTORY(RootHistogramFactory)

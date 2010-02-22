@@ -8,7 +8,7 @@ namespace theta {
 
 /** \brief Base class for all Exceptions used in this project.
  * 
- * \todo: rework exceptions using Boost to have more detailed context nformation.
+ * \todo rework exceptions using Boost to have more detailed context nformation.
  */
 class Exception: virtual public std::exception{
 public:
@@ -18,18 +18,10 @@ public:
     //Exception();
     virtual ~Exception() throw(){}
     virtual const char* what()throw(){
-        //memory allocation for stringstream and copy assignment could cause bad_alloc
-        //throw, so watch out:
-
-        //try{
-            std::stringstream ss;
-            ss << std::exception::what() << ": " << message;
-            whatstring = ss.str();
-            return whatstring.c_str();
-        //}
-        //catch(std::exception){}
-        //pass-through behaviour is the best we can do without any allocation:
-        //return std::exception::what();
+         std::stringstream ss;
+         ss << std::exception::what() << ": " << message;
+         whatstring = ss.str();
+         return whatstring.c_str();
     }
 protected:
     std::string whatstring;

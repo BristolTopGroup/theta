@@ -1,0 +1,44 @@
+BOOST_INCLUDE := $(shell scram tool tag boost INCLUDE)
+BOOST_LIBLIST := $(shell scram tool tag boost LIB) $(shell scram tool tag boost_filesystem LIB) $(shell scram tool tag boost_program_options LIB) $(shell scram tool tag boost_regex LIB)
+BOOST_LIBS := -L$(shell scram tool tag boost LIBDIR) $(patsubst %,-l%,$(BOOST_LIBLIST))
+
+SQLITE_LIBLIST := $(shell scram tool tag sqlite LIB)
+SQLITE_LIBS := $(patsubst %,-l%,$(SQLITE_LIBLIST)) -L$(shell scram tool tag sqlite LIBDIR)
+SQLITE_INCLUDE := $(shell scram tool tag sqlite INCLUDE)
+
+CC := g++
+
+#lazy evaluation to allow subdirectories to add their own includes and libs ...
+INCLUDES = -I.. -I$(BOOST_INCLUDE) -I$(SQLITE_INCLUDE)
+EXTRA_COMPILE =
+EXTRA_LINK_EXE =
+EXTRA_LINK_SO =
+
+#use these to compile:
+COMPILE = $(CC) -c -Wall -Wextra -Wno-long-long -Wno-unused-parameter -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
+
+#use LIBS to link any executable
+LINK_EXE = $(CC) -L../lib -ldl -ltheta -llbfgs -lconfig -lsqlite3 $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
+
+#use SHARED to link any .so file
+#"-rdynamic" required for correct handling of exceptions
+LINK_SO = $(CC) -shared -rdynamic $(EXTRA_LINK_SO)
+
+%.o: %.cpp
+	$(COMPILE) -o $@ $<
+
+%.o: %.cxx
+	$(COMPILE) -o $@ $<
+
+%.o: %.c
+	$(COMPILE) -x c -o $@ $<
+
+#redirect to "all" target which is defined in each of the subdirs
+a: all
+
+clean:
+	rm -f *.o
+
+
+.PHONY: clean
+

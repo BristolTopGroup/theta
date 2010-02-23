@@ -18,7 +18,10 @@ namespace theta{
 /** \brief A callback class called by the run to signal progress.
  *
  * User interfaces can derive their classes from  ProgressListener and implement
- * a visual feedback of the current state of the execution ("progress bar").
+ * a visual feedback of the current state of the execution ("progress bar"). An instance
+ * of this user-defined class should be registered with the
+ * Run::set_progress_listener() method. Then, the Run instance will call ProgressListener::progress regularly
+ * to report the current progress of the run.
  */
 class ProgressListener{
 public:
@@ -54,10 +57,10 @@ public:
  *  Handling of result tables is done in the individual producers. Only run-wide tables
  *  are managed here, that is
  *  <ul>
- *   <li>A LogTable called 'log', where all log entries of the run are stored.</li>
- *   <li>A ProdInfoTable called 'prodinfo', where the list of configured producers for this run is stored.</li>
- *   <li>A RndInfoTable called 'rndinfo', where the random number generator configuration for this run is stored.</li>
- *   <li>A ParamInfoTable called 'params', where for each pseudo experiment,
+ *   <li>A database::LogTable called 'log', where all log entries of the run are stored.</li>
+ *   <li>A database::ProdInfoTable called 'prodinfo', where the list of configured producers for this run is stored.</li>
+ *   <li>A database::RndInfoTable called 'rndinfo', where the random number generator configuration for this run is stored.</li>
+ *   <li>A database::ParamInfoTable called 'params', where for each pseudo experiment,
  *       the actually used parameter values used to generate the pseudo data from 
  *       the pseusodata model are saved.</li>
  *  </ul>

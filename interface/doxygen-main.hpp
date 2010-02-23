@@ -154,7 +154,7 @@
  * to positive values.
  *
  * Next, (line with <tt>mass=</tt>), the expectation for the "mass" observable is specified. As discussed above,
- * it is a linear combination of s signal events which are gaussian and b background events whch are flat. I think
+ * it is a linear combination of s signal events which are gaussian and b background events which are flat. I think
  * you will find the corresponding statements in the configuration file now.
  *
  * After the observable specification, there is a list of constraints. Constraints
@@ -195,6 +195,32 @@
  * </pre>
  * theta will execute the "main" run by default. You can also specify the run name 
  * as the second command line argument.
+ *
+ * \section pseudodata Generation of pseudo data
+ *
+ * If pseudo data is thrown according to a model, it proceeds in several steps:
+ * <ol>
+ *  <li>Determine a random value for each model parameter. This is done with a constraint, if one exists for this parameter. Otherwise,
+ *        the default value from the parameter definition is used. In any case, the values of the parameters used will be stored
+ *        in the parameter table (see below).</ul>
+ *  <li>For each observable, use these parameters to evaluate the HistogramFunction and Histogram coefficients</li>
+ *  <li>For each observable, add all components (=histograms determined in the previous step) with the coefficients from the previous step</li>
+ *  <li>For each observable, draw a poisson-random sample from the obtained histogram</li>
+ * </ol>
+ *
+ * Note that in step 2., Histograms might be fluctuated to within its uncertainties; for an example see
+ * ConstantHistogramFunctionError.
+ *
+ * \section resultfile Result File
+ *
+ * The result file is a SQLite %database file. It always contains some tables created by the \link theta::RunT Run \endlink object
+ * which are documented there. Note that derived classes of %Run can create additional tables.
+ *
+ * Additionally, one table per producer is created. The table names match the producer names, as given in the configuration file. The
+ * table format is producer-specific and documented seperately for each producer.
+ *
+ * For example, the "hypotest" producer in the gaussoverflat example will write its results into a table called "hypotest"
+ * with a format documented in DeltaNLLHypotestTable.
  *
  * \section config Configuration file format
  *

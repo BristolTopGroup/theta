@@ -1,4 +1,5 @@
 #include "interface/plugin_so_interface.hpp"
+#include "interface/plugin.hpp"
 #include "interface/histogram-function.hpp"
 #include "TH1.h"
 #include "TFile.h"

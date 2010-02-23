@@ -226,7 +226,7 @@ int main(int argc, char** argv){
                 }
                 fs::copy_file(input_files[i], outfile);
             }
-            catch(fs::basic_filesystem_error<string> & ex){
+            catch(fs::filesystem_error & ex){
                 cout << "error while copying '" << input_files[i] << "' to '" << outfile << "': " << ex.what() << endl;
                 return 2;
             }

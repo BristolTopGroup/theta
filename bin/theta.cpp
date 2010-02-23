@@ -4,12 +4,15 @@
 #include "libconfig/libconfig.h++"
 
 #include <boost/timer.hpp>
+#include <boost/filesystem.hpp>
 
 using namespace std;
 using namespace theta;
 using namespace theta::utils;
 using namespace theta::plugin;
 using namespace libconfig;
+
+namespace fs = boost::filesystem;
 
 class MyProgressListener: public ProgressListener{
 public:
@@ -42,6 +45,7 @@ int main(int argc, char** argv) {
     else{
        run_name = argv[2];
     }
+    string cfg_filename = argv[1];
 
     Config cfg;
     
@@ -52,10 +56,21 @@ int main(int argc, char** argv) {
 
     try {
         try {
-            cfg.readFile(argv[1]);
+            //as includes in config files shouled always be resolved relative to the config file's location:
+            string old_path = fs::current_path().string();
+            //convert any failure to a FileIOException:
+            try{
+                 fs::current_path(fs::path(cfg_filename).parent_path());
+                 cfg_filename = fs::path(cfg_filename).filename();
+            }
+            catch(fs::filesystem_error & ex){
+                 throw FileIOException();
+            }
+            cfg.readFile(cfg_filename.c_str());
+            fs::current_path(old_path);
         } catch (FileIOException & f) {
             stringstream s;
-            s << "Configuration file " << argv[1] << " could not be read.";
+            s << "Configuration file " << cfg_filename << " could not be read";
             throw ConfigurationException(s.str());
         } catch (ParseException & p) {
             stringstream s;

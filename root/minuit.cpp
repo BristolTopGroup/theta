@@ -108,7 +108,7 @@ public:
         min->SetFunction(minuit_f);
 
         //3. setup tolerance
-        //if(!isnan(tolerance))  min->SetTolerance(tolerance);
+        if(!isnan(tolerance))  min->SetTolerance(tolerance);
         
         //4. minimize
         bool success = min->Minimize();
@@ -134,8 +134,19 @@ public:
         result.fval = min->MinValue();
         ivar = 0;
         const double * x = min->X();
+        const double * errors = 0;
+        bool have_errors = min->ProvidesError();
+        if(have_errors) errors = min->Errors();
         for(ParIds::const_iterator it=parameters.begin(); it!=parameters.end(); ++it, ++ivar){
             result.values.set(*it, x[ivar]);
+            if(have_errors){
+                result.errors_plus.set(*it, errors[ivar]);
+                result.errors_minus.set(*it, errors[ivar]);
+            }
+            else{
+                result.errors_plus.set(*it, -1);
+                result.errors_minus.set(*it, -1);
+            }
         }
         result.covariance.reset(parameters.size(), parameters.size());
         //I would use min->CovMatrixStatus here to check the validity of the covariance matrix,

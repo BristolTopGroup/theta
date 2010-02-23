@@ -25,6 +25,29 @@ namespace theta{
          */
         ParValues values;
 
+        /** \brief The errors at the function minimum, in positive direction.
+         *
+         * Contains all parameters the function to minimize depends
+         * on. How this is calculated depends on the minimizer used. In cases where
+         * the minimizer provides symmetrical errors, the entries are equal to \c errors_minus.
+         *
+         * Set to -1 if not provided by the minimizer.
+         */
+        ParValues errors_plus;
+
+        /** \brief The errors at the function minimum, in negative direction.
+         *
+         * Contains all parameters the function to minimize depends
+         * on. How this is calculated depends on the minimizer used. In cases where
+         * the minimizer provides symmetrical errors, the entries are equal to \c errors_plus.
+         *
+         * Note that while these are the errors in negative direction, the
+         * entries are always positive in case it contains valid errors.
+         *
+         * Set to -1 if not provided by the minimizer.
+         */
+        ParValues errors_minus;
+
         /** \brief Contains the error matrix at the minimum.
          *
          * It is quadratic and has values.size() rows.

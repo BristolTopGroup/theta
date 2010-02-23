@@ -84,7 +84,7 @@ void Database::exec(const string & query) {
         stringstream ss;
         ss << "Database.exec(\"" << query << "\") returned error: " << err;
         sqlite3_free(err);
-        err = 0;
+        /*err = 0;
         //rollback, if a transaction is active, but ignore any error here:
         if (transaction_active) {
             ss << ". Active Transaction is rolled back...";
@@ -93,7 +93,10 @@ void Database::exec(const string & query) {
                 ss << "There was an error while calling ROLLBACK in the error handling: " << err << ". Ignoring that.";
                 sqlite3_free(err);
             }
-        }
+        }*/
+        //database errors should not happen at all. If they do, we cannot use the log table, so write the error
+        // to stderr, so the user knows what has happened:
+        cerr << "SQL error: " << ss.str() << endl;
         throw DatabaseException(ss.str());
     }
 }

@@ -158,28 +158,70 @@ public:
     }
 };
 
+/** \brief Factory class for a Gaussian normal distribution in one or more dimensions.
+ *
+ * A one-dimensional case is configured with a setting group like
+ * <pre>
+ * {
+ *  type = "gauss";
+ *  parameter = "p0";
+ *  mean = 2.0;
+ *  width = 0.5;
+ * }
+ * </pre>
+ * The meanings should be clear.
+ * 
+ * A multi-dimensional normal distribution can be specified with a setting like
+ * <pre>
+ * {
+ *  type = "gauss";
+ *  parameters = ("p0", "p1");
+ *  mean = [2.0, 3.0];
+ *  covariance = ([1.0, 0.2], [0.2, 1.0]);
+ * }
+ * </pre>
+ * 
+ * \c mean specifies, in the same order as parameters, the mean values to use for the gaussian.
+ *
+ * \c covariance is the (symmetric) covariance matrix for the normal distribution. Note that
+ *     you give it as list of arrays (as it is symmetric anyway, it is left open what the "rows" and "columns" are).
+ */
 std::auto_ptr<Distribution> GaussDistributionFactory::build(ConfigurationContext & ctx)const {
-        vector<string> p_names;
         vector<ParId> v_par_ids;
-        size_t n = ctx.setting["parameters"].getLength();
-        if(n==0){
-            stringstream ss;
-            ss << "While building gauss distribution defined on line " << ctx.setting.getSourceLine() << ": expected one or more 'parameters'.";
-            throw ConfigurationException(ss.str());
+        Matrix cov;
+        vector<double> mean;
+        //handle 1d case:
+        if(ctx.setting.exists("parameter")){
+            mean.resize(1);
+            cov.reset(1,1);
+            v_par_ids.push_back(ctx.vm->getParId(ctx.setting["parameter"]));
+            mean[0] = ctx.setting["mean"];
+            double width = ctx.setting["width"];
+            cov(0,0) = width*width;
+            ctx.rec.markAsUsed(ctx.setting["mean"]);
+            ctx.rec.markAsUsed(ctx.setting["parameter"]);
+            ctx.rec.markAsUsed(ctx.setting["width"]);
         }
-        Matrix cov(n,n);
-        vector<double> mean(n);
-        for(size_t i=0; i<n; i++){
-            p_names.push_back(ctx.setting["parameters"][i]);
-            v_par_ids.push_back(ctx.vm->getParId(p_names.back()));
-            mean[i] = ctx.setting["mean"][i];
-            for(size_t j=0; j<n; j++){
-                cov(i,j) = ctx.setting["covariance"][i][j];
-            }
-        }
-        ctx.rec.markAsUsed(ctx.setting["mean"]);
-        ctx.rec.markAsUsed(ctx.setting["parameters"]);
-        ctx.rec.markAsUsed(ctx.setting["covariance"]);
+        else{ //multi-dimensional case:
+           size_t n = ctx.setting["parameters"].getLength();
+           if(n==0){
+               stringstream ss;
+               ss << "While building gauss distribution defined on line " << ctx.setting.getSourceLine() << ": expected one or more 'parameters'.";
+               throw ConfigurationException(ss.str());
+           }
+           mean.resize(n);
+           cov.reset(n,n);
+           for(size_t i=0; i<n; i++){
+               v_par_ids.push_back(ctx.vm->getParId(ctx.setting["parameters"][i]));
+               mean[i] = ctx.setting["mean"][i];
+               for(size_t j=0; j<n; j++){
+                   cov(i,j) = ctx.setting["covariance"][i][j];
+               }
+           }
+           ctx.rec.markAsUsed(ctx.setting["mean"]);
+           ctx.rec.markAsUsed(ctx.setting["parameters"]);
+           ctx.rec.markAsUsed(ctx.setting["covariance"]);
+      }
         return std::auto_ptr<Distribution>(new GaussDistribution(v_par_ids, mean, cov));
 }
 

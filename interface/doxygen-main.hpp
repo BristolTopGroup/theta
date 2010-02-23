@@ -6,11 +6,98 @@
 
 /** \mainpage
  *
- * \section Installation
+ * Welcome to %theta. %theta is a framework for statistical tests, focussing on problems
+ * in high-energy physics. It provides the possibility for the user to express a "model", i.e.,
+ * the expected data distribution, as function of physical parameters. This model can be used
+ * to make statistical inference about the physical parameter of interest.
+ * %theta make it easier to treat commonly arising questions such as the treatment of nuisance
+ * parameters, coverage tests, luminosity scans, large-scale production of test statistic points,
+ * and many more.
  *
- * In the following, "program root" is the directory containing the \c Jamroot file.
+ * The documentation is split into several pages. If you are new to %theta, read them in this order:
+ * <ol>
+ *   <li>\subpage getting_started "Getting Started" explains how to obtain and compile %theta</li>
+ *   <li>\subpage intro Introduction describes how to run %theta; the example discussed there gives a good first
+ *                 overview of how %theta works.</li>
+ *   <li>\subpage arch "General architecture of theta" describes more in-depth the architecture of %theta and provides
+ *            a good entry point if you want to extent %theta</li>
+ *   <li>\subpage design "Design Goals of theta" contains some thoughts about what the code of %theta should be like.
+ *       You should read that either if you want to contribute code to %theta or if you want to know what makes %theta different.</li>
+ * </ol>
+ *
+ * \section ack Acknowledgement
+ *
+ * I would like to thank the authors of the software packages used by %theta:
+ * <ul>
+ * <li>\link http://www.hyperrealm.com/libconfig/libconfig.html libconfig \endlink A
+ *      well-written, well-documented C/C++ library for processing configuration files with a very simple and elegant API.</li>
+ * <li>\link http://www.chokkan.org/software/liblbfgs/ liblbfgs \endlink An implementation of
+ *     the Limited-memory Broyden-Fletcher-Goldfarb-Shanno minimization algorithm</li>
+ * </ul>
+ * These libraries are included in the distribution of %theta.
+ *
+ * Furthermore, some parts of the random number algorithm code and for the matrix code
+ * have been copied from the excellent \link http://www.gnu.org/software/gsl/ GNU Scientific Library (GSL) \endlink.
+ *
+ * \section license License
+ *
+ * %theta is licensed under the \link http://www.gnu.org/copyleft/gpl.html GPL \endlink.
+ */
+
+
+/** \page getting_started Getting Started
+ *
+ * \section obtaining Obtaining theta
+ *
+ * %theta is available as source-code distribution via subversion only. The latest version can be obtained by running
+ * <pre>
+ * svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
+ * </pre>
+ *
+ * \section builiding Building theta
+ *
+ * \subsection with_cmssw With CMSSW
+ *
+ * Copy the source tree to an initialized \c CMSSW directory structure and run
+ * \c make. In this case, boost and sqlite3 which are shipped with CMSSW will be used.
+ * The main executable will be located in
+ * <pre>
+ * bin/theta
+ * </pre>
+ *
+ * Before running it, execute
+ * <pre>
+ * source setenv.sh
+ * </pre>
+ * from the installation root to adapt \c LD_LIBRARY_PATH for the shared objects of boost and sqlite3. This ensures
+ * that the ones from the CMSSW distribution will be used.
+ *
+ * If you want to test that everything is Ok, you can run the unit-tests provided with %theta, by running
+ * <pre>
+ * make run-test
+ * </pre>
+ *
+ * In summary, a complete set of commands to check out, compile, test and run %theta with cmssw
+ * would be (assuming that cmssw was set up):
+ * <pre>
+ *  scram project CMSSW CMSSW_3_5_0 
+ *  cd CMSSW_3_5_0/src
+ *  cmsenv
+ *  svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
+ *  cd theta
+ *  make
+ *  source setenv.sh
+ *  make run-test
+ *  bin/theta examples/gaussoverflat.cfg
+ * </pre>
+ *
+ * <tt>CMSSW_3_5_0</tt> is an example, you can poick another version. It is recommended to pick a recent one, as %theta
+ * was not tested with older versions of CMSSW which contain older versions of boost which %theta depends on. However,
+ * your chances are good that it compiles under many different versions.
  *
  * \subsection without_cmssw Without CMSSW
+ *
+ * NOTE: this subsection will become obsolete soon.
  *
  * Be sure to get all the external dependencies and install them either system-wide ore somehwere they can
  * be found during compile-time and run-time:
@@ -18,27 +105,13 @@
  * <li>Boost, including the jam build system</li>
  * <li>sqlite3</li>
  * </ol>
- * (If you install the libraries in a non-standard location, tou have to adapt the \c Jamroot file)
+ * (If you install the libraries in a non-standard location, you have to adapt the \c Jamroot file)
  * and run \c bjam. The main executable to run is \c theta. Where it is located depends on the
  * toolchain used. It is put to some location like bin&lt;toolchain&gt;/&lt;releas-variant&gt;/theta.
- *
- * \subsection with_cmssw With CMSSW
- *
- * Copy the source tree to an initialized \c CMSSW directory structure and run
- * \c make. In this case, boost and sqlite3 which are shipped with CMSSW will be used.
- * The main executable will be located in
- * \beginverbatim
- * bin/theta
- * \endverbatim
- *
- * Before running it, execute
- * \beginverbatim
- * source setenv.sh
- * \endvarbatim
- * from the installation root to adapt \c LD_LIBRARY_PATH for the shared objects of boost and sqlite3. This ensures
- * that the ones from the CMSSW distribution will be used.
- *
- * \section first_run Introduction
+ */
+
+ /**
+ * \page intro Introduction
  *
  * %Theta is about modeling and statistical inference. For %theta, "model" means
  * a specification of the probability density of one or more observables as function of
@@ -128,20 +201,22 @@
  * %Theta uses \link http://www.hyperrealm.com/libconfig/ libconfig \endlink as configuration file
  * format. The format is described in detail
  * \link http://www.hyperrealm.com/libconfig/libconfig_manual.html#Configuration-Files here \endlink.
- *
- * \section arch Architecture of theta; working with the documentation
+ */
+ 
+ 
+/** \page arch Architecture of %theta
  *
  * A large part of theta is already thouroughly documented. However, to use the
- * documentation effectively, a previous knowledge of the architecture of theta is
+ * documentation effectively, some knowledge of the architecture of %theta is
  * essential.
  *
- * While the original goal of theta was to implement some statistical methods and
+ * While the original goal of %theta was to implement some statistical methods and
  * utilities for it (e.g., make it easy to define a model, create the likelihood function for the model, given data,
  * run a large number of pseudo experiments with some statistical methods, compare different methods to each other, etc.),
- * theta has developed to a <i>framework</i> in the sense that it provides interfaces
+ * %theta has developed to a <i>framework</i> in the sense that it provides interfaces
  * (in the form of abstract C++ classes) for new functionality.
  *
- * A typical execution of the <tt>theta</tt> main program consists of:
+ * A typical execution of the <tt>%theta</tt> main program consists of:
  * <ol>
  * <li>Read in and parse the config file supplied as command-line argument</li>
  * <li>Create an instance of the configured <tt>Run</tt> object. This, in turn, will invoke:
@@ -161,7 +236,7 @@
  * </ol>
  *
  * Now, everywhere in the above list where the word "create" was used, you might want
- * to extent theta and provide your own version of what follows this word "create".
+ * to extent %theta and provide your own version of what follows this word "create".
  *
  * To make that possible, a plugin system was created. Although it does not permit to replace
  * every possible class just mentioned, it allows to define your own derived classes of:
@@ -202,8 +277,9 @@
  * <li>As ConstantHistogramFunction is a subclass of the abstarct type HistogramFunction, some documentation
  *  about HistogramFunction in general can be found there.</li>
  * </ol>
- *
- * \section design Design Goals of Theta
+ */
+ 
+/** \page design Design Goals of Theta
  *
  * I'm not a friend of some general statements of intention one can write about the meta-goals of a program. Still, I do raise some points here
  * because it will make some design choices clearer and because I truly believe in these principles and actually affect
@@ -256,28 +332,6 @@
  * (ii) There should never be a need to guess how to code something, i.e., there should be as little ambiguities left of how to write working code
  * or a working config file after reading the documentation. (iii) There should be one (and preferrably only one) obvious way of getting
  * something done.
- *
- *
- * \section docs Further Documentation
- *
- * Documentation of Theta has three sources:
- * <ol>
- * <li> This <b>doxygen documentation</b> which documents the internals of the program as well has how to get
- *   and build it. Most users only need this main page as pointer to the other documentation.</li>
- * <li>The <b>tutorials</b> which provide complete, working examples for some common tasks.</li>
- * </ol>
- *
- * After a successull installation and compilation discussed on this page, the
- * best place to start for new users are the <b>tutorials</b>.
- * If you are familiar with the basics from there you can consult the <b>reference manual</b> to look
- * up the configuration options in detail.
- *
- * If you need a new feature you want to add, you will need to write code which integrates
- * well with Theta. Use this <b>doxygen documentation</b> to learn about the classes and architecture
- * of Theta.
- * Note that the last chapter of the reference manual gives a introduction meant
- * for developers which described the whole system on a somewhat higher level. This
- * can be useful before starting to read the details about the classes here.
  */
 
 /** \brief Common namespace for almost all classes of %Theta.

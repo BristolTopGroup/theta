@@ -76,7 +76,7 @@ void do_main(const string & fname, TDirectory * cd, const string & tablename){
     
     sqlite3 * db = sqlite3_open(fname);
     stringstream ss;
-    ss << "SELECT lnq FROM '" << tablename << "';";
+    ss << "SELECT nll_sb - nll_b FROM '" << tablename << "';";
     sqlite3_stmt* st = sqlite3_prepare(db, ss.str().c_str());
     int res;
     while(SQLITE_ROW == (res=sqlite3_step(st))){
@@ -96,7 +96,7 @@ int main(int argc, char** argv){
         return 1;
     }
     try{
-        TFile file("out_bOnly.root", "recreate");
+        TFile file("out_SigAndBkg.root", "recreate");
         do_main(argv[1], &file, argv[2]);
         file.Write();
         file.Close();

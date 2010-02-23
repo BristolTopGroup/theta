@@ -10,8 +10,8 @@
 
 class DeltaNLLHypotestTable: public database::Table {
 public:
-    DeltaNLLHypotestTable(const std::string & name_): database::Table(name_){}
-    void append(const theta::Run & run, double lnq);
+  DeltaNLLHypotestTable(const std::string & name_): database::Table(name_){}
+  void append(const theta::Run & run, double nll_sb, double nll_b);
 private:
     virtual void create_table();
 };

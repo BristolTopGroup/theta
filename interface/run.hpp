@@ -178,8 +178,7 @@ protected:
     
     /** \brief Run constructor.
      *
-     * \param g_seed_ Seed for the "G" random number generator (used for pseudo data generation)
-     * \param s_seed_ Seed for the "S" random number generation (used for seeding producers' own generators)
+     * \param seed Seed for the random number generator (used for pseudo data generation)
      * \param m_pseudodata_ Pseudodata model,  used to generate pseudo data
      * \param m_producers_ Model passed to the producers to make statistical inferences.
      * \param outfilename Path to the file system name of the output database.

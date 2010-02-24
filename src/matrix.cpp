@@ -3,8 +3,10 @@
 
 #include <cmath>
 #include <algorithm>
+#include <limits>
 
 using namespace theta;
+using namespace std;
 
 Matrix::Matrix(size_t r, size_t c) : rows(r), cols(c==0?r:c), elements(rows*cols, 0) {}
 
@@ -18,10 +20,19 @@ void Matrix::reset(size_t r, size_t c){
 void Matrix::invert_cholesky(){
     cholesky_decomposition();
     Matrix result(rows, cols);
+    double max_tii, min_tii;
+    max_tii = -numeric_limits<double>::infinity();
+    min_tii = numeric_limits<double>::infinity();
     //column i and row j of the inverse:
     for(size_t i=0; i<rows; i++){
+        double t_ii = (*this)(i,i);
+        if(t_ii==0.0){
+           throw MathException("Matrix inversion not possible: division by zero");
+        }
+        max_tii = std::max(max_tii, fabs(t_ii));
+        min_tii = std::min(min_tii, fabs(t_ii));
         //the diagonals of the inverse are the inverse of the diagonals:
-        result(i,i) = 1.0/(*this)(i,i);
+        result(i,i) = 1.0/t_ii;
         for(size_t j=i+1; j<cols; j++){
             //inverse(j,i)
             result(j,i) = 0;
@@ -31,6 +42,11 @@ void Matrix::invert_cholesky(){
             result(j,i) *= -1.0/(*this)(j,j);
         }
     }
+    
+    if(max_tii / min_tii > 1E12){
+        throw MathException("Matrix inversion: problem is very bad (largest / smallest eigenvalue > 1E12)");
+    }
+    
     //now, result=L^-1 where L is the lower triangular matrix from the cholesky decomposition,
     //i.e. (originally) this = L * L^t.
     //So (this)^-1 = (L^-1)^t * L^-1

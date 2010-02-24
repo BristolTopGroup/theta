@@ -94,7 +94,37 @@ namespace theta{
     private:
         double mu, sigma;
     };
-    
+
+/** \brief A Gaussian normal distribution in one or more dimensions. 
+ * 
+ * A one-dimensional case is configured with a setting group like 
+ * <pre> 
+ * { 
+ *  type = "gauss"; 
+ *  parameter = "p0"; 
+ *  mean = 2.0; 
+ *  width = 0.5; 
+ * } 
+ * </pre> 
+ * \c parameter specifies the parameter the normal distribution depends on
+ *
+ * \c mean is a floating point value specifying the mean value of the distribution, \c width is its standard deviation.
+ *
+ * A multi-dimensional normal distribution can be specified with a setting like 
+ * <pre> 
+ * { 
+ *  type = "gauss"; 
+ *  parameters = ("p0", "p1"); 
+ *  mean = [2.0, 3.0]; 
+ *  covariance = ([1.0, 0.2], [0.2, 1.0]); 
+ * } 
+ * </pre> 
+ *
+ * \c mean specifies, in the same order as parameters, the mean values to use for the gaussian. 
+ * 
+ * \c covariance is the (symmetric) covariance matrix for the normal distribution. Note that 
+ *     you give it as list of arrays (as it is symmetric anyway, it is left open what the "rows" and "columns" are). 
+ */ 
     class GaussDistribution: public Distribution{
     public:
         /** Construct a GaussDistribution which depends on the variable ids v_ids, have a mean of mu

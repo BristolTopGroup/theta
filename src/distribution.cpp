@@ -50,26 +50,17 @@ void LogNormalDistribution::sample(ParValues & result, AbsRandomProxy & rnd, con
     result.set(pid, value);
 }
 
-/*Distribution* LogNormalDistribution::clone() const {
-    return new LogNormalDistribution(*this);
-}*/
-
 GaussDistribution::GaussDistribution(const vector<ParId> & v_ids, const std::vector<double> & mu_, const Matrix & cov) :
  v_par_ids(v_ids), mu(mu_), sqrt_cov(cov), inverse_cov(cov) {
     const size_t n = v_ids.size();
     if (n != mu.size() || n != cov.getRows() || n != cov.getCols())
-        throw InvalidArgumentException("GaussDistribution constructor: diemension of parameters do not match.");
-//    var_ids = v_ids;
+        throw InvalidArgumentException("GaussDistribution constructor: dimension of parameters do not match.");
     for(vector<ParId>::const_iterator p_it=v_ids.begin(); p_it!=v_ids.end(); p_it++){
         par_ids.insert(*p_it);
     }
     sqrt_cov.cholesky_decomposition(); //throws MathException if not possible
     inverse_cov.invert_cholesky();
 }
-
-/*Distribution* GaussDistribution::clone() const {
-    return new GaussDistribution(*this);
-}*/
 
 void GaussDistribution::sample(ParValues & result, AbsRandomProxy & rnd, const VarIdManager & vm) const{
     const size_t n = v_par_ids.size();

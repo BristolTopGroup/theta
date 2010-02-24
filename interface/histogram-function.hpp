@@ -185,7 +185,7 @@ namespace theta {
         virtual const Histogram & getRandomFluctuation(AbsRandomProxy & rnd, const ParValues & values) const{
             const size_t nbins = h.get_nbins();
             for(size_t i=1; i<=nbins; ++i){
-                double c = fluc.get(i);
+                double c = h.get(i);
                 double err_i = err.get(i);
                 if(err_i==0.0){
                     fluc.set(i, c);

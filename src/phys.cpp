@@ -294,7 +294,7 @@ std::auto_ptr<Model> ModelFactory::buildModel(ConfigurationContext & ctx) {
                         << obs_setting[i]["coefficients"].getSourceLine() << ": NotFoundException occured: " << e.message;
                 throw ConfigurationException(ss.str());
             }
-            obs_setting[i].remove("coefficients");
+            ctx.rec.markAsUsed(obs_setting[i]["coefficients"]);
             histos.push_back(hf);
             //hf should have lost pointer ownership:
             assert(hf.get() == 0);

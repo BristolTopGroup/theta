@@ -61,12 +61,14 @@ std::auto_ptr<Run> PlainRunFactory::build(ConfigurationContext & ctx) const {
         ConfigurationContext context(ctx, ctx.rootsetting[model_path]);
         m_pseudodata = ModelFactory::buildModel(context);
         ctx.rec.markAsUsed(s["model-pseudodata"]);
+        s["model-producers"];//will throw if not found
     }
     if (s.exists("model-producers")) {
         string model_path = s["model-producers"];
         ConfigurationContext context(ctx, ctx.rootsetting[model_path]);
         m_producers = ModelFactory::buildModel(context);
         ctx.rec.markAsUsed(s["model-producers"]);
+        s["model-pseudodata"];//will throw if not found
     }
     //create result, depending on the mode:
     result.reset(new PlainRun(seed, *m_pseudodata, *m_producers, outfile, runid, n_event));

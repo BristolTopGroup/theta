@@ -17,11 +17,13 @@ namespace theta {
     class VarIdManager;
     
     
-    /** \brief To refer to a certain parameter (not the value, only the parameter) or observable,
-     *  \c ParId and \c ObsId instances are used, which are both implemented through the class templeate \c VarId.
-     *  
-     *  The \c VarId class only defines equality and an order relation, they do not associate
-     *  any values with the parameters.
+    /** \brief To refer to a certain parameter or observable,\c ParId and \c ObsId instances are used throughout %theta.
+     *
+     *  ParId and ObsId are used internally everyehere where a user would write the parameter / observable name
+     *  to refer to a certain parameter / observable.
+     *
+     *  The \c VarId class defines equality and less-than order relation, so they can be used as key
+     *  in a map.
      *
      *  Any associated informations such as default value and ranges are stored
      *  in a VarIdManager instance. Concrete parameter values are defined via an instance
@@ -41,7 +43,7 @@ namespace theta {
         bool operator<(const VarId & rhs) const{
             return id<rhs.id;
         }
-        bool operator>(const VarId & rhs) const {
+        /*bool operator>(const VarId & rhs) const {
             return id>rhs.id;
         }
         bool operator<=(const VarId & rhs)const{
@@ -49,7 +51,7 @@ namespace theta {
         }
         bool operator>=(const VarId & rhs)const{
             return id>=rhs.id;
-        }
+        }*/
         operator bool(){
             return id>=0;
         }
@@ -121,6 +123,14 @@ namespace theta {
          */
         bool insert(const id_type & id) {
             return vars.insert(id).second;
+        }
+        
+        /** \brief Insert new ids.
+         *
+         * Insert [first, last) in this container.
+         */
+        void insert(const_iterator first, const_iterator last) {
+            vars.insert(first, last);
         }
 
         /** \brief Test whether an id is contained.
@@ -200,12 +210,16 @@ namespace theta {
         size_t get_nbins(const ObsId & id) const;
         const std::pair<double, double> & get_range(const ObsId & id) const;
         
-        
         /** Returns the VarId for the given variable name. If the name is not known,
          *  a NotFoundException is thrown.
          */
         ParId getParId(const std::string & name) const;
         ObsId getObsId(const std::string & name) const;
+        
+        /** Returns all currently defined ParIds or ObsIds
+         */
+        ParIds getAllParIds() const;
+        ObsIds getAllObsIds() const;
         
         VarIdManager(): next_pid_id(0), next_oid_id(0) {
         }
@@ -330,8 +344,7 @@ namespace theta {
     private:
         std::vector<double> values;
     };
+
 }
-
-
 
 #endif	/* _VARIABLES_HPP */

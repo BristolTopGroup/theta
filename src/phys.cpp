@@ -41,10 +41,6 @@ double MultFunction::gradient(const ParValues & v, const ParId & pid) const{
     return result;
 }
 
-/*Function * MultFunction::clone() const{
-    return new MultFunction(v_ids);
-}*/
-
 /* DATA */
 ObsIds Data::getObservables() const{
     ObsIds result;
@@ -66,8 +62,8 @@ void Data::addData(const ObsId & obs_id, const Histogram & dat){
 }
 
 /* MODEL */
-Model::Model(boost::shared_ptr<VarIdManager> & vm_, const ParIds & parameter_ids, const ObsIds & observable_ids):
-                   vm(vm_), parameters(parameter_ids), observables(observable_ids){
+Model::Model(boost::shared_ptr<VarIdManager> & vm_):
+                   vm(vm_){
 }
 
 ParIds Model::getParameters() const{
@@ -79,7 +75,7 @@ ObsIds Model::getObservables() const{
 }
 
 void Model::setPrediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs_, boost::ptr_vector<HistogramFunction> & histos_, const std::vector<std::string> & component_names){
-    if(!observables.contains(obs_id)) throw InvalidArgumentException("Model::setPrediction: used an invalid obs_id!");
+    observables.insert(obs_id);
     const size_t n = coeffs_.size();
     if(n!=coeffs_.size() or n!=component_names.size()) throw InvalidArgumentException("Model::setPrediction: number of histograms, coefficients and component names do not match!");
     if(histos[obs_id].get()!=0)
@@ -91,9 +87,12 @@ void Model::setPrediction(const ObsId & obs_id, boost::ptr_vector<Function> & co
         throw InvalidArgumentException("Model::setPrediction: prediction already set for this observable (coeffs)!");
     coeffs[obs_id].reset(new boost::ptr_vector<Function>());
     coeffs[obs_id]->transfer(coeffs[obs_id]->end(), coeffs_.begin(), coeffs_.end(), coeffs_);
-
-    //coeffs[obs_id].transfer(coeffs[obs_id].end(), coeffs_.begin(), coeffs_.end(), coeffs_);
     names[obs_id] = component_names;
+    
+    for(boost::ptr_vector<Function>::const_iterator it=coeffs[obs_id]->begin(); it!=coeffs[obs_id]->end(); ++it){
+        ParIds pids = (*it).getParameters();
+        parameters.insert(pids.begin(), pids.end());
+    }
 }
 
 void Model::get_prediction(Histogram & result, const ParValues & parameters, const ObsId & obs_id) const {
@@ -179,7 +178,6 @@ void Model::get_prediction_derivative(Histogram & result, const ParValues & para
         const pair<double, double> & o_range = vm->get_range(obs_id);
         result.reset(vm->get_nbins(obs_id), o_range.first, o_range.second);
     }
-    //return result;
 }
 
 
@@ -229,7 +227,6 @@ NLLikelihood Model::getNLLikelihood(const Data & data) const{
     NLLikelihood result(*this, data, observables, parameters);
     //to test that everything is set up (i.e. no missing parameters or observable histograms in the model)
     // test the likelihood:
-    //boost::scoped_array<double> pars(new double[result.getnpar()]);
     ParValues pv(*vm);
     for(ParIds::const_iterator it=parameters.begin(); it!=parameters.end(); ++it){
         pv.set(*it, vm->get_default(*it));
@@ -265,59 +262,12 @@ NLLikelihood Model::getNLLikelihood(const Data & data, const ParIds & pars, cons
 /* ModelFactory */
 std::auto_ptr<Model> ModelFactory::buildModel(ConfigurationContext & ctx) {
     const libconfig::Setting & s = ctx.setting;
-    //VarIdManager & vm = *ctx.vm;
-    //get the observables:
-    ObsIds observables;
-    int nobs = s["observables"].getLength();
-    if (nobs == 0)
-        throw ConfigurationException("model has no observables.");
-    for (int i = 0; i < nobs; i++) {
-        string obs_name = s["observables"][i].getName();
-        double min = get_double_or_inf(s["observables"][i]["range"][0]);
-        double max = get_double_or_inf(s["observables"][i]["range"][1]);
-        int nbins = s["observables"][i]["nbins"];
-        s["observables"][i].remove("range");
-        s["observables"][i].remove("nbins");
-        if (min >= max) {
-            stringstream ss;
-            ss << "observable " << obs_name << " has empty range.";
-            throw ConfigurationException(ss.str());
-        }
-        if (nbins <= 0) {
-            stringstream ss;
-            ss << "observable " << obs_name << " hasnbins<=0.";
-            throw ConfigurationException(ss.str());
-        }
-        observables.insert(ctx.vm->createObsId(obs_name, (size_t) nbins, min, max));
-    }
-    //get parameters:
-    ParIds parameters;
-    int npar = s["parameters"].getLength();
-    if (npar == 0)
-        throw ConfigurationException("model has no parameters.");
-    for (int i = 0; i < npar; i++) {
-        string par_name = s["parameters"][i].getName();
-        double def = s["parameters"][i]["default"];
-        double min = get_double_or_inf(s["parameters"][i]["range"][0]);
-        double max = get_double_or_inf(s["parameters"][i]["range"][1]);
-        s["parameters"][i].remove("default");
-        s["parameters"][i].remove("range");
-        if (min >= max) {
-            stringstream ss;
-            ss << "parameter " << par_name << " has empty range.";
-            throw ConfigurationException(ss.str());
-        }
-        if (def < min || def > max) {
-            stringstream ss;
-            ss << "parameter " << par_name << " has default value outside of its range.";
-            throw ConfigurationException(ss.str());
-        }
-        parameters.insert(ctx.vm->createParId(par_name, def, min, max));
-    }
-    std::auto_ptr<Model> result(new Model(ctx.vm, parameters, observables));
+    std::auto_ptr<Model> result(new Model(ctx.vm));
+    ObsIds observables = ctx.vm->getAllObsIds();
     //go through observables to find the template definition for each of them:
     for (ObsIds::const_iterator obsit = observables.begin(); obsit != observables.end(); obsit++) {
         string obs_name = ctx.vm->getName(*obsit);
+        if(not s.exists(obs_name)) continue;
         libconfig::Setting & obs_setting = s[obs_name];
         boost::ptr_vector<HistogramFunction> histos;
         boost::ptr_vector<Function> coeffs;

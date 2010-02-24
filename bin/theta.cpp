@@ -1,6 +1,8 @@
 #include "interface/run.hpp"
 #include "interface/cfg-utils.hpp"
 #include "interface/plugin.hpp"
+#include "interface/variables-utils.hpp"
+
 #include "libconfig/libconfig.h++"
 
 #include <boost/timer.hpp>
@@ -79,17 +81,20 @@ int main(int argc, char** argv) {
         }
         Setting & root = cfg.getRoot();
         proot = &root;
+        
+        //load plugins:
         if(root.exists("plugins")){
             PluginLoader::execute(root["plugins"], rec);
-            //rec.remove_used(root);
         }
+        //fill VarIdManager:
+        ConfigurationContext vm_context(vm, root, root, rec);
+        VarIdManagerUtils::apply_settings(vm_context);
+        //build run:
         Setting & runsetting = root[run_name];
-        ConfigurationContext run_context(vm, root, runsetting, rec);
-
+        ConfigurationContext run_context(vm_context, runsetting);
         run = PluginManager<RunFactory>::get_instance()->build(run_context);
         boost::shared_ptr<ProgressListener> l(new MyProgressListener());
         run->set_progress_listener(l);
-        //std::auto_ptr<Model> model = ExceptionWrapper<std::auto_ptr<Model> >(boost::bind<std::auto_ptr<Model> >(&ModelFactory::buildModel, modelsetting, vm));
     } catch (ConfigurationException & ex) {
         cerr << "Error while building Model from config: " << ex.message << "." << endl;
     } catch (SettingNotFoundException & ex) {
@@ -112,11 +117,11 @@ int main(int argc, char** argv) {
     remove_empty_groups(root);
     vector<string> unused = get_paths(root);
     if (unused.size() > 0) {
-        cout << "CONFIG WARNING: following paths in the configuration file were IGNORED: " << endl;
-        for (size_t i = 0; i < unused.size(); i++) {
-            cout << unused[i] << endl;
+        cout << "WARNING: following setting paths in the configuration file have not been used: " << endl;
+        for (size_t i = 0; i < unused.size(); ++i) {
+            cout << "  " << (i+1) << ". " << unused[i] << endl;
         }
-        cout << "(end CONFIG WARNING)" << endl << endl;
+        cout << "Comment out these settings to get rid of this message." << endl << endl;
     }
 
     try {

@@ -1,11 +1,15 @@
 #include "interface/variables.hpp"
+#include "interface/variables-utils.hpp"
 #include "interface/exception.hpp"
+#include "interface/cfg-utils.hpp"
 
 #include <sstream>
 #include <cmath>
 
 using namespace theta;
+using namespace theta::utils;
 using namespace std;
+using namespace libconfig;
 
 ParId VarIdManager::createParId(const std::string & name, double def, double min, double max) {
     if (parNameExists(name)) {
@@ -135,6 +139,24 @@ const pair<double, double> & VarIdManager::get_range(const ObsId & id) const{
     return it->second;
 }
 
+ObsIds VarIdManager::getAllObsIds() const{
+    std::map<ObsId, pair<double, double> >::const_iterator it = oid_to_range.begin();
+    ObsIds result;
+    for(; it!= oid_to_range.end(); ++it){
+       result.insert(it->first);
+    }
+    return result;
+}
+
+ParIds VarIdManager::getAllParIds() const{
+    std::map<ParId, pair<double, double> >::const_iterator it = pid_to_range.begin();
+    ParIds result;
+    for(; it!= pid_to_range.end(); ++it){
+       result.insert(it->first);
+    }
+    return result;
+}
+
 /* ParValues */
 ParIds ParValues::getAllParIds() const {
     ParIds result;
@@ -143,5 +165,60 @@ ParIds ParValues::getAllParIds() const {
             result.insert(ParId(i));
     }    
     return result;
+}
+
+void theta::VarIdManagerUtils::apply_settings(theta::plugin::ConfigurationContext & ctx){
+    const Setting & s = ctx.setting;
+    int nobs = s["observables"].getLength();
+    if (nobs == 0){
+        stringstream ss;
+        ss << "No observables defined in " << s["observables"].getPath();
+        throw ConfigurationException(ss.str());
+    }
+    for (int i = 0; i < nobs; i++) {
+        string obs_name = s["observables"][i].getName();
+        double min = get_double_or_inf(s["observables"][i]["range"][0]);
+        double max = get_double_or_inf(s["observables"][i]["range"][1]);
+        int nbins = s["observables"][i]["nbins"];
+        ctx.rec.markAsUsed(s["observables"][i]["range"]);
+        ctx.rec.markAsUsed(s["observables"][i]["nbins"]);
+        if (min >= max) {
+            stringstream ss;
+            ss << "Observable " << obs_name << " has min >= max, i.e., empty range.";
+            throw ConfigurationException(ss.str());
+        }
+        if (nbins <= 0) {
+            stringstream ss;
+            ss << "Observable " << obs_name << " has nbins<=0.";
+            throw ConfigurationException(ss.str());
+        }
+        ctx.vm->createObsId(obs_name, (size_t) nbins, min, max);
+    }
+    //get parameters:
+    int npar = s["parameters"].getLength();
+    if (npar == 0){
+        stringstream ss;
+        ss << "No parameters defined in " << s["parameters"].getPath();
+        throw ConfigurationException(ss.str());
+    }
+    for (int i = 0; i < npar; i++) {
+        string par_name = s["parameters"][i].getName();
+        double def = s["parameters"][i]["default"];
+        double min = get_double_or_inf(s["parameters"][i]["range"][0]);
+        double max = get_double_or_inf(s["parameters"][i]["range"][1]);
+        ctx.rec.markAsUsed(s["parameters"][i]["range"]);
+        ctx.rec.markAsUsed(s["parameters"][i]["default"]);
+        if (min >= max) {
+            stringstream ss;
+            ss << "Parameter " << par_name << " has min >= max, i.e., empty range.";
+            throw ConfigurationException(ss.str());
+        }
+        if (def < min || def > max) {
+            stringstream ss;
+            ss << "Parameter " << par_name << " has default value outside of its range.";
+            throw ConfigurationException(ss.str());
+        }
+        ctx.vm->createParId(par_name, def, min, max);
+    }
 }
 

@@ -169,7 +169,10 @@ namespace theta {
         friend class ModelFactory;
     public:
         Model(){}
-        Model(boost::shared_ptr<VarIdManager> & vm_, const ParIds & parameter_ids, const ObsIds & observable_ids);
+        
+       /** \brief Create a new Model with the VarIdManager \c vm.
+        */
+        Model(boost::shared_ptr<VarIdManager> & vm);
         ParIds getParameters() const;
         ObsIds getObservables() const;
         

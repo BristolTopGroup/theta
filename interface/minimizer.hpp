@@ -103,7 +103,7 @@ namespace theta{
          * a MinimizationException is thrown. The reasons for such a failure are manifold
          * and also depend on the particular minimization algorithm.
          */
-        virtual MinimizationResult minimize(const boost::shared_ptr<theta::Function> & f) = 0;
+        virtual MinimizationResult minimize(const theta::Function & f) = 0;
 
         /** \brief Override the allowed range used for a particular parameter.
          *

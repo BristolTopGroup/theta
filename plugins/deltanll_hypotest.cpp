@@ -28,10 +28,6 @@ void DeltaNLLHypotestTable::append(const Run & run, double nll_sb, double nll_b)
     }
 }
 
-template<typename T>
-struct noop_deleter{
-    void operator()(T* t){}
-};
 
 DeltaNLLHypotestProducer::DeltaNLLHypotestProducer(const ParValues & s_plus_b_, const ParValues & b_only_, std::auto_ptr<Minimizer> & min, const string & name_) :
     Producer(name_), s_plus_b(s_plus_b_), b_only(b_only_), minimizer(min), table(name_) {
@@ -46,7 +42,6 @@ void DeltaNLLHypotestProducer::produce(Run & run, const Data & data, const Model
     if(!table) table.connect(run.get_database());
     NLLikelihood nll = model.getNLLikelihood(data);
     //see above for this type of noop_deleter construction
-    boost::shared_ptr<Function> function_ptr(&nll, noop_deleter<Function>());
     double nll_sb, nll_b;
     nll_sb = NAN;
     nll_b = NAN;
@@ -60,7 +55,7 @@ void DeltaNLLHypotestProducer::produce(Run & run, const Data & data, const Model
         }
     }
     try{
-        MinimizationResult minres = minimizer->minimize(function_ptr);
+        MinimizationResult minres = minimizer->minimize(nll);
         nll_sb = minres.fval;
     }
     catch(Exception & ex){
@@ -76,7 +71,7 @@ void DeltaNLLHypotestProducer::produce(Run & run, const Data & data, const Model
         else
             minimizer->reset_range_override(*it);
     }
-    MinimizationResult minres = minimizer->minimize(function_ptr);
+    MinimizationResult minres = minimizer->minimize(nll);
     nll_b = minres.fval;
     table.append(run, nll_sb, nll_b);
 }

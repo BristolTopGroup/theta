@@ -22,15 +22,15 @@ public:
         return ndim;
     }
 
-    RootMinuitFunctionAdapter(const boost::shared_ptr<Function> & f_): f(f_), ndim(f->getnpar()){
+    RootMinuitFunctionAdapter(const Function & f_): f(f_), ndim(f.getnpar()){
     }
 
     virtual double DoEval(const double * x) const{
-        return (*f)(x);
+        return f(x);
     }
 
 private:
-    const boost::shared_ptr<theta::Function> f;
+    const theta::Function & f;
     const size_t ndim;
 };
 
@@ -64,7 +64,7 @@ public:
         tolerance = tol;
     }
 
-    virtual MinimizationResult minimize(const boost::shared_ptr<theta::Function> & f){
+    virtual MinimizationResult minimize(const theta::Function & f){
         //I would like to re-use min. However, it horribly fails after very few uses with
         // unsigned int ROOT::Minuit2::MnUserTransformation::IntOfExt(unsigned int) const: Assertion `!fParameters[ext].IsFixed()' failed.
         // when calling SetFixedVariable(...).
@@ -73,7 +73,7 @@ public:
         MinimizationResult result;
 
         //1. setup parameters, limits and initial step sizes
-        ParIds parameters = f->getParameters();
+        ParIds parameters = f.getParameters();
         int ivar=0;
         for(ParIds::const_iterator it=parameters.begin(); it!=parameters.end(); ++it, ++ivar){
             pair<double, double> range = get_range(*it);

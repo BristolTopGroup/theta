@@ -45,19 +45,11 @@ DeltaNLLIntervalProducer::DeltaNLLIntervalProducer(const ParId & pid_, const vec
     }
 }
 
-template<typename T>
-struct noop_deleter{
-    void operator()(T* t){}
-};
-
 void DeltaNLLIntervalProducer::produce(Run & run, const Data & data, const Model & model) {
     if(!table) table.connect(run.get_database());
     NLLikelihood nll = model.getNLLikelihood(data);
 
-    //note that nll ius stack-allocated, so we need to tell the shared_ptr
-    // that nll should not be deleted if the use count drops to zero:
-    boost::shared_ptr<Function> function_ptr(&nll, noop_deleter<Function>());
-    MinimizationResult minres = minimizer->minimize(function_ptr);
+    MinimizationResult minres = minimizer->minimize(nll);
 
     //the "0" c.l. interval is the minimum:
     table.append(run, 0.0, minres.values.get(pid), minres.values.get(pid));

@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_CASE(model0){
     pars.insert(beta1);
     pars.insert(beta2);
     obs.insert(obs0);
-    Model m(vm, pars, obs);
+    Model m(vm);
     boost::ptr_vector<Function> coeffs;
     ParIds v_beta1;
     v_beta1.insert(beta1);
@@ -107,7 +107,7 @@ BOOST_AUTO_TEST_CASE(modelgrad){
     pars.insert(beta1);
     pars.insert(beta2);
     obs.insert(obs0);
-    Model m(vm, pars, obs);
+    Model m(vm);
     boost::ptr_vector<Function> coeffs;
     ParIds v_beta1;
     v_beta1.insert(beta1);

@@ -10,9 +10,6 @@
 #include <iostream>
 #include <dlfcn.h>
 
-#include <boost/thread.hpp>
-
-
 namespace theta {
 
     /** \brief Namespace for all plugin-related classes.
@@ -25,6 +22,8 @@ namespace theta {
          * the construction to the corect factory.
          *
          * For any T, \c PluginManager &lt; T &gt; is a singleton.
+         *
+         * Note that this class is not thread-safe, as it has access to a global registry.
          */
         template<typename factory_type>
         class PluginManager : private boost::noncopyable {
@@ -35,10 +34,8 @@ namespace theta {
             /** \brief returns the singleton instance of this PluginManager.
              */
             static PluginManager* get_instance() {
-                boost::lock_guard<boost::mutex> l(singleton_mutex);
                 if (instance.get() == 0) instance.reset(new PluginManager);
                 return instance.get();
-                //singleton_mutex is released implicitely upon destruction of l
             }
 
             /** \brief Use the registered factories to build an instance from a configuration
@@ -66,9 +63,6 @@ namespace theta {
             //bool verbose;
             boost::ptr_vector<factory_type> factories;
             static std::auto_ptr<PluginManager> instance;
-            //mutex to prevent more than one function executing in parallel
-            // (and to prevent more than one instance being created).
-            static boost::mutex singleton_mutex;
             //prevent public default construction.
 
             PluginManager() {
@@ -77,9 +71,6 @@ namespace theta {
 
         template<typename factory_type>
         std::auto_ptr<PluginManager<factory_type> > PluginManager<factory_type>::instance;
-
-        template<typename factory_type>
-        boost::mutex PluginManager<factory_type>::singleton_mutex;
 
         template<typename factory_type>
         std::vector<std::string> PluginManager<factory_type>::get_registered_types() {
@@ -93,7 +84,6 @@ namespace theta {
 
         template<typename factory_type>
         std::auto_ptr<typename factory_type::product_type> PluginManager<factory_type>::build(ConfigurationContext & ctx) const {
-            boost::lock_guard<boost::mutex> l(singleton_mutex);
             std::string type = ctx.setting["type"];
             ctx.rec.markAsUsed(ctx.setting["type"]);
             for (size_t i = 0; i < factories.size(); ++i) {
@@ -117,7 +107,6 @@ namespace theta {
 
         template<typename factory_type>
         void PluginManager<factory_type>::register_factory(std::auto_ptr<factory_type> & new_factory) {
-            boost::lock_guard<boost::mutex> l(singleton_mutex);
             for (size_t i = 0; i < factories.size(); i++) {
                 if (factories[i].getTypeName() == new_factory->getTypeName()) {
                     std::stringstream ss;
@@ -128,7 +117,6 @@ namespace theta {
             //append plugins to the end of the list:
             factories.push_back(new_factory);
             assert(new_factory.get() == 0);
-            //release singleton_mutex upon destrution of l.
         }
 
         /** \brief Class responsible to register the plugins at the different PluginManagers.

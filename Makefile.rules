@@ -1,10 +1,26 @@
+
+#if available, use dependencies from CMSSW:
+ifneq ($(shell which scram),)
 BOOST_INCLUDE := $(shell scram tool tag boost INCLUDE)
 BOOST_LIBLIST := $(shell scram tool tag boost LIB) $(shell scram tool tag boost_filesystem LIB) $(shell scram tool tag boost_program_options LIB) $(shell scram tool tag boost_regex LIB)
 BOOST_LIBS := -L$(shell scram tool tag boost LIBDIR) $(patsubst %,-l%,$(BOOST_LIBLIST))
-
 SQLITE_LIBLIST := $(shell scram tool tag sqlite LIB)
 SQLITE_LIBS := $(patsubst %,-l%,$(SQLITE_LIBLIST)) -L$(shell scram tool tag sqlite LIBDIR)
 SQLITE_INCLUDE := $(shell scram tool tag sqlite INCLUDE)
+else
+#otherwise: assume boost is installed system-wide (i.e., include are found without special care)
+BOOST_INCLUDE:=
+SQLITE_INCLUDE:=
+SQLITE_LIBS := -lsqlite3
+#on some systems, boost libraries have a "-mt" suffix. This is a dirty hack. If you know better, tell me:
+ifeq ($(shell test -e /usr/lib/libboost_system-mt.so && echo -n A),A)
+BS:=-mt
+else
+BS:=
+endif
+
+BOOST_LIBS := -lboost_filesystem$(BS) -lboost_regex$(BS) -lboost_program_options$(BS) -lboost_thread$(BS)
+endif
 
 CC := g++
 

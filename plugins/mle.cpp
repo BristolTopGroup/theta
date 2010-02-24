@@ -49,12 +49,6 @@ void MLETable::append(const Run & run, double nll, const ParValues & values, con
     }
 }
 
-
-template<typename T>
-struct noop_deleter{
-    void operator()(T* t){}
-};
-
 MLEProducer::MLEProducer(const VarIdManager & vm, const ParIds & save_ids, std::auto_ptr<Minimizer> & min, const string & name_) :
     Producer(name_), minimizer(min), table(name_, vm, save_ids) {
 }
@@ -62,8 +56,7 @@ MLEProducer::MLEProducer(const VarIdManager & vm, const ParIds & save_ids, std::
 void MLEProducer::produce(Run & run, const Data & data, const Model & model) {
     if(!table) table.connect(run.get_database());
     NLLikelihood nll = model.getNLLikelihood(data);
-    boost::shared_ptr<Function> function_ptr(&nll, noop_deleter<Function>());
-    MinimizationResult minres = minimizer->minimize(function_ptr);
+    MinimizationResult minres = minimizer->minimize(nll);
     table.append(run, minres.fval, minres.values, minres.errors_plus);
 }
 

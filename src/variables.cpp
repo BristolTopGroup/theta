@@ -58,13 +58,13 @@ bool VarIdManager::obsNameExists(const std::string & name) const {
     return name_to_oid.find(name) != name_to_oid.end();
 }
 
-bool VarIdManager::varIdExists(const ParId & id) const {
+/*bool VarIdManager::varIdExists(const ParId & id) const {
     return pid_to_name.find(id) != pid_to_name.end();
 }
 
 bool VarIdManager::varIdExists(const ObsId & id) const {
     return oid_to_name.find(id) != oid_to_name.end();
-}
+}*/
 
 std::string VarIdManager::getName(const ParId & id) const {
     std::map<ParId, std::string>::const_iterator it = pid_to_name.find(id);
@@ -167,7 +167,7 @@ ParIds ParValues::getAllParIds() const {
     return result;
 }
 
-void theta::VarIdManagerUtils::apply_settings(theta::plugin::ConfigurationContext & ctx){
+void theta::VarIdManagerUtils::apply_settings(theta::plugin::Configuration & ctx){
     const Setting & s = ctx.setting;
     int nobs = s["observables"].getLength();
     if (nobs == 0){

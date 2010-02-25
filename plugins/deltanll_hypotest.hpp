@@ -3,8 +3,10 @@
 
 #include "interface/plugin_so_interface.hpp"
 
-#include "interface/variables.hpp"
+//#include "interface/variables.hpp"
+#include "interface/decls.hpp"
 #include "interface/database.hpp"
+#include "interface/producer.hpp"
 
 #include <string>
 
@@ -29,16 +31,16 @@ private:
     virtual void create_table();
 };
 
-
 /** \brief A producer to create test statistics based on likelihood ratio.
  *
  * Given data and a model, this producer will find the maximum likelihood for a "signal-plus-background"
  * contraint and a "background-only" constraint and save the distance of the negative log-likelihood as 'lnq'
  * in the result table, DeltaNLLHypotestTable.
  */
-class DeltaNLLHypotestProducer: public theta::Producer{
+class deltanll_hypotest: public theta::Producer{
 public:
-    DeltaNLLHypotestProducer(const theta::ParValues & s_plus_b_, const theta::ParValues & b_only_, std::auto_ptr<theta::Minimizer> & min, const std::string & name_);
+    deltanll_hypotest(theta::plugin::Configuration & ctx);
+    //DeltaNLLHypotestProducer(const theta::ParValues & s_plus_b_, const theta::ParValues & b_only_, std::auto_ptr<theta::Minimizer> & min, const std::string & name_);
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
 private:
     theta::ParValues s_plus_b;
@@ -46,15 +48,6 @@ private:
     std::auto_ptr<theta::Minimizer> minimizer;
     theta::ParIds par_ids_constraints;
     DeltaNLLHypotestTable table;
-};
-
-
-class DeltaNLLHypotestProducerFactory: public theta::plugin::ProducerFactory{
-public:
-    virtual std::auto_ptr<theta::Producer> build(theta::plugin::ConfigurationContext & ctx) const;
-    virtual std::string getTypeName() const{
-        return "deltanll-hypotest";
-    }
 };
 
 #endif

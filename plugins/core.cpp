@@ -1,6 +1,6 @@
 #include "core.hpp"
 #include "plugins/interpolating-histogram.hpp"
-#include "plugins/run_plain.hpp"
+//#include "plugins/run_plain.hpp"
 
 #include <iostream>
 
@@ -9,7 +9,7 @@ using namespace theta::plugin;
 using namespace libconfig;
 using namespace std;
 
-std::auto_ptr<HistogramFunction> FixedPolyHistoFactory::build(ConfigurationContext & ctx) const {
+fixed_poly::fixed_poly(Configuration & ctx){
     const Setting & s = ctx.setting;
     ObsId obs_id = ctx.vm->getObsId(s["observable"]);
     ctx.rec.markAsUsed(s["observable"]);
@@ -37,16 +37,16 @@ std::auto_ptr<HistogramFunction> FixedPolyHistoFactory::build(ConfigurationConte
     }
     double norm_to = s["normalize_to"];
     double norm;
-    if ((norm = h.get_sum_of_weights()) == 0.0) {
+    if ((norm = h.get_sum_of_bincontents()) == 0.0) {
         throw ConfigurationException("Histogram specification is zero (can't normalize)");
     }
     h *= norm_to / norm;
     ctx.rec.markAsUsed(s["coefficients"]);
     ctx.rec.markAsUsed(s["normalize_to"]);
-    return std::auto_ptr<HistogramFunction > (new ConstantHistogramFunction(h));
+    set_histo(h);
 }
 
-std::auto_ptr<HistogramFunction> FixedGaussHistoFactory::build(ConfigurationContext & ctx) const {
+fixed_gauss::fixed_gauss(Configuration & ctx){
     const Setting & s = ctx.setting;
     double width = s["width"];
     double mean = s["mean"];
@@ -61,26 +61,15 @@ std::auto_ptr<HistogramFunction> FixedGaussHistoFactory::build(ConfigurationCont
     }
     double norm_to = s["normalize_to"];
     double norm;
-    if ((norm = h.get_sum_of_weights()) == 0.0) {
+    if ((norm = h.get_sum_of_bincontents()) == 0.0) {
         throw ConfigurationException("Histogram specification is zero (can't normalize)");
     }
     h *= norm_to / norm;
     ctx.rec.markAsUsed(s["width"]);
     ctx.rec.markAsUsed(s["mean"]);
     ctx.rec.markAsUsed(s["normalize_to"]);
-    return std::auto_ptr<HistogramFunction > (new ConstantHistogramFunction(h));
+    set_histo(h);
 }
 
-REGISTER_FACTORY(FixedPolyHistoFactory)
-REGISTER_FACTORY(FixedGaussHistoFactory)
-
-/*void get_histogram_function_factories(boost::ptr_vector<HistogramFunctionFactory> & factories) {
-    factories.push_back(new FixedPolyHistoFactory());
-    factories.push_back(new FixedGaussHistoFactory());
-    factories.push_back(new InterpolatingHistoFactory());
-}
-
-void get_run_factories(boost::ptr_vector<RunFactory> & factories){
-    factories.push_back(new PlainRunFactory());
-}*/
-
+REGISTER_PLUGIN(fixed_poly)
+REGISTER_PLUGIN(fixed_gauss)

@@ -1,5 +1,7 @@
 #include "interface/plugin.hpp"
 #include "interface/cfg-utils.hpp"
+#include "interface/phys.hpp"
+#include "interface/minimizer.hpp"
 
 #include <boost/test/unit_test.hpp> 
 
@@ -54,8 +56,8 @@ BOOST_AUTO_TEST_CASE(minuit){
     pars.insert(p0);
     pars.insert(p1);
     
-    ConfigurationContext ctx(vm, s, s["min"], rec);
-    std::auto_ptr<Minimizer> min = PluginManager<MinimizerFactory>::get_instance()->build(ctx);
+    Configuration ctx(vm, s, s["min"], rec);
+    std::auto_ptr<Minimizer> min = PluginManager<Minimizer>::build(ctx);
     BOOST_REQUIRE(min.get());
     ImpossibleFunction f(pars);
     bool exception;

@@ -322,21 +322,23 @@ private:
 class ParamTable: public Table {
 public:
 
-  void append(const theta::Run & run, const theta::ParValues & values, double);
+  void append(const theta::Run & run, const theta::ParValues & values, const std::map<theta::ObsId, double> n_data);
 
   /** Create a new table with name \c tablename in the given database.
    * The columns of the table are
    * - INT runid
    * - INT eventid
-   * - double param for each parameter in \c ids. These columns have the name of the parameter as defined in \c vm.
-   * - double PEdataInt. This column holds the integral of the pseudodata.
+   * - DOUBLE param for each parameter in \c ids. These columns have the name of the parameter as defined in \c vm.
+   * - DOUBLE n_data_&lt;obs&gt; for each observable. This column holds the integral of the pseudo events produced for this observable.
    */
-  ParamTable(const std::string & name, const theta::VarIdManager & vm, const theta::ParIds & ids, const std::string & integral_name);
+  ParamTable(const std::string & name, const theta::VarIdManager & vm, const theta::ParIds & ids, const theta::ObsIds & obs_ids);
 private:
     virtual void create_table();
 
     theta::ParIds par_ids;
+    theta::ObsIds obs_ids;
     std::vector<std::string> pid_names;
+    std::vector<std::string> oid_names;
 };
 
 }//namespace database

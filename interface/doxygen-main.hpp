@@ -144,18 +144,17 @@
  * Now, have a look at the <tt>examples/gaussoverflat.cfg</tt> configuration file. (For now, do not
  * care about syntax too much, see \link config link below \endlink for a detailed description).
  *
- * At the top of the configuration file, a model with the name "gaussoverflat" is defined. It is
- * exactly the model described above: there is one observable "mass" with the range [500, 1500] and
- * 200 bins. Note that theta does not care at all about units and that observables are <em>always</em> binned (of course,
+ * At the top of the configuration file, the parameters and observables you want to use are defined:
+ * there is one observable "mass" with the range [500, 1500] and 200 bins. Note that theta does
+ * not care at all about units and that observables are <em>always</em> binned (of course,
  * you can always make the binning very fine). The parameter this model depends on are defined next: "s" is
  * the (poisson) mean number of signal events after your selection, "b" is the number of
  * background events. Their "default" values are set to the scenario in question. The range is mainly
- * used as contraint for fits. You usually define it as large as physically makes sense. In this case, it makes sense to restrcit the parameters
- * to positive values.
+ * used as contraint for fits. You usually define it as large as physically makes sense. In this case,
+ * the parameters are restricted to non-negative values.
  *
- * Next, (line with <tt>mass=</tt>), the expectation for the "mass" observable is specified. As discussed above,
- * it is a linear combination of s signal events which are gaussian and b background events which are flat. I think
- * you will find the corresponding statements in the configuration file now.
+ * Next, the model "gaussoverflat" is defined, where the expectation for the "mass" observable is specified. As discussed above,
+ * it is a linear combination of s signal events which are gaussian and b background events which are flat.
  *
  * After the observable specification, there is a list of constraints. Constraints
  * specified in the model will be used for
@@ -164,14 +163,15 @@
  * <li>If throwing pseudo experiments, they are used to choose the parameters' values for pseudo data creation (if no contraint is
  *      defined for a parameter, always its default value is used for pseudo data generation).
  * </ul>
- * The "constraint" settings block concludes the definitiopn of the model. The next thing
- * to take care of is the hypothesis test. This is done by the "hypotest" settings block.
+ * The "constraint" settings group (a setting group is anything enclosed in curly braces, "{","}", a setting
+ * is any statement of the form "name = value;") concludes the definitiopn of the model. The next thing
+ * to take care of is the hypothesis test. This is done by the "hypotest" settings group.
  *
- * This block defines a statistical method (also called "producer", as it produces
+ * This settings group defines a statistical method (also called "producer", as it produces
  * results) of type "lnQ-minimize". This module expectes two more settings: "signal-plus-background"
- * and "background-only". They are both setting blocks which specify constraints to apply to
+ * and "background-only". They are both setting groups which specify constraints to apply to
  * get these two model varaints from the original model. In this case, the "background-only" model is given
- * by the constraint "{s=0.0;}".For the "signal-plus-background", no constraints have to be applied, therefore, an empty settings block
+ * by the constraint "{s=0.0;}".For the "signal-plus-background", no constraints have to be applied, therefore, an empty settings group
  * is given ("{}"). So whenever this module runs, it will be provided with a model and data. It will
  * <ol>
  * <li> Construct the likelihood function of the model, given the data.</li>
@@ -183,7 +183,7 @@
  * </ol>
  *
  * Having configured the model and a statistical method, we have to glue them together. In this case, we want to make
- * pseudo experiments. This is done by the "main" settings block. It defines a plain run
+ * pseudo experiments. This is done by the "main" settings group. It defines a plain run
  * ("plain" means: throw pseudo data from the model and run the producers, nothing more
  * complicated. Other types of runs can do parameter scans). We have to specify which model to use, which producers
  * to run and how many pseudo experiments you wish to perform. The results will be written
@@ -194,7 +194,41 @@
  * bin/theta examples/gaussoverflat.cfg
  * </pre>
  * theta will execute the "main" run by default. You can also specify the run name 
- * as the second command line argument.
+ * as the second command line argument. The results will be written to a SQLite database file.
+ *
+ * \section internal Overview of %theta internals
+ *
+ * In the previous section you have seen a simple use case of theta. Most of the components and concepts of
+ * theta have been touched there. To better understand the documentation, it is useful to know what happens "behind the scenes".
+ *
+ * First of all, you might have noticed that the configuration file format is <i>hierarchical</i> and consists of many
+ * named setting groups (as reminder: a setting group is anything enclosed in "{}"). As a rule of thumb, each setting
+ * groups configures one C++ object.
+ *
+ * A typical execution of the <tt>%theta</tt> main program consists of:
+ * <ol>
+ * <li>Read in and parse the config file supplied as command-line argument</li>
+ * <li>Use the "parameters" and "observables" blocks to save the information supplied there in a \link theta::VarIdManager VarIdManager \endlink
+ *     instance. This object saves information about parameters and observables like the ones supplied in the configuration file. </li>
+ * <li>Locate the "main" settings block (or the one supplied on the command line) and use it to
+ *     create an instance of the configured \link theta::RunT Run \endlink object.
+ *     The creation of the this object, in turn, will invoke:
+ *   <ol>
+ *     <li>Create the model(s). The model will create some histograms defined
+ *        in the model (as these histograms depend on model parameters, they are called HistogramFunctions).
+ *        The constraints definition in a model will lead to the creation of Distributions and
+ *        the coefficients of the HistogramFunction will be created in for of Functions.
+ *     </li>
+ *   <li>Create an instance of each of the configured producers. This might involve creating
+ *    a minimizer, if the producer depends on minimization of the negative log-likelihood.</li>
+ *   <li>Create the pseudo-random number generator</li>
+ *   <li>Create the output database</li>
+ *   </ol>
+ * <li>Execute the <tt>Run</tt>. What execution means depends on the configured type of the Run. Typically,
+ *   it will throw pseudo experiments and, for each pseudo experiment, apply some statistical methods ("producers").</li>
+ * </ol>
+ 
+ 
  *
  * \section pseudodata Generation of pseudo data
  *

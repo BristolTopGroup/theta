@@ -2,27 +2,17 @@
 #define PLUGIN_CORE_HPP
 
 #include "interface/plugin_so_interface.hpp"
-#include "libconfig/libconfig.h++"
-#include "plugins/run_plain.hpp"
+#include "interface/histogram-function.hpp"
+//#include "libconfig/libconfig.h++"
 
-//HistogramFunction Plugins. "fixed-" prefix is a convention and means that the Histogram
-// does not depend on any parameters. In this case, it is suitable to return
-// a ConstantHistogramFunction.
-class FixedPolyHistoFactory: public theta::plugin::HistogramFunctionFactory{
+class fixed_poly: public theta::ConstantHistogramFunction{
 public:
-   virtual std::auto_ptr<theta::HistogramFunction> build(theta::plugin::ConfigurationContext & ctx) const;
-   virtual std::string getTypeName() const{
-      return "fixed-poly";
-   }
+   fixed_poly(theta::plugin::Configuration & cfg);
 };
 
-
-class FixedGaussHistoFactory: public theta::plugin::HistogramFunctionFactory{
+class fixed_gauss: public theta::ConstantHistogramFunction{
 public:
-   virtual std::auto_ptr<theta::HistogramFunction> build(theta::plugin::ConfigurationContext & ctx) const;
-   virtual std::string getTypeName() const{
-      return "fixed-gauss";
-   }
+   fixed_gauss(theta::plugin::Configuration & cfg);
 };
 
 #endif

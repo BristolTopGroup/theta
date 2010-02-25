@@ -1,5 +1,8 @@
 #include "interface/minimizer.hpp"
+#include "interface/cfg-utils.hpp"
 #include "interface/plugin_so_interface.hpp"
+#include "libconfig/libconfig.h++"
+
 
 #include <utility>
 #include <sstream>
@@ -49,7 +52,7 @@ double Minimizer::get_initial_stepsize(const theta::ParId & pid) const {
 }
 
 
-void theta::MinimizerUtils::apply_settings(Minimizer & m, theta::plugin::ConfigurationContext & ctx){
+void theta::MinimizerUtils::apply_settings(Minimizer & m, theta::plugin::Configuration & ctx){
     if(ctx.setting.exists("override-ranges")){
         const libconfig::Setting & s_ranges = ctx.setting["override-ranges"];
         if(not s_ranges.isGroup()){

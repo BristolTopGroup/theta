@@ -24,16 +24,13 @@ namespace theta {
     class Distribution;
     class HistogramFunction;
     namespace plugin{
-        class ConfigurationContext;
+        class Configuration;
     }
     
     /** A real-valued function which depends on some variables. */
     class Function{
-    /// \internal required for copying boost::ptr_vector<Function>
-    /*friend Function * new_clone(const Function & f){
-        return f.clone();
-    }*/
     public:
+        typedef Function base_type;
         /** \brief Evaluate the function at the given parameter values.
          *
          * @return The function value at \c v.
@@ -168,7 +165,7 @@ namespace theta {
         friend class NLLikelihood;
         friend class ModelFactory;
     public:
-        Model(){}
+        //Model(){}
         
        /** \brief Create a new Model with the VarIdManager \c vm.
         */
@@ -351,7 +348,7 @@ namespace theta {
          * \param s The Setting to use to build the Model from.
          * \param vm The VarIdManager which should be used for the Model.
          */
-        static std::auto_ptr<Model> buildModel(plugin::ConfigurationContext & ctx);
+        static std::auto_ptr<Model> buildModel(plugin::Configuration & ctx);
     };    
 
     /** Function object of a negative log likelihood of a model, given data.

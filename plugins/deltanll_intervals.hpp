@@ -5,6 +5,7 @@
 
 #include "interface/variables.hpp"
 #include "interface/database.hpp"
+#include "interface/producer.hpp"
 
 #include <string>
 
@@ -45,53 +46,6 @@ private:
 
 /** \brief Confidence intervals based on the difference in the negative log-likelihood.
  *
- * This producer uses the likelihood to derive confidence intervals based on the
- * based on the asymptotic property of the likelihood ratio test statistics to be distributed
- * according to a chi^2-distribution.
- *
- * Given a likelihood function L which depends on parameters p_0 ... p_n, for which a
- * confidence interval for p0 should be constructed, the method works as follows:
- * <ol>
- * <li>vary parameters p_0 ... p_n to find the maximum value of the likelihood function, L_max</li>
- * <li>scan through the parameter p0. For each new value of po, maximize L with respect to all other
- *     parameters, yielding the maximum as function of p_0, L_m(p_0).</li>
- * <li>The interval for p0 is given by the points where the ratio L_m(p0) / L_max corresponds to
- *     the desired confidence level.</li>
- * </ol>
- *
- * L_m(p_0) is sometimes called the "profiled likelihood function" or the "reduced likelihood function",
- * as it only depends on one of the original n+1 parameters.
- */
-class DeltaNLLIntervalProducer: public theta::Producer{
-public:
-    /** DeltaNLL-producer for interval of parameter \c pid with confidence levels
-     *  \c clevels_, using the minimizer \c min.
-     *
-     *  Note that ownership of min will be taken, i.e., \c min.get()==0 holds after a call
-     *  to this constructor.
-     */
-    DeltaNLLIntervalProducer(const theta::ParId & pid_, const std::vector<double> & clevels_, std::auto_ptr<theta::Minimizer> & min,
-            const std::string & name_);
-
-    /** \brief Run the statistical method with Data and model and write out the result
-     *    to the database.
-     *
-     * As this producer can be configured to determine several intervals at once, it
-     * usually makes more than one entry per pseudo experiment in the result table.
-     */
-    virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
-private:
-    theta::ParId pid;
-    std::vector<double> clevels;
-    std::auto_ptr<theta::Minimizer> minimizer;
-    //at construction, save here the deltanll values corresponding to
-    //clevels:
-    std::vector<double> deltanll_levels;
-    DeltaNllIntervalTable table;
-};
-
-/** \brief factory class for the class DeltaNLLProducer.
- *
  * Configuration is done with a settings block like:
  * <pre>
  * {
@@ -114,19 +68,65 @@ private:
  *
  * \c minimizer is the configuration path to a \link theta::Minimizer Minimizer\endlink definition.
  *
+ * This producer uses the likelihood to derive confidence intervals based on the
+ * based on the asymptotic property of the likelihood ratio test statistics to be distributed
+ * according to a chi^2-distribution.
+ *
+ * Given a likelihood function L which depends on parameters p_0 ... p_n, for which a
+ * confidence interval for p0 should be constructed, the method works as follows:
+ * <ol>
+ * <li>vary parameters p_0 ... p_n to find the maximum value of the likelihood function, L_max</li>
+ * <li>scan through the parameter p0. For each new value of po, maximize L with respect to all other
+ *     parameters, yielding the maximum as function of p_0, L_m(p_0).</li>
+ * <li>The interval for p0 is given by the points where the ratio L_m(p0) / L_max corresponds to
+ *     the desired confidence level.</li>
+ * </ol>
+ *
+ * L_m(p_0) is sometimes called the "profiled likelihood function" or the "reduced likelihood function",
+ * as it only depends on one of the original n+1 parameters.
  */
-class DeltaNLLProducerFactory: public theta::plugin::ProducerFactory{
+class deltanll_intervals: public theta::Producer{
 public:
-    /** \brief implementation of the purely virtual build method of the factory.
+    /** DeltaNLL-producer for interval of parameter \c pid with confidence levels
+     *  \c clevels_, using the minimizer \c min.
+     *
+     *  Note that ownership of min will be taken, i.e., \c min.get()==0 holds after a call
+     *  to this constructor.
      */
-    virtual std::auto_ptr<theta::Producer> build(theta::plugin::ConfigurationContext & ctx) const;
+    /*DeltaNLLIntervalProducer(const theta::ParId & pid_, const std::vector<double> & clevels_, std::auto_ptr<theta::Minimizer> & min,
+            const std::string & name_);*/
+    deltanll_intervals(theta::plugin::Configuration & cfg);
 
-    /** \brief always returns "delta-nll"
+    /** \brief Run the statistical method with Data and model and write out the result
+     *    to the database.
+     *
+     * As this producer can be configured to determine several intervals at once, it
+     * usually makes more than one entry per pseudo experiment in the result table.
      */
+    virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
+private:
+    theta::ParId pid;
+    std::vector<double> clevels;
+    std::auto_ptr<theta::Minimizer> minimizer;
+    //at construction, save here the deltanll values corresponding to
+    //clevels:
+    std::vector<double> deltanll_levels;
+    DeltaNllIntervalTable table;
+};
+
+
+/*class DeltaNLLProducerFactory: public theta::plugin::ProducerFactory{
+public:
+    / ** \brief implementation of the purely virtual build method of the factory.
+     * /
+    virtual std::auto_ptr<theta::Producer> build(theta::plugin::Configuration & ctx) const;
+
+    / ** \brief always returns "delta-nll"
+     * /
     virtual std::string getTypeName() const{
         return "deltanll-interval";
     }
-};
+};*/
 
 #endif
 

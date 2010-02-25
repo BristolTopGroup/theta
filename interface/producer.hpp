@@ -1,15 +1,16 @@
 #ifndef PRODUCER_HPP
 #define PRODUCER_HPP
 
-#include "liblbfgs/lbfgs.h"
+//#include "liblbfgs/lbfgs.h"
 #include "libconfig/libconfig.h++"
 
-#include "interface/phys.hpp"
-#include "interface/variables.hpp"
-#include "interface/database.hpp"
-#include "interface/minimizer.hpp"
+//#include "interface/phys.hpp"
+//#include "interface/variables.hpp"
+//#include "interface/database.hpp"
+//#include "interface/minimizer.hpp"
 
 #include "interface/decls.hpp"
+#include "interface/plugin_so_interface.hpp"
 
 #include <vector>
 #include <string>
@@ -32,6 +33,7 @@ namespace theta {
  */
 class Producer{
 public:
+    typedef Producer base_type;
     /** Declare the destructor as virtual, as we expect polymorphic
      *  access to derived classes.
      */
@@ -57,13 +59,14 @@ public:
     }
 
 protected:
-    Producer(const std::string & name_): name(name_){}
+    //Producer(const std::string & name_): name(name_){}
+    Producer(const plugin::Configuration & cfg): name(cfg.setting.getName()){}
 private:
     std::string name;
 };
 
 
-class MCMCQuantileProducer: public Producer{
+/*class MCMCQuantileProducer: public Producer{
 public:
    MCMCQuantileProducer(const ParId & p_id, const std::vector<double> & quantiles, database::Database & db, database::LogTable & log);
    virtual void pre_run(const Run & run);
@@ -72,7 +75,7 @@ private:
    ParId p_id;
    std::vector<double> quantiles;
    database::MCMCQuantileTable table;
-};
+};*/
 
 
 }

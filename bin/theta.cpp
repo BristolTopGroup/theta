@@ -1,3 +1,4 @@
+#include "interface/plugin_so_interface.hpp"
 #include "interface/run.hpp"
 #include "interface/cfg-utils.hpp"
 #include "interface/plugin.hpp"
@@ -87,12 +88,12 @@ int main(int argc, char** argv) {
             PluginLoader::execute(root["plugins"], rec);
         }
         //fill VarIdManager:
-        ConfigurationContext vm_context(vm, root, root, rec);
+        Configuration vm_context(vm, root, root, rec);
         VarIdManagerUtils::apply_settings(vm_context);
         //build run:
         Setting & runsetting = root[run_name];
-        ConfigurationContext run_context(vm_context, runsetting);
-        run = PluginManager<RunFactory>::get_instance()->build(run_context);
+        Configuration run_context(vm_context, runsetting);
+        run = PluginManager<Run>::build(run_context);
         boost::shared_ptr<ProgressListener> l(new MyProgressListener());
         run->set_progress_listener(l);
     } catch (ConfigurationException & ex) {

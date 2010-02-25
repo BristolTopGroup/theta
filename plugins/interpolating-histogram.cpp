@@ -8,34 +8,7 @@ using namespace theta;
 using namespace theta::plugin;
 using namespace libconfig;
 
-InterpolatingHistogramFunction::InterpolatingHistogramFunction(const Histogram & h0_, const vector<ParId> & varids,
-        const vector<Histogram> & hplus_, const vector<Histogram> & hminus_) :
-        h0(h0_), hplus(hplus_), hminus(hminus_), vid(varids), h(h0_){
-    const size_t nsys = hplus.size();
-    if (nsys != hminus.size() || nsys != varids.size())
-        throw InvalidArgumentException("InterpolatingHistogramFunction::InterpolatingHistogramFunction: number of histograms for plus/minus and number of variables mismatch!");
-    std::set<ParId> pid_set;
-    for(size_t i=0; i<nsys; i++){
-        pid_set.insert(varids[i]);
-        h0.check_compatibility(hplus[i]);
-        h0.check_compatibility(hminus[i]);
-        //set overflow and underflow to zero. Those are not included in the likelihood and in order
-        // to get the normalization right, we have to subtract those:
-        hplus[i].set(0,0);
-        hplus[i].set(hplus[i].get_nbins()+1,0);
-        hminus[i].set(0,0);
-        hminus[i].set(hminus[i].get_nbins()+1,0);
-    }
-    //to make calculation of derivatives easier, we do not allow the same parameter twice.
-    if(pid_set.size()!=nsys){
-        throw InvalidArgumentException("InterpolatingHistogramFunction::InterpolatingHistogramFunction: having one parameter parametrizing two interpolations is not supported.");
-    }
-    h0.set(0,0);
-    h0.set(h0.get_nbins()+1,0);
-}
-
-
-const Histogram & InterpolatingHistogramFunction::operator()(const ParValues & values) const {
+const Histogram & interpolating_histo::operator()(const ParValues & values) const {
     h.reset_to_1();
     const size_t n_sys = hplus.size();
     for (size_t isys = 0; isys < n_sys; isys++) {
@@ -48,7 +21,7 @@ const Histogram & InterpolatingHistogramFunction::operator()(const ParValues & v
     return h;
 }
 
-const Histogram & InterpolatingHistogramFunction::gradient(const ParValues & values, const ParId & pid) const{
+const Histogram & interpolating_histo::gradient(const ParValues & values, const ParId & pid) const{
     const size_t n_sys = hplus.size();
     bool found = false;
     for (size_t isys = 0; isys < n_sys; isys++) {
@@ -74,7 +47,7 @@ const Histogram & InterpolatingHistogramFunction::gradient(const ParValues & val
     return h;
 }
 
-theta::ParIds InterpolatingHistogramFunction::getParameters() const {
+theta::ParIds interpolating_histo::getParameters() const {
     theta::ParIds result;
     for (size_t i = 0; i < vid.size(); ++i) {
         result.insert(vid[i]);
@@ -82,13 +55,13 @@ theta::ParIds InterpolatingHistogramFunction::getParameters() const {
     return result;
 }
 
-std::auto_ptr<HistogramFunction> InterpolatingHistoFactory::build(ConfigurationContext & ctx) const{
+interpolating_histo::interpolating_histo(Configuration & ctx){
     const Setting & psetting = ctx.setting["parameters"];
     vector<ParId> par_ids;
-    vector<Histogram> hplus;
-    vector<Histogram> hminus;
+    //vector<Histogram> hplus;
+    //vector<Histogram> hminus;
     //build nominal histogram:
-    Histogram h0 = getConstantHistogram(ctx, psetting["nominal-histogram"]);
+    h0 = getConstantHistogram(ctx, psetting["nominal-histogram"]);
     int n = psetting.getLength();
     //note: allow n==0 to allow the user to disable systematics.
     // In case of unintentional type error (parameters="delta1,delta2";), user will get a warning about
@@ -110,14 +83,35 @@ std::auto_ptr<HistogramFunction> InterpolatingHistoFactory::build(ConfigurationC
     assert(par_ids.size()==hminus.size());
     assert(static_cast<int>(par_ids.size())==n);
     ctx.rec.markAsUsed(psetting);
-    //(other setting are not lowest-level and need not be marked).
-    return std::auto_ptr<HistogramFunction>(new InterpolatingHistogramFunction(h0, par_ids, hplus, hminus));
+    h = h0;
+    
+    //do some checks and set overflow  underflow to zero:
+    const size_t nsys = hplus.size();
+    if (nsys != hminus.size() || nsys != vid.size())
+        throw InvalidArgumentException("interpolating_histo::interpolating_histo: number of histograms for plus/minus and number of variables mismatch!");
+    std::set<ParId> pid_set;
+    for(size_t i=0; i<nsys; i++){
+        pid_set.insert(vid[i]);
+        h0.check_compatibility(hplus[i]);
+        h0.check_compatibility(hminus[i]);
+        //set overflow and underflow to zero. Those are not included in the likelihood and in order
+        // to get the normalization right, we have to subtract those:
+        hplus[i].set(0,0);
+        hplus[i].set(hplus[i].get_nbins()+1,0);
+        hminus[i].set(0,0);
+        hminus[i].set(hminus[i].get_nbins()+1,0);
+    }
+    //to make calculation of derivatives easier, we do not allow the same parameter twice.
+    if(pid_set.size()!=nsys){
+        throw InvalidArgumentException("interpolating_histo::interpolating_histo: having one parameter parametrizing two interpolations is not supported.");
+    }
+    h0.set(0,0);
+    h0.set(h0.get_nbins()+1,0);
 }
 
-
-Histogram InterpolatingHistoFactory::getConstantHistogram(ConfigurationContext & ctx, const libconfig::Setting & s){
-    ConfigurationContext context(ctx, s);
-    std::auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunctionFactory>::get_instance()->build(context);
+Histogram interpolating_histo::getConstantHistogram(Configuration & ctx, const libconfig::Setting & s){
+    Configuration cfg(ctx, s);
+    std::auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::build(cfg);
     if(hf->getParameters().size()!=0){
         stringstream ss;
         ss << "Histogram defined in path " << s.getPath() << " is not constant (but has to be).";
@@ -126,4 +120,4 @@ Histogram InterpolatingHistoFactory::getConstantHistogram(ConfigurationContext &
     return (*hf)(ParValues());//copies the internal reference, so this is ok.
 }
 
-REGISTER_FACTORY(InterpolatingHistoFactory)
+REGISTER_PLUGIN(interpolating_histo)

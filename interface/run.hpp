@@ -1,12 +1,19 @@
 #ifndef RUN_HPP
 #define RUN_HPP
 
-#include "interface/decls.hpp"
+//#include "interface/decls.hpp"
+
 #include "interface/phys.hpp"
 #include "interface/exception.hpp"
 #include "interface/random.hpp"
 #include "interface/producer.hpp"
 #include "interface/database.hpp"
+#include "interface/plugin_so_interface.hpp"
+#include "interface/cfg-utils.hpp"
+#include "interface/plugin.hpp"
+
+#include "libconfig/libconfig.h++"
+
 
 #include <string>
 #include <sstream>
@@ -70,6 +77,7 @@ public:
 template<typename rndtype>
 class RunT {
 public:
+    typedef RunT<rndtype> base_type;
 
    /** \brief Register progress listener.
     *
@@ -77,7 +85,6 @@ public:
     void set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
         progress_listener = l;
     }
-
 
     /** \brief The pre-run, to be executed before the \c run routine.
      * 
@@ -148,14 +155,6 @@ public:
     virtual ~RunT() {
         //db.close(); //not necessary, as is closed on destruction of db anyway (and we could not propagate exceptions from here anyway ...)
     }
-    
-    /*const Model & get_pseudodata_model() const{
-       return m_pseudodata;
-    }
-    
-    const Model & get_producers_model() const{
-       return m_producers;
-    }*/
 
     /** Get the Databse object associated to this run, i.e.,
      *  this is where the producers should create their result tables.
@@ -186,18 +185,65 @@ protected:
      * \param n_event_ number of events (=number of pseudo experiments to perform).
      */
     // protected, as Run is purley virtual.
-    RunT(long seed_, const Model & m_pseudodata_, const Model & m_producers_,
-            const std::string & outfilename, int runid_, int n_event_) :
-        seed(seed_), m_pseudodata(m_pseudodata_), m_producers(m_producers_), db(new database::Database(outfilename)),
-            logtable(new database::LogTable("log")), prodinfo_table("prodinfo"), rndinfo_table("rndinfo"),
-	params_table("params", m_pseudodata.getVarIdManager(), m_pseudodata.getParameters(), "PEdataIntegral"),
-        runid(runid_), n_event(n_event_), state(0){
+    RunT(plugin::Configuration & cfg): seed(-1), m_pseudodata(cfg.vm), m_producers(cfg.vm), db(new database::Database(cfg.setting["result-file"])),
+      logtable(new database::LogTable("log")), prodinfo_table("prodinfo"), rndinfo_table("rndinfo"),
+      runid(1), eventid(0), n_event(cfg.setting["n-events"]), state(0){
+          
+      const libconfig::Setting & s = cfg.setting;
+      if(s.lookupValue(static_cast<const char*>("run-id"), runid)){
+         cfg.rec.markAsUsed(s["run-id"]);
+      }
+      int i_seed = -1;
+      if(s.lookupValue(static_cast<const char*>("seed"), i_seed)){
+         cfg.rec.markAsUsed(s["seed"]);
+      }
+      seed = i_seed;
+      if(seed==-1) seed = time(0);
+      rnd.setSeed(seed);
+      if (s.exists("model")) {
+        std::string model_path = s["model"];
+        plugin::Configuration context(cfg, cfg.rootsetting[model_path]);
+        std::auto_ptr<Model> model = ModelFactory::buildModel(context);
+        m_pseudodata = *model;
+        m_producers = *model;
+        cfg.rec.markAsUsed(s["model"]);
+      }
+      if (s.exists("model-pseudodata")) {
+         std::string model_path = s["model-pseudodata"];
+         plugin::Configuration context(cfg, cfg.rootsetting[model_path]);
+         m_pseudodata = *ModelFactory::buildModel(context);
+         cfg.rec.markAsUsed(s["model-pseudodata"]);
+         s["model-producers"];//will throw if not found
+       }
+       if (s.exists("model-producers")) {
+         std::string model_path = s["model-producers"];
+         plugin::Configuration context(cfg, cfg.rootsetting[model_path]);
+         m_producers = *ModelFactory::buildModel(context);
+         cfg.rec.markAsUsed(s["model-producers"]);
+         s["model-pseudodata"];//will throw if not found
+       }
+       
       logtable->connect(db);
       prodinfo_table.connect(db);
       rndinfo_table.connect(db);
-      params_table.connect(db);
-      rnd.setSeed(seed);
+      params_table.reset(new database::ParamTable("params", m_pseudodata.getVarIdManager(),
+                                               m_pseudodata.getParameters(), m_pseudodata.getObservables()));
+      params_table->connect(db);
       eventid = 0;
+      
+      //add the producers:
+      int n_p = s["producers"].getLength();
+      if (n_p == 0)
+         throw ConfigurationException("no producers in run specified!");
+      for (int i = 0; i < n_p; i++) {
+        std::string prod_path = s["producers"][i];
+        plugin::Configuration cfg2(cfg, cfg.rootsetting[prod_path]);
+        std::auto_ptr<Producer> p = plugin::PluginManager<Producer>::build(cfg2);
+        addProducer(p);
+        //should transfer ownership:
+        assert(p.get()==0);
+      }
+      cfg.rec.markAsUsed(s["producers"]);
     }    
     
     //random number generators for seeding (s) and pseudo data generation (g),
@@ -218,12 +264,12 @@ protected:
     //the tables only used by run (and only by run):
     database::ProducerInfoTable prodinfo_table;
     database::RndInfoTable rndinfo_table;
-    database::ParamTable params_table;
+    std::auto_ptr<database::ParamTable> params_table;
 
     //the producers to be run on the pseudo data:
     boost::ptr_vector<Producer> producers;
 
-    const int runid;
+    int runid;
     
     //the current eventid:
     int eventid;
@@ -247,12 +293,12 @@ protected:
     void fill_data() {
         ParValues values = m_pseudodata.sampleValues(rnd);
         data = m_pseudodata.samplePseudoData(rnd, values);
-	double dataIntegral = 0.0;
-	const ObsIds& obs_ids = data.getObservables();
+	const ObsIds & obs_ids = data.getObservables();
+        std::map<theta::ObsId, double> n_data;
 	for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
-	  dataIntegral = data.getData(*obsit).get_sum_of_bincontents();
+	    n_data[*obsit] = data.getData(*obsit).get_sum_of_bincontents();
 	}
-        params_table.append(*this, values, dataIntegral);
+        params_table->append(*this, values, n_data);
     }
 
     /** \brief Make an informational log entry to indicate the start of a pseudo experiment.

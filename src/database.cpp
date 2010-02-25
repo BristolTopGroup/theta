@@ -10,7 +10,9 @@
 
 #include "interface/variables.hpp"
 #include "interface/database.hpp"
+#include "interface/plugin_so_interface.hpp"
 #include "interface/run.hpp"
+
 
 using namespace std;
 using namespace theta;
@@ -248,13 +250,15 @@ void MCMCQuantileTable::append(const Run & run, double quantile, double par_valu
 
 
 
-ParamTable::ParamTable(const std::string & name_, const theta::VarIdManager & vm, const theta::ParIds & ids, const std::string & integral_name_):
-    Table(name_), par_ids(ids){
+ParamTable::ParamTable(const std::string & name_, const theta::VarIdManager & vm, const theta::ParIds & ids, const theta::ObsIds & obs_ids_):
+    Table(name_), par_ids(ids), obs_ids(obs_ids_){
     pid_names.reserve(par_ids.size());
     for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
         pid_names.push_back(vm.getName(*it));
     }
-
+    for(ObsIds::const_iterator it=obs_ids.begin(); it!=obs_ids.end(); ++it){
+        oid_names.push_back(vm.getName(*it));
+    }    
 }
 
 void ParamTable::create_table() {
@@ -263,7 +267,9 @@ void ParamTable::create_table() {
     for (vector<string>::const_iterator it = pid_names.begin(); it != pid_names.end(); ++it) {
         ss << ", '" << *it << "' DOUBLE";
     }
-    ss << ", PEdataIntegral DOUBLE";
+    for (vector<string>::const_iterator it = oid_names.begin(); it != oid_names.end(); ++it) {
+        ss << ", 'n_data_" << *it << "' DOUBLE";
+    }
     ss << ");";
     exec(ss.str());
     //prepare insert statement:
@@ -272,11 +278,14 @@ void ParamTable::create_table() {
     for (vector<string>::const_iterator it = pid_names.begin(); it != pid_names.end(); ++it) {
         ss << ", ?";
     }
-    ss << ",?);";
+    for (vector<string>::const_iterator it = oid_names.begin(); it != oid_names.end(); ++it) {
+        ss << ", ?";
+    }    
+    ss << ");";
     insert_statement = prepare(ss.str());
 }
 
-void ParamTable::append(const Run & run, const ParValues & values, double PEdataIntegral) {
+void ParamTable::append(const Run & run, const ParValues & values, map<ObsId, double> n_data) {
     sqlite3_bind_int(insert_statement, 1, run.get_runid());
     sqlite3_bind_int(insert_statement, 2, run.get_eventid());
     int next_col = 3;
@@ -284,7 +293,10 @@ void ParamTable::append(const Run & run, const ParValues & values, double PEdata
         sqlite3_bind_double(insert_statement, next_col, values.get(*it));
         next_col++;
     }
-    sqlite3_bind_double(insert_statement, next_col, PEdataIntegral);
+    for (ObsIds::const_iterator it = obs_ids.begin(); it != obs_ids.end(); it++) {
+        sqlite3_bind_double(insert_statement, next_col, n_data[*it]);
+        next_col++;
+    }
     int res = sqlite3_step(insert_statement);
     sqlite3_reset( insert_statement);
     if (res != 101) {

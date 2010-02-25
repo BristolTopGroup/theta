@@ -10,15 +10,13 @@ using namespace std;
 using namespace theta;
 using namespace theta::plugin;
 
-class TestExDuringBuild: public FunctionFactory{
+class test_ex_during_build: public Function{
 public:
-  auto_ptr<Function> build(ConfigurationContext & ctx) const {
+  test_ex_during_build(Configuration & cfg):Function(ParIds()) {
        throw Exception("exception message 23");
   }
-  
-  string getTypeName() const{
-     return "test-exception-during-build";
-  }
+  virtual double operator()(const ParValues & v) const{       return 0.0;  }
+  virtual double gradient(const ParValues & v, const ParId & pid) const{ return 0.0;}
 };
 
-REGISTER_FACTORY(TestExDuringBuild)
+REGISTER_PLUGIN(test_ex_during_build)

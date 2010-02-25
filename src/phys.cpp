@@ -260,7 +260,7 @@ NLLikelihood Model::getNLLikelihood(const Data & data, const ParIds & pars, cons
 
 
 /* ModelFactory */
-std::auto_ptr<Model> ModelFactory::buildModel(ConfigurationContext & ctx) {
+std::auto_ptr<Model> ModelFactory::buildModel(Configuration & ctx) {
     const libconfig::Setting & s = ctx.setting;
     std::auto_ptr<Model> result(new Model(ctx.vm));
     ObsIds observables = ctx.vm->getAllObsIds();
@@ -273,8 +273,8 @@ std::auto_ptr<Model> ModelFactory::buildModel(ConfigurationContext & ctx) {
         boost::ptr_vector<Function> coeffs;
         vector<string> names;
         for (int i = 0; i < obs_setting.getLength(); i++) {
-            ConfigurationContext context(ctx, obs_setting[i]["histogram"]);
-            auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunctionFactory>::get_instance()->build(context);
+            Configuration context(ctx, obs_setting[i]["histogram"]);
+            auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::build(context);
             //the coefficients:
             int n_coeff = obs_setting[i]["coefficients"].getLength();
             if (n_coeff == 0) {
@@ -307,8 +307,8 @@ std::auto_ptr<Model> ModelFactory::buildModel(ConfigurationContext & ctx) {
     if (s.exists("constraints")) {
         int n = s["constraints"].getLength();
         for (int i = 0; i < n; i++) {
-            ConfigurationContext ctx2(ctx, s["constraints"][i]);
-            std::auto_ptr<Distribution> d = PluginManager<DistributionFactory>::get_instance()->build(ctx2);
+            Configuration ctx2(ctx, s["constraints"][i]);
+            std::auto_ptr<Distribution> d = PluginManager<Distribution>::build(ctx2);
             result->addPrior(d);
         }
     }

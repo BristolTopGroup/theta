@@ -1,4 +1,10 @@
 #include "interface/plugin.hpp"
+#include "interface/histogram.hpp"
+#include "interface/distribution.hpp"
+#include "interface/phys.hpp"
+#include "interface/histogram-function.hpp"
+#include "interface/run.hpp"
+#include "interface/minimizer.hpp"
 
 using namespace theta::plugin;
 
@@ -23,42 +29,42 @@ void PluginLoader::execute(const libconfig::Setting & s, theta::utils::SettingUs
 
 void PluginLoader::print_plugins() {
     std::cout << "  HistogramFunctions: ";
-    std::vector<std::string> typenames = PluginManager<HistogramFunctionFactory>::get_instance()->get_registered_types();
+    std::vector<std::string> typenames = PluginManager<HistogramFunction>::get_registered_types();
     for (size_t i = 0; i < typenames.size(); ++i) {
         std::cout << typenames[i] << " ";
     }
     std::cout << std::endl;
 
     std::cout << "  Functions: ";
-    typenames = PluginManager<FunctionFactory>::get_instance()->get_registered_types();
+    typenames = PluginManager<Function>::get_registered_types();
     for (size_t i = 0; i < typenames.size(); ++i) {
         std::cout << typenames[i] << " ";
     }
     std::cout << std::endl;
 
     std::cout << "  Runs: ";
-    typenames = PluginManager<RunFactory>::get_instance()->get_registered_types();
+    typenames = PluginManager<Run>::get_registered_types();
     for (size_t i = 0; i < typenames.size(); ++i) {
         std::cout << typenames[i] << " ";
     }
     std::cout << std::endl;
 
     std::cout << "  Minimizers: ";
-    typenames = PluginManager<MinimizerFactory>::get_instance()->get_registered_types();
+    typenames = PluginManager<Minimizer>::get_registered_types();
     for (size_t i = 0; i < typenames.size(); ++i) {
         std::cout << typenames[i] << " ";
     }
     std::cout << std::endl;
 
     std::cout << "  Producers: ";
-    typenames = PluginManager<ProducerFactory>::get_instance()->get_registered_types();
+    typenames = PluginManager<Producer>::get_registered_types();
     for (size_t i = 0; i < typenames.size(); ++i) {
         std::cout << typenames[i] << " ";
     }
     std::cout << std::endl;
 
     std::cout << "  Distributions: ";
-    typenames = PluginManager<DistributionFactory>::get_instance()->get_registered_types();
+    typenames = PluginManager<Distribution>::get_registered_types();
     for (size_t i = 0; i < typenames.size(); ++i) {
         std::cout << typenames[i] << " ";
     }

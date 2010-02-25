@@ -5,6 +5,8 @@
 //#include "libconfig.h++"
 #include "interface/variables.hpp"
 #include "interface/matrix.hpp"
+#include "interface/decls.hpp"
+#include "interface/plugin_so_interface.hpp"
 
 #include <memory>
 #include <vector>
@@ -24,6 +26,8 @@ namespace theta{
      */
     class Distribution{
     public:
+        // required for the plugin system:
+        typedef Distribution base_type;
         /** Sample values from this distribution using \c rnd as random number generator
          *  and respecting limits set for the parameters in \c vm.
          *
@@ -125,21 +129,19 @@ namespace theta{
  * \c covariance is the (symmetric) covariance matrix for the normal distribution. Note that 
  *     you give it as list of arrays (as it is symmetric anyway, it is left open what the "rows" and "columns" are). 
  */ 
-    class GaussDistribution: public Distribution{
+    class gauss: public Distribution{
     public:
         /** Construct a GaussDistribution which depends on the variable ids v_ids, have a mean of mu
          *  and a covariance matrix cov.
          *  If dimensions of v_ids, mu and cov mismatch, an InvalidArgumentException is thrown.
          *  If cov is not positive definite, a MathException is thrown.
          */
-        GaussDistribution(const std::vector<ParId> & var_ids, const std::vector<double> & mu, const Matrix & cov);
+        //GaussDistribution(const std::vector<ParId> & var_ids, const std::vector<double> & mu, const Matrix & cov);
+        gauss(plugin::Configuration & cfg);
         virtual void sample(ParValues & result, AbsRandomProxy & rnd, const VarIdManager & vm) const;
         virtual double evalNL(const ParValues & values) const;
         virtual double evalNL_withDerivatives(const ParValues & values, ParValues & derivatives) const;
-        virtual ~GaussDistribution(){}
-
     private:
-        //GaussDistribution(GaussDistribution & rhs);
         std::vector<ParId> v_par_ids;
         std::vector<double> mu;
         Matrix sqrt_cov; //required for sampling

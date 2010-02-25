@@ -7,6 +7,26 @@
 
 /** A HistogramFunction which interpolates a "zero" Histogram and several "distorted" Histograms.
  *
+ * The configuration block is something like (mass is some observable previously defined.
+ * s, delta1, delta2 are parameters):
+ * <pre>
+ * mass = {
+ *   coefficients = ("s");
+ *   histogram = {
+ *      type = "interpolating";
+ *      parameters = ("delta1", "delta2");
+ *      nominal-histogram = { / * fixed-histogram-specification * / };
+ *      delta1-plus-histogram = { / * fixed-histogram-specification * / };
+ *      delta1-minus-histogram = { / * fixed-histogram-specification * / };
+ *      delta2-plus-histogram = { / * fixed-histogram-specification * / };
+ *      delta2-minus-histogram = { / * fixed-histogram-specification * / };
+ *   };
+ * };
+ * </pre>
+ * Here, <tt>fixed-histogram-specification</tt> is a Histogram Setting block that returns a Histogram
+ * which does not depend on any parameters. That is, any Histogram of type="fixed_*" (if the naming convention
+ * is obeyed).
+ *
  * A histogram \c h0 is interpolated by parameters p_i specified in varids such that
  *  -# if all p_i = 0, the original Histogram h0 is returned
  *  -# for p_j = 1 for fixed j and p_i=0 for all i!=j, the Histogram hplus[j] is returned
@@ -23,11 +43,13 @@
  *
  * \sa Histogram::checkCompatibility VarId
  */
-class InterpolatingHistogramFunction : public theta::HistogramFunction {
+class interpolating_histo : public theta::HistogramFunction {
 public:
-    InterpolatingHistogramFunction(const theta::Histogram & h0_, const std::vector<theta::ParId> & varids,
-            const std::vector<theta::Histogram> & hplus_, const std::vector<theta::Histogram> & hminus_);
+    interpolating_histo(theta::plugin::Configuration & ctx);
     
+   /** \brief Build a (constant) Histogram from a Setting block.
+     */
+    static theta::Histogram getConstantHistogram(theta::plugin::Configuration & ctx, const libconfig::Setting & s);
     /** Returns the interpolated Histogram as documented in the class documentation.
      * throws a NotFoundException if a parameter is missing.
      */
@@ -40,9 +62,6 @@ public:
     }
 
     virtual const theta::Histogram & gradient(const theta::ParValues & values, const theta::ParId & pid) const;
-
-    virtual ~InterpolatingHistogramFunction() {
-    }
 private:
     theta::Histogram h0;
     std::vector<theta::Histogram> hplus;
@@ -54,43 +73,6 @@ private:
     // operator() to be const.
     mutable theta::Histogram h;
     //virtual HistogramFunction* clone() const;
-};
-
-/** \brief Plugin Factory class to produce InterpolatinHistogramFunction of type="interpolating".
- *
- * For a description of the InterpolatingHistogramFunction semantics, see there. In short: it interpolates
- * (previously known, fixed) Histograms, mainly intended for studying systematic uncertainties on the templates.
- *
- * The configuration block is something like (mass is some observable previously defined.
- * s, delta1, delta2 are parameters):
- * <verbatim>
- * mass = {
- *   coefficients = ("s");
- *   histogram = {
- *      type = "interpolating";
- *      parameters = ("delta1", "delta2");
- *      nominal-histogram = { /<b></b>* fixed-histogram-specification *<b></b>/ };
- *      delta1-plus-histogram = { /<b></b>* fixed-histogram-specification *<b></b>/ };
- *      delta1-minus-histogram = { /<b></b>* fixed-histogram-specification *<b></b>/ };
- *      delta2-plus-histogram = { /<b></b>* fixed-histogram-specification *<b></b>/ };
- *      delta2-minus-histogram = { /<b></b>* fixed-histogram-specification *<b></b>/ };
- *   };
- * };
- * </verbatim>
- * Here, <tt>fixed-histogram-specification</tt> is a Histogram Setting block that returns a Histogram
- * which does not depend on any parameters. That is, any Histogram of type="fixed-*" (if the naming convention
- * is obeyed).
- */
-class InterpolatingHistoFactory: public theta::plugin::HistogramFunctionFactory{
-public:
-   virtual std::auto_ptr<theta::HistogramFunction> build(theta::plugin::ConfigurationContext & ctx) const;
-   virtual std::string getTypeName() const{
-      return "interpolate";
-   }
-private:
-    /** \brief Build a (constant) Histogram from a Setting block.
-     */
-    static theta::Histogram getConstantHistogram(theta::plugin::ConfigurationContext & ctx, const libconfig::Setting & s);
 };
 
 #endif

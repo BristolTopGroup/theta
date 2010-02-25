@@ -17,7 +17,7 @@ void check_histos_equal(const Histogram & h1, const Histogram & h2){
     BOOST_REQUIRE(h1.get_xmin()==h2.get_xmin());
     BOOST_REQUIRE(h1.get_xmax()==h2.get_xmax());
     //for the total weight, do not assume too much ...
-    BOOST_REQUIRE(utils::close_to_relative(h1.get_sum_of_weights(),h2.get_sum_of_weights()));
+    BOOST_REQUIRE(utils::close_to_relative(h1.get_sum_of_bincontents(),h2.get_sum_of_bincontents()));
     const size_t n = h1.get_nbins();
     for(size_t i=0; i<=n+1; i++){
         BOOST_CHECK(h1.get(i)==h2.get(i));
@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE(ctest){
    BOOST_CHECK(m.get_nbins()==100);
    BOOST_CHECK(m.get_xmin()==-1);
    BOOST_CHECK(m.get_xmax()==1);
-   BOOST_CHECK(m.get_sum_of_weights()==0);
+   BOOST_CHECK(m.get_sum_of_bincontents()==0);
    //fill a bit:
    for(size_t i=0; i<=101; i++){
        m.set(i, i*i);
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(getset){
         m.set(i, a);
     }
 
-    BOOST_CHECK(m.get_sum_of_weights()==sum);
+    BOOST_CHECK(m.get_sum_of_bincontents()==sum);
 
     for(size_t i=0; i<=nbins; i++){
         volatile double a = sqrt(i+0.0);
@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(getset){
     content += 1.7;
     BOOST_CHECK(content==m.get(1));
     sum += 1.7;
-    BOOST_CHECK(sum==m.get_sum_of_weights());
+    BOOST_CHECK(sum==m.get_sum_of_bincontents());
 
     //fill in underflow:
     content = m.get(0);
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(getset){
     content += delta;
     BOOST_CHECK(content==m.get(0));
     sum += delta;
-    BOOST_CHECK(sum==m.get_sum_of_weights());
+    BOOST_CHECK(sum==m.get_sum_of_bincontents());
 
     //fill in overflow:
     content = m.get(nbins+1);
@@ -100,7 +100,7 @@ BOOST_AUTO_TEST_CASE(getset){
     content += delta;
     BOOST_CHECK(content==m.get(nbins+1));
     sum += delta;
-    BOOST_CHECK(sum==m.get_sum_of_weights());
+    BOOST_CHECK(sum==m.get_sum_of_bincontents());
 }
 
 //test +=

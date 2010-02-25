@@ -1,7 +1,8 @@
 #include "interface/exception.hpp"
 #include "interface/plugin.hpp"
 
-//#include "interface/plugin.hpp"
+#include "interface/variables.hpp"
+#include "interface/phys.hpp"
 
 #include <boost/test/unit_test.hpp>
 
@@ -32,14 +33,27 @@ BOOST_AUTO_TEST_CASE(etest_plugin) {
     s["files"].add(Setting::TypeString);
     s["files"][0] = "test/test-ex.so";
     SettingUsageRecorder rec;
-    PluginLoader::execute(s, rec);
+    try{
+        PluginLoader::execute(s, rec);
+    }
+    catch(Exception & ex){
+        BOOST_REQUIRE_EQUAL(ex.message, "");
+        BOOST_REQUIRE(false);
+    }    
     //test-ex.so defines a Function named "test-exception":
     s.add("type", Setting::TypeString);
-    s["type"] = "test-exception";
+    s["type"] = "test_exception";
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
-    ConfigurationContext ctx(vm, s, s, rec);
+    Configuration ctx(vm, s, s, rec);
     BOOST_REQUIRE(true); // create checkpoint
-    std::auto_ptr<Function> f = PluginManager<FunctionFactory>::get_instance()->build(ctx);
+    std::auto_ptr<Function> f;
+    try{
+         f = PluginManager<Function>::build(ctx);
+    }
+    catch(Exception & ex){
+        BOOST_REQUIRE_EQUAL(ex.message, "");
+        BOOST_REQUIRE(false);
+    }
     ParValues values;
     bool exception = false;
     try{
@@ -61,13 +75,13 @@ BOOST_AUTO_TEST_CASE(etest_plugin_build) {
     SettingUsageRecorder rec;
     Setting & s = cfg.getRoot();
     s.add("type", Setting::TypeString);
-    s["type"] = "test-exception-during-build";
+    s["type"] = "test_ex_during_build";
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
-    ConfigurationContext ctx(vm, s, s, rec);
+    Configuration ctx(vm, s, s, rec);
     BOOST_REQUIRE(true); // create checkpoint
     bool exception = false;
     try{
-        PluginManager<FunctionFactory>::get_instance()->build(ctx);
+        PluginManager<Function>::build(ctx);
     }
     catch(Exception & ex){
        //does not have to be equal, but original message must appear somewhere:
@@ -84,14 +98,14 @@ BOOST_AUTO_TEST_CASE(etest_plugin_plugin) {
     SettingUsageRecorder rec;
     Setting & s = cfg.getRoot();
     s.add("type", Setting::TypeString);
-    s["type"] = "test-exception2";
+    s["type"] = "proxy_function";
     s.add("block", Setting::TypeGroup);
     s["block"].add("type", Setting::TypeString);
-    s["block"]["type"] = "test-exception";
+    s["block"]["type"] = "test_exception";
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
-    ConfigurationContext ctx(vm, s, s, rec);
+    Configuration ctx(vm, s, s, rec);
     BOOST_REQUIRE(true); // create checkpoint
-    auto_ptr<Function> proxy_function = PluginManager<FunctionFactory>::get_instance()->build(ctx);
+    auto_ptr<Function> proxy_function = PluginManager<Function>::build(ctx);
     
     ParValues values;
     bool exception = false;
@@ -99,7 +113,7 @@ BOOST_AUTO_TEST_CASE(etest_plugin_plugin) {
        (*proxy_function)(values);
     }
     catch(Exception & ex){
-       BOOST_REQUIRE_EQUAL(ex.message, "exception caught by ProxyFunction: test-exception message 42");
+       BOOST_REQUIRE_EQUAL(ex.message, "exception caught by proxy_function: test-exception message 42");
        exception = true;
     }
     BOOST_REQUIRE(exception);
@@ -107,5 +121,4 @@ BOOST_AUTO_TEST_CASE(etest_plugin_plugin) {
 
 
 BOOST_AUTO_TEST_SUITE_END()
-
 

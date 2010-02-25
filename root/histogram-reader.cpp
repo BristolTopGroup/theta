@@ -33,12 +33,9 @@ using namespace std;
  *
  * \sa ConstantHistogramFunctionError ConstantHistogramFunction
  */
-class RootHistogramFactory: public HistogramFunctionFactory{
+class root_histogram: public ConstantHistogramFunctionError{
 public:
-   virtual string getTypeName() const {
-      return "root-histogram";
-   }
-   auto_ptr<HistogramFunction> build(ConfigurationContext & ctx) const {
+   root_histogram(Configuration & ctx){
       string filename = ctx.setting["filename"];
       ctx.rec.markAsUsed(ctx.setting["filename"]);
       string histoname = ctx.setting["histoname"];
@@ -60,11 +57,13 @@ public:
       int nbins = histo->GetNbinsX();
       theta::Histogram h(nbins, xmin, xmax);
       theta::Histogram h_error(nbins, xmin, xmax);
+      bool use_errors = ctx.setting["use_errors"];
+      ctx.rec.markAsUsed(ctx.setting["use_errors"]);      
       for(int i=0; i<=nbins+1; i++){
           double content = histo->GetBinContent(i);
           h.set(i, content);
           //h_error contains the relative errors:
-          if(content > 0.0){
+          if(use_errors && content > 0.0){
              h_error.set(i, histo->GetBinError(i) / content);
           }
       }
@@ -72,15 +71,8 @@ public:
       ctx.rec.markAsUsed(ctx.setting["normalize_to"]);
       double integral = h.get_sum_of_bincontents();
       h *= norm/integral;
-      bool use_errors = ctx.setting["use_errors"];
-      ctx.rec.markAsUsed(ctx.setting["use_errors"]);
-      if(use_errors){
-          return std::auto_ptr<HistogramFunction>(new ConstantHistogramFunctionError(h, h_error));
-      }
-      else{
-          return std::auto_ptr<HistogramFunction>(new ConstantHistogramFunction(h));
-      }
+      set_histos(h, h_error);
    }
 };
 
-REGISTER_FACTORY(RootHistogramFactory)
+REGISTER_PLUGIN(root_histogram)

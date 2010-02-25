@@ -1,5 +1,5 @@
 #ifndef MINIMIZER_HPP
-#define	MINIMIZER_HPP
+#define MINIMIZER_HPP
 
 #include "interface/variables.hpp"
 #include "interface/matrix.hpp"
@@ -93,6 +93,7 @@ namespace theta{
      */
     class Minimizer{
     public:
+        typedef Minimizer base_type;
 
         // declare destructor virtual as we expect polymorphic access to derived classes
         virtual ~Minimizer(){}
@@ -192,11 +193,11 @@ namespace theta{
          *
          * This function is usually called only from a derived class of MinimizerFactory.
          */
-        void apply_settings(Minimizer & m, theta::plugin::ConfigurationContext & ctx);
+        void apply_settings(Minimizer & m, theta::plugin::Configuration & ctx);
     }
 
 }
 
 
-#endif	/* _MINIMIZER_HPP */
+#endif /* _MINIMIZER_HPP */
 

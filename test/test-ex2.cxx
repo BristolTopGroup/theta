@@ -11,15 +11,20 @@ using namespace std;
 using namespace theta;
 using namespace theta::plugin;
 
-class ProxyFunction: public Function{
+class proxy_function: public Function{
 public:
-    ProxyFunction(auto_ptr<Function> & f_): Function(f_->getParameters()), f(f_){}
+    proxy_function(Configuration & cfg): Function(ParIds()){
+         Configuration ctx2(cfg,cfg.setting["block"]);
+         f = PluginManager<Function>::build(ctx2);
+         par_ids = f->getParameters();
+    }
+    
     virtual double operator()(const ParValues & v) const{
        try{
            return (*f)(v);
        }
        catch(Exception & ex){
-           ex.message = "exception caught by ProxyFunction: " + ex.message;
+           ex.message = "exception caught by proxy_function: " + ex.message;
            throw;
        }
     }
@@ -30,18 +35,4 @@ private:
    auto_ptr<Function> f;
 };
 
-class TestExFunctionFactory2: public FunctionFactory{
-public:
-  auto_ptr<Function> build(ConfigurationContext & ctx) const {
-     ConfigurationContext ctx2(ctx,ctx.setting["block"]);
-     auto_ptr<Function> f = PluginManager<FunctionFactory>::get_instance()->build(ctx2);
-     return auto_ptr<Function>(new ProxyFunction(f));
-  }
-  
-  string getTypeName() const{
-     return "test-exception2";
-  }
-
-};
-
-REGISTER_FACTORY(TestExFunctionFactory2)
+REGISTER_PLUGIN(proxy_function)

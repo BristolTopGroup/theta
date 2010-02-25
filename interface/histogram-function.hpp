@@ -25,6 +25,7 @@ namespace theta {
      */
     class HistogramFunction{
     public:
+        typedef HistogramFunction base_type;
         /** Returns the Histogram as function of values. The reference is only guaranteed
          *  to be valid as long as this HistogramFunction object.
          */
@@ -87,10 +88,8 @@ namespace theta {
          *
          *  \sa HistogramFunction getRandomFluctuation
          */
-        ConstantHistogramFunction(const Histogram & histo): h(histo){
-            h.set(0,0);
-            h.set(h.get_nbins()+1,0);
-            grad.reset(h.get_nbins(), h.get_xmin(), h.get_xmax());
+        ConstantHistogramFunction(const Histogram & histo){
+            set_histo(histo);
         }
 
         /** Returns the Histogram \c h set at construction time.
@@ -123,7 +122,16 @@ namespace theta {
         
         virtual ~ConstantHistogramFunction(){}
 
-    private:
+    protected:
+        
+        void set_histo(const Histogram & h_){
+           h = h_;
+           h.set(0,0);
+           h.set(h.get_nbins()+1,0);
+           grad.reset(h.get_nbins(), h.get_xmin(), h.get_xmax());
+        }
+        ConstantHistogramFunction(){}
+     private:
         Histogram h;
         Histogram grad;
     };
@@ -150,16 +158,8 @@ namespace theta {
          *
          *  \sa HistogramFunction getRandomFluctuation Histogram::check_compatibility
          */
-        ConstantHistogramFunctionError(const Histogram & histo, const Histogram & error): h(histo), err(error){
-            h.check_compatibility(error);//throws if not compatible
-            h.set(0,0);
-            h.set(h.get_nbins()+1,0);
-            grad.reset(h.get_nbins(), h.get_xmin(), h.get_xmax());
-            fluc.reset(h.get_nbins(), h.get_xmin(), h.get_xmax());
-            //check that errors are positive:
-            for(size_t i=1; i<=h.get_nbins(); ++i){
-                if(error.get(i)<0.0) throw InvalidArgumentException("ConstantHistogramFunctionError: error histogram contains negative entries");
-            }
+        ConstantHistogramFunctionError(const Histogram & histo, const Histogram & error){
+            set_histos(histo, error);
         }
 
         /** Returns the Histogram \c h set at construction time.
@@ -223,6 +223,24 @@ namespace theta {
 
         virtual ~ConstantHistogramFunctionError(){}
 
+    protected:
+        // to be used by derived classes
+        void set_histos(const Histogram & histo, const Histogram & error){
+            h = histo;
+            err = error;
+            
+            h.check_compatibility(error);//throws if not compatible
+            h.set(0,0);
+            h.set(h.get_nbins()+1,0);
+            grad.reset(h.get_nbins(), h.get_xmin(), h.get_xmax());
+            fluc.reset(h.get_nbins(), h.get_xmin(), h.get_xmax());
+            //check that errors are positive:
+            for(size_t i=1; i<=h.get_nbins(); ++i){
+                if(error.get(i)<0.0) throw InvalidArgumentException("ConstantHistogramFunctionError: error histogram contains negative entries");
+            }
+        }
+        ConstantHistogramFunctionError(){}
+        
     private:
         Histogram h;
         Histogram err;

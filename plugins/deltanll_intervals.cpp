@@ -1,6 +1,7 @@
 #include "plugins/deltanll_intervals.hpp"
 #include "interface/plugin.hpp"
-
+#include "interface/run.hpp"
+#include "interface/minimizer.hpp"
 #include <sstream>
 
 using namespace theta;
@@ -30,22 +31,8 @@ void DeltaNllIntervalTable::append(const Run & run, double clevel, double lower,
     }
 }
 
-DeltaNLLIntervalProducer::DeltaNLLIntervalProducer(const ParId & pid_, const vector<double> & clevels_,
-        std::auto_ptr<Minimizer> & min, const string & name_) :
-    Producer(name_), pid(pid_), clevels(clevels_), minimizer(min), deltanll_levels(clevels.size()), table(name_) {
-    //auto_ptr has "transfer" semantics:
-    assert(min.get()==0 && minimizer.get()!=0);
-    //fill deltanll_levels:
-    for(size_t i=0; i<clevels.size(); ++i){
-        if(clevels[i] < 0.0) throw InvalidArgumentException("DeltaNLLIntervalProducer: clevel < 0 not allowed.");
-        if(clevels[i] >= 1.0) throw InvalidArgumentException("DeltaNLLIntervalProducer: clevel >= 1.0 not allowed.");
-        deltanll_levels[i] = utils::phi_inverse(1-(1-clevels[i])/2);
-        deltanll_levels[i] *= deltanll_levels[i];
-        //cout << "deltanll for " << clevels[i] << " is " << deltanll_levels[i] << endl;
-    }
-}
 
-void DeltaNLLIntervalProducer::produce(Run & run, const Data & data, const Model & model) {
+void deltanll_intervals::produce(Run & run, const Data & data, const Model & model) {
     if(!table) table.connect(run.get_database());
     NLLikelihood nll = model.getNLLikelihood(data);
 
@@ -57,17 +44,16 @@ void DeltaNLLIntervalProducer::produce(Run & run, const Data & data, const Model
     //TODO: scan the parameter of interest ...
 }
 
-std::auto_ptr<Producer> DeltaNLLProducerFactory::build(theta::plugin::ConfigurationContext & ctx)const{
+deltanll_intervals::deltanll_intervals(theta::plugin::Configuration & ctx): Producer(ctx), table(getName()){
     const Setting & s = ctx.setting;
     std::auto_ptr<Producer> result;
     string minimizer_path = s["minimizer"];
     Setting & minimizer_setting = ctx.rootsetting[minimizer_path];
-    theta::plugin::ConfigurationContext ctx_min(ctx, minimizer_setting);
-    std::auto_ptr<Minimizer> minimizer = theta::plugin::PluginManager<theta::plugin::MinimizerFactory>::get_instance()->build(ctx_min);
+    theta::plugin::Configuration ctx_min(ctx, minimizer_setting);
+    minimizer = theta::plugin::PluginManager<Minimizer>::build(ctx_min);
         string par_name = s["parameter"];
         ctx.rec.markAsUsed(s["parameter"]);
-        ParId pid = ctx.vm->getParId(par_name);
-        vector<double> clevels;
+        pid = ctx.vm->getParId(par_name);
         int ic = s["clevels"].getLength();
         if (ic == 0) {
             throw ConfigurationException("buildProducer[type=deltanll]: empty clevels.");
@@ -76,10 +62,13 @@ std::auto_ptr<Producer> DeltaNLLProducerFactory::build(theta::plugin::Configurat
             clevels.push_back(s["clevels"][i]);
         }
         ctx.rec.markAsUsed(s["clevels"]);
-        result.reset(new DeltaNLLIntervalProducer(pid, clevels, minimizer, s.getName()));
-    return result;
+    for(size_t i=0; i<clevels.size(); ++i){
+        if(clevels[i] < 0.0) throw InvalidArgumentException("deltanll_intervals: clevel < 0 not allowed.");
+        if(clevels[i] >= 1.0) throw InvalidArgumentException("deltanll_intervals: clevel >= 1.0 not allowed.");
+        deltanll_levels[i] = utils::phi_inverse(1-(1-clevels[i])/2);
+        deltanll_levels[i] *= deltanll_levels[i];
+    }
 }
 
 //plugin is not ready: does not really produce intervals so far ...
-REGISTER_FACTORY(DeltaNLLProducerFactory)
-
+REGISTER_PLUGIN(deltanll_intervals)

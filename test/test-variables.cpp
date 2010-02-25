@@ -11,7 +11,6 @@ BOOST_AUTO_TEST_SUITE(variables_tests)
 BOOST_AUTO_TEST_CASE(parids){
     VarIdManager vm;
     ParId var0 = vm.createParId("var0");
-    BOOST_REQUIRE(vm.varIdExists(var0));
     BOOST_REQUIRE(vm.parNameExists("var0"));
     BOOST_REQUIRE(vm.getName(var0)=="var0");
     BOOST_REQUIRE(vm.getParId("var0")==var0);

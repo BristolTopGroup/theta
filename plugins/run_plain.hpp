@@ -2,24 +2,10 @@
 #define	RUN_PLAIN_HPP
 
 #include "interface/plugin.hpp"
+#include "interface/run.hpp"
 #include "interface/plugin_so_interface.hpp"
 
 #include <string>
-
-
-class PlainRun: public theta::Run {
-public:
-    PlainRun(long seed, const theta::Model & m_pseudodata, const theta::Model & m_producers,
-            const std::string & outfilename, int runid, int n_event) :
-        theta::Run(seed, m_pseudodata, m_producers, outfilename, runid, n_event) {
-    }
-protected:
-    /** \brief Actual run implementation.
-     *
-     * Run::run delegates the actual run to run_impl, which is overridden here.
-     */
-    virtual void run_impl();
-};
 
 /** \brief A plain run, creating pseudo data and calling the producers.
  *
@@ -63,14 +49,30 @@ protected:
  *    strange behaviour only for some seeds). The default setting -1 generates a different seed
  *    each time and should be used as default.
  */
-class PlainRunFactory: public theta::plugin::RunFactory {
+class plain_run: public theta::Run {
 public:
-   virtual std::auto_ptr<theta::Run> build(theta::plugin::ConfigurationContext & ctx) const;
+    plain_run(theta::plugin::Configuration & ctx);
+    /*PlainRun(long seed, const theta::Model & m_pseudodata, const theta::Model & m_producers,
+            const std::string & outfilename, int runid, int n_event) :
+        theta::Run(seed, m_pseudodata, m_producers, outfilename, runid, n_event) {
+    }*/
+protected:
+    /** \brief Actual run implementation.
+     *
+     * Run::run delegates the actual run to run_impl, which is overridden here.
+     */
+    virtual void run_impl();
+};
+
+
+/*class PlainRunFactory: public theta::plugin::RunFactory {
+public:
+   virtual std::auto_ptr<theta::Run> build(theta::plugin::Configuration & ctx) const;
    virtual std::string getTypeName() const{
       return "plain";
    }
    virtual ~PlainRunFactory(){}
-};
+};*/
 
 
-#endif	/* RUN_PLAIN_HPP */
+#endif

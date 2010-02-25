@@ -1,5 +1,5 @@
-#ifndef _VARIABLES_HPP
-#define	_VARIABLES_HPP
+#ifndef VARIABLES_HPP
+#define VARIABLES_HPP
 
 #include <set>
 #include <map>
@@ -7,7 +7,6 @@
 #include <string>
 #include <sstream>
 #include <vector>
-#include <cmath>
 
 #include "interface/exception.hpp"
 #include "interface/utils.hpp"
@@ -34,6 +33,9 @@ namespace theta {
     friend class VarIdManager;
     friend class ParValues;
     public:
+        //@{
+        /** \brief Implements the order and equality semantics.
+         */
         bool operator==(const VarId & rhs) const{
             return id==rhs.id;
         }
@@ -43,18 +45,8 @@ namespace theta {
         bool operator<(const VarId & rhs) const{
             return id<rhs.id;
         }
-        /*bool operator>(const VarId & rhs) const {
-            return id>rhs.id;
-        }
-        bool operator<=(const VarId & rhs)const{
-            return id<=rhs.id;
-        }
-        bool operator>=(const VarId & rhs)const{
-            return id>=rhs.id;
-        }*/
-        operator bool(){
-            return id>=0;
-        }
+        //@}
+        
         /** Creates in invalid VarId which will evaulate to false.
          */
         VarId(): id(-1){}
@@ -142,10 +134,15 @@ namespace theta {
             return vars.find(id) != vars.end();
         }
 
+        /** \brief Test equality with other VarIds object.
+         *
+         * Two VarIds are the same if and only if the set of contained VarId s is the same.
+         */
         bool operator==(const VarIds<id_type> & rhs) {
             return vars == rhs.vars;
         }
 
+        /// The number of contained ids
         size_t size() const {
             return vars.size();
         }
@@ -160,67 +157,92 @@ namespace theta {
 
     class ParValues;
     
-    /** Manager class for variable idendities (both \c ParId and \c ObsId ).
+    /** \brief Manager class for parameter and observable information
      *
-     * TODO: rewrite this doc, not recent any more ...
-     * As one wishes to express that two different objects (say two Funciton objects) take
-     * the same variable as argument, one has to manag variable identities. That is, if I have two Function objects
-     * f1(v1, v2) and f2(v2, v3) I need to express somehow that the v2 in the argument list of f1 and v2 in
-     * the argument list of f2 are actually the same variable.
+     * This class provides methods to save the information given in the "parameters"
+     * and "observables" setting groups.
      *
-     * A possibility would be to assign each variable an id number, for example v1_id = 0, v2_id = 1, v3_id = 2.
-     * However, keeping track of those consistently through the whole program will be a mess.
+     * This class
+     * <ul>
+     * <li>keeps track of the association between parameter / observable names and ParId / ObsId objects</li>
+     * <li>saves the configured range and binning for the observables and the range and default value for parameters</li>
+     * </ul>
      *
-     * The idea of assiging variables an id is kept: for each variable, an identifier of type VarId is created which, together
-     * with the VarIdManager class, identifies uniquely a variable.
-     *
-     * Note that no space is allocated for a variable by this class, it is merely managing
-     * their idendity (there is no process-wide "current value" for a given variable). Managing concrete
-     * values of a set of variables is done by VarValues.
+     * Note that there does not exist any global "current value" of a variable.
      */
-
     class VarIdManager {
-//        friend class Model;
         friend class ParValues;
     public:
-        /** Creates a new variable id and associates it with the given name.
-         * If the name is already used for another variable, the corresponding Id is returned,
-         * if the specification (default and range) match. If the variable name exists but
-         * the specification does not match, an InvalidArgumentException
-         * is thrown. */
+        //@{
+        /** \brief Creates a new parameter or observable ids (ParId, ObsId) and associates it with the given name.
+         *
+         * If the name is already used for another parameter / observable, an InvalidArgumentException is thrown.
+         */
         ParId createParId(const std::string & name, double def = 0.0, double xmin=-std::numeric_limits<double>::infinity(), double xmax=std::numeric_limits<double>::infinity());
         ObsId createObsId(const std::string & name, size_t nbins, double xmin, double xmax);
+        //@}
         
+        //@{
+        /** \brief Returns wheher the given name is already used as parameter / observable name.
+         *
+         * Note that parameters and obserables are different things in theta and it is possible
+         * (although not recommended) to have the same name for a parameter and an observable.
+         *
+         * Names are case-sensitive.
+         */
         bool parNameExists(const std::string & name) const;
         bool obsNameExists(const std::string & name) const;
+        //@}
         
-        bool varIdExists(const ParId & id) const;
-        bool varIdExists(const ObsId & id) const;
+        //@{
         
-        /** Returns the name of the given variable id. If the id is not known,
-            a NotFoundException is thrown.
+        /*bool varIdExists(const ParId & id) const;
+        bool varIdExists(const ObsId & id) const;*/
+        //@}
+        
+        //@{
+        /** \brief Return the name of the given ParId or ObsId.
+         *
+         * If the id is not known, a NotFoundException is thrown.
          */
         std::string getName(const ParId & id) const;
         std::string getName(const ObsId & id) const;
+        //@}
         
-        /** Parameters have a range and a default value, whereas observables have a range and a number of bins:
-        */
+        //@{
+        /** \brief Return default value and range for a parameter identified by the  ParId id.
+         */
         double get_default(const ParId & id) const;
         const std::pair<double, double> & get_range(const ParId & id) const;
+        //@}
+        
+        //@{
+        /** \brief Return the number of bins and range for an observable identified by the ObsId id.
+         */
         size_t get_nbins(const ObsId & id) const;
         const std::pair<double, double> & get_range(const ObsId & id) const;
+        //@}
         
-        /** Returns the VarId for the given variable name. If the name is not known,
-         *  a NotFoundException is thrown.
+        //@{
+        /** \brief Return the ParId / ObsId with the given name
+         *
+         * If the name is not known, a NotFoundException is thrown.
+         *
+         * If you merely want to test whether a name already exists, use parNameExists and obsNameExists
          */
         ParId getParId(const std::string & name) const;
         ObsId getObsId(const std::string & name) const;
+        //@}
         
-        /** Returns all currently defined ParIds or ObsIds
+        //@{
+        /** Returns all currently defined ParId or ObsId identifiers as ParIds or ObsIds
          */
         ParIds getAllParIds() const;
         ObsIds getAllObsIds() const;
+        //@}
         
+        /** \brief Create an empty VarIdManager with no registered variables.
+         */
         VarIdManager(): next_pid_id(0), next_oid_id(0) {
         }
 
@@ -264,17 +286,16 @@ namespace theta {
          */
         ParValues(const VarIdManager & vm): values(vm.next_pid_id, NAN){}
         
-        /** \brief Set a value. 
-         * 
+        /** \brief Set a value.
+         *
          * Set the value of the ParId \c pid to \c val. Setting a parameter 
-         * to NAN has no effect (i.e., it is the same as not calling this function at all).
+         * to NAN means to delete it from the list (i.e., get() will throw a
+         * NotFoundException for that parameter). This makes it possible to "clear" a parameter
+         * from a VarValues instance after setting it.
          *
          * Returns a reference to this \c ParValues object to allow 
          * chaining calls like \c values.set(a, 0.0).set(b, 1.0).set(c, 2.0) ...
          *
-         * \post get(pid) == val
-         * \post contains(pid)
-         * 
          * \param pid Identified the parameter to assign a new value to.
          * \param value The new value for the parameter.
          */
@@ -288,13 +309,13 @@ namespace theta {
          }
         
         /** \brief Add a value to a parameter.
-         * 
-        * Same as \c set(pid, get(pid) + delta), but faster. Throws NotFoundException if not value
-        * was set for \c pid before.
-        * 
-        * \param pid The parameter to change.
-        * \param delta The value to add to the parameter. 
-        */
+         *
+         * Same as \c set(pid, get(pid) + delta), but faster. Throws NotFoundException if not value
+         * was set for \c pid before.
+         *
+         * \param pid The parameter to change.
+         * \param delta The value to add to the parameter. 
+         */
         void addTo(const ParId & pid, double delta){
             const int id = pid.id;
             if(id >= (int)values.size() || isnan(values[id])){
@@ -306,7 +327,7 @@ namespace theta {
         /** \brief Retrieve the current value of a parameter.
          *
          *  Throws a NotFoundException if no value was set for \c pid in this \c ParValues.
-         *  
+         *
          *  \param pid The parameter for which the value should be returned.
          *  \return The current value for the parameter \c pid.
          */
@@ -321,7 +342,7 @@ namespace theta {
             return result;
         }
 
-        /** \brief Returns whether vid is contained in this VarVariables.
+        /** \brief Returns whether \c pid is contained in this VarVariables.
          */
         bool contains(const ParId & pid) const{
             const int id = pid.id;
@@ -332,19 +353,11 @@ namespace theta {
          */
         ParIds getAllParIds() const;
 
-        /* \brief Adds the given variables to this container.
-         * 
-         * Throws an InvalidArgumentException exception if a value was
-         * already contained in this Varvalues. In this case, no guarantee about
-         * which variables have already been set are made.
-         * 
-         * \param values The parameter values to add to this object.
-         */
-        //void addNew(const ParValues & values);
     private:
+        //values are stored using the VarId.id as index
         std::vector<double> values;
     };
 
 }
 
-#endif	/* _VARIABLES_HPP */
+#endif 

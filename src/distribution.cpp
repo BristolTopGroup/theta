@@ -3,7 +3,7 @@
 #include "interface/random.hpp"
 #include "libconfig/libconfig.h++"
 
-#include "interface/plugin_so_interface.hpp"
+//#include "interface/plugin_so_interface.hpp"
 #include "interface/plugin.hpp"
 
 #include <string>
@@ -50,19 +50,7 @@ void LogNormalDistribution::sample(ParValues & result, AbsRandomProxy & rnd, con
     result.set(pid, value);
 }
 
-GaussDistribution::GaussDistribution(const vector<ParId> & v_ids, const std::vector<double> & mu_, const Matrix & cov) :
- v_par_ids(v_ids), mu(mu_), sqrt_cov(cov), inverse_cov(cov) {
-    const size_t n = v_ids.size();
-    if (n != mu.size() || n != cov.getRows() || n != cov.getCols())
-        throw InvalidArgumentException("GaussDistribution constructor: dimension of parameters do not match.");
-    for(vector<ParId>::const_iterator p_it=v_ids.begin(); p_it!=v_ids.end(); p_it++){
-        par_ids.insert(*p_it);
-    }
-    sqrt_cov.cholesky_decomposition(); //throws MathException if not possible
-    inverse_cov.invert_cholesky();
-}
-
-void GaussDistribution::sample(ParValues & result, AbsRandomProxy & rnd, const VarIdManager & vm) const{
+void gauss::sample(ParValues & result, AbsRandomProxy & rnd, const VarIdManager & vm) const{
     const size_t n = v_par_ids.size();
     boost::scoped_array<double> x(new double[n]);
     boost::scoped_array<double> x_trafo(new double[n]);
@@ -96,7 +84,9 @@ void GaussDistribution::sample(ParValues & result, AbsRandomProxy & rnd, const V
     }while(repeat);
 }
 
-double GaussDistribution::evalNL(const ParValues & values) const{
+
+
+double gauss::evalNL(const ParValues & values) const{
     const size_t n = v_par_ids.size();
     boost::scoped_array<double> delta(new double[n]);
     size_t i=0;
@@ -116,7 +106,7 @@ double GaussDistribution::evalNL(const ParValues & values) const{
     return e;
 }
 
-double GaussDistribution::evalNL_withDerivatives(const ParValues & values, ParValues & derivatives) const{
+double gauss::evalNL_withDerivatives(const ParValues & values, ParValues & derivatives) const{
     const size_t n = v_par_ids.size();
     boost::scoped_array<double> delta(new double[n]);
     size_t i=0;
@@ -140,93 +130,63 @@ double GaussDistribution::evalNL_withDerivatives(const ParValues & values, ParVa
     return e;
 }
 
-
-class GaussDistributionFactory: public DistributionFactory{
-public:
-    std::auto_ptr<Distribution> build(ConfigurationContext & ctx)const;
-    virtual std::string getTypeName() const{
-        return "gauss";
-    }
-};
-
-/** \brief Factory class for a Gaussian normal distribution in one or more dimensions.
- *
- * A one-dimensional case is configured with a setting group like
- * <pre>
- * {
- *  type = "gauss";
- *  parameter = "p0";
- *  mean = 2.0;
- *  width = 0.5;
- * }
- * </pre>
- * The meanings should be clear.
- * 
- * A multi-dimensional normal distribution can be specified with a setting like
- * <pre>
- * {
- *  type = "gauss";
- *  parameters = ("p0", "p1");
- *  mean = [2.0, 3.0];
- *  covariance = ([1.0, 0.2], [0.2, 1.0]);
- * }
- * </pre>
- * 
- * \c mean specifies, in the same order as parameters, the mean values to use for the gaussian.
- *
- * \c covariance is the (symmetric) covariance matrix for the normal distribution. Note that
- *     you give it as list of arrays (as it is symmetric anyway, it is left open what the "rows" and "columns" are).
- */
-std::auto_ptr<Distribution> GaussDistributionFactory::build(ConfigurationContext & ctx)const {
-        vector<ParId> v_par_ids;
-        Matrix cov;
-        vector<double> mean;
-        //handle 1d case:
-        if(ctx.setting.exists("parameter")){
-            mean.resize(1);
+gauss::gauss(Configuration & cfg){
+    Matrix cov;
+      if(cfg.setting.exists("parameter")){
+            mu.resize(1);
             cov.reset(1,1);
-            v_par_ids.push_back(ctx.vm->getParId(ctx.setting["parameter"]));
-            mean[0] = ctx.setting["mean"];
-            double width = ctx.setting["width"];
+            v_par_ids.push_back(cfg.vm->getParId(cfg.setting["parameter"]));
+            mu[0] = cfg.setting["mean"];
+            double width = cfg.setting["width"];
             cov(0,0) = width*width;
-            ctx.rec.markAsUsed(ctx.setting["mean"]);
-            ctx.rec.markAsUsed(ctx.setting["parameter"]);
-            ctx.rec.markAsUsed(ctx.setting["width"]);
+            cfg.rec.markAsUsed(cfg.setting["mean"]);
+            cfg.rec.markAsUsed(cfg.setting["parameter"]);
+            cfg.rec.markAsUsed(cfg.setting["width"]);
         }
         else{ //multi-dimensional case:
-           size_t n = ctx.setting["parameters"].getLength();
+           size_t n = cfg.setting["parameters"].getLength();
            if(n==0){
                stringstream ss;
-               ss << "While building gauss distribution defined on line " << ctx.setting.getSourceLine() << ": expected one or more 'parameters'.";
+               ss << "While building gauss distribution defined on line " << cfg.setting.getSourceLine() << ": expected one or more 'parameters'.";
                throw ConfigurationException(ss.str());
            }
-           mean.resize(n);
+           mu.resize(n);
            cov.reset(n,n);
            for(size_t i=0; i<n; i++){
-               v_par_ids.push_back(ctx.vm->getParId(ctx.setting["parameters"][i]));
-               mean[i] = ctx.setting["mean"][i];
+               v_par_ids.push_back(cfg.vm->getParId(cfg.setting["parameters"][i]));
+               mu[i] = cfg.setting["mean"][i];
                for(size_t j=0; j<n; j++){
-                   cov(i,j) = ctx.setting["covariance"][i][j];
+                   cov(i,j) = cfg.setting["covariance"][i][j];
                }
            }
-           ctx.rec.markAsUsed(ctx.setting["mean"]);
-           ctx.rec.markAsUsed(ctx.setting["parameters"]);
-           ctx.rec.markAsUsed(ctx.setting["covariance"]);
+           cfg.rec.markAsUsed(cfg.setting["mean"]);
+           cfg.rec.markAsUsed(cfg.setting["parameters"]);
+           cfg.rec.markAsUsed(cfg.setting["covariance"]);
       }
-        return std::auto_ptr<Distribution>(new GaussDistribution(v_par_ids, mean, cov));
+      
+    const size_t n = v_par_ids.size();
+    if (n != mu.size() || n != cov.getRows() || n != cov.getCols())
+        throw InvalidArgumentException("GaussDistribution constructor: dimension of parameters do not match.");
+    for(vector<ParId>::const_iterator p_it=v_par_ids.begin(); p_it!=v_par_ids.end(); p_it++){
+        par_ids.insert(*p_it);
+    }
+    sqrt_cov = cov;
+    inverse_cov = cov;
+    sqrt_cov.cholesky_decomposition(); //throws MathException if not possible
+    inverse_cov.invert_cholesky();
 }
 
-REGISTER_FACTORY(GaussDistributionFactory)
+REGISTER_PLUGIN(gauss)
 
-class LognormalDistributionFactory: public DistributionFactory{
+/*class LognormalDistributionFactory: public DistributionFactory{
 public:
-    std::auto_ptr<Distribution> build(ConfigurationContext & ctx)const;
+    std::auto_ptr<Distribution> build(Configuration & ctx)const;
     virtual std::string getTypeName() const{
         return "lognormal";
     }
 };
 
-std::auto_ptr<Distribution> LognormalDistributionFactory::build(ConfigurationContext & ctx) const {
+std::auto_ptr<Distribution> LognormalDistributionFactory::build(Configuration & ctx) const {
     double mu = ctx.setting["mu"];
     double sigma = ctx.setting["sigma"];
     string p_name = ctx.setting["parameter"];
@@ -239,3 +199,4 @@ std::auto_ptr<Distribution> LognormalDistributionFactory::build(ConfigurationCon
 
 
 REGISTER_FACTORY(LognormalDistributionFactory)
+*/

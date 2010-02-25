@@ -4,6 +4,8 @@
 #include "Math/IFunction.h"
 
 #include "interface/plugin.hpp"
+#include "interface/phys.hpp"
+#include "interface/minimizer.hpp"
 
 using namespace theta;
 using namespace theta::plugin;
@@ -34,31 +36,17 @@ private:
     const size_t ndim;
 };
 
-class RootMinuit: public Minimizer{
+class root_minuit: public Minimizer{
 public:
 
     //method is either "simplex" or "migrad". Otherwise, an InvalidArgumentException
     // is thrown.
-    RootMinuit(const boost::shared_ptr<theta::VarIdManager> & vm_, const string & method): Minimizer(vm_), tolerance(NAN){
-        if(method=="migrad"){
-            type = ROOT::Minuit2::kMigrad;
-        }
-        else if(method == "simplex"){
-            type = ROOT::Minuit2::kSimplex;
-        }
-        else{
-            stringstream s;
-            s << "RootMinuit: invalid method '" << method << "' (allowed are only 'migrad' and 'simplex')";
-            throw InvalidArgumentException(s.str());
-        }
-        min.reset(new ROOT::Minuit2::Minuit2Minimizer(type));
-    }
+    root_minuit(Configuration & cfg);
 
     void set_printlevel(int p){
         min->SetPrintLevel(p);
     }
-
-
+    
     //set to NAN to use default
     void set_tolerance(double tol){
         tolerance = tol;
@@ -127,6 +115,7 @@ public:
                 default:
                     s << " [unexpected status code]";
             }
+            cerr << "throwing minimizationex" << endl;
             throw MinimizationException(s.str());
         }
 
@@ -200,12 +189,8 @@ private:
  *  you find this documentation, write me a mail, so I can point other users to it here).
  *
  */
-class RootMinuitFactory: public MinimizerFactory{
-public:
-   virtual string getTypeName() const {
-      return "root-minuit";
-   }
-   auto_ptr<Minimizer> build(ConfigurationContext & ctx) const {
+root_minuit::root_minuit(Configuration & ctx): Minimizer(ctx.vm), tolerance(NAN){
+       min.reset(new ROOT::Minuit2::Minuit2Minimizer(type));
        int printlevel = 0;
        if(ctx.setting.lookupValue("printlevel", printlevel)){
            ctx.rec.markAsUsed(ctx.setting["printlevel"]);
@@ -214,17 +199,25 @@ public:
        if(ctx.setting.lookupValue("method", method)){
            ctx.rec.markAsUsed(ctx.setting["method"]);
        }
+       if(method=="migrad"){
+            type = ROOT::Minuit2::kMigrad;
+       }
+       else if(method == "simplex"){
+           type = ROOT::Minuit2::kSimplex;
+       }
+       else{
+           stringstream s;
+           s << "RootMinuit: invalid method '" << method << "' (allowed are only 'migrad' and 'simplex')";
+           throw InvalidArgumentException(s.str());
+       }       
        double tol = NAN;
        if(ctx.setting.lookupValue("tolerance", tol)){
            ctx.rec.markAsUsed(ctx.setting["tolerance"]);
        }
-       auto_ptr<RootMinuit> result(new RootMinuit(ctx.vm, method));
-       result->set_printlevel(printlevel);
-       result->set_tolerance(tol);
-       MinimizerUtils::apply_settings(*result, ctx);
-       return auto_ptr<Minimizer>(result.release());
+       set_printlevel(printlevel);
+       set_tolerance(tol);
+       MinimizerUtils::apply_settings(*this, ctx);
    }
-};
 
 
-REGISTER_FACTORY(RootMinuitFactory)
+REGISTER_PLUGIN(root_minuit)

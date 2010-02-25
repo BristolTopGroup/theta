@@ -1,5 +1,7 @@
 #include "plugins/mle.hpp"
 #include "interface/plugin.hpp"
+#include "interface/run.hpp"
+#include "interface/minimizer.hpp"
 
 #include <sstream>
 
@@ -7,7 +9,8 @@ using namespace theta;
 using namespace std;
 using namespace libconfig;
 
-MLETable::MLETable(const std::string & name_, const theta::VarIdManager & vm, const theta::ParIds & ids): Table(name_), save_ids(ids){
+void MLETable::init(const theta::VarIdManager & vm, const theta::ParIds & ids){
+    save_ids=ids;
     pid_names.reserve(ids.size());
     for(ParIds::const_iterator it=ids.begin(); it!=ids.end(); ++it){
         pid_names.push_back(vm.getName(*it));
@@ -49,31 +52,32 @@ void MLETable::append(const Run & run, double nll, const ParValues & values, con
     }
 }
 
-MLEProducer::MLEProducer(const VarIdManager & vm, const ParIds & save_ids, std::auto_ptr<Minimizer> & min, const string & name_) :
+/*MLEProducer::MLEProducer(const VarIdManager & vm, const ParIds & save_ids, std::auto_ptr<Minimizer> & min, const string & name_) :
     Producer(name_), minimizer(min), table(name_, vm, save_ids) {
-}
+}*/
 
-void MLEProducer::produce(Run & run, const Data & data, const Model & model) {
+void mle::produce(Run & run, const Data & data, const Model & model) {
     if(!table) table.connect(run.get_database());
     NLLikelihood nll = model.getNLLikelihood(data);
     MinimizationResult minres = minimizer->minimize(nll);
     table.append(run, minres.fval, minres.values, minres.errors_plus);
 }
 
-std::auto_ptr<Producer> MLEProducerFactory::build(theta::plugin::ConfigurationContext & ctx) const {
+mle::mle(theta::plugin::Configuration & ctx): Producer(ctx), table(getName()){
     const Setting & s = ctx.setting;
     string minimizer_path = s["minimizer"];
     Setting & minimizer_setting = ctx.rootsetting[minimizer_path];
-    theta::plugin::ConfigurationContext ctx_min(ctx, minimizer_setting);
-    std::auto_ptr<Minimizer> minimizer = theta::plugin::PluginManager<theta::plugin::MinimizerFactory>::get_instance()->build(ctx_min);
-    ParIds save_ids;
+    theta::plugin::Configuration ctx_min(ctx, minimizer_setting);
+    minimizer = theta::plugin::PluginManager<Minimizer>::build(ctx_min);
     int n_parameters = s["parameters"].getLength();
+    ParIds save_ids;
     for (int i = 0; i < n_parameters; i++) {
         string par_name = s["parameters"][i];
         save_ids.insert(ctx.vm->getParId(par_name));
     }
     ctx.rec.markAsUsed(s["parameters"]);
-    return std::auto_ptr<Producer>(new MLEProducer(*ctx.vm, save_ids, minimizer, s.getName()));
+    table.init(*ctx.vm, save_ids);
+    //return std::auto_ptr<Producer>(new MLEProducer(*ctx.vm, save_ids, minimizer, s.getName()));
 }
 
-REGISTER_FACTORY(MLEProducerFactory)
+REGISTER_PLUGIN(mle)

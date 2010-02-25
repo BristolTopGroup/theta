@@ -24,7 +24,7 @@ class Histogram {
 //friend class boost::serialization::access;
 private:
     double* histodata;
-    double sum_of_weights;
+    double sum_of_bincontents;
     //number of bins for the histogram, *excluding* underflow and overflow:
     size_t nbins;
     double xmin, xmax;
@@ -66,7 +66,7 @@ public:
     /** Set bin entry i to \c weight.
     */
     void set(size_t i, double weight){
-       sum_of_weights += weight - histodata[i];
+       sum_of_bincontents += weight - histodata[i];
        histodata[i] = weight;
     }
 
@@ -100,8 +100,8 @@ public:
     void fill(double xvalue, double weight);
 
     /// Get the sum of weights of all bins of the Histogram.
-    double get_sum_of_weights() const{
-        return sum_of_weights;
+    double get_sum_of_bincontents() const{
+        return sum_of_bincontents;
     }
 
     /** the x value for the bin center of bin \c ibin.
@@ -166,7 +166,7 @@ public:
 template<class rndtype>
 void Histogram::fill_with_pseudodata(Histogram & m, rndtype & rnd, double mu, bool use_poisson) const{
     m.reset(nbins, xmin, xmax);
-    if(mu<0) mu = sum_of_weights;
+    if(mu<0) mu = sum_of_bincontents;
     if(!use_poisson){
         const size_t N = static_cast<size_t>(mu+0.5);
         std::vector<double> r(N);
@@ -179,7 +179,7 @@ void Histogram::fill_with_pseudodata(Histogram & m, rndtype & rnd, double mu, bo
         //next r to probe:
         size_t next_r = 0;
         for(size_t bin=0; bin<=nbins+1; bin++){
-            integral += histodata[bin]/sum_of_weights;
+            integral += histodata[bin]/sum_of_bincontents;
             size_t n=0;
             while(next_r < N && r[next_r] <= integral){
                 n++;
@@ -189,7 +189,7 @@ void Histogram::fill_with_pseudodata(Histogram & m, rndtype & rnd, double mu, bo
         }
     }
     else{//use_poisson.
-        double factor = mu/sum_of_weights;
+        double factor = mu/sum_of_bincontents;
         for(size_t bin=0; bin<=nbins+1; bin++){
             size_t n = rnd.poisson(factor * histodata[bin]);
             m.set(bin, n);

@@ -10,7 +10,7 @@
 using namespace theta;
 
 Histogram::Histogram(size_t b, double x_min, double x_max) :
-sum_of_weights(0.0), nbins(b), xmin(x_min), xmax(x_max) {
+sum_of_bincontents(0.0), nbins(b), xmin(x_min), xmax(x_max) {
     histodata = new double[nbins + 2];
     memset(histodata, 0, sizeof (double) *(nbins + 2));
 }
@@ -26,7 +26,7 @@ Histogram & Histogram::operator=(const Histogram & rhs) {
         initFromHisto(rhs);
     } else {
         memcpy(histodata, rhs.histodata, sizeof (double) *(nbins + 2));
-        sum_of_weights = rhs.sum_of_weights;
+        sum_of_bincontents = rhs.sum_of_bincontents;
     }
     return *this;
 }
@@ -36,7 +36,7 @@ Histogram::~Histogram() {
 }
 
 void Histogram::reset(size_t b, double x_min, double x_max) {
-    sum_of_weights = 0.0;
+    sum_of_bincontents = 0.0;
     //only re-allocate if there where changes.
     if (b != 0 && (b != nbins || x_min != xmin || x_max != xmax)) {
         nbins = b;
@@ -65,7 +65,7 @@ void Histogram::multiply_with_ratio_exponented(const Histogram & nominator, cons
          histodata[i] *= pow(n_data[i] / d_data[i], exponent);
       s += histodata[i];
    }
-   sum_of_weights = s;
+   sum_of_bincontents = s;
 }
 
 void Histogram::add_with_coeff(double coeff, const Histogram & other){
@@ -74,14 +74,14 @@ void Histogram::add_with_coeff(double coeff, const Histogram & other){
     for(size_t i=0; i<=nbins+1; i++){
         histodata[i] += coeff * data[i];
     }
-    sum_of_weights += coeff * other.sum_of_weights;
+    sum_of_bincontents += coeff * other.sum_of_bincontents;
 }
 
 void Histogram::initFromHisto(const Histogram & h) {
     nbins = h.nbins;
     xmin = h.xmin;
     xmax = h.xmax;
-    sum_of_weights = h.sum_of_weights;
+    sum_of_bincontents = h.sum_of_bincontents;
     histodata = new double[nbins + 2];
     if (h.histodata != 0) {
         memcpy(histodata, h.histodata, sizeof (double) *(nbins + 2));
@@ -95,7 +95,7 @@ void Histogram::fill(double xvalue, double weight) {
     if (static_cast<size_t> (bin) > nbins + 1)
         bin = nbins + 1;
     histodata[bin] += weight;
-    sum_of_weights += weight;
+    sum_of_bincontents += weight;
 }
 
 void Histogram::check_compatibility(const Histogram & h) const {
@@ -115,17 +115,17 @@ Histogram & Histogram::operator+=(const Histogram & h) {
     for (size_t i = 0; i <= nbins + 1; i++) {
         histodata[i] += hdata[i];
     }
-    sum_of_weights += h.sum_of_weights;
+    sum_of_bincontents += h.sum_of_bincontents;
     return *this;
 }
 
 Histogram & Histogram::operator*=(const Histogram & h) {
     check_compatibility(h);
     const double * hdata = h.histodata;
-    sum_of_weights = 0.0;
+    sum_of_bincontents = 0.0;
     for (size_t i = 0; i <= nbins + 1; i++) {
         histodata[i] *= hdata[i];
-        sum_of_weights += histodata[i];
+        sum_of_bincontents += histodata[i];
     }
     return *this;
 }
@@ -135,16 +135,16 @@ Histogram & Histogram::operator*=(double a) {
     for (size_t i = 0; i <= nbins + 1; i++) {
         histodata[i] *= a;
     }
-    sum_of_weights *= a;
+    sum_of_bincontents *= a;
     return *this;
 }
 
 /*double Histogram::get_quantile(double q) const {
-    q *= sum_of_weights;
+    q *= sum_of_bincontents;
     //if quantile under underflow requested: return -inf:
     if (q < histodata[0]) return -std::numeric_limits<double>::infinity();
-    if (mcmcutils::close_to(q, sum_of_weights - histodata[nbins + 1], sum_of_weights)) return xmax;
-    if (q > sum_of_weights - histodata[nbins + 1]) return std::numeric_limits<double>::infinity();
+    if (mcmcutils::close_to(q, sum_of_bincontents - histodata[nbins + 1], sum_of_bincontents)) return xmax;
+    if (q > sum_of_bincontents - histodata[nbins + 1]) return std::numeric_limits<double>::infinity();
     double sum = histodata[0];
     size_t bin = 1;
     while (sum <= q && bin <= nbins + 1) {

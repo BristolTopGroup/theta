@@ -248,7 +248,7 @@ void MCMCQuantileTable::append(const Run & run, double quantile, double par_valu
 
 
 
-ParamTable::ParamTable(const std::string & name_, const theta::VarIdManager & vm, const theta::ParIds & ids):
+ParamTable::ParamTable(const std::string & name_, const theta::VarIdManager & vm, const theta::ParIds & ids, const std::string & integral_name_):
     Table(name_), par_ids(ids){
     pid_names.reserve(par_ids.size());
     for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
@@ -263,6 +263,7 @@ void ParamTable::create_table() {
     for (vector<string>::const_iterator it = pid_names.begin(); it != pid_names.end(); ++it) {
         ss << ", '" << *it << "' DOUBLE";
     }
+    ss << ", PEdataIntegral DOUBLE";
     ss << ");";
     exec(ss.str());
     //prepare insert statement:
@@ -271,11 +272,11 @@ void ParamTable::create_table() {
     for (vector<string>::const_iterator it = pid_names.begin(); it != pid_names.end(); ++it) {
         ss << ", ?";
     }
-    ss << ");";
+    ss << ",?);";
     insert_statement = prepare(ss.str());
 }
 
-void ParamTable::append(const Run & run, const ParValues & values) {
+void ParamTable::append(const Run & run, const ParValues & values, double PEdataIntegral) {
     sqlite3_bind_int(insert_statement, 1, run.get_runid());
     sqlite3_bind_int(insert_statement, 2, run.get_eventid());
     int next_col = 3;
@@ -283,6 +284,7 @@ void ParamTable::append(const Run & run, const ParValues & values) {
         sqlite3_bind_double(insert_statement, next_col, values.get(*it));
         next_col++;
     }
+    sqlite3_bind_double(insert_statement, next_col, PEdataIntegral);
     int res = sqlite3_step(insert_statement);
     sqlite3_reset( insert_statement);
     if (res != 101) {

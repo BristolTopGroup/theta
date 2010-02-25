@@ -322,15 +322,16 @@ private:
 class ParamTable: public Table {
 public:
 
-    void append(const theta::Run & run, const theta::ParValues & values);
+  void append(const theta::Run & run, const theta::ParValues & values, double);
 
-    /** Create a new table with name \c tablename in the given database.
-     * The columns of the table are
-     * - INT runid
-     * - INT eventid
-     * - double param for each parameter in \c ids. These columns have the name of the parameter as defined in \c vm.
-     */
-    ParamTable(const std::string & name, const theta::VarIdManager & vm, const theta::ParIds & ids);
+  /** Create a new table with name \c tablename in the given database.
+   * The columns of the table are
+   * - INT runid
+   * - INT eventid
+   * - double param for each parameter in \c ids. These columns have the name of the parameter as defined in \c vm.
+   * - double PEdataInt. This column holds the integral of the pseudodata.
+   */
+  ParamTable(const std::string & name, const theta::VarIdManager & vm, const theta::ParIds & ids, const std::string & integral_name);
 private:
     virtual void create_table();
 

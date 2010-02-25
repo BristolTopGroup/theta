@@ -70,7 +70,7 @@ public:
       }
       double norm = ctx.setting["normalize_to"];
       ctx.rec.markAsUsed(ctx.setting["normalize_to"]);
-      double integral = h.get_sum_of_weights();
+      double integral = h.get_sum_of_bincontents();
       h *= norm/integral;
       bool use_errors = ctx.setting["use_errors"];
       ctx.rec.markAsUsed(ctx.setting["use_errors"]);

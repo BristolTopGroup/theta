@@ -347,7 +347,7 @@ double NLLikelihood::operator()(const ParValues & values) const{
              if(pred_data[i]>0.0)
                  result -= data_data[i] * theta::utils::log(pred_data[i]);
         }
-        result += model_prediction.get_sum_of_weights();
+        result += model_prediction.get_sum_of_bincontents();
     }
     if(isnan(result)){
         throw MathException("NLLikelihood:Loperator() would return nan (1)");
@@ -399,7 +399,7 @@ void NLLikelihood::gradient2(const double* x, double* g, double & result) const{
              if(pred_data[k]>0.0)
                  result -= data_data[k] * theta::utils::log(pred_data[k]);
         }
-        result += model_prediction.get_sum_of_weights();
+        result += model_prediction.get_sum_of_bincontents();
         
         //derivatives:
         i=0;
@@ -411,7 +411,7 @@ void NLLikelihood::gradient2(const double* x, double* g, double & result) const{
                  if(pred_data[k]>0.0)
                      g[i] -= data_data[k] * pred_d_data[k] / pred_data[k];
             }
-            g[i] += model_prediction_d.get_sum_of_weights();
+            g[i] += model_prediction_d.get_sum_of_bincontents();
         }
     }
     
@@ -445,7 +445,7 @@ double NLLikelihood::gradient(const ParValues & values, const ParId & pid) const
              if(pred_data[k]>0.0)
                  der -= data_data[k] * pred_d_data[k] / pred_data[k];
         }
-        der += model_prediction_d.get_sum_of_weights();
+        der += model_prediction_d.get_sum_of_bincontents();
     }
     for(size_t k=0; k<model.priors.size(); k++){
         model.priors[k]->evalNL_withDerivatives(values, p_derivatives);

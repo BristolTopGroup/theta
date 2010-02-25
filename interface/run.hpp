@@ -190,14 +190,14 @@ protected:
             const std::string & outfilename, int runid_, int n_event_) :
         seed(seed_), m_pseudodata(m_pseudodata_), m_producers(m_producers_), db(new database::Database(outfilename)),
             logtable(new database::LogTable("log")), prodinfo_table("prodinfo"), rndinfo_table("rndinfo"),
-            params_table("params", m_pseudodata.getVarIdManager(), m_pseudodata.getParameters()),
+	params_table("params", m_pseudodata.getVarIdManager(), m_pseudodata.getParameters(), "PEdataIntegral"),
         runid(runid_), n_event(n_event_), state(0){
-        logtable->connect(db);
-        prodinfo_table.connect(db);
-        rndinfo_table.connect(db);
-        params_table.connect(db);
-        rnd.setSeed(seed);
-        eventid = 0;
+      logtable->connect(db);
+      prodinfo_table.connect(db);
+      rndinfo_table.connect(db);
+      params_table.connect(db);
+      rnd.setSeed(seed);
+      eventid = 0;
     }    
     
     //random number generators for seeding (s) and pseudo data generation (g),
@@ -241,12 +241,18 @@ protected:
     virtual void run_impl() = 0;
 
     /** \brief Fill \c data with pseudo data from the model m_pseudodata and write
-     * the used values of the parameters to the "params" table.
+     * the used values of the parameters to the "params" table. In addition the
+     * integral of the PEdata histo is written into the last column.
      */
     void fill_data() {
         ParValues values = m_pseudodata.sampleValues(rnd);
-        params_table.append(*this, values);
         data = m_pseudodata.samplePseudoData(rnd, values);
+	double dataIntegral = 0.0;
+	const ObsIds& obs_ids = data.getObservables();
+	for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
+	  dataIntegral = data.getData(*obsit).get_sum_of_bincontents();
+	}
+        params_table.append(*this, values, dataIntegral);
     }
 
     /** \brief Make an informational log entry to indicate the start of a pseudo experiment.

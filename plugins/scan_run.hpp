@@ -14,7 +14,7 @@
  * The configuration is done via a setting like:
  * <pre>
  * {
- *   //common parameters for Run:
+ *   //common parameters for each Run:
  *   type = "scan_run";
  *   result-file = "result/abc.db";
  *   producers = ("hypotest");
@@ -36,7 +36,12 @@
  *
  * \c scan-parameter-values: an array of floating point vales to scan through.
  *
- * Note that each parameter value opens a new runid.
+ * \c n-events is the number of events <em>per scan point</em>.
+ *
+ * Note that each parameter value opens a new runid in the result table.
+ *
+ * Important CAVEAT: the parameter is forced to its value only for
+ *  pseudo data generation; its default value, constraint in the model which is used to fit is not changed.
  */
 class scan_run: public theta::Run {
 public:

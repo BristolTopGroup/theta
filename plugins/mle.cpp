@@ -52,10 +52,6 @@ void MLETable::append(const Run & run, double nll, const ParValues & values, con
     }
 }
 
-/*MLEProducer::MLEProducer(const VarIdManager & vm, const ParIds & save_ids, std::auto_ptr<Minimizer> & min, const string & name_) :
-    Producer(name_), minimizer(min), table(name_, vm, save_ids) {
-}*/
-
 void mle::produce(Run & run, const Data & data, const Model & model) {
     if(!table) table.connect(run.get_database());
     NLLikelihood nll = model.getNLLikelihood(data);
@@ -77,7 +73,6 @@ mle::mle(theta::plugin::Configuration & ctx): Producer(ctx), table(getName()){
     }
     ctx.rec.markAsUsed(s["parameters"]);
     table.init(*ctx.vm, save_ids);
-    //return std::auto_ptr<Producer>(new MLEProducer(*ctx.vm, save_ids, minimizer, s.getName()));
 }
 
 REGISTER_PLUGIN(mle)

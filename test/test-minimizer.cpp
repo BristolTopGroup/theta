@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(minuit){
     
     s.add("min", Setting::TypeGroup);
     s["min"].add("type", Setting::TypeString);
-    s["min"]["type"] = "root-minuit";
+    s["min"]["type"] = "root_minuit";
     
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
     ParId p0 = vm->createParId("p0");

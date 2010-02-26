@@ -47,14 +47,14 @@ void deltanll_hypotest::produce(Run & run, const Data & data, const Model & mode
             minimizer->reset_range_override(*it);
         }
     }
-    try{
+    //try{
         MinimizationResult minres = minimizer->minimize(nll);
         nll_sb = minres.fval;
-    }
-    catch(Exception & ex){
+    //}
+    /*catch(Exception & ex){
         cerr << "minres(1): "<< ex.message << endl;
         exit(1);
-    }
+    }*/
     
     //b. calculate b only:
     //apply b contraints:
@@ -64,7 +64,7 @@ void deltanll_hypotest::produce(Run & run, const Data & data, const Model & mode
         else
             minimizer->reset_range_override(*it);
     }
-    MinimizationResult minres = minimizer->minimize(nll);
+    minres = minimizer->minimize(nll);
     nll_b = minres.fval;
     table.append(run, nll_sb, nll_b);
 }

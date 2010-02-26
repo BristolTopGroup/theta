@@ -34,7 +34,7 @@ EXTRA_LINK_SO =
 COMPILE = echo compiling $<; $(CC) -c -Wall -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
 
 #use LIBS to link any executable
-LINK_EXE = echo linking $@; $(CC) -L../lib -ldl -ltheta -llbfgs -lconfig -lsqlite3 $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
+LINK_EXE = echo linking $@; $(CC) -rdynamic -L../lib -ldl -ltheta -llbfgs -lconfig -lsqlite3 $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
 
 #use SHARED to link any .so file
 #"-rdynamic" required for correct handling of exceptions

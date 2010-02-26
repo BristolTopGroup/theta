@@ -58,14 +58,6 @@ bool VarIdManager::obsNameExists(const std::string & name) const {
     return name_to_oid.find(name) != name_to_oid.end();
 }
 
-/*bool VarIdManager::varIdExists(const ParId & id) const {
-    return pid_to_name.find(id) != pid_to_name.end();
-}
-
-bool VarIdManager::varIdExists(const ObsId & id) const {
-    return oid_to_name.find(id) != oid_to_name.end();
-}*/
-
 std::string VarIdManager::getName(const ParId & id) const {
     std::map<ParId, std::string>::const_iterator it = pid_to_name.find(id);
     if (it == pid_to_name.end()) {
@@ -105,6 +97,20 @@ ObsId VarIdManager::getObsId(const std::string & name) const {
         throw NotFoundException(ss.str());
     }
     return it->second;
+}
+
+void VarIdManager::set_range_default(const ParId & id, double low, double high, double def){
+    std::map<ParId, double>::iterator it = pid_to_default.find(id);
+    std::map<ParId, pair<double, double> >::iterator itt = pid_to_range.find(id);
+    if (it == pid_to_default.end() || itt == pid_to_range.end()) {
+        throw NotFoundException("VarIdManager::set_range_default: did not find given ParId.");
+    }
+    if(def < low || def > high){
+       throw InvalidArgumentException("VarIdManagerLLset_range_default: default not included in range!");
+    }
+    it->second = def;
+    itt->second.first = low;
+    itt->second.second = high;
 }
 
 double VarIdManager::get_default(const ParId & id) const{

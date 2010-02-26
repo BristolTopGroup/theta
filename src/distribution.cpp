@@ -39,6 +39,10 @@ double LogNormalDistribution::evalNL_withDerivatives(const ParValues & values, P
 void LogNormalDistribution::sample(ParValues & result, AbsRandomProxy & rnd, const VarIdManager & vm) const {
     const ParId & pid = *par_ids.begin();
     const pair<double, double> & range = vm.get_range(pid);
+    if(range.first == range.second){
+       result.set(pid, range.first);
+       return;
+    }
     double value;
     int i=0;
     do{
@@ -71,7 +75,13 @@ void gauss::sample(ParValues & result, AbsRandomProxy & rnd, const VarIdManager 
         size_t i=0;
         for(vector<ParId>::const_iterator v=v_par_ids.begin(); v!=v_par_ids.end(); v++){
             const pair<double, double> & range = vm.get_range(*v);
-            double value = x_trafo[i] + mu[i];
+            double value;
+            if(range.first == range.second){
+                value = range.first;
+            }
+            else{
+                value = x_trafo[i] + mu[i];
+            }
             if(value > range.second || value < range.first){
                 repeat = true;
                 break;

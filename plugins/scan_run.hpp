@@ -27,6 +27,7 @@
  *   //specific to scan_run:
  *   scan-parameter = "beta_signal";
  *   scan-parameter-values = [0.0, 1.0];
+ *  scan-parameter-fixed = true;
  * }
  * </pre>
  *
@@ -35,6 +36,13 @@
  * \c scan-parameter : the parameter name to scan through 
  *
  * \c scan-parameter-values: an array of floating point vales to scan through.
+ *
+ * \c scan-parameter-fixed : if true, the scan parameter range will be set to an interval only
+ *  containing the current scan point. As consequence, the parameter is fixed for all producers.
+ *  This is useful for lumi scans where the lumi parameter should not be left free in the staistical method
+ *  which might attempt to fit with too many parameters otherwise. If set to false, the parameter will only
+ *  be fixed for pseudodata generation, but will not be modified otherwise (i.e., any range and constraint
+ *  configured apply unchanged).
  *
  * \c n-events is the number of events <em>per scan point</em>.
  *
@@ -55,6 +63,7 @@ protected:
 private:
    std::vector<double> scan_values;
    theta::ParId pid;
+   bool scan_parameter_fixed;
 };
 
 

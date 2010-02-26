@@ -196,9 +196,19 @@ namespace theta {
         
         //@{
         
-        /*bool varIdExists(const ParId & id) const;
-        bool varIdExists(const ObsId & id) const;*/
-        //@}
+        /** \brief Set the range an default value of a parameter.
+         *
+         * This function only exists for parameters. Observables are fixed once created as this information
+         * it typically used for constructing Histograms.
+         *
+         * So every code alles get_range(const ParId &) or get_default must make sure that
+         * changes are respected, whereas code for observables can assume that once they
+         * get the information about bins and range, it will never change.
+         *
+         * Throws an NotFoundException if the parameter does not exist an an InvalidArgumentException
+         * if def is not conatined in the interval [low, high].
+         */
+        void set_range_default(const ParId & pid, double low, double high, double def);
         
         //@{
         /** \brief Return the name of the given ParId or ObsId.

@@ -7,13 +7,16 @@ using namespace std;
 
 void scan_run::run_impl() {
     for(runid=1; runid<=(int)scan_values.size(); ++runid){
+    const double scan_value = scan_values[runid-1];
+    if(scan_parameter_fixed){
+        vm->set_range_default(pid, scan_value, scan_value, scan_value);
+    }
     for (eventid = 1; eventid <= n_event; eventid++) {
         log_event_start();
         
         //like fill_data(), but set a parameter by hand:
         ParValues values = m_pseudodata.sampleValues(rnd);
-        values.set(pid, scan_values[runid-1]);
-        
+        values.set(pid, scan_value);
         data = m_pseudodata.samplePseudoData(rnd, values);
         const ObsIds & obs_ids = data.getObservables();
                 std::map<theta::ObsId, double> n_data;
@@ -44,6 +47,7 @@ scan_run::scan_run(Configuration & cfg): Run(cfg){
     for(int i=0; i<n; ++i){
        scan_values.push_back(cfg.setting["scan-parameter-values"][i]);
     }
+    scan_parameter_fixed = cfg.setting["scan-parameter-fixed"];
 }
 
 REGISTER_PLUGIN(scan_run)

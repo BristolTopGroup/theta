@@ -185,7 +185,7 @@ protected:
      * \param n_event_ number of events (=number of pseudo experiments to perform).
      */
     // protected, as Run is purley virtual.
-    RunT(plugin::Configuration & cfg): seed(-1), m_pseudodata(cfg.vm), m_producers(cfg.vm), db(new database::Database(cfg.setting["result-file"])),
+    RunT(plugin::Configuration & cfg): seed(-1), vm(cfg.vm), m_pseudodata(cfg.vm), m_producers(cfg.vm), db(new database::Database(cfg.setting["result-file"])),
       logtable(new database::LogTable("log")), prodinfo_table("prodinfo"), rndinfo_table("rndinfo"),
       runid(1), eventid(0), n_event(cfg.setting["n-events"]), state(0){
           
@@ -249,6 +249,8 @@ protected:
     //random number generators for seeding (s) and pseudo data generation (g),
     long seed;
     rndtype rnd;
+    
+    boost::shared_ptr<VarIdManager> vm;
 
     //pseudo data:
     Data data;

@@ -22,7 +22,7 @@ void PseudodataTable::create_table() {
     ss << ");";
     exec(ss.str());
     ss.str("");
-    ss << "INSERT INTO '" << name << "' VALUES(?,?,";
+    ss << "INSERT INTO '" << name << "' VALUES(?,?";
     for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
         ss << ", ?";
         if(write_data){
@@ -40,7 +40,7 @@ void PseudodataTable::append(const theta::Run & run, const Data & data) {
     for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
         const Histogram & h = data.getData(*it);
         double n_event = h.get_sum_of_bincontents();
-        sqlite3_bind_int(insert_statement, next_col, n_event);
+        sqlite3_bind_double(insert_statement, next_col, n_event);
         ++next_col;
         if(write_data){
             const double * double_data = h.getData();

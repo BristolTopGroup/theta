@@ -2,6 +2,7 @@
 #include "interface/histogram.hpp"
 
 using namespace theta;
+using namespace std;
 
 void Run::set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
     progress_listener = l;
@@ -18,6 +19,18 @@ void Run::run(){
     run_impl();
     eventid = 0; // to indicate in the log table that this is an "event-wide" entry
     log_run_end();
+    if(log_report){
+        const int* n_messages = logtable->get_n_messages();
+        database::severity::e_severity s = logtable->get_loglevel();
+        cout << endl << endl << "Log report:" << endl;
+        cout << "  errors:   " << setw(6) << n_messages[0] << endl;
+        if(s > 0)
+            cout << "  warnings: " << setw(6) << n_messages[1] << endl;
+        if(s > 1)
+            cout << "  infos:    " << setw(6) << n_messages[2] << endl;
+        if(s > 2)
+            cout << "  debug:    " << setw(6) << n_messages[3] << endl;
+    }
 }
 
 void Run::addProducer(std::auto_ptr<Producer> & p){
@@ -26,7 +39,7 @@ void Run::addProducer(std::auto_ptr<Producer> & p){
 
 Run::Run(plugin::Configuration & cfg): seed(-1), rnd(new RandomSourceTaus()),
       vm(cfg.vm), m_pseudodata(cfg.vm), m_producers(cfg.vm), db(new database::Database(cfg.setting["result-file"])),
-      logtable(new database::LogTable("log")), prodinfo_table("prodinfo"), rndinfo_table("rndinfo"),
+      logtable(new database::LogTable("log")), log_report(true), prodinfo_table("prodinfo"), rndinfo_table("rndinfo"),
       runid(1), eventid(0), n_event(cfg.setting["n-events"]){
           
       const libconfig::Setting & s = cfg.setting;
@@ -68,7 +81,7 @@ Run::Run(plugin::Configuration & cfg): seed(-1), rnd(new RandomSourceTaus()),
       rndinfo_table.connect(db);
       params_table.reset(new database::ParamTable("params", *vm, m_pseudodata.getParameters()));
       params_table->connect(db);
-      database::severity::e_severity level = database::severity::info;
+      database::severity::e_severity level = database::severity::warning;
       if(s.exists("log-level")){
          std::string loglevel = s["log-level"];
          if(loglevel=="error") level = database::severity::error;
@@ -84,6 +97,10 @@ Run::Run(plugin::Configuration & cfg): seed(-1), rnd(new RandomSourceTaus()),
          }
       }
       logtable->set_loglevel(level);
+      if(s.exists("log-report")){
+          log_report = s["log-report"];
+      }
+      
       eventid = 0;
       
       //add the producers:

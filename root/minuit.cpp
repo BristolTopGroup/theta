@@ -98,8 +98,12 @@ public:
         //3. setup tolerance
         if(!isnan(tolerance))  min->SetTolerance(tolerance);
         
-        //4. minimize
-        bool success = min->Minimize();
+        //4. minimize. In case of failure, try harder
+        bool success;
+        for(int i=1; i<=3; i++){
+            success = min->Minimize();
+            if(success) break;
+        }
 
         //5. do error handling
         if(not success){

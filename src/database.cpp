@@ -146,11 +146,27 @@ void Table::checkName(const string & name) {
     }
 }
 
+LogTable::LogTable(const std::string & name): Table (name), level(severity::info){
+   for(int i=0; i<4; ++i){
+       n_messages[i]=0;
+   }
+}
+
+const int* LogTable::get_n_messages() const{
+    return n_messages;
+}
+    
+
 void LogTable::set_loglevel(severity::e_severity s){
     level = s;
 }
 
+severity::e_severity LogTable::get_loglevel() const{
+    return level;
+}
+
 void LogTable::really_append(const Run & run, severity::e_severity s, const string & message) {
+    n_messages[s]++;
     sqlite3_bind_int(insert_statement, 1, run.get_runid());
     sqlite3_bind_int(insert_statement, 2, run.get_eventid());
     sqlite3_bind_int(insert_statement, 3, s);

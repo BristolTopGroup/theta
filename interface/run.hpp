@@ -65,7 +65,8 @@ public:
  *   //optional:
  *   run-id = 2; //default is 1.
  *   seed = 15; //default is -1.
- *   log-level = "error";//default is "info"
+ *   log-level = "error";//default is "warning"
+ *   log-report = false;//default is true
  * }
  *
  * hypotest = {...}; //some producer definition
@@ -94,6 +95,10 @@ public:
  * \c log-level controls the amount of logging information written to the log table: only log messages with a
  *      severity level equal to or exceeding the level given here are actually logged. Valid values are "error", "warning", "info"
  *      and "debug". Note that it is not possible to disable logging of error messages.
+ *
+ * \c log-report is a boolean specifying whether or not to print a logging report to standard out at the end of the run. This report
+ *       summarizes how many messages there have been from any non-suppressed level. This allows for a quick check by the user whether
+ *       everything went Ok or whether there have been obvious errors.
  *  
  *  Handling of result tables is done in the individual producers. Only run-wide tables
  *  are managed here, that is
@@ -183,6 +188,7 @@ protected:
     //database and logtable as shared_ptr, as they are used by the producers:
     boost::shared_ptr<database::Database> db;
     boost::shared_ptr<database::LogTable> logtable;
+    bool log_report;
 
     //the tables only used by run (and only by run):
     database::ProducerInfoTable prodinfo_table;

@@ -63,7 +63,9 @@ int main(int argc, char** argv) {
             string old_path = fs::current_path().string();
             //convert any failure to a FileIOException:
             try{
-                 fs::current_path(fs::path(cfg_filename).parent_path());
+                 if(fs::path(cfg_filename).has_parent_path()){
+                    fs::current_path(fs::path(cfg_filename).parent_path());
+                 }
                  cfg_filename = fs::path(cfg_filename).filename();
             }
             catch(fs::filesystem_error & ex){

@@ -231,8 +231,7 @@ public:
      * \param db The Database the table should be created in.
      * \param name The name of the table. Has to pass Table::checkName()
      */
-    LogTable(const std::string & name): Table (name), level(severity::info){}
-    
+    LogTable(const std::string & name);
     
     /** \brief Set the current log level.
      *
@@ -242,6 +241,10 @@ public:
      * Note that is it not possible to disable logging of error messages.
      */
     void set_loglevel(severity::e_severity s);
+    
+    /** \brief Get the currently active log level
+     */
+    severity::e_severity get_loglevel() const;
     
     /** \brief Append message to log table, if severity is larger than currently configured level
      * 
@@ -254,6 +257,8 @@ public:
         // encourage the compiler actually inlining it.
         if(s <= level) really_append(run, s, message);
     }
+    
+    const int* get_n_messages() const;
 
 private:
     /** \brief Implementation of Table::create_table to do the actual table creation.
@@ -264,6 +269,7 @@ private:
     void really_append(const theta::Run & run, severity::e_severity s, const std::string & message);
     
     severity::e_severity level;
+    int n_messages[4];
 };
 
 

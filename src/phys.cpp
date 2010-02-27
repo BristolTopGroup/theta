@@ -3,6 +3,7 @@
 #include "interface/utils.hpp"
 #include "interface/cfg-utils.hpp"
 #include "interface/histogram-function.hpp"
+#include "interface/distribution.hpp"
 
 #include "interface/plugin.hpp"
 #include "interface/plugin_so_interface.hpp"
@@ -74,7 +75,30 @@ ObsIds Model::getObservables() const{
     return observables;
 }
 
-void Model::setPrediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs_, boost::ptr_vector<HistogramFunction> & histos_, const std::vector<std::string> & component_names){
+Data Model::samplePseudoData(Random & rnd, const ParValues & values) const{
+    Data result;
+    for (ObsIds::const_iterator it = observables.begin(); it != observables.end(); it++) {
+        Histogram pred, h;
+        get_prediction_randomized(rnd, pred, values, *it);
+        pred.fill_with_pseudodata(h, rnd);
+        result.addData(*it, h);
+    }
+    return result;
+}
+
+ParValues Model::sampleValues(Random & rnd) const{
+    ParValues result;
+    for(std::vector<boost::shared_ptr<Distribution> >::const_iterator d_it=priors.begin(); d_it!=priors.end(); d_it++){
+        (*d_it)->sample(result, rnd, *vm);
+    }
+    for(ParIds::const_iterator p_it = parameters.begin(); p_it!=parameters.end(); p_it++){
+        if(not result.contains(*p_it)) result.set(*p_it, vm->get_default(*p_it));
+    }
+    return result;
+}
+
+
+void Model::set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs_, boost::ptr_vector<HistogramFunction> & histos_, const std::vector<std::string> & component_names){
     observables.insert(obs_id);
     const size_t n = coeffs_.size();
     if(n!=coeffs_.size() or n!=component_names.size()) throw InvalidArgumentException("Model::setPrediction: number of histograms, coefficients and component names do not match!");
@@ -118,7 +142,7 @@ void Model::get_prediction(Histogram & result, const ParValues & parameters, con
     }
 }
 
-void Model::get_prediction_randomized(AbsRandomProxy & rnd, Histogram &result, const ParValues & parameters, const ObsId & obs_id) const{
+void Model::get_prediction_randomized(Random & rnd, Histogram &result, const ParValues & parameters, const ObsId & obs_id) const{
     histos_type::const_iterator it = histos.find(obs_id);
     if (it == histos.end()) throw InvalidArgumentException("Model::get_prediction_randomized: invalid obs_id");
     const histos_type::mapped_type & h_producers = it->second;
@@ -224,7 +248,7 @@ NLLikelihood Model::getNLLikelihood(const Data & data) const{
     if(not(data.getObservables()==observables)){
         throw InvalidArgumentException("Model::createNLLikelihood: observables of model and data mismatch!");
     }
-    NLLikelihood result(*this, data, observables, parameters);
+    NLLikelihood result(vm, *this, data, observables, parameters);
     //to test that everything is set up (i.e. no missing parameters or observable histograms in the model)
     // test the likelihood:
     ParValues pv(*vm);
@@ -235,7 +259,7 @@ NLLikelihood Model::getNLLikelihood(const Data & data) const{
     return result;
 }
 
-NLLikelihood Model::getNLLikelihood(const Data & data, const ParIds & pars, const ObsIds & obs_ids) const{
+/*NLLikelihood Model::getNLLikelihood(const Data & data, const ParIds & pars, const ObsIds & obs_ids) const{
     //check that each observable specified by obs_ids is both (a) described by this model and (b) present in the data.
     ObsIds data_observables = data.getObservables();
     for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
@@ -256,7 +280,7 @@ NLLikelihood Model::getNLLikelihood(const Data & data, const ParIds & pars, cons
     }
     result(pv);
     return result;
-}
+}*/
 
 
 /* ModelFactory */
@@ -301,7 +325,7 @@ std::auto_ptr<Model> ModelFactory::buildModel(Configuration & ctx) {
             coeffs.push_back(new MultFunction(coeff_factors));
             names.push_back(obs_setting[i].getName());
         }
-        result->setPrediction(*obsit, coeffs, histos, names);
+        result->set_prediction(*obsit, coeffs, histos, names);
     }
     //priors:
     if (s.exists("constraints")) {
@@ -317,8 +341,8 @@ std::auto_ptr<Model> ModelFactory::buildModel(Configuration & ctx) {
 
 
 /* NLLIKELIHOOD */
-NLLikelihood::NLLikelihood(const Model & m, const Data & dat, const ObsIds & obs, const ParIds & pars): Function(pars), model(m),
-        data(dat), obs_ids(obs), values(model.getVarIdManager()), p_derivatives(model.getVarIdManager()){
+NLLikelihood::NLLikelihood(const boost::shared_ptr<VarIdManager> & vm_, const Model & m, const Data & dat, const ObsIds & obs, const ParIds & pars): Function(pars), vm(vm_), model(m),
+        data(dat), obs_ids(obs), values(*vm), p_derivatives(*vm){
 }
 
 double NLLikelihood::operator()(const ParValues & values) const{
@@ -333,7 +357,7 @@ double NLLikelihood::operator()(const ParValues & values) const{
             ex.message += " (in NLLikelihood::operator() model.get_prediction()): ";
             ParIds ids = values.getAllParIds();
             for(ParIds::const_iterator it=ids.begin(); it!=ids.end(); ++it){
-                ex.message += model.getVarIdManager().getName(*it) + "=";
+                ex.message += vm->getName(*it) + "=";
                 ex.message += values.get(*it);
                 ex.message += "; ";
             }

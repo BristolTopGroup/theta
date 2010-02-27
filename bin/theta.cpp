@@ -2,11 +2,11 @@
 #include "interface/run.hpp"
 #include "interface/cfg-utils.hpp"
 #include "interface/plugin.hpp"
+#include "interface/histogram.hpp"
 #include "interface/variables-utils.hpp"
 
 #include "libconfig/libconfig.h++"
 
-#include <boost/timer.hpp>
 #include <boost/filesystem.hpp>
 
 using namespace std;
@@ -126,9 +126,7 @@ int main(int argc, char** argv) {
     }
 
     try {
-        run->pre_run();
         run->run();
-        run->post_run();
     } catch (Exception & ex) {
         cerr << "An exception ocurred: " << ex.what() << endl;
         return 1;

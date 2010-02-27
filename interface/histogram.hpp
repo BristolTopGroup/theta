@@ -1,12 +1,8 @@
 #ifndef HISTOGRAM_HPP
 #define HISTOGRAM_HPP
 
-#include <vector>
-#include <cmath>
-#include <algorithm>
-#include "interface/utils.hpp"
-#include "interface/exception.hpp"
-
+#include "interface/decls.hpp"
+#include <cstring> //for size_t
 
 namespace theta{
 
@@ -143,59 +139,20 @@ public:
     
     //double get_quantile(double q) const;
 
-    /** Use the current Histogram as pdf to draw random numbers and fill them into \c m.
+    /** \brief Populate a Histogram with data drawn from the current one.
+     *
+     * Use the current Histogram as pdf to draw random numbers and fill them into \c m.
      * 
      * \c m will be reset to match the range and number of bins of the current Histogram.
      * \c rnd is the random number generator to use
      * \c mu is either the exact number of points to sample or the mean of a Poisson to use to determine the number of sample points. 
-     *  If \c mu &lt; 0, the current \c sum_of_weigths is used as \c mu.
+     *  If \c mu &lt; 0, the current \c sum_of_bincontents is used as \c mu.
      * If \c use_poisson is false, mu is rounded and used as the number of created entries. Otherwise, \c m will contain 
      * a total weight distributed according to a Poisson with mean \c mu.
      */ 
-    template<class rndtype>
-    void fill_with_pseudodata(Histogram & m, rndtype & rnd, double mu=-1, bool use_poisson=true) const;
+    void fill_with_pseudodata(Histogram & m, Random & rnd, double mu=-1, bool use_poisson=true) const;
 };
 
-
-/*TODO: the complexity is not optimal: it is O(N*log(N) + M) for a sample size N and M bins. Also, space requirement is N*sizeof(double).
- * Maybe it would be better to use a simple N*M algo.
- * It would also be possible to do it in N*log(M), or maybe O(M + sqrt(N))
- *
- * If use_poisson is true, a O(M) complexity algorithm is used.
- */
-template<class rndtype>
-void Histogram::fill_with_pseudodata(Histogram & m, rndtype & rnd, double mu, bool use_poisson) const{
-    m.reset(nbins, xmin, xmax);
-    if(mu<0) mu = sum_of_bincontents;
-    if(!use_poisson){
-        const size_t N = static_cast<size_t>(mu+0.5);
-        std::vector<double> r(N);
-        for(size_t i=0; i<N; i++){
-            r[i] = rnd.uniform();
-        }
-        std::sort(r.begin(), r.end());
-        //normalized integral up to and including bin:
-        double integral = 0;
-        //next r to probe:
-        size_t next_r = 0;
-        for(size_t bin=0; bin<=nbins+1; bin++){
-            integral += histodata[bin]/sum_of_bincontents;
-            size_t n=0;
-            while(next_r < N && r[next_r] <= integral){
-                n++;
-                next_r++;
-            }
-            m.set(bin, n);
-        }
-    }
-    else{//use_poisson.
-        double factor = mu/sum_of_bincontents;
-        for(size_t bin=0; bin<=nbins+1; bin++){
-            size_t n = rnd.poisson(factor * histodata[bin]);
-            m.set(bin, n);
-        }
-    }
-}
 
 }
 

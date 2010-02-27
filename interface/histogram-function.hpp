@@ -1,17 +1,15 @@
 #ifndef HISTOGRAM_FUNCTION_HPP
 #define HISTOGRAM_FUNCTION_HPP
 
+#include "interface/decls.hpp"
 #include "interface/variables.hpp"
 #include "interface/histogram.hpp"
-#include "interface/random.hpp"
 
-#include <vector>
+//#include "interface/random.hpp"
+
+/*#include <vector>
 #include <algorithm>
-#include <memory>
-
-namespace libconfig{
-    class Setting;
-}
+#include <memory>*/
 
 namespace theta {
     class VarValues;
@@ -56,7 +54,7 @@ namespace theta {
          * included as parameter in the likelihood (possibly with some constraint). Choosing between this possibilities
          * is up to the user specifying the model.
          */
-        virtual const Histogram & getRandomFluctuation(AbsRandomProxy & rnd, const ParValues & values) const{
+        virtual const Histogram & getRandomFluctuation(Random & rnd, const ParValues & values) const{
             return operator()(values);
         }
 
@@ -182,25 +180,7 @@ namespace theta {
          * enter the discussion, you should remember that there is no sensible "&lt; 0" for
          * bin entries, so the density of a truncated gaussian is continous for *everywhere*.
          */
-        virtual const Histogram & getRandomFluctuation(AbsRandomProxy & rnd, const ParValues & values) const{
-            const size_t nbins = h.get_nbins();
-            for(size_t i=1; i<=nbins; ++i){
-                double c = h.get(i);
-                double err_i = err.get(i);
-                if(err_i==0.0){
-                    fluc.set(i, c);
-                }
-                else{
-                    double factor = -1.0;
-                    //factor is gaussian around 1.0 with the current error, truncated at zero:
-                    while(factor < 0.0){
-                        factor = 1.0 + rnd.gauss(err_i);
-                    }
-                    fluc.set(i, factor * c);
-                }
-            }
-            return fluc;
-        }
+        virtual const Histogram & getRandomFluctuation(Random & rnd, const ParValues & values) const;
 
         /** Returns the empty parameter set as it does not depend on any parameters.
          */

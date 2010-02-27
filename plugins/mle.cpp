@@ -2,6 +2,7 @@
 #include "interface/plugin.hpp"
 #include "interface/run.hpp"
 #include "interface/minimizer.hpp"
+#include "interface/histogram.hpp"
 
 #include <sstream>
 
@@ -59,7 +60,7 @@ void mle::produce(Run & run, const Data & data, const Model & model) {
     table.append(run, minres.fval, minres.values, minres.errors_plus);
 }
 
-mle::mle(theta::plugin::Configuration & ctx): Producer(ctx), table(getName()){
+mle::mle(theta::plugin::Configuration & ctx): Producer(ctx), table(get_name()){
     const Setting & s = ctx.setting;
     string minimizer_path = s["minimizer"];
     Setting & minimizer_setting = ctx.rootsetting[minimizer_path];

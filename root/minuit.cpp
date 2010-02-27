@@ -115,7 +115,6 @@ public:
                 default:
                     s << " [unexpected status code]";
             }
-            cerr << "throwing minimizationex" << endl;
             throw MinimizationException(s.str());
         }
 

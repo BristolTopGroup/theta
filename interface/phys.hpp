@@ -1,31 +1,28 @@
 #ifndef PHYS_HPP
 #define PHYS_HPP
 
-#include "interface/histogram.hpp"
+#include "interface/decls.hpp"
+
+/*#include "interface/histogram.hpp"
 #include "interface/histogram-function.hpp"
 #include "interface/exception.hpp"
 #include "interface/matrix.hpp"
 #include "interface/random.hpp"
 #include "interface/metropolis.hpp"
-#include "interface/distribution.hpp"
+#include "interface/distribution.hpp"*/
+
+#include "interface/variables.hpp"
 
 #include <vector>
 #include <string>
 #include <limits>
 #include <set>
 #include <map>
-#include <boost/math/special_functions/fpclassify.hpp>
+//#include <boost/math/special_functions/fpclassify.hpp>
 
 #include <boost/ptr_container/ptr_vector.hpp>
 
 namespace theta {
-
-    class Model;
-    class Distribution;
-    class HistogramFunction;
-    namespace plugin{
-        class Configuration;
-    }
     
     /** A real-valued function which depends on some variables. */
     class Function{
@@ -38,7 +35,7 @@ namespace theta {
         virtual double operator()(const ParValues & v) const = 0;
 
         #if 0
-        /* \brief Evaluate the gradient of the function at \c.
+        /** \brief Evaluate the gradient of the function at \c.
          *
          * The result is written to \c grad.
          *
@@ -135,11 +132,13 @@ namespace theta {
      */
     class Data {
     public:
-        /** Returns all obs_ids for which any data was added using addData(obs_id).
+        /** \brief Returns all obs_ids for which any data was added using addData(obs_id).
          */
         ObsIds getObservables() const;
 
-        /** Add the Histogram dat as observed data for variable obs_id to this container.
+        /** \brief Add the data for an observables
+         *
+         * The Histogram dat as observed data for variable obs_id to this container.
          * The Histogram is copied.
          *
          * \param obs_id The observable the data was recorded for.
@@ -147,7 +146,7 @@ namespace theta {
          */
         void addData(const ObsId & obs_id, const Histogram & dat);
 
-        /** returns the Histogram previously set by addData.
+        /** \brief returns the Histogram for the specified observable previously set by addData.
          *
          * If no Histogram was set for this obs_id, a NotFoundException is thrown.
          */
@@ -156,68 +155,36 @@ namespace theta {
     private:
         std::map<ObsId, Histogram> data;
     };
-
-    class NLLikelihood;
-    class ModelFactory;
-    
     
     class Model {
         friend class NLLikelihood;
         friend class ModelFactory;
     public:
-        //Model(){}
-        
        /** \brief Create a new Model with the VarIdManager \c vm.
         */
         Model(boost::shared_ptr<VarIdManager> & vm);
+        
+        /** \brief Get all parameters the model prediction depends upon
+         */
         ParIds getParameters() const;
+        
+        /** \brief Get all observables the model predicts a distribution for
+         */
         ObsIds getObservables() const;
         
-        /** sample pseudo data for the prediction of this Model using the values.
+        /** \brief Sample pseudo data for the prediction of this Model for model parameters values
+         *
          */
-        template<class rndtype>
-        Data samplePseudoData(rndtype & rnd, const ParValues & values) const {
-            Data result;
-            RandomProxy<rndtype> rndproxy(rnd);
-            for (ObsIds::const_iterator it = observables.begin(); it != observables.end(); it++) {
-                Histogram pred, h;
-                get_prediction_randomized(rndproxy, pred, values, *it);
-                pred.fill_with_pseudodata(h, rnd);
-                result.addData(*it, h);
-            }
-            return result;
-        }
-
+        Data samplePseudoData(Random & rnd, const ParValues & values) const;
+        
         /** \brief Sample values from the prior Distributions.
          * 
          * Parameters, for which no prior was specified are set to their default values. The returned
          * \c ParValues object contains values for *all* parameters of this model.
          */
-        template<class rndtype>
-        ParValues sampleValues(rndtype & rnd) const{
-            ParValues result;
-            RandomProxy<rndtype> rndproxy(rnd);
-            /*for(boost::ptr_vector<Distribution>::const_iterator d_it=priors.begin(); d_it!=priors.end(); d_it++){
-                d_it->sample(result, rndproxy, *vm);
-            }*/
-            for(std::vector<boost::shared_ptr<Distribution> >::const_iterator d_it=priors.begin(); d_it!=priors.end(); d_it++){
-                (*d_it)->sample(result, rndproxy, *vm);
-            }
-            for(ParIds::const_iterator p_it = parameters.begin(); p_it!=parameters.end(); p_it++){
-                if(not result.contains(*p_it)) result.set(*p_it, vm->get_default(*p_it));
-            }
-            return result;
-        }
+        ParValues sampleValues(Random & rnd) const;
 
-        VarIdManager & getVarIdManager() {
-            return *vm;
-        }
-        
-        const VarIdManager & getVarIdManager() const{
-            return *vm;
-        }
-
-        /** Creates a likelihood function object for this model, given the data.
+        /** \brief Creates a likelihood function object for this model, given the data.
          *
          * The observables of this Model and the given Data must be the same. Otherwise,
          * an InvalidArgumentException is thrown.
@@ -233,24 +200,27 @@ namespace theta {
          */
         NLLikelihood getNLLikelihood(const Data & data) const;
 
-        /** Creates a NLLikelihood function object for this Model, given Data data, but includes only the specified
+        /* Creates a NLLikelihood function object for this Model, given Data data, but includes only the specified
          *  observables obs_ids and parameters pars. obs_ids and pars must be subset of this model's parameters
          *  and observables, respectively. obs_ids must also be subset of the data's observables.
          *  If one of those conditions is not met, an InvalidArgumentException is thrown.
          *
          * Make sure that both, this Model's lifetime as well as the lifetime of data, exceed the lifetime of the returned NLLikelihood
          * object.
-         */
+         *
         NLLikelihood getNLLikelihood(const Data & data, const ParIds & pars, const ObsIds & obs_ids) const;
+        */
 
-        /** Set the prediction of observable \c obs_id to a linear combination of \c histos with \c coeffs as coefficients.
+        /** \brief Specify the prediction of an observable
+         *
+         * Set the prediction of observable \c obs_id to a linear combination of \c histos with \c coeffs as coefficients.
          *  \c coeffs , \c histos and \c component_names must be of same length and non-empty, otherwise, an 
          *   \c InvalidArgumentException is thrown.
          *
          * The objects in \c histos and \c coeffs will be transferred, not copied, i.e. histos.empty() and coeffs.empty() will hold
          * after this function returns.
          */
-        void setPrediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs, boost::ptr_vector<HistogramFunction> & histos, const std::vector<std::string> & component_names);
+        void set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs, boost::ptr_vector<HistogramFunction> & histos, const std::vector<std::string> & component_names);
 
         /** Returns the prediction for the observable \c obs_id using the variable values \c parameters into \c result.
         *   The returned Histogram is built as a linear combination of HistogramFunctions using coefficients as previously set
@@ -264,7 +234,7 @@ namespace theta {
          *
          * This function should be used in place of \c get_prediction, if sampling pseudo data from the model.
          */
-        void get_prediction_randomized(AbsRandomProxy & rnd, Histogram &result, const ParValues & parameters, const ObsId & obs_id) const;
+        void get_prediction_randomized(Random & rnd, Histogram &result, const ParValues & parameters, const ObsId & obs_id) const;
         
         /** The derivative of getPredition w.r.t. \c pid. Make sure to copy the returned Histogram as the function
          * returns a reference to intrenal data which is overwritten in the next call to \c getPredictionDerivative
@@ -398,6 +368,7 @@ namespace theta {
         const Model & getModel() const{return model;}
 
     private:
+        boost::shared_ptr<VarIdManager> vm;
         const Model & model;
         const Data & data;
 
@@ -411,7 +382,7 @@ namespace theta {
         mutable std::map<ObsId, Histogram> predictions;
         mutable std::map<ObsId, Histogram> predictions_d;
         
-        NLLikelihood(const Model & m, const Data & data, const ObsIds & obs, const ParIds & pars);
+        NLLikelihood(const boost::shared_ptr<VarIdManager> & vm, const Model & m, const Data & data, const ObsIds & obs, const ParIds & pars);
     };
     
 }

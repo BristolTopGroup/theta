@@ -87,18 +87,11 @@ private:
  */
 class deltanll_intervals: public theta::Producer{
 public:
-    /** DeltaNLL-producer for interval of parameter \c pid with confidence levels
-     *  \c clevels_, using the minimizer \c min.
-     *
-     *  Note that ownership of min will be taken, i.e., \c min.get()==0 holds after a call
-     *  to this constructor.
+    /** \brief Construct deltanll_intervals from a Conmfiguration.
      */
-    /*DeltaNLLIntervalProducer(const theta::ParId & pid_, const std::vector<double> & clevels_, std::auto_ptr<theta::Minimizer> & min,
-            const std::string & name_);*/
     deltanll_intervals(theta::plugin::Configuration & cfg);
 
-    /** \brief Run the statistical method with Data and model and write out the result
-     *    to the database.
+    /** \brief Run the statistical method with Data and model and write out the result  to the database.
      *
      * As this producer can be configured to determine several intervals at once, it
      * usually makes more than one entry per pseudo experiment in the result table.
@@ -113,20 +106,6 @@ private:
     std::vector<double> deltanll_levels;
     DeltaNllIntervalTable table;
 };
-
-
-/*class DeltaNLLProducerFactory: public theta::plugin::ProducerFactory{
-public:
-    / ** \brief implementation of the purely virtual build method of the factory.
-     * /
-    virtual std::auto_ptr<theta::Producer> build(theta::plugin::Configuration & ctx) const;
-
-    / ** \brief always returns "delta-nll"
-     * /
-    virtual std::string getTypeName() const{
-        return "deltanll-interval";
-    }
-};*/
 
 #endif
 

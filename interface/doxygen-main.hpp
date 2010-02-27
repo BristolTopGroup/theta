@@ -1,4 +1,4 @@
-/* note: this file is not for inclusion in C++ code. It is only here
+/* this file is not for inclusion in C++ code. It is only here
  * to provide a "mainpage" block for doxygen (and I didn't want to spoil some random
  * header with it ...). It also includes documentation of the "theta" namespace
  * which is distributed over many header files.
@@ -10,19 +10,18 @@
  * in high-energy physics. It provides the possibility for the user to express a "model", i.e.,
  * the expected data distribution, as function of physical parameters. This model can be used
  * to make statistical inference about the physical parameter of interest.
- * %theta make it easier to treat commonly arising questions such as the treatment of nuisance
+ * %theta make it easier to treat commonly arising tasks such as the treatment of nuisance
  * parameters, coverage tests, luminosity scans, large-scale production of test statistic points,
  * and many more.
  *
  * The documentation is split into several pages. If you are new to %theta, read them in this order:
  * <ol>
- *   <li>\subpage getting_started "Getting Started" explains how to obtain and compile %theta</li>
- *   <li>\subpage intro Introduction describes how to run %theta; the example discussed there gives a good first
- *                 overview of how %theta works.</li>
- *   <li>\subpage arch "General architecture of theta" describes more in-depth the architecture of %theta and provides
- *            a good entry point if you want to extent %theta</li>
+ *   <li>\subpage installation Installation explains how to obtain and compile %theta</li>
+ *   <li>\subpage intro Introduction describes how to run %theta; a first example is discussed and an introduction to the internals of %theta.
+ *        In also contains a \ref plugins "list of available plugins".<li>
  *   <li>\subpage design "Design Goals of theta" contains some thoughts about what the code of %theta should be like.
- *       You should read that either if you want to contribute code to %theta or if you want to know what makes %theta different.</li>
+ *       You should read that either if you want to contribute code to %theta or if you want to know what makes %theta
+ *       different to other software you often deal with in high-energy physics.</li>
  * </ol>
  *
  * \section ack Acknowledgement
@@ -39,13 +38,16 @@
  * Furthermore, some parts of the random number algorithm code and for the matrix code
  * have been copied from the excellent \link http://www.gnu.org/software/gsl/ GNU Scientific Library (GSL) \endlink.
  *
+ * Last but not least, I want to thank Jasmin Gruschke who tested %theta from an end-user point of view, made useful
+ * suggestions and bravely endured some backward-incompatible changes.
+ *
  * \section license License
  *
  * %theta is licensed under the \link http://www.gnu.org/copyleft/gpl.html GPL \endlink.
  */
 
 
-/** \page getting_started Getting Started
+/** \page installation Installation
  *
  * \section obtaining Obtaining theta
  *
@@ -54,7 +56,7 @@
  * svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
  * </pre>
  *
- * \section builiding Building theta
+ * \section building Building theta
  *
  * \subsection with_cmssw With CMSSW
  *
@@ -80,7 +82,7 @@
  * In summary, a complete set of commands to check out, compile, test and run %theta with cmssw
  * would be (assuming that cmssw was set up):
  * <pre>
- *  scram project CMSSW CMSSW_3_5_0 
+ *  scram project CMSSW CMSSW_3_5_0
  *  cd CMSSW_3_5_0/src
  *  cmsenv
  *  svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
@@ -97,17 +99,24 @@
  *
  * \subsection without_cmssw Without CMSSW
  *
- * NOTE: this subsection will become obsolete soon.
- *
- * Be sure to get all the external dependencies and install them either system-wide ore somehwere they can
- * be found during compile-time and run-time:
+ * Be sure to get the external dependencies:
  * <ol>
- * <li>Boost, including the jam build system</li>
+ * <li>Boost</li>
  * <li>sqlite3</li>
  * </ol>
- * (If you install the libraries in a non-standard location, you have to adapt the \c Jamroot file)
- * and run \c bjam. The main executable to run is \c theta. Where it is located depends on the
- * toolchain used. It is put to some location like bin&lt;toolchain&gt;/&lt;releas-variant&gt;/theta.
+ * There are packages available for these on many distribution.
+ *
+ * Then, you can follow the instructions above:
+ *<pre>
+ *  svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
+ *  cd theta
+ *  make
+ *  source setenv.sh
+ *  make run-test
+ *  bin/theta examples/gaussoverflat.cfg
+ *</pre>
+ * If you install the dependencies in an unusual location (i.e., if headers and libraries are not found automatically)
+ * you have to edit the SQLITE_INCLUDE, SQLITE_LIBS, BOOST_INCLUDE, and BOOST_LIBS variables on top of \c Makefile.rules.
  */
 
  /**
@@ -116,95 +125,233 @@
  * %Theta is about modeling and statistical inference. For %theta, "model" means
  * a specification of the probability density of one or more observables as function of
  * some parameters, including possible probability densities of the parameters. To make this
- * more clear, let us consider a more concrete example: suppose you are searching for a new particle.
+ * more clear, a concrete example is discussed first where you get an overview over how %theta works
+ * from the point of view of a user.
  *
- * After a sophsticated event selection, you have events containing candidates of your new particle.
+ * In the second section, some internals of %theta are explained which are good to know even if you
+ * do not plan to extend %theta.
+ *
+ * \section first_example First example
+ *
+ * Suppose you search for a new particle. After a sophsticated event selection,
+ * you have events containing candidates of your new particle.
  * For each of these events, you can reconstruct the mass. From your Monte-Carlo simulation,
  * you conclude that your signal has a distribution in this reconstructed mass in the
  * form of a gaussian with mean 1000 GeV/c^2 and width 250 GeV/c^2, whereas your background
- * model (probably from some signal-free data sideband) is expected to be flat in this region (please don't
- * tell me that it is not realistic, I know ;-) ). From a background fit to a sideband you know
- * that your background poisson mean in the signal region is 1600 +- 200 events. The model of your signal
- * allows for a large variety of signal cross sections; the only thing you know is that the standard
- * model predicts no signal at all.
+ * is expected to be flat in the region from 500 to 1500 GeV/c^2 which should be used to further constrain
+ * your background.
  *
- * There are some questions everyone keeps asking you:
+ * You do the studies mainly at one fixed integrated luminosity L. From a background fit
+ * to a sideband you expect that you can constrain your background poisson mean in the signal
+ * region to 1600 +- 200 events. The model of your signal allows for a large variety of signal
+ * cross sections; the standard model predicts predicts no "signal".
+ *
+ * In this analysis, there are many questions frequently asked. Some of them are:
  * <ol>
- * <li>At some fixed integrated luminosity, and assuming that the SM is true, what is your upper limit
+ * <li>At some fixed integrated luminosity, and assuming that the SM is true, what is your expected upper limit
  *  on the signal cross section?</li>
- * <li>How does this behave as function of luminosity?</li>
+ * <li>Given the actually measured data, what is your upper limit?</li>
  * <li>Assume that your signal has cross section such that in the mean case 200 signal events pass your event selection.
- *    If it was actually there, could you find it? More precisely:
- *    what will a likelihood-ratio hypothesis test with the null-hypothesis being the standard model tell you about the p-value
- *    of some data (real or simulated)?
+ *    Can you exclude the standard model null-hypothesis at 3 (5) sigma in this case?
  * </ol>
  *
- * For this introduction, only the question of finding the signal if it is actually there will be addressed
+ * For this introduction, we consider the creation of likelihood-ratio test statistics for the
+ * "background only" null hypothesis in order to address the last question.
  *
- * Now, have a look at the <tt>examples/gaussoverflat.cfg</tt> configuration file. (For now, do not
- * care about syntax too much, see \link config link below \endlink for a detailed description).
+ * Analysis with %theta always consists of several steps, namely:
+ *<ol>
+ * <li>Model definition</li>
+ * <li>Configuration of the statistical methods to apply</li>
+ * <li>Configuration of the run</li>
+ * <li>Executing the %theta main program (optional: more than once)</li>
+ * <li>(optional:) merging the output produced by different runs of %theta</li>
+ * <li>analyzing the output</li>
+ *</ol>
+ *All but the last point are well supported by %theta and explained below in more detail.
+ *
+ * \subsection model_def Model definition
+ *
+ * The first step to do in any analysis with %theta is to translate you model (like the one above) into a %theta
+ * configuration.
+ *
+ * Now, have a look at the <tt>examples/gaussoverflat.cfg</tt> configuration file. For now, only two
+ * recurring terms are introduced: "setting" is any statement of the form "parameter = value;" and
+ * "setting group" which is a set of settings enclosed in curly braces, e.g., in
+ * <pre>
+ * mass = {
+ *   range = (500.0, 1500.0);
+ *   nbins = 200;
+ * };
+ * </pre>
+ * the right hand side of the "mass" setting is a setting group containing a "range" setting (which has a list as type) and "nbins"
+ * setting (an integer type). See \link config link below \endlink for a detailed description of the configuration file syntax.
  *
  * At the top of the configuration file, the parameters and observables you want to use are defined:
  * there is one observable "mass" with the range [500, 1500] and 200 bins. Note that theta does
- * not care at all about units and that observables are <em>always</em> binned (of course,
- * you can always make the binning very fine). The parameter this model depends on are defined next: "s" is
- * the (poisson) mean number of signal events after your selection, "b" is the number of
- * background events. Their "default" values are set to the scenario in question. The range is mainly
- * used as contraint for fits. You usually define it as large as physically makes sense. In this case,
- * the parameters are restricted to non-negative values.
+ * not care at all about units and that observables are <em>always</em> binned.
+ * The parameter this model depends on are defined next: "s" is
+ * the (poisson) mean number of signal events after your selection, "b" is the mean number of
+ * background events. Their "default" values are used later for pseudo data generation. As we want to create test statistics for the
+ * "background only" hypothesis, we set the signal parameter to zero. The range of these parameters
+ * is mainly used as contraint for fits. You usually define it as large as physically makes sense. In this case,
+ * the parameters can take any non-negative value.
  *
  * Next, the model "gaussoverflat" is defined, where the expectation for the "mass" observable is specified. As discussed above,
- * it is a linear combination of s signal events which are gaussian and b background events which are flat.
+ * it is a linear combination of s signal events which are gaussian and b background events which are flat. This linear combination
+ * of different components is expressed as different setting groups where you specify \c coefficients and \c histogram for each component.
  *
  * After the observable specification, there is a list of constraints. Constraints
- * specified in the model will be used for
+ * specified in the model will be used
  * <ul>
  * <li>as additional term in the likelihood function (Bayesianically, these are priors)</li>
  * <li>If throwing pseudo experiments, they are used to choose the parameters' values for pseudo data creation (if no contraint is
  *      defined for a parameter, always its default value is used for pseudo data generation).
  * </ul>
- * The "constraint" settings group (a setting group is anything enclosed in curly braces, "{","}", a setting
- * is any statement of the form "name = value;") concludes the definitiopn of the model. The next thing
- * to take care of is the hypothesis test. This is done by the "hypotest" settings group.
+ * The "constraint" settings group  concludes the definition of the model.
+ *
+ * \subsection conf_stat Configuration of the statistical methods to apply
+ *
+ * After having defined the model, the next thing to take care of is the statistical method you want to apply.
+ *
+ * In this case, this is done by the "hypotest" settings group.
  *
  * This settings group defines a statistical method (also called "producer", as it produces
- * results) of type "lnQ-minimize". This module expectes two more settings: "signal-plus-background"
- * and "background-only". They are both setting groups which specify constraints to apply to
+ * data in the output %database) of type "deltanll_hypotest". This producer (which is documented \link deltanll_hypotest here \endlink)
+ * expects two more settings: "signal-plus-background" and "background-only".
+ * They are both setting groups which specify special parameter values to apply to
  * get these two model varaints from the original model. In this case, the "background-only" model is given
- * by the constraint "{s=0.0;}".For the "signal-plus-background", no constraints have to be applied, therefore, an empty settings group
- * is given ("{}"). So whenever this module runs, it will be provided with a model and data. It will
+ * by the setting group "{s=0.0;}".For the "signal-plus-background", no constraints have to be applied,
+ * therefore, an empty settings group is given: "{}".
+ *
+ * Whenever a producer modeule runs, it will be provided with a model and data. The deltanll_hypotest producer will
  * <ol>
- * <li> Construct the likelihood function of the model, given the data.</li>
- * <li> Minimize the negative logarithm of the likelihood function with the "signal-plus-background" constraint.</li>
- * <li> Minimize the negative log-likelihood function with the "background-only" constraint.</li>
- * <li> save the difference of the outcome of the two previous steps. (For large event numbers, twice the
- *     square root of this value is a very good approximation for the significance with which the "background-only"
- *     null-hypothesis can be rejected.)</li>
+ * <li> Construct the likelihood function of the model, given the data</li>
+ * <li> Minimize the negative logarithm of the likelihood function with the "signal-plus-background" parameter values fixed</li>
+ * <li> Minimize the negative log-likelihood function with the "background-only" parameter values fixed</li>
+ * <li> save the two values of the negative-log-likelihood in the result table</li>
  * </ol>
  *
+ * \subsection conf_run Configuration of the run
+ *
  * Having configured the model and a statistical method, we have to glue them together. In this case, we want to make
- * pseudo experiments. This is done by the "main" settings group. It defines a plain run
- * ("plain" means: throw pseudo data from the model and run the producers, nothing more
- * complicated. Other types of runs can do parameter scans). We have to specify which model to use, which producers
- * to run and how many pseudo experiments you wish to perform. The results will be written
+ * many pseudo experiments in order to determine the distribution of the likelihood-ration test-statistics.
+ *
+ * This is done by the "main" settings group. It defines a \link plain_run plain run \endlink which
+ * throws random pseudo data from a model and calls a list of producers. The results will be written
  * as SQL %database to a file with the path specified with "result-file".
  *
- * You can execute the run by specifying the configuration filename:
+ * Pseudo data is thrown according to the configured model with following sequence:
+ * <ol>
+ *  <li>Determine a random value for each model parameter. This is done with a the constraint given in the model for that parameter, if it exists.
+ *        Otherwise, the default value from the parameter definition is used.</ul>
+ *  <li>For each observable, use these parameters to evaluate the Histograms and coefficients.</li>
+ *  <li>For each observable, add all components (i.e., coefficients and histograms)</li>
+ *  <li>For each observable, draw a poisson-random sample from the obtained summed histogram</li>
+ * </ol>
+ *
+ * \subsection running_theta Executing theta
+ *
+ * To actually do all the work, you have to call %theta with the configuration file name as argument
  * <pre>
  * bin/theta examples/gaussoverflat.cfg
  * </pre>
- * theta will execute the "main" run by default. You can also specify the run name 
- * as the second command line argument. The results will be written to a SQLite database file.
  *
- * \section internal Overview of %theta internals
+ * \subsection analyzing Analyzing the output
+ *
+ * The output of a run of %theta is saved as SQLite %database to the output file configured in the run
+ * settings group. %theta does not (at least so far) provide any tools to analyze this output. However
+ * it is not hard to write you own program which goes through the result tables and makes some plots; see
+ * \c root/histos.cxx for a starting point.
+ *
+ * In order to know which tables are in the file, have a look at the documentation of the \link theta::RunT Run\endlink
+ * object which is responsible to create some general-purpose tables. Furthermore, there is one table per producer
+ * for which the table format is documented there.
+ *
+ * \section internal Overview of theta internals
  *
  * In the previous section you have seen a simple use case of theta. Most of the components and concepts of
  * theta have been touched there. To better understand the documentation, it is useful to know what happens "behind the scenes".
  *
  * First of all, you might have noticed that the configuration file format is <i>hierarchical</i> and consists of many
- * named setting groups (as reminder: a setting group is anything enclosed in "{}"). As a rule of thumb, each setting
- * groups configures one C++ object.
+ * named setting groups. %theta has a very modular architecture which makes it easy to write extensions for; one important
+ * thing to remember at this point is:
+ * \attention
+ *  Any setting group containing a "type="&lt;typaname&gt;";" setting is used to construct a C++ object of class &lt;typename&gt; via a plugin system.
  *
+ * This is very useful if you search for documentation: if you encounter a setting like "type="deltanll_producer"", you now know that you have
+ * to search for the documentation at \link deltanll_producer \endlink.
+ *
+ * So far, plugins can be defined for following types:
+ * <ul>
+ * <li>\link theta::HistogramFunction HistogramFunction\endlink: used in the "histogram=..."-setting in the observables specification of a model</li>
+ * <li>\link theta::Function Function\endlink: used as coefficients of the components of an observable specification in a model</li>
+ * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood, profile likelihood methods</li>
+ * <li>\link theta::Run Run \endlink: the top-level object which invokes the pseudo data creation and producers</li>
+ * <li>\link theta::Distribution Distribution\endlink: used in model constraints or as priors in a statistical method</li>
+ * <li>\link theta::Producer Producer\endlink: statistical method called by a Run object</li>
+ * </ul>
+ *
+ * To define and use your own plugin, you have to:
+ *<ol>
+ * <li>Define a new class derived from one classes in the list above and implement all its pure virtual methods and a constructor
+ *     taking a \link theta::plugin::Configuration & Configuration \endlink object as the only argument.</li>
+ * <li>In a .cpp-file, call the REGISTER_PLUGIN(yourclass) macro</li>
+ * <li>Make sure to compile and link this definition to a shared-object file.</li>
+ * <li>In the configuration file, make sure to load the shared-object file as plugin. You can now use the plugin defined as any other %theta component via
+ *     a setting group containing type="yourclass";
+ *</ol>
+ * For all these cases, you can have a look at the \c plugins/ directory, which contains the core plugins of %theta. E.g., a
+ * complete, more complex example is given by plugins/interpolating-histogram.{cpp,hpp} which defines Histogram interpolation
+ * via additional model parameters, meant for a generic treatment of systematic uncertainties. You will find that, given the complexity of the problem,
+ * the required code is manageable.
+ *
+ * \section plugins Plugins
+ *
+ * Core and root plugins, by type:
+ * <ul>
+ * <li>\link theta::HistogramFunction HistogramFunction\endlink: used in the "histogram=..."-setting in the observables specification of a model:
+ *     <ul>
+ *         <li>\link fixed_gauss <b>fixed_gauss</b>\endlink for defining a normal distribution with fixed (i.e., not parameter dependent) mean and standard deviation</li>
+ *         <li>\link fixed_poly <b>fixed_poly</b>\endlink for a polynomial of arbitrary order with fixed (i.e., not parameter dependent) coefficients</li>
+ *         <li>\link interpolating_histo <b>interpolating_histo</b>\endlink to interpolate between one "nominal" and several "distorted" histograms for the generic treatment of systematic uncertainties</li>
+ *         <li>\link root_histogram <b>root_histogram</b>\endlink to read a histogram from a root file</li>
+ *     </ul>
+ *   </li>
+ * <li>\link theta::Function Function\endlink: used as coefficients of the components of an observable specification in a model. Currently, no core plugins are available.</li>
+ * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood, profile likelihood methods:
+ *     <ul>
+ *       <li>\link root_minuit <b>root_minuit</b>\endlink using MINUIT via ROOT</li>
+ *       <li>(not yet implemented) \link lbfgs <b>lbfgs</b>\endlink using liblbfgs</li>
+ *     </ul>
+ * </li>
+ * <li>\link theta::Run Run \endlink: the top-level object which invokes the pseudo data creation and producers:
+ *    <ul>
+ *       <li>\link plain_run <b>plain_run</b> \endlink throwing pseudo data and calling all producers</li>
+ *       <li>\link scan_run <b>scan_run</b> \endlink scanning through a given model parameter. For each fixed parameter value, throw pseudo data and call the producers</li>
+ *       <li>(not yet implemented:) \link data_run <b>data_run</b> \endlink apply the list of statistical methods to data</li>
+ *    </ul>
+ * </li>
+ * <li>\link theta::Distribution Distribution\endlink: used in model constraints or as priors in a statistical method:
+ *    <ul>
+ *       <li>\link gauss <b>gauss</b>\endlink normal distribution in one or more dimensions, including arbitrary correlations</li>
+ *       <li>\link lognormal <b>lognormal</b>\endlink log-normal distribution in one dimension</li>
+ *     </ul>
+ * </li>
+ * <li>\link theta::Producer Producer\endlink: statistical method called by a Run object</li>
+ *    <ul>
+ *       <li>\link deltanll_hypotest <b>deltanll_hypotest</b>\endlink creates likelihood-ratio test statistics to find the critical region for rejecting a "background only" null hypothesis</li>
+ *       <li>(not yet implemented:) \link deltanll_intervals <b>deltanll_intervals</b>\endlink interval creation based on the difference in the negative-log-likelihood function</li>
+ *       <li>\link mle <b>mle</b>\endlink maximum likelihood estimator estimates parameter values and errors using a minimizer on the negative-log-likelihood function</li>
+ *       <li>(not yet implemented:)\link mcmc_quantiles <b>mcmc_quantiles</b>\endlink Quantile estimator based on Markov-Chain Monte-Carlo to be used for interval estimation</li>
+ *       <li>(not yet implemented:)\link mcmc_marginal <b>mcmc_marginal</b>\endlink Determine the marginal distribution (as Histogram) for a parameter</li>
+ *       <li>(not yet implemented:)\link mcmc_posterior_ratio <b>mcmc_posterior_ratio</b>\endlink analogue of deltanll_hypotest, but integrates over any free parameters instead of minimizing</li>
+ *       <li>\link pseudodata_writer <b>pseudodata_writer</b>\endlink writes out the created pseudo data. Not really a statistical method, but technically implemented as a Producer as well</li>
+ *    </ul>
+ * </ul>
+ */
+ 
+ 
+ /*
  * A typical execution of the <tt>%theta</tt> main program consists of:
  * <ol>
  * <li>Read in and parse the config file supplied as command-line argument</li>
@@ -227,23 +374,6 @@
  * <li>Execute the <tt>Run</tt>. What execution means depends on the configured type of the Run. Typically,
  *   it will throw pseudo experiments and, for each pseudo experiment, apply some statistical methods ("producers").</li>
  * </ol>
- 
- 
- *
- * \section pseudodata Generation of pseudo data
- *
- * If pseudo data is thrown according to a model, it proceeds in several steps:
- * <ol>
- *  <li>Determine a random value for each model parameter. This is done with a constraint, if one exists for this parameter. Otherwise,
- *        the default value from the parameter definition is used. In any case, the values of the parameters used will be stored
- *        in the parameter table (see below).</ul>
- *  <li>For each observable, use these parameters to evaluate the HistogramFunction and Histogram coefficients</li>
- *  <li>For each observable, add all components (=histograms determined in the previous step) with the coefficients from the previous step</li>
- *  <li>For each observable, draw a poisson-random sample from the obtained histogram</li>
- * </ol>
- *
- * Note that in step 2., Histograms might be fluctuated to within its uncertainties; for an example see
- * ConstantHistogramFunctionError.
  *
  * \section resultfile Result File
  *
@@ -264,7 +394,7 @@
  */
  
  
-/** \page arch Architecture of %theta
+/* \page arch Architecture of %theta
  *
  * A large part of theta is already thouroughly documented. However, to use the
  * documentation effectively, some knowledge of the architecture of %theta is
@@ -297,48 +427,8 @@
  *
  * Now, everywhere in the above list where the word "create" was used, you might want
  * to extent %theta and provide your own version of what follows this word "create".
- *
- * To make that possible, a plugin system was created. Although it does not permit to replace
- * every possible class just mentioned, it allows to define your own derived classes of:
- * <ul>
- * <li>\link theta::HistogramFunction HistogramFunction\endlink: used in the observables specification of a model</li>
- * <li>\link theta::Function Function\endlink: used as coefficients of HistogramFunctions in a model</li>
- * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood, profile likelihood methods</li>
- * <li>\link theta::Run Run \endlink: the top-level object which invokes the pseudo data creation and producers</li>
- * <li>\link theta::Distribution Distribution\endlink: used in model constraints or as priors in a statistical method</li>
- * <li>\link theta::Producer Producer\endlink: statistical method called by a Run object</li>
- * </ul>
- *
- * Note that this is a conclusive enumeration. In particular, it is <i>not</i> possible (at least for now)
- * to write plugins for the \link theta::Model Model \endlink, \link database::Database Database\endlink,
- * or random number generator.
- *
- * For each of these different component classes, there can be as many specific implementations
- * as you want. The different implementations for one class are distinguished by
- * the "type=..." line in the configuration: A central registry knows
- * whom to ask if you request, say, a HistogramFunction with type="fixed-gauss" and invokes
- * a so-called "Factory" class.
- *
- * This architecture has consequences for the documentation:
- * <ol>
- * <li>For each of these components, there is an abstract C++ type. However, this type is kept
- *   "abstract" also in the sense that it cannot provide much documentation.</li>
- * <li>Specific types of these components are documented at the concrete (derived) class</li>
- * <li>The configuration is documented at the corresponding factory classes (as it is there
- *    where the configuration is processed).</li>
- * </ol>
- * So if you want to know something about the type="fixed-gauss" HistogramFunction, which
- * is provided by the FixedGaussFunctionFactory, you can find documentation for that at different places:
- * <ol>
- * <li>The documentation for the configuration directives can be found at the Factory class. This is
- *  the place you might want to look first as it gives an impression of what this class can do.</li>
- * <li>The Factory will produce an instance of some subclass of HistogramFunction, in this case ConstantHistogramFunction.
- *   Everything specific to this subclass is documented at ConstantHistogramFunction.</li>
- * <li>As ConstantHistogramFunction is a subclass of the abstarct type HistogramFunction, some documentation
- *  about HistogramFunction in general can be found there.</li>
- * </ol>
  */
- 
+
 /** \page design Design Goals of Theta
  *
  * I'm not a friend of some general statements of intention one can write about the meta-goals of a program. Still, I do raise some points here
@@ -394,10 +484,7 @@
  * something done.
  */
 
-/** \brief Common namespace for almost all classes of %Theta.
- *
- * The only exception are %database function which are located in the
- * database namespace.
+/** \brief Common namespace for almost all classes of %theta.
  */
 namespace theta{}
 

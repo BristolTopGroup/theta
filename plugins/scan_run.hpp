@@ -7,29 +7,29 @@
 
 #include <string>
 
-/** \brief A scan run, scanning over a parameter, creating pseudo data and calling the producers.
+/** \brief A run which scans over one parameter, creating pseudo data and calling the producers.
  *
- * \todo documentation should go mainly to the Run object. Only specific things here ...
+ * You can think of the scan_run as a simple for-loop over one parameter
+ * which does (for each fixed parameter value) the same as plain_run.
  *
  * The configuration is done via a setting like:
  * <pre>
  * {
- *   //common parameters for each Run:
+ *   //common parameters for all run types:
  *   type = "scan_run";
  *   result-file = "result/abc.db";
  *   producers = ("hypotest");
  *   n-events = 10000;
  *   model = "gaussoverflat";
  *
- *   run-id = 2; //optional. Default is 1.
- *   seed = 15; //optional, Default is -1.
- *
  *   //specific to scan_run:
  *   scan-parameter = "beta_signal";
  *   scan-parameter-values = [0.0, 1.0];
- *  scan-parameter-fixed = true;
+ *   scan-parameter-fixed = true;
  * }
  * </pre>
+ *
+ * For the parameters common to all run types, refer to the documentation of theta::RunT.
  *
  * The only parameters specific to this run type are:
  *
@@ -39,17 +39,13 @@
  *
  * \c scan-parameter-fixed : if true, the scan parameter range will be set to an interval only
  *  containing the current scan point. As consequence, the parameter is fixed for all producers.
- *  This is useful for lumi scans where the lumi parameter should not be left free in the staistical method
- *  which might attempt to fit with too many parameters otherwise. If set to false, the parameter will only
- *  be fixed for pseudodata generation, but will not be modified otherwise (i.e., any range and constraint
- *  configured apply unchanged).
+ *  If set to false, the parameter will only be fixed for pseudodata generation, but will
+ *  not be modified otherwise (i.e., any range and constraint configured apply unchanged when
+ *  running the producers).
  *
- * \c n-events is the number of events <em>per scan point</em>.
+ * \c n-events is the number of pseudo experiments <em>per scan point</em>.
  *
- * Note that each parameter value opens a new runid in the result table.
- *
- * Important CAVEAT: the parameter is forced to its value only for
- *  pseudo data generation; its default value, constraint in the model which is used to fit is not changed.
+ * For each scan parameter value, the run-id in the result tables is incremented.
  */
 class scan_run: public theta::Run {
 public:
@@ -66,5 +62,5 @@ private:
    bool scan_parameter_fixed;
 };
 
-
 #endif
+

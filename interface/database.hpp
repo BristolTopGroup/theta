@@ -226,25 +226,44 @@ class LogTable: public Table {
 public:
     /** \brief Construct a new table in Database \c db with name \c name.
      *
+     * The default loglevel is warning.
+     *
      * \param db The Database the table should be created in.
      * \param name The name of the table. Has to pass Table::checkName()
      */
-    LogTable(const std::string & name): Table (name){}
+    LogTable(const std::string & name): Table (name), level(severity::info){}
     
-    /** \brief Append message to log table.
+    
+    /** \brief Set the current log level.
+     *
+     * Future calls to append() will only write the message to the table if the messages
+     * has a severity which is euqal to or exceeds the level given here.
+     *
+     * Note that is it not possible to disable logging of error messages.
+     */
+    void set_loglevel(severity::e_severity s);
+    
+    /** \brief Append message to log table, if severity is larger than currently configured level
      * 
      * \param runid The run id the log entry is associted with.
      * \param eventid The event id the log entry is associted with or 0 if no particular event is referred.
      * \param message The log message, in human-readable english.
-     * \param force_write If \c true, a new transaction is started, forcing an immidiate flush-to-disk.
-     *  This is useful if an abnormal program termination is likely and the log entry should be written before that.
      */
-    void append(const theta::Run & run, severity::e_severity s, const std::string & message, bool force_write = false);
+    void append(const theta::Run & run, severity::e_severity s, const std::string & message){
+        //define inline as hint to the compiler; keep this function as short as possible to
+        // encourage the compiler actually inlining it.
+        if(s <= level) really_append(run, s, message);
+    }
 
 private:
     /** \brief Implementation of Table::create_table to do the actual table creation.
      */
     virtual void create_table();
+    
+    /// really append the log message. Called from append() in case severity is large enough
+    void really_append(const theta::Run & run, severity::e_severity s, const std::string & message);
+    
+    severity::e_severity level;
 };
 
 
@@ -257,8 +276,8 @@ private:
  * <li>\c runid \c INTEGER(4): the run id the entry refers to.</li>
  * <li>\c ind \c INTEGER(4): the index (starting from 0) for this producer in the current run configuration,
  *   i.e. the index it appeared in the producers = ("...") list in the configuration. </li>
+ * <li>\c type \c TEXT: the type setting used to configure this producer, as given in the type="..."  setting for this producer</li> 
  * <li>\c name \c TEXT: the name of the producer, as defined in the setting (via the setting name).</li>
- * <li>\c setting \c TEXT: configuration settings block of this producer.</li>
  * </ol>
  */
 class ProducerInfoTable: public Table {
@@ -272,12 +291,12 @@ public:
     
     /** \brief Append an entry to the ProducerInfoTable.
      * 
-     * \param runid The run id.
-     * \param index The index for this producer in the current run configuration.
-     * \param p_name The name of the producer.
-     * \param setting The configuration file settings block for this producer
+     * \param runid The run id
+     * \param index The index for this producer in the current run configuration
+     * \param p_name The name of the producer
+     * \param p_type The right hand side of the type="..."; setting used to configure this producer
      */
-    void append(const theta::Run & run, int index, const std::string & p_name, const std::string & setting);
+    void append(const theta::Run & run, int index, const std::string & p_name, const std::string & p_type);
 
 private:
     /** \brief Implementation of Table::create_table to do the actual table creation.
@@ -311,34 +330,31 @@ private:
     virtual void create_table();
 };
 
-class MCMCQuantileTable: public Table {
+/*class MCMCQuantileTable: public Table {
 public:
     MCMCQuantileTable(const std::string & name_) : Table(name_){}
     void append(const theta::Run & run, double quantile, double parvalue);
 private:
     virtual void create_table();
-};
+};*/
 
 class ParamTable: public Table {
 public:
 
-  void append(const theta::Run & run, const theta::ParValues & values, const std::map<theta::ObsId, double> n_data);
+  void append(const theta::Run & run, const theta::ParValues & values);
 
   /** Create a new table with name \c tablename in the given database.
    * The columns of the table are
    * - INT runid
    * - INT eventid
    * - DOUBLE param for each parameter in \c ids. These columns have the name of the parameter as defined in \c vm.
-   * - DOUBLE n_data_&lt;obs&gt; for each observable. This column holds the integral of the pseudo events produced for this observable.
    */
-  ParamTable(const std::string & name, const theta::VarIdManager & vm, const theta::ParIds & ids, const theta::ObsIds & obs_ids);
+  ParamTable(const std::string & name, const theta::VarIdManager & vm, const theta::ParIds & ids);
 private:
     virtual void create_table();
 
     theta::ParIds par_ids;
-    theta::ObsIds obs_ids;
     std::vector<std::string> pid_names;
-    std::vector<std::string> oid_names;
 };
 
 }//namespace database

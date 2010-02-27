@@ -46,20 +46,54 @@ public:
     virtual void progress(int done, int total) = 0;
 };
 
-/** \brief Represents a single run, i.e., a type="run" setting block in the configuration.
- *  
- *  Different "mode" settings are implemented via subclassing the run object.
- *  
- *  After creation of a Run object, following operations can be done with it, in this order:
- *  <ol>
- *   <li>call \c addProducer to add one or more producers </li>
- *   <li>call \c pre_run </li>
- *   <li>call \c run </li>
- *   <li>call \c post_run </li>
- *  </ol>
- *  Calling these functions in any other sequence will result in an IllegalStateException
- *  to be thrown. In particular, it is not possible to execute a run twice using
- *  the same instance of the Run class.
+/** \brief Represents a run, i.e., a chain of producer executions on pseudo data (or data).
+ *
+ *
+ * Note that this is an abstract class, you cannot instantiate it directly but only subclasses of it.
+ * If you are unsure, have a look at the documentation of \link plain_run plain_run\endlink which is the
+ * simplest subclass.
+ *
+ * The configuration is done via a setting like:
+ * <pre>
+ * {
+ *   type = "..."; //depends on which subclass you want
+ *   result-file = "result/abc.db";
+ *   producers = ("hypotest", "hupotest2");
+ *   n-events = 10000;
+ *   model = "gaussoverflat";
+ *
+ *   //optional:
+ *   run-id = 2; //default is 1.
+ *   seed = 15; //default is -1.
+ *   log-level = "error";//default is "info"
+ * }
+ *
+ * hypotest = {...}; //some producer definition
+ * hypotest2 = {...}; //some other producer definition
+ * </pre>
+ *
+ * \c type must always be "plain" to create an instance of \c PlainRun.
+ *
+ * \c result-file gives the path to the result database file to create to save the result in
+ *
+ * \c producers is a list of configuration file paths which contain the
+ *    definition of the producers to run.
+ *
+ * \c n-events is the number of pseudo experiments to run. This is ignored for some subclasses.
+ *
+ * \c model is the model used for pseudo data creation and which is passed to the producers.
+ *    Note that you can provide two different models for these steps if you use the settings
+ *    \c model-pseudodata and \c model-producers
+ *
+ * \c run-id is an optional setting and specifies which run-id to write to the result table. This setting
+ *    might be removed in future versions of this plugin, as it is not really needed at this point.
+ *
+ * \c seed is the random number generator seed. It is mainly useful for debugging (i.e., reproducing a bug might require
+ *    choosing a particular seed). The default setting -1 will generate a different seed each time and should be used as default.
+ *
+ * \c log-level controls the amount of logging information written to the log table: only log messages with a
+ *      severity level equal to or exceeding the level given here are actually logged. Valid values are "error", "warning", "info"
+ *      and "debug". Note that it is not possible to disable logging of error messages.
  *  
  *  Handling of result tables is done in the individual producers. Only run-wide tables
  *  are managed here, that is
@@ -72,98 +106,50 @@ public:
  *       the pseusodata model are saved.</li>
  *  </ul>
  *
- *  For more information about these tables, see their documentation.
+ *  For more information about these tables, see the documentation of the corresponding class.
  */
-template<typename rndtype>
-class RunT {
+class Run {
 public:
-    typedef RunT<rndtype> base_type;
+    typedef Run base_type;
 
    /** \brief Register progress listener.
     *
+    * The registered progress listener will be informed about the current progress of the run during
+    * execution of Run::run().
     */
-    void set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
-        progress_listener = l;
-    }
+    void set_progress_listener(const boost::shared_ptr<ProgressListener> & l);
 
-    /** \brief The pre-run, to be executed before the \c run routine.
-     * 
-     * This routine performs common pre-run tasks like populating the informational
-     * tables.
-     */
-    void pre_run() {
-        if(state!=0){
-            throw IllegalStateException();
-        }
-        state = 1;
-        //record all producers in prodinfo_table:
-        for(size_t i=0; i<producers.size(); i++){
-            //TODO: save the setting(?!)
-            prodinfo_table.append(*this, (int)i, producers[i].getName(), "");
-        }
-        //write random seeds to rndinfo_table:
-        rndinfo_table.append(*this, seed);
-        //call any pre_run method from the derived classes:
-        pre_run_impl();
-        log_run_start();
-        state = 2;
-    }
-    
     /** \brief Perform the actual run.
      * 
      * The actual meaning depends on the derived classes. Common to all is
      * that a number of pseudo experiments is performed whose data is
      * passed to each of the producers.
      */
-    void run(){
-        if(state!=2){
-            throw IllegalStateException();
-        }
-        state = 3;
-        run_impl();
-        state = 4;
-    }
-    
-    /** \brief Perform any post-run cleaup. To be called after \c run.
-     * 
-     * This routine performs common post run tasks.
-     */
-    void post_run() {
-        if(state!=4){
-            throw IllegalStateException();
-        }
-        state = 5;
-        log_run_end();
-        //delegate to derived class:
-        post_run_impl();
-        state = 6;
-    }
+    void run();
 
-    /** Add \c p to the internal list of producers. Pointer ownership will be transferred,
+    /** \brief Add a producer to the list of producers to run.
+     *
+     * Add \c p to the internal list of producers. Memory ownership will be transferred,
      * i.e., p.get() will be 0 after this function returns.
      * 
      * It is only valid to call this function after creation, before any calls to the *run methods.
      * If violating this, the behavior is undefined.
      */
-    void addProducer(std::auto_ptr<Producer> & p) {
-        if(state!=0){
-            throw IllegalStateException();
-        }
-        producers.push_back(p);
-    }
+    void addProducer(std::auto_ptr<Producer> & p);
 
-    virtual ~RunT() {
-        //db.close(); //not necessary, as is closed on destruction of db anyway (and we could not propagate exceptions from here anyway ...)
-    }
+    /// declare destructor virtual as polymorphic access to derived classes is likely
+    virtual ~Run() {}
 
-    /** Get the Databse object associated to this run, i.e.,
-     *  this is where the producers should create their result tables.
+    /** \brief Get the database of the run.
+     *
+     * This method is mainly used by Producers to initialize their tables
+     * in the first call.
      */
     boost::shared_ptr<database::Database> get_database(){
        return db;
     }
 
-    /// Get the currect run id. Will always be the same for the same instance of Run
+    /// Get the currect run id.
     int get_runid() const{
         return runid;
     }
@@ -175,80 +161,15 @@ public:
 
 protected:
     
-    /** \brief Run constructor.
+    /** \brief Construct a Run using the supplied configuration
      *
-     * \param seed Seed for the random number generator (used for pseudo data generation)
-     * \param m_pseudodata_ Pseudodata model,  used to generate pseudo data
-     * \param m_producers_ Model passed to the producers to make statistical inferences.
-     * \param outfilename Path to the file system name of the output database.
-     * \param runid_ The run id used in the output database.
-     * \param n_event_ number of events (=number of pseudo experiments to perform).
      */
     // protected, as Run is purley virtual.
-    RunT(plugin::Configuration & cfg): seed(-1), vm(cfg.vm), m_pseudodata(cfg.vm), m_producers(cfg.vm), db(new database::Database(cfg.setting["result-file"])),
-      logtable(new database::LogTable("log")), prodinfo_table("prodinfo"), rndinfo_table("rndinfo"),
-      runid(1), eventid(0), n_event(cfg.setting["n-events"]), state(0){
-          
-      const libconfig::Setting & s = cfg.setting;
-      if(s.lookupValue(static_cast<const char*>("run-id"), runid)){
-         cfg.rec.markAsUsed(s["run-id"]);
-      }
-      int i_seed = -1;
-      if(s.lookupValue(static_cast<const char*>("seed"), i_seed)){
-         cfg.rec.markAsUsed(s["seed"]);
-      }
-      seed = i_seed;
-      if(seed==-1) seed = time(0);
-      rnd.setSeed(seed);
-      if (s.exists("model")) {
-        std::string model_path = s["model"];
-        plugin::Configuration context(cfg, cfg.rootsetting[model_path]);
-        std::auto_ptr<Model> model = ModelFactory::buildModel(context);
-        m_pseudodata = *model;
-        m_producers = *model;
-        cfg.rec.markAsUsed(s["model"]);
-      }
-      if (s.exists("model-pseudodata")) {
-         std::string model_path = s["model-pseudodata"];
-         plugin::Configuration context(cfg, cfg.rootsetting[model_path]);
-         m_pseudodata = *ModelFactory::buildModel(context);
-         cfg.rec.markAsUsed(s["model-pseudodata"]);
-         s["model-producers"];//will throw if not found
-       }
-       if (s.exists("model-producers")) {
-         std::string model_path = s["model-producers"];
-         plugin::Configuration context(cfg, cfg.rootsetting[model_path]);
-         m_producers = *ModelFactory::buildModel(context);
-         cfg.rec.markAsUsed(s["model-producers"]);
-         s["model-pseudodata"];//will throw if not found
-       }
-       
-      logtable->connect(db);
-      prodinfo_table.connect(db);
-      rndinfo_table.connect(db);
-      params_table.reset(new database::ParamTable("params", m_pseudodata.getVarIdManager(),
-                                               m_pseudodata.getParameters(), m_pseudodata.getObservables()));
-      params_table->connect(db);
-      eventid = 0;
-      
-      //add the producers:
-      int n_p = s["producers"].getLength();
-      if (n_p == 0)
-         throw ConfigurationException("no producers in run specified!");
-      for (int i = 0; i < n_p; i++) {
-        std::string prod_path = s["producers"][i];
-        plugin::Configuration cfg2(cfg, cfg.rootsetting[prod_path]);
-        std::auto_ptr<Producer> p = plugin::PluginManager<Producer>::build(cfg2);
-        addProducer(p);
-        //should transfer ownership:
-        assert(p.get()==0);
-      }
-      cfg.rec.markAsUsed(s["producers"]);
-    }    
+    Run(plugin::Configuration & cfg);
     
-    //random number generators for seeding (s) and pseudo data generation (g),
-    long seed;
-    rndtype rnd;
+    //random number generator seed and generator:
+    unsigned int seed;
+    Random rnd;
     
     boost::shared_ptr<VarIdManager> vm;
 
@@ -271,37 +192,19 @@ protected:
     //the producers to be run on the pseudo data:
     boost::ptr_vector<Producer> producers;
 
-    int runid;
     
-    //the current eventid:
+    //the runid, eventid and the total number of events to produce:
+    int runid;
     int eventid;
     const int n_event;
     
     boost::shared_ptr<ProgressListener> progress_listener;
     
-    /** The \c pre_run, \c run and \c post_run methods will call
-     * their *_impl counterpart which should be overriden in the derived classes.
-     * 
-     * At least \c run_impl *must* be implemented by derived classes.
-     * */
-    virtual void pre_run_impl() {}
-    virtual void post_run_impl() {}
-    virtual void run_impl() = 0;
-
-    /** \brief Fill \c data with pseudo data from the model m_pseudodata and write
-     * the used values of the parameters to the "params" table. In addition the
-     * integral of the PEdata histo is written into the last column.
+    /** \brief Actual run implementation
+     *
+     * This is the method to implement in subclasses of run.
      */
-    void fill_data() {
-        ParValues values = m_pseudodata.sampleValues(rnd);
-        data = m_pseudodata.samplePseudoData(rnd, values);
-	const ObsIds & obs_ids = data.getObservables();
-        std::map<theta::ObsId, double> n_data;
-	for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
-	    n_data[*obsit] = data.getData(*obsit).get_sum_of_bincontents();
-	}
-        params_table->append(*this, values, n_data);
-    }
+    virtual void run_impl() = 0;
 
     /** \brief Make an informational log entry to indicate the start of a pseudo experiment.
      * 
@@ -334,19 +237,6 @@ protected:
     void log_run_end() {
         logtable->append(*this, database::severity::info, "run end");
     }
-private:
-    //In order to implement the calling sequence, keep track of the current state with a state variable:
-    //0 = just constructed
-    //1 = starting to execute pre-run
-    //2 = end executing pre-run
-    //3 = start executing run
-    //4 = end executing run
-    //5 = start executing post_run
-    //6 = end executing post_run
-    //(having two numbers for each step makes debugging easier
-    // if method execution is interrupted by exception. In this case, Run object
-    // will be in an invalid state, but at least, it is detectable).
-    int state;
 };
 
 

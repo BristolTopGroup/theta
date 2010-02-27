@@ -2,6 +2,7 @@
 #include "interface/plugin.hpp"
 #include "interface/run.hpp"
 #include "interface/minimizer.hpp"
+#include "interface/histogram.hpp"
 
 #include <sstream>
 
@@ -47,14 +48,8 @@ void deltanll_hypotest::produce(Run & run, const Data & data, const Model & mode
             minimizer->reset_range_override(*it);
         }
     }
-    //try{
-        MinimizationResult minres = minimizer->minimize(nll);
-        nll_sb = minres.fval;
-    //}
-    /*catch(Exception & ex){
-        cerr << "minres(1): "<< ex.message << endl;
-        exit(1);
-    }*/
+    MinimizationResult minres = minimizer->minimize(nll);
+    nll_sb = minres.fval;
     
     //b. calculate b only:
     //apply b contraints:
@@ -70,7 +65,7 @@ void deltanll_hypotest::produce(Run & run, const Data & data, const Model & mode
 }
 
 
-deltanll_hypotest::deltanll_hypotest(theta::plugin::Configuration & cfg): Producer(cfg), table(getName()){
+deltanll_hypotest::deltanll_hypotest(theta::plugin::Configuration & cfg): Producer(cfg), table(get_name()){
     const Setting & s = cfg.setting;
     string minimizer_path = s["minimizer"];
     Setting & minimizer_setting = cfg.rootsetting[minimizer_path];

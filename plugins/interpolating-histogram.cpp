@@ -1,6 +1,4 @@
 //#include "core.hpp"
-//#include "plugin.hpp"
-
 #include "plugins/interpolating-histogram.hpp"
 
 using namespace std;
@@ -58,8 +56,6 @@ theta::ParIds interpolating_histo::getParameters() const {
 interpolating_histo::interpolating_histo(Configuration & ctx){
     const Setting & psetting = ctx.setting["parameters"];
     vector<ParId> par_ids;
-    //vector<Histogram> hplus;
-    //vector<Histogram> hminus;
     //build nominal histogram:
     h0 = getConstantHistogram(ctx, psetting["nominal-histogram"]);
     int n = psetting.getLength();

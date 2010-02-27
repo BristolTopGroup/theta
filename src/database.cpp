@@ -12,6 +12,7 @@
 #include "interface/database.hpp"
 #include "interface/plugin_so_interface.hpp"
 #include "interface/run.hpp"
+#include "interface/histogram.hpp"
 
 
 using namespace std;
@@ -86,16 +87,6 @@ void Database::exec(const string & query) {
         stringstream ss;
         ss << "Database.exec(\"" << query << "\") returned error: " << err;
         sqlite3_free(err);
-        /*err = 0;
-        //rollback, if a transaction is active, but ignore any error here:
-        if (transaction_active) {
-            ss << ". Active Transaction is rolled back...";
-            sqlite3_exec(db, "ROLLBACK;", 0, 0, &err);
-            if (err != 0) {
-                ss << "There was an error while calling ROLLBACK in the error handling: " << err << ". Ignoring that.";
-                sqlite3_free(err);
-            }
-        }*/
         //database errors should not happen at all. If they do, we cannot use the log table, so write the error
         // to stderr, so the user knows what has happened:
         cerr << "SQL error: " << ss.str() << endl;
@@ -155,7 +146,11 @@ void Table::checkName(const string & name) {
     }
 }
 
-void LogTable::append(const Run & run, severity::e_severity s, const string & message, bool force_write) {
+void LogTable::set_loglevel(severity::e_severity s){
+    level = s;
+}
+
+void LogTable::really_append(const Run & run, severity::e_severity s, const string & message) {
     sqlite3_bind_int(insert_statement, 1, run.get_runid());
     sqlite3_bind_int(insert_statement, 2, run.get_eventid());
     sqlite3_bind_int(insert_statement, 3, s);
@@ -171,10 +166,6 @@ void LogTable::append(const Run & run, severity::e_severity s, const string & me
     if (res != 101) {
         error(__FUNCTION__);//throws exception
     }
-    if (force_write) {
-        endTransaction();
-        beginTransaction();
-    }
 }
 
 void LogTable::create_table(){
@@ -189,18 +180,18 @@ void LogTable::create_table(){
 
 void ProducerInfoTable::create_table() {
     stringstream ss;
-    ss << "CREATE TABLE '" << name << "' (runid INTEGER(4), ind INTEGER(4), name TEXT, setting TEXT);";
+    ss << "CREATE TABLE '" << name << "' (runid INTEGER(4), ind INTEGER(4), name TEXT, type TEXT);";
     exec(ss.str().c_str());
     ss.str("");
     ss << "INSERT INTO '" << name << "' VALUES(?,?,?,?);";
     insert_statement = prepare(ss.str());
 }
     
-void ProducerInfoTable::append(const Run & run, int index, const std::string & p_name, const std::string & setting){
+void ProducerInfoTable::append(const Run & run, int index, const std::string & p_name, const std::string & p_type){
     sqlite3_bind_int(insert_statement, 1, run.get_runid());
     sqlite3_bind_int(insert_statement, 2, index);
     sqlite3_bind_text(insert_statement, 3, p_name.c_str(), p_name.size(), SQLITE_TRANSIENT);
-    sqlite3_bind_text(insert_statement, 4, setting.c_str(), setting.size(), SQLITE_TRANSIENT);
+    sqlite3_bind_text(insert_statement, 4, p_type.c_str(), p_type.size(), SQLITE_TRANSIENT);
     int res = sqlite3_step(insert_statement);
     sqlite3_reset(insert_statement);
     if (res != 101) {
@@ -227,7 +218,7 @@ void RndInfoTable::append(const Run & run, long seed){
     }
 }
 
-void MCMCQuantileTable::create_table() {
+/*void MCMCQuantileTable::create_table() {
     stringstream ss;
     ss << "CREATE TABLE '" << name << "' (runid INTEGER(4), eventid INTEGER(4), quantile DOUBLE, parvalue DOUBLE);";
     exec(ss.str());
@@ -246,19 +237,16 @@ void MCMCQuantileTable::append(const Run & run, double quantile, double par_valu
     if (res != 101) {
         error(__FUNCTION__);//throws exception
     }
-}
+}*/
 
 
 
-ParamTable::ParamTable(const std::string & name_, const theta::VarIdManager & vm, const theta::ParIds & ids, const theta::ObsIds & obs_ids_):
-    Table(name_), par_ids(ids), obs_ids(obs_ids_){
+ParamTable::ParamTable(const std::string & name_, const theta::VarIdManager & vm, const theta::ParIds & ids):
+    Table(name_), par_ids(ids){
     pid_names.reserve(par_ids.size());
     for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
         pid_names.push_back(vm.getName(*it));
     }
-    for(ObsIds::const_iterator it=obs_ids.begin(); it!=obs_ids.end(); ++it){
-        oid_names.push_back(vm.getName(*it));
-    }    
 }
 
 void ParamTable::create_table() {
@@ -266,9 +254,6 @@ void ParamTable::create_table() {
     ss << "CREATE TABLE '" << name << "' (runid INTEGER(4), eventid INTEGER(4)";
     for (vector<string>::const_iterator it = pid_names.begin(); it != pid_names.end(); ++it) {
         ss << ", '" << *it << "' DOUBLE";
-    }
-    for (vector<string>::const_iterator it = oid_names.begin(); it != oid_names.end(); ++it) {
-        ss << ", 'n_data_" << *it << "' DOUBLE";
     }
     ss << ");";
     exec(ss.str());
@@ -278,23 +263,16 @@ void ParamTable::create_table() {
     for (vector<string>::const_iterator it = pid_names.begin(); it != pid_names.end(); ++it) {
         ss << ", ?";
     }
-    for (vector<string>::const_iterator it = oid_names.begin(); it != oid_names.end(); ++it) {
-        ss << ", ?";
-    }    
     ss << ");";
     insert_statement = prepare(ss.str());
 }
 
-void ParamTable::append(const Run & run, const ParValues & values, map<ObsId, double> n_data) {
+void ParamTable::append(const Run & run, const ParValues & values) {
     sqlite3_bind_int(insert_statement, 1, run.get_runid());
     sqlite3_bind_int(insert_statement, 2, run.get_eventid());
     int next_col = 3;
     for (ParIds::const_iterator it = par_ids.begin(); it != par_ids.end(); it++) {
         sqlite3_bind_double(insert_statement, next_col, values.get(*it));
-        next_col++;
-    }
-    for (ObsIds::const_iterator it = obs_ids.begin(); it != obs_ids.end(); it++) {
-        sqlite3_bind_double(insert_statement, next_col, n_data[*it]);
         next_col++;
     }
     int res = sqlite3_step(insert_statement);

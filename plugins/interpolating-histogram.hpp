@@ -5,7 +5,7 @@
 #include "interface/plugin.hpp"
 
 
-/** A HistogramFunction which interpolates a "zero" Histogram and several "distorted" Histograms.
+/** \brief A HistogramFunction which interpolates a "zero" Histogram and several "distorted" Histograms as generic method to treat systematic uncertainties.
  *
  * The configuration block is something like (mass is some observable previously defined.
  * s, delta1, delta2 are parameters):
@@ -35,21 +35,12 @@
  *    with (hplus[i][k]/h0[k])^fabs(p_i) * (hminus[j][k]/h0[k])^fabs(p_j), where hplus[i][k] is bin k of hplus[i]. It was assumed
  *    that p_i > 0 and p_j &lt; 0. You can verify that 1., 2. and 3. are fulfilled with this formula.
  *
- * It is not allowed to use the same parameter as interpolating parameter twice (i.e., each \c ParId in \c varids must be
- *  unique in that collection).
- *
- * If the number of varids, hplus or hminus Histograms differ, an InvalidArgumentException is thrown.
- * An InvalidArgumentException is also thrown if the Histograms (h0, hplus, hminus) are not compatible.
- *
- * \sa Histogram::checkCompatibility VarId
+ * It is not allowed to use the same parameter as interpolating parameter twice.
  */
 class interpolating_histo : public theta::HistogramFunction {
 public:
     interpolating_histo(theta::plugin::Configuration & ctx);
-    
-   /** \brief Build a (constant) Histogram from a Setting block.
-     */
-    static theta::Histogram getConstantHistogram(theta::plugin::Configuration & ctx, const libconfig::Setting & s);
+        
     /** Returns the interpolated Histogram as documented in the class documentation.
      * throws a NotFoundException if a parameter is missing.
      */
@@ -63,16 +54,19 @@ public:
 
     virtual const theta::Histogram & gradient(const theta::ParValues & values, const theta::ParId & pid) const;
 private:
+    /** \brief Build a (constant) Histogram from a Setting block.
+    *
+    * Will throw an InvalidArgumentException if the Histogram is not constant.
+    */
+    static theta::Histogram getConstantHistogram(theta::plugin::Configuration & ctx, const libconfig::Setting & s);    
+    
     theta::Histogram h0;
     std::vector<theta::Histogram> hplus;
     std::vector<theta::Histogram> hminus;
-    //the interpolation parameters used to interpolate between
-    // hplus and hminus.
+    //the interpolation parameters used to interpolate between hplus and hminus.
     std::vector<theta::ParId> vid;
-    //the Histogram returned by operator(). Defined as mutable to allow
-    // operator() to be const.
+    //the Histogram returned by operator(). Defined as mutable to allow operator() to be const.
     mutable theta::Histogram h;
-    //virtual HistogramFunction* clone() const;
 };
 
 #endif

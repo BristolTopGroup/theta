@@ -2,6 +2,8 @@
 #include "interface/plugin.hpp"
 #include "interface/run.hpp"
 #include "interface/minimizer.hpp"
+#include "interface/histogram.hpp"
+
 #include <sstream>
 
 using namespace theta;
@@ -44,7 +46,7 @@ void deltanll_intervals::produce(Run & run, const Data & data, const Model & mod
     //TODO: scan the parameter of interest ...
 }
 
-deltanll_intervals::deltanll_intervals(theta::plugin::Configuration & ctx): Producer(ctx), table(getName()){
+deltanll_intervals::deltanll_intervals(theta::plugin::Configuration & ctx): Producer(ctx), table(get_name()){
     const Setting & s = ctx.setting;
     std::auto_ptr<Producer> result;
     string minimizer_path = s["minimizer"];
@@ -71,4 +73,4 @@ deltanll_intervals::deltanll_intervals(theta::plugin::Configuration & ctx): Prod
 }
 
 //plugin is not ready: does not really produce intervals so far ...
-REGISTER_PLUGIN(deltanll_intervals)
+//REGISTER_PLUGIN(deltanll_intervals)

@@ -44,7 +44,7 @@ namespace theta{
          * \param rnd Proxy to the random number generator to use for sampling.
          * \param vm The VarIdManager instance which holds range values to respect.
          */
-        virtual void sample(ParValues & result, AbsRandomProxy & rnd, const VarIdManager & vm) const = 0;
+        virtual void sample(ParValues & result, Random & rnd, const VarIdManager & vm) const = 0;
 
         /** \brief The negative logarithm of the probability density.
          * 
@@ -91,7 +91,7 @@ namespace theta{
         
         /** \brief Sample random values. 
          */
-        virtual void sample(ParValues & result, AbsRandomProxy & rnd, const VarIdManager & vm) const;
+        virtual void sample(ParValues & result, Random & rnd, const VarIdManager & vm) const;
         virtual double evalNL(const ParValues & values) const;
         virtual double evalNL_withDerivatives(const ParValues & values, ParValues & derivatives) const;
         virtual ~LogNormalDistribution(){}
@@ -136,9 +136,8 @@ namespace theta{
          *  If dimensions of v_ids, mu and cov mismatch, an InvalidArgumentException is thrown.
          *  If cov is not positive definite, a MathException is thrown.
          */
-        //GaussDistribution(const std::vector<ParId> & var_ids, const std::vector<double> & mu, const Matrix & cov);
         gauss(plugin::Configuration & cfg);
-        virtual void sample(ParValues & result, AbsRandomProxy & rnd, const VarIdManager & vm) const;
+        virtual void sample(ParValues & result, Random & rnd, const VarIdManager & vm) const;
         virtual double evalNL(const ParValues & values) const;
         virtual double evalNL_withDerivatives(const ParValues & values, ParValues & derivatives) const;
     private:

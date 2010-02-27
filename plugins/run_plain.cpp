@@ -1,4 +1,5 @@
 #include "run_plain.hpp"
+#include "interface/histogram.hpp"
 
 using namespace theta;
 using namespace theta::plugin;
@@ -8,13 +9,15 @@ using namespace std;
 void plain_run::run_impl() {
     for (eventid = 1; eventid <= n_event; eventid++) {
         log_event_start();
-        fill_data();
+        ParValues values = m_pseudodata.sampleValues(rnd);
+        data = m_pseudodata.samplePseudoData(rnd, values);
+        params_table->append(*this, values);
         for (size_t j = 0; j < producers.size(); j++) {
             try {
                 producers[j].produce(*this, data, m_producers);
             } catch (Exception & ex) {
                 std::stringstream ss;
-                ss << "Producer '" << producers[j].getName() << "' failed: " << ex.message;
+                ss << "Producer '" << producers[j].get_name() << "' failed: " << ex.message;
                 logtable->append(*this, database::severity::error, ss.str());
             }
         }
@@ -28,4 +31,3 @@ plain_run::plain_run(Configuration & cfg): Run(cfg){
 }
 
 REGISTER_PLUGIN(plain_run)
-

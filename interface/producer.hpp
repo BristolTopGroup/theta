@@ -1,13 +1,7 @@
 #ifndef PRODUCER_HPP
 #define PRODUCER_HPP
 
-//#include "liblbfgs/lbfgs.h"
 #include "libconfig/libconfig.h++"
-
-//#include "interface/phys.hpp"
-//#include "interface/variables.hpp"
-//#include "interface/database.hpp"
-//#include "interface/minimizer.hpp"
 
 #include "interface/decls.hpp"
 #include "interface/plugin_so_interface.hpp"
@@ -54,15 +48,24 @@ public:
      * saved in the producer. It is used for logging and database table names,
      * as this name is unique.
      */
-    std::string getName() const{
+    std::string get_name() const{
         return name;
     }
-
+    
+    /** \brief Returns the type of the producer, i.e., the C++ class name.
+     *
+     * This is also what is given as the type="..." setting of the producer configuration.
+     */
+    std::string get_type() const{
+        return type;
+    }
 protected:
-    //Producer(const std::string & name_): name(name_){}
-    Producer(const plugin::Configuration & cfg): name(cfg.setting.getName()){}
+    /// to be called by derived classes in order to fill name and type.
+    Producer(const plugin::Configuration & cfg): name(cfg.setting.getName()), type(static_cast<const char*>(cfg.setting["type"])){
+    }
 private:
     std::string name;
+    std::string type;
 };
 
 

@@ -208,12 +208,6 @@ void RandomSourceTaus::set_seed(unsigned int s) {
     if (s2 < 16) s1 += 16;
     vector<unsigned int> buffer(6);
     fill(buffer);
-    /*get();
-    get();
-    get();
-    get();
-    get();
-    get();*/
 }
 
 void RandomSourceTaus::fill(vector<unsigned int> & buffer) throw(){

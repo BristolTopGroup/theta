@@ -16,7 +16,7 @@
 namespace theta {
     /** Run the metropolis-Hastings Markov-Chain Monte-Carlo algorithm.
      *
-     * @param nllilkelihood is a function object which must implement double operator()(const double*) const which returns
+     * @param nllikelihood is a function object which must implement double operator()(const double*) const which returns
      *  the negative logarithm of the likelihood (rather: the posterior) to integrate.
      * @param res is a "container" where the Markov Chain will be saved. It must implement the methods:
      * <ul>
@@ -37,7 +37,7 @@ namespace theta {
      *   jumping kernel before adding it to the current point. It should be set to the Cholesky decomposition of the
      *   covariance matrix of the likelihood (or an approximation thereof), hence the name "square root of covariance".
      * @param iterations is the number of iterations for the Markov Chain which will be reported to the \c res object.
-     * @param burn_in is the number of Markov-Chain iterations run at the beginning which are <it>not</it> reported to the \c res
+     * @param burn_in is the number of Markov-Chain iterations run at the beginning which are <em>not</em> reported to the \c res
      *   object.
      */
     template<class nlltype, class resulttype>
@@ -115,7 +115,7 @@ namespace theta {
      *
      * \param rnd is the random number generator to use
      * \param nll is the negative log-posterior to evaluate
-     * \param fixed_parameters contains the values of all parameters considered to be fixed
+     * \param fixed_parameters contains the values of all parameters which shall be considered fixed
      * \param vm is required to estimate good/allowed start values and step sizes for the first pass.
      * \param[out] startvalues will contain the suggested startvalues. The contents when calling this function will be ignored.
      */

@@ -10,9 +10,9 @@
 #include <string>
 
 
-/** \brief Table to store results of a DeltaNLLIntervalProducer.
+/** \brief Result table for the deltanll_interval producer
  *
- * This table object is used by an instance of \link DeltaNLLIntervalProducer DeltaNLLIntervalProducer \endlink.
+ * This table object is used by an instance of deltanll_interval producer.
  *
  * The corresponding SQL table has following fields:
  * <ol>
@@ -26,9 +26,9 @@
  * Note that each DeltaNllIntervalProducer makes one entry per pseudo experiment and
  * configured confidence level (plus always an entry for the zero confidence level).
  */
-class DeltaNllIntervalTable: public database::Table {
+class deltanll_interval_table: public database::Table {
 public:
-    DeltaNllIntervalTable(const std::string & name_): database::Table(name_){}
+    deltanll_interval_table(const std::string & name_): database::Table(name_){}
 
     /** \brief append an entry to the table
      *
@@ -104,7 +104,7 @@ private:
     //at construction, save here the deltanll values corresponding to
     //clevels:
     std::vector<double> deltanll_levels;
-    DeltaNllIntervalTable table;
+    deltanll_interval_table table;
 };
 
 #endif

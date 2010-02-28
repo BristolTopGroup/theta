@@ -1,4 +1,3 @@
-#include "interface/random2.hpp"
 #include "interface/random.hpp"
 
 #include <boost/test/unit_test.hpp>

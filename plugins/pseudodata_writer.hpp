@@ -38,8 +38,8 @@ public:
 
     /** \brief append an entry to the table
      *
-     * \param run the \link theta::Run Run \endlink object; used to extract the runid and eventid columns
-     * \param Data the pseudodata to write to the table
+     * \param run the theta::Run instance used to extract the current runid and eventid
+     * \param data the pseudodata to write to the table
      */
     void append(const theta::Run & run, const theta::Data & data);
 private:

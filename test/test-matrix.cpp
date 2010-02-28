@@ -1,5 +1,7 @@
 #include "interface/random.hpp"
 #include "interface/matrix.hpp"
+#include "interface/utils.hpp"
+#include "interface/exception.hpp"
 
 #include <boost/test/unit_test.hpp>
 
@@ -34,7 +36,7 @@ BOOST_AUTO_TEST_CASE(matrix0){
 BOOST_AUTO_TEST_CASE(matrix1){
    const unsigned int N=10;
    //create a positive definite matrix n:
-   RandomTaus rnd;//no setSeed to keep it the same every time ...
+   Random rnd(new RandomSourceTaus());//no setSeed to keep it the same every time ...
    Matrix m(N,N);
    for(size_t i=0; i<N; i++){
       for(size_t j=0; j<N;j++){
@@ -87,7 +89,7 @@ BOOST_AUTO_TEST_CASE(matrix1){
 BOOST_AUTO_TEST_CASE(matrix2){
    const unsigned int N=10;
    //create a positive definite matrix n (see matrix 1 test case):
-   RandomTaus rnd;//no setSeed to keep it the same every time ...
+   Random rnd(new RandomSourceTaus());//no setSeed to keep it the same every time ...
    Matrix m(N,N);
    for(size_t i=0; i<N; i++){
       for(size_t j=0; j<N;j++){

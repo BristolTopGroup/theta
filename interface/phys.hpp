@@ -103,13 +103,17 @@ namespace theta {
             return par_ids.size();
         }
 
+        /// Declare destructor virtual as polymorphic access to derived classes will happen.
         virtual ~Function(){}
     protected:
+        /// The parameters this function depends on
         ParIds par_ids;
+        /// Constructor dpecifying the parameters this function depends on
         Function(const ParIds & pids): par_ids(pids){}
     };
     
-    /** A function which multiplies a list of variables.*/
+    /** \brief A function which multiplies a list of variables.
+     */
     class MultFunction: public Function{
     public:
         virtual double operator()(const ParValues & v) const;
@@ -119,7 +123,7 @@ namespace theta {
     };
     
     
-    /** An object representing (binned) data for one or more observables.
+    /** \brief Contains data for one or more observables
      *  
      * A data object can be constructed:
      * -# "by hand": use the default constructor and set data Histograms for a number of observables
@@ -156,6 +160,12 @@ namespace theta {
         std::map<ObsId, Histogram> data;
     };
     
+    /** \brief Provides a mapping from parameters to distributions for one or more observables
+     *
+     * A Model is used together with Data to construct the likelihood function.
+     *
+     * For configuration syntax, see ModelFactory.
+     */
     class Model {
         friend class NLLikelihood;
         friend class ModelFactory;
@@ -222,7 +232,8 @@ namespace theta {
          */
         void set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs, boost::ptr_vector<HistogramFunction> & histos, const std::vector<std::string> & component_names);
 
-        /** Returns the prediction for the observable \c obs_id using the variable values \c parameters into \c result.
+        /** \brief Returns the prediction for the observable \c obs_id using the variable values \c parameters into \c result.
+        *
         *   The returned Histogram is built as a linear combination of HistogramFunctions using coefficients as previously set
         *   by \c set_prediction. The HistogramFunctions and coefficients are evaluated using the values in \c parameters.
         *
@@ -230,41 +241,45 @@ namespace theta {
         */
         void get_prediction(Histogram & result, const ParValues & parameters, const ObsId & obs_id) const;
 
-        /** Like \c get_prediction, but randomize the histograms with their parametrization errors.
+        /** \brief Like \c get_prediction, but fluctuate the histograms within their parametrization errors.
          *
          * This function should be used in place of \c get_prediction, if sampling pseudo data from the model.
          */
         void get_prediction_randomized(Random & rnd, Histogram &result, const ParValues & parameters, const ObsId & obs_id) const;
         
-        /** The derivative of getPredition w.r.t. \c pid. Make sure to copy the returned Histogram as the function
-         * returns a reference to intrenal data which is overwritten in the next call to \c getPredictionDerivative
-        */
+        /** \brief The derivative of getPredition w.r.t. \c pid.
+         *
+         * Make sure to copy the returned Histogram as the function returns a reference to intrenal data which is overwritten in the next call to \c getPredictionDerivative
+         */
         void get_prediction_derivative(Histogram & result, const ParValues & parameters, const ObsId & obs_id, const ParId & pid) const;
 
-        /** get a single component of the prediction for a given observable. Will return
-         * coefficient i * histogram function i
-         * as set with setPrediction. throws OutOfBoundsException if i is too large.
+        /** \brief get a single component of the prediction for a given observable.
+         *
+         * Will return coefficient i * histogram function i
+         * as set with setPrediction. throws NotFoundException if i is too large and an InvalidArgumentException
+         * if no prediction was previously set for obs_id.
          */
         Histogram getPredictionComponent(const ParValues & parameters, const ObsId & obs_id, size_t i) const;
 
-        /** Returns the name of component \c i as set before with \c setPrediction.
+        /** \brief Returns the name of component \c i as set before with set_prediction.
         */
         std::string getPredictionComponentName(const ObsId &, size_t i) const;
 
-        /** Returns the number of components for observable \c obs_id as set before with \c setPrediction.
+        /** \brief Returns the number of components for observable \c obs_id as set before with set_prediction.
         */
         size_t getPredictionNComponents(const ObsId & obs_id) const;
 
         /** \brief Adds the given Distribution to the list of priors.
          * 
-         * This Model takes the ownership of \c d, i.e., d.get()==0 holds after this function returns.
+         * This Model takes the ownership of the memory pointed to by \c d, and \code d.get()==0 \endcode holds after this function returns.
          * 
-         * \todo This method should throw an InvalidArgumentException if a parameter would have two priors
+         * Throws an InvalidArgumentException if by adding this prior, a parameter would have two priors.
+         *
          * \param d The Distribution to add.
          */
         void addPrior(std::auto_ptr<Distribution> & d);
 
-        /** Returns a reference to the prior Distribution previously added with addPrior.
+        /** \brief Returns a reference to the prior Distribution previously added with addPrior.
          * 
          * The returned reference is only valid as long as this Model's lifetime.
          * 
@@ -272,7 +287,7 @@ namespace theta {
          */
         const Distribution & getPrior(size_t i) const;
 
-        /** Retuns the number of priors added with addPrior.
+        /** \brief Retuns the number of priors added with addPrior.
          */
         size_t getNPriors() const;
 
@@ -298,30 +313,31 @@ namespace theta {
         std::vector<boost::shared_ptr<Distribution> > priors;
     };
     
-    /** \brief Factory class to build Models from configuration settings. 
+    /** \brief Factory class to build Models from a configuration settings group
+     *
+     * See the \ref model_def "Model definition" in the introction for a discussion of the configuration syntax.
+     *
+     * The configuration group defining a model contains:
+     * <ul>
+     *   <li>Excatly one settings group per observable to be modeled by this Model. Each observable setting group is named after the observable
+     *      contains one or more components in form of setting groups (whose name can be chosen freely). Each component
+     *      contains the setting "coeficient" and "histogram". </li> 
+     *    <li>
+     *   <li>Zero or one "constraints" setting groups which defines  (as setting groups) zero or more \link Distribution Distributions\endlink used as model priors</li>
+     * </ul>
      */
     class ModelFactory{
     public:
         /** \brief Build a Model from the Setting \c s.
          * 
-         * Throws various exceptions in case of errors. Possible exceptins thrown are:
-         * <ul>
-         * <li> SettingNotFoundException </li>
-         * <li> SettingTypeException </li>
-         * <li> SettingException </li>
-         * <li> Exception </li>
+         * The returned Model will use the VarIdManager given in \c ctx.vm
          * 
-         * The returned Model will use the VarIdManager given in \c vm. Existing variables
-         * (=same name, same specification) will be re-used. Otheriwse, they will
-         * be added to \c vm.
-         * 
-         * \param s The Setting to use to build the Model from.
-         * \param vm The VarIdManager which should be used for the Model.
+         * \param ctx The Configuration to use to build the Model.
          */
         static std::auto_ptr<Model> buildModel(plugin::Configuration & ctx);
     };    
 
-    /** Function object of a negative log likelihood of a model, given data.
+    /** \brief Function object of a negative log likelihood of a model, given data.
      *
      * An instance cannot be constructed directly; use Model::getNLLikelihood instead.
      *

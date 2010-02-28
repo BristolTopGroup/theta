@@ -18,7 +18,7 @@
  * <ol>
  *   <li>\subpage installation Installation explains how to obtain and compile %theta</li>
  *   <li>\subpage intro Introduction describes how to run %theta; a first example is discussed and an introduction to the internals of %theta.
- *        In also contains a \ref plugins "list of available plugins".<li>
+ *        In also contains a \ref plugins "list of available plugins".</li>
  *   <li>\subpage design "Design Goals of theta" contains some thoughts about what the code of %theta should be like.
  *       You should read that either if you want to contribute code to %theta or if you want to know what makes %theta
  *       different to other software you often deal with in high-energy physics.</li>
@@ -28,26 +28,26 @@
  *
  * I would like to thank the authors of the excellent software packages used by %theta:
  * <ul>
- * <li>\link http://www.hyperrealm.com/libconfig/libconfig.html libconfig \endlink A
+ * <li><a href="http://www.hyperrealm.com/libconfig/libconfig.html">libconfig</a> A
  *      well-written, well-documented C/C++ library for processing configuration files with a very simple and elegant API.</li>
- * <li>\link http://www.chokkan.org/software/liblbfgs/ liblbfgs \endlink An implementation of
+ * <li><a href="http://www.chokkan.org/software/liblbfgs/">liblbfgs</a> An implementation of
  *     the Limited-memory Broyden-Fletcher-Goldfarb-Shanno minimization algorithm</li>
  * </ul>
  * These libraries are included in the distribution of %theta.
  *
- * Furthermore, some parts of numerical algorithms have been copied from the excellent \link http://www.gnu.org/software/gsl/ GNU Scientific Library (GSL) \endlink.
+ * Furthermore, some parts of numerical algorithms have been copied from the excellent <a href="http://www.gnu.org/software/gsl/">GNU Scientific Library (GSL)</a>.
  *
  * Last but not least, I want to thank Jasmin Gruschke who tested %theta from an end-user point of view, made useful
  * suggestions and bravely endured backward-incompatible changes.
  *
  * \section license License
  *
- * %theta is licensed under the \link http://www.gnu.org/copyleft/gpl.html GPL \endlink.
+ * %theta is licensed under the <a href="http://www.gnu.org/copyleft/gpl.html">GPL</a>.
  *
  * \section ref References
  * The %theta make use of:
  * <ol>
- *   <li><em>Matsumoto, Makoto and Nishimura, Takuji:</em> \link http://doi.acm.org/10.1145/272991.272995 "Mersenne twister: a 623-dimensionally equidistributed uniform pseudo-random number generator"\endlink,
+ *   <li><em>Matsumoto, Makoto and Nishimura, Takuji:</em> <a href="http://doi.acm.org/10.1145/272991.272995">"Mersenne twister: a 623-dimensionally equidistributed uniform pseudo-random number generator"</a>,
  *        ACM Trans. Model. Comput. Simul. 1, 1998</li>
  *   <li><em>Pierre L'Ecuyer:</em> "Maximally Equidistributed Combined Tausworthe Generators", Math. Comp. 65, 1996</li>
  *   <li><em>Pierre L'Ecuyer:</em> "Tables of Maximally Equidistributed Combined LFSR Generators", Math. Comp. 68, 1999</li>
@@ -197,7 +197,7 @@
  * };
  * </pre>
  * the right hand side of the "mass" setting is a setting group containing a "range" setting (which has a list as type) and "nbins"
- * setting (an integer type). See \link config link below \endlink for a detailed description of the configuration file syntax.
+ * setting (an integer type). See the libconfig reference linked from the \ref mainpage "main page" for a detailed description of the configuration file syntax.
  *
  * At the top of the configuration file, the parameters and observables you want to use are defined:
  * there is one observable "mass" with the range [500, 1500] and 200 bins. Note that theta does
@@ -256,7 +256,7 @@
  * Pseudo data is thrown according to the configured model with following sequence:
  * <ol>
  *  <li>Determine a random value for each model parameter. This is done with a the constraint given in the model for that parameter, if it exists.
- *        Otherwise, the default value from the parameter definition is used.</ul>
+ *        Otherwise, the default value from the parameter definition is used.</li>
  *  <li>For each observable, use these parameters to evaluate the Histograms and coefficients.</li>
  *  <li>For each observable, add all components (i.e., coefficients and histograms)</li>
  *  <li>For each observable, draw a poisson-random sample from the obtained summed histogram</li>
@@ -276,7 +276,7 @@
  * it is not hard to write you own program which goes through the result tables and makes some plots; see
  * \c root/histos.cxx for a starting point.
  *
- * In order to know which tables are in the file, have a look at the documentation of the \link theta::RunT Run\endlink
+ * In order to know which tables are in the file, have a look at the documentation of the theta::Run
  * object which is responsible to create some general-purpose tables. Furthermore, there is one table per producer
  * for which the table format is documented there.
  *
@@ -287,12 +287,10 @@
  *
  * First of all, you might have noticed that the configuration file format is <i>hierarchical</i> and consists of many
  * named setting groups. %theta has a very modular architecture which makes it easy to write extensions for; one important
- * thing to remember at this point is:
- * \attention
- *  Any setting group containing a "type="&lt;typaname&gt;";" setting is used to construct a C++ object of class &lt;typename&gt; via a plugin system.
+ * thing to remember at this point is:<b>Any setting group containing a "type="&lt;typaname&gt;";" setting is used to construct a C++ object of class &lt;typename&gt; via a plugin system.</b>
  *
- * This is very useful if you search for documentation: if you encounter a setting like "type="deltanll_producer"", you now know that you have
- * to search for the documentation at \link deltanll_producer \endlink.
+ * This is very useful if you search for documentation: if you encounter a setting like type="deltanll_hypotest", you now know that you have
+ * to search for the documentation at \link deltanll_hypotest \endlink.
  *
  * So far, plugins can be defined for following types:
  * <ul>
@@ -347,7 +345,7 @@
  * <li>\link theta::Distribution Distribution\endlink: used in model constraints or as priors in a statistical method:
  *    <ul>
  *       <li>\link gauss <b>gauss</b>\endlink normal distribution in one or more dimensions, including arbitrary correlations</li>
- *       <li>\link lognormal <b>lognormal</b>\endlink log-normal distribution in one dimension</li>
+ *       <li>\link log_normal <b>log_normal</b>\endlink log-normal distribution in one dimension</li>
  *     </ul>
  * </li>
  * <li>\link theta::Producer Producer\endlink: statistical method called by a Run object</li>
@@ -357,7 +355,7 @@
  *       <li>\link mle <b>mle</b>\endlink maximum likelihood estimator estimates parameter values and errors using a minimizer on the negative-log-likelihood function</li>
  *       <li>(not yet implemented:)\link mcmc_quantiles <b>mcmc_quantiles</b>\endlink Quantile estimator based on Markov-Chain Monte-Carlo to be used for interval estimation</li>
  *       <li>(not yet implemented:)\link mcmc_marginal <b>mcmc_marginal</b>\endlink Determine the marginal distribution (as Histogram) for a parameter</li>
- *       <li>(not yet implemented:)\link mcmc_posterior_ratio <b>mcmc_posterior_ratio</b>\endlink analogue of deltanll_hypotest, but integrates over any free parameters instead of minimizing</li>
+ *       <li>\link mcmc_posterior_ratio <b>mcmc_posterior_ratio</b>\endlink analogue of deltanll_hypotest, but integrates over any free parameters instead of minimizing</li>
  *       <li>\link pseudodata_writer <b>pseudodata_writer</b>\endlink writes out the created pseudo data. Not really a statistical method, but technically implemented as a Producer as well</li>
  *    </ul>
  * </ul>

@@ -5,22 +5,6 @@
 
 namespace theta{ namespace utils{
 
-/* from the GNU C Library docs: */
-/*double diff_timeval(timeval * x, timeval * y){
-       if (x->tv_usec < y->tv_usec) {
-         int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
-         y->tv_usec -= 1000000 * nsec;
-         y->tv_sec += nsec;
-       }
-       if (x->tv_usec - y->tv_usec > 1000000) {
-         int nsec = (x->tv_usec - y->tv_usec) / 1000000;
-         y->tv_usec += 1000000 * nsec;
-         y->tv_sec -= nsec;
-       }
-       return x->tv_sec - y->tv_sec + (double)(x->tv_usec - y->tv_usec)/1000000;
-}*/
-
-
 /** The inverse Error function in form of the inverse
  * of the cumulative distribution function phi of the 
  * standard gaussian distribution.

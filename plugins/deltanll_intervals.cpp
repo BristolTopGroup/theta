@@ -10,7 +10,7 @@ using namespace theta;
 using namespace std;
 using namespace libconfig;
 
-void DeltaNllIntervalTable::create_table() {
+void deltanll_interval_table::create_table() {
     stringstream ss;
     ss << "CREATE TABLE '" << name << "' (runid INTEGER(4), eventid INTEGER(4), clevel DOUBLE, lower DOUBLE, upper DOUBLE);";
     exec(ss.str());
@@ -20,7 +20,7 @@ void DeltaNllIntervalTable::create_table() {
 }
 
 
-void DeltaNllIntervalTable::append(const Run & run, double clevel, double lower, double upper) {
+void deltanll_interval_table::append(const Run & run, double clevel, double lower, double upper) {
     sqlite3_bind_int(insert_statement, 1, run.get_runid());
     sqlite3_bind_int(insert_statement, 2, run.get_eventid());
     sqlite3_bind_double(insert_statement, 3, clevel);

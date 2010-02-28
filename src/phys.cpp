@@ -204,7 +204,6 @@ void Model::get_prediction_derivative(Histogram & result, const ParValues & para
     }
 }
 
-
 size_t Model::getPredictionNComponents(const ObsId & obs_id) const{
     histos_type::const_iterator it = histos.find(obs_id);
     if(it==histos.end()) throw InvalidArgumentException("Model::getPrediction: invalid obs_id");
@@ -233,6 +232,14 @@ Histogram Model::getPredictionComponent(const ParValues & parameters, const ObsI
 }
 
 void Model::addPrior(auto_ptr<Distribution> & d){
+    ParIds par_ids = d->getParameters();
+    for(size_t i=0; i<priors.size(); ++i){
+        for(ParIds::const_iterator par=par_ids.begin(); par!=par_ids.end(); ++par){
+            if(priors[i]->getParameters().contains(*par)){
+                throw InvalidArgumentException("Model::addPrior: trying to define two priors for one parameter!");
+            }
+        }
+    }
     priors.push_back(boost::shared_ptr<Distribution>(d.release()));
 }
 
@@ -258,30 +265,6 @@ NLLikelihood Model::getNLLikelihood(const Data & data) const{
     result(pv); // will throw exception if parameters are missing ...
     return result;
 }
-
-/*NLLikelihood Model::getNLLikelihood(const Data & data, const ParIds & pars, const ObsIds & obs_ids) const{
-    //check that each observable specified by obs_ids is both (a) described by this model and (b) present in the data.
-    ObsIds data_observables = data.getObservables();
-    for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
-        if(!observables.contains(*obsit))
-            throw InvalidArgumentException("Model::createNLLikelihood: observable specified which is not modelled");
-         if(!data_observables.contains(*obsit))
-             throw InvalidArgumentException("Model::createNLLikelihood: observable specified which is not present in data");
-    }
-
-    for(ParIds::const_iterator parit=pars.begin(); parit!=pars.end(); parit++){
-        if(!parameters.contains(*parit))
-            throw InvalidArgumentException("Model::createNLLikelihood: parameter specified which is not modelled");
-    }
-    NLLikelihood result =  NLLikelihood(*this, data, obs_ids, pars);
-    ParValues pv(*vm);
-    for(ParIds::const_iterator it=parameters.begin(); it!=parameters.end(); ++it){
-        pv.set(*it, vm->get_default(*it));
-    }
-    result(pv);
-    return result;
-}*/
-
 
 /* ModelFactory */
 std::auto_ptr<Model> ModelFactory::buildModel(Configuration & ctx) {

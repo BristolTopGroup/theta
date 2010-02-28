@@ -6,9 +6,7 @@
 
 namespace theta {
 
-/** \brief Base class for all Exceptions used in this project.
- * 
- * \todo rework exceptions using Boost to have more detailed context nformation.
+/** \brief Base class for all Exceptions used in %theta
  */
 class Exception: virtual public std::exception{
 public:

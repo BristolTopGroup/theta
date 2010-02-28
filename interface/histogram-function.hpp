@@ -14,7 +14,7 @@
 namespace theta {
     class VarValues;
 
-    /** A Histogram-valued function which depends on zero, one or more parameters.
+    /** \brief A Histogram-valued function which depends on zero or more parameters.
      *
      * This class is used extensively for model building: a physical model is given by specifying
      * the expected observation in one or more observables and this expectation in turn is specified
@@ -24,31 +24,34 @@ namespace theta {
     class HistogramFunction{
     public:
         typedef HistogramFunction base_type;
-        /** Returns the Histogram as function of values. The reference is only guaranteed
-         *  to be valid as long as this HistogramFunction object.
+        
+        /** \brief Returns the Histogram for the given parameter values.
+         *
+         * The returned reference is only guaranteed to be valid as long as this HistogramFunction object.
          */
         virtual const Histogram & operator()(const ParValues & values) const = 0;
 
-        /** Returns the Histogram as function of some values, but randomly fluctuated
-         *  around its parametrization uncertainty.
+        /** \brief Returns the Histogram for the given parameter values, but randomly fluctuated around its parametrization uncertainty.
          *
-         * Note that if a derived class does not overload this function, the
+         * If a derived class does not provide its own implementation of this method, the
          * default behaviour implemented here is to return an un-fluctuated Histogram
          * (see documentation of the derived class for details of the particular behaviour).
          *
          *  HistogramFunctions are used in theta mainly as building blocks for a model. Here, there play the role
          *  of p.d.f. estimations. Building a p.d.f. estimate always involves some uncertainty:
-         *  - for p.d.f.s derived through a fit of some function, the function parameters
-         *     have an uncertainty due to the finite statistics of the sample it was derived from
-         *  - for p.d.f.s derived simply as histograms from some (simulated or actual) data, the limited
-         *    sample size of the data introduces a bin-by-bin statistical uncertainty of the p.d.f. estimation.
+         * <ul>
+         *  <li>for p.d.f.s derived through a fit of some function, the function parameters
+         *     have an uncertainty due to the finite statistics of the sample it was derived from</li>
+         *   <li>for p.d.f.s derived simply as histograms from some (simulated or actual) data, the limited
+         *    sample size of the data introduces a bin-by-bin statistical uncertainty of the p.d.f. estimation.</li>
+         *  </ul>
          *
-         * Note that this uncertainty is one inherent to the way the p.d.f. was modeled. It is different
+         * The uncertainty is inherent to the way the p.d.f. was modeled. It is different
          * from the treatment of other uncertainties in that it is not written explicitely in the likelihood.
          * Rather, for pseudo data creation, this function will be used instead of \c operator(), effectively
          * integrating over this uncertainty.
          *
-         * Note that some p.d.f. uncertainties can be incorporated either here or explicitely through additional
+         * Some p.d.f. uncertainties can be incorporated either here or explicitely through additional
          * parameters in the likelihood: for example a p.d.f. desribes with a gaussian parametrization where
          * the width has some error, this could either be treated here or, alternatively, the width can be
          * included as parameter in the likelihood (possibly with some constraint). Choosing between this possibilities
@@ -58,25 +61,27 @@ namespace theta {
             return operator()(values);
         }
 
-        /** The parameters which this HistogramFunction depends on.
+        /** \brief Returns the parameters which this HistogramFunction depends on.
          */
         virtual ParIds getParameters() const = 0;
         
-        /** Returns whether a derivative w.r.t. pid could be !=0.
+        /** \brief Returns whether a derivative w.r.t. pid could be !=0.
          * 
          * Same as getParameters().contains(pid).
          */
         virtual bool dependsOn(const ParId & pid) const = 0;
         
-        /** Returns the gradient of the Histogram w.r.t. \c pid at \c values.
+        /** \brief Returns the gradient of the Histogram w.r.t. \c pid at \c values.
         */
         virtual const Histogram & gradient(const ParValues & values, const ParId & pid) const = 0;
         
+        /// Declare the destructor virtual as there will be polymorphic access to derived classes
         virtual ~HistogramFunction(){}
     };
 
-    /** A simple HistogramFunction which always returns the same Histogram, independent of
-     * any parameters. It has no error.
+    /** \brief A simple HistogramFunction which always returns the same Histogram, independent of any parameters.
+     *
+     * It does not implement any kind of error, i.e., getRandomFluctuation() returns always the same Histogram.
      */
     class ConstantHistogramFunction: public HistogramFunction{
     public:
@@ -90,44 +95,49 @@ namespace theta {
             set_histo(histo);
         }
 
-        /** Returns the Histogram \c h set at construction time.
+        /** \brief Returns the Histogram \c h set at construction time.
          */
         virtual const Histogram & operator()(const ParValues & values) const{
             return h;
         }
 
-        /** Returns the empty parameter set as it does not depend on any parameters.
+        /** \brief Returns the empty parameter set as it does not depend on any parameters.
          */
         virtual ParIds getParameters() const{
             return ParIds();//empty set.
         }
 
-        /** Always returns false, as the Histogram is constant and does not depend
-         *  on any parameters.
+        /** \brief Always returns false, as the Histogram is constant and does not depend on any parameters.
          */
         virtual bool dependsOn(const ParId &) const{
             return false;
         }
 
-        /** Always returns a zero Histogram. Assuming well-written client code, this
-         * should never be called, as this code could check dependsOn(pid) and see
-         * that it would be a zero-return anyway and save the time to call this function 
-         * (and doing something with the result ...).
+        /** \brief Always returns a zero Histogram.
+         *
+         * As this HistogramFunction does not depend on parameters by definition, the gradient is always zero.
+         *
+         * Assuming well-written client code, this method should never be called, as any code calling it can check dependsOn() first
+         * see that it would be a zero-return anyway.
          */
         virtual const Histogram & gradient(const ParValues & values, const ParId & pid) const{
             return grad;
         }
-        
-        virtual ~ConstantHistogramFunction(){}
 
     protected:
-        
+        /** \brief Set the constant Histogram to return
+         *
+         * This method is meant for derived classes which can use it to set the constant Histogram to
+         * be returned by operator()
+         */
         void set_histo(const Histogram & h_){
            h = h_;
            h.set(0,0);
            h.set(h.get_nbins()+1,0);
            grad.reset(h.get_nbins(), h.get_xmin(), h.get_xmax());
         }
+        /** \brief Default constructor to be used by derived classes
+         */
         ConstantHistogramFunction(){}
      private:
         Histogram h;
@@ -135,13 +145,14 @@ namespace theta {
     };
 
 
-    /** A simple HistogramFunction which always returns the same Histogram, independent of
-     * any parameters. It already includes errors in the form of bin-by-bin poisson errors (which
+    /** \brief A constant HistogramFunction, including bin-by-bin fluctuation for pseudodata generation.
+     * 
+     * Similar to ConstantHistogramFunction, but includes bin-by-bin gaussian errors as uncertainty.
      * are not correlated).
      */
     class ConstantHistogramFunctionError: public HistogramFunction{
     public:
-        /** \brief A \c HistogramFunction which does not depend on any parameters and always returns \c histo.
+        /** \brief Construct from a Histogram and an error Histogram
          *
          * \param histo is the Histogram to return on operator()(...).
          * \param error is a Histogram containing relative errors on the bin entries of histo.
@@ -160,13 +171,13 @@ namespace theta {
             set_histos(histo, error);
         }
 
-        /** Returns the Histogram \c h set at construction time.
+        /** \brief Returns the Histogram \c h set at construction time.
          */
         virtual const Histogram & operator()(const ParValues & values) const{
             return h;
         }
 
-        /** Returns the bin-by-bin fluctuated Histogram.
+        /** \brief Returns the bin-by-bin fluctuated Histogram.
          *
          * For evey bin j, a random number from a gaussian distribution around 1, truncated at 0, with
          * the width taken from bin j of the error-Histogram is drawn. The contents of
@@ -182,29 +193,32 @@ namespace theta {
          */
         virtual const Histogram & getRandomFluctuation(Random & rnd, const ParValues & values) const;
 
-        /** Returns the empty parameter set as it does not depend on any parameters.
+        /** \brief Returns the empty parameter set as it does not depend on any parameters.
          */
         virtual ParIds getParameters() const{
             return ParIds();//empty set.
         }
 
-        /** Always returns false, as the HistogramFunction is constant and does not depend
-         *  on any parameters.
+        /** \brief Always returns false, as this HistogramFunction is constant and does not depend on any parameters.
          */
         virtual bool dependsOn(const ParId &) const{
             return false;
         }
 
-        /** Always returns a zero Histogram.
+        /** \brief Always returns a zero as this HistogramFunction is constant and does not depend on any parameters.
          */
         virtual const Histogram & gradient(const ParValues & values, const ParId & pid) const{
             return grad;
         }
 
-        virtual ~ConstantHistogramFunctionError(){}
-
     protected:
-        // to be used by derived classes
+        /** \brief Set the Histogram and the errors to to return
+         *
+         * This method is meant for derived classes which can use it to set the constant Histogram to
+         * be returned by operator() and the error Histogram used by getRandomFlutuation(). As documented
+         * in ConstantHistogramFunctionError::ConstantHistogramFunctionError, the \c error Histogram
+         * contains bin-by-bin relative errors which are assumed to be independent.
+         */        
         void set_histos(const Histogram & histo, const Histogram & error){
             h = histo;
             err = error;
@@ -219,6 +233,8 @@ namespace theta {
                 if(error.get(i)<0.0) throw InvalidArgumentException("ConstantHistogramFunctionError: error histogram contains negative entries");
             }
         }
+        /** \brief Default constructor to be used by derived classes
+         */
         ConstantHistogramFunctionError(){}
         
     private:

@@ -71,14 +71,16 @@ void PluginLoader::print_plugins() {
     std::cout << std::endl;
 }
 
+std::vector<std::string> PluginLoader::loaded_files;
+
 void PluginLoader::load(const std::string & soname) {
+    if(find(loaded_files.begin(), loaded_files.end(), soname)!=loaded_files.end()) return;
     void* handle = 0;
     try {
         handle = dlopen(soname.c_str(), RTLD_NOW);
     } catch (Exception & ex) {
         std::cerr << "Exception while loading plugin file '" << soname << "': " << ex.message << std::endl;
     }
-
     if (handle == 0) {
         std::stringstream s;
         const char * error = dlerror();
@@ -86,5 +88,5 @@ void PluginLoader::load(const std::string & soname) {
         s << "PluginLoader::load: error loading plugin file '" << soname << "': " << error << std::endl;
         throw InvalidArgumentException(s.str());
     }
+    loaded_files.push_back(soname);
 }
-

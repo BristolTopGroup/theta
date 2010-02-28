@@ -234,29 +234,6 @@ void RndInfoTable::append(const Run & run, long seed){
     }
 }
 
-/*void MCMCQuantileTable::create_table() {
-    stringstream ss;
-    ss << "CREATE TABLE '" << name << "' (runid INTEGER(4), eventid INTEGER(4), quantile DOUBLE, parvalue DOUBLE);";
-    exec(ss.str());
-    ss.str("");
-    ss << "INSERT INTO '" << name << "' VALUES(?,?,?,?);";
-    insert_statement = prepare(ss.str());
-}
-
-void MCMCQuantileTable::append(const Run & run, double quantile, double par_value) {
-    sqlite3_bind_int(insert_statement, 1, run.get_runid());
-    sqlite3_bind_int(insert_statement, 2, run.get_eventid());
-    sqlite3_bind_double(insert_statement, 3, quantile);
-    sqlite3_bind_double(insert_statement, 4, par_value);
-    int res = sqlite3_step(insert_statement);
-    sqlite3_reset(insert_statement);
-    if (res != 101) {
-        error(__FUNCTION__);//throws exception
-    }
-}*/
-
-
-
 ParamTable::ParamTable(const std::string & name_, const theta::VarIdManager & vm, const theta::ParIds & ids):
     Table(name_), par_ids(ids){
     pid_names.reserve(par_ids.size());
@@ -297,4 +274,3 @@ void ParamTable::append(const Run & run, const ParValues & values) {
         error(__FUNCTION__);//throws exception
     }
 }
-

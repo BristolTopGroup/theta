@@ -1,18 +1,37 @@
 #include "interface/distribution.hpp"
 #include "interface/random.hpp"
+#include "interface/plugin_so_interface.hpp"
+#include "interface/plugin.hpp"
 
 #include <boost/test/unit_test.hpp>
 
 using namespace theta;
+using namespace theta::plugin;
+using namespace libconfig;
 
 BOOST_AUTO_TEST_SUITE(distribution_tests)
 
 BOOST_AUTO_TEST_CASE(distribution_lognormal){
-    VarIdManager vm;
-    ParId var0 = vm.createParId("var0");
+    
+    PluginLoader::load("lib/core-plugins.so");
+    
     double sigma = .5;
     double mu = 2.0;
-    std::auto_ptr<Distribution> d(new LogNormalDistribution(var0, mu, sigma));
+    Config c;
+    Setting & s = c.getRoot();
+    s.add("mu", Setting::TypeFloat);
+    s["mu"] = mu;
+    s.add("sigma", Setting::TypeFloat);
+    s["sigma"] = sigma;
+    s.add("parameter", Setting::TypeString);
+    s["parameter"] = "var0";
+    s.add("type", Setting::TypeString);
+    s["type"] = "log_normal";
+    boost::shared_ptr<VarIdManager> vm(new VarIdManager);
+    ParId var0 = vm->createParId("var0");
+    theta::utils::SettingUsageRecorder rec;
+    Configuration cfg(vm, s, s, rec);
+    std::auto_ptr<Distribution> d = PluginManager<Distribution>::build(cfg);
     //must return +infinity for argument < 0:
     ParValues values;
     values.set(var0, -1.0);
@@ -41,10 +60,9 @@ BOOST_AUTO_TEST_CASE(distribution_lognormal){
         double lognormal_x_d = d->evalNL(values);
         BOOST_CHECK(utils::close_to(-utils::log(lognormal_x / lognormal_mu), lognormal_x_d - lognormal_mu_d, 10));
     }
-    RandomTaus rnd;
-    RandomProxy<RandomTaus> rndproxy(rnd);
-    ParValues v_sampled(vm);
-    d->sample(v_sampled, rndproxy, vm);
+    Random rnd(new RandomSourceTaus());
+    ParValues v_sampled(*vm);
+    d->sample(v_sampled, rnd, *vm);
     BOOST_REQUIRE(v_sampled.contains(var0));
     //BOOST_REQUIRE(v_sampled.getAllParIds().size() == 1);
     //it is difficult to check that the sampling works correctly.

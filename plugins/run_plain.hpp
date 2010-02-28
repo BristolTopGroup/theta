@@ -1,11 +1,8 @@
 #ifndef RUN_PLAIN_HPP
 #define	RUN_PLAIN_HPP
 
-//#include "interface/plugin.hpp"
 #include "interface/decls.hpp"
 #include "interface/run.hpp"
-
-//#include "interface/plugin_so_interface.hpp"
 
 #include <string>
 
@@ -17,9 +14,10 @@
  * <li>calls all producers, in turn (using the producer model).</li>
  * </ol>
  *
- * For the configuration, refer to the documentation of the \link RunT Run\endlink class.
- * No additional configuration settings are introduced here. Note that the type setting must
- * always be "plain_run".
+ * For the configuration, refer to the documentation of the theta::Run class.
+ * No additional configuration settings are introduced here.
+ *
+ * The type setting must always be "plain_run".
  */
 class plain_run: public theta::Run {
 public:

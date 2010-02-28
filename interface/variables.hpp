@@ -311,7 +311,7 @@ namespace theta {
          * chaining calls like \c values.set(a, 0.0).set(b, 1.0).set(c, 2.0) ...
          *
          * \param pid Identified the parameter to assign a new value to.
-         * \param value The new value for the parameter.
+         * \param val The new value for the parameter.
          */
         ParValues & set(const ParId & pid, double val){
             const int id = pid.id;

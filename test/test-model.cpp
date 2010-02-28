@@ -1,4 +1,7 @@
 #include "interface/phys.hpp"
+#include "interface/histogram.hpp"
+#include "interface/random.hpp"
+#include "interface/histogram-function.hpp"
 
 #include <boost/test/unit_test.hpp>
 
@@ -43,7 +46,7 @@ BOOST_AUTO_TEST_CASE(model0){
     names.push_back("signal");
     names.push_back("background");
     //TODO check error behavior, e.g. likelihood without any histos set!
-    m.setPrediction(obs0, coeffs, histos, names);
+    m.set_prediction(obs0, coeffs, histos, names);
     ParValues values;
     values.set(beta1, 1.0);
     values.set(beta2, 0.0);
@@ -121,7 +124,7 @@ BOOST_AUTO_TEST_CASE(modelgrad){
     Histogram background(nbins, -1, 1);
     BOOST_REQUIRE(true);
 
-    RandomTaus rnd;
+    Random rnd(new RandomSourceTaus());
     for(size_t i = 1; i<=nbins; i++){
         //background.set(i, 1.0 + rnd.get());
         //signal.set(i, 1.0 + rnd.get());
@@ -134,7 +137,7 @@ BOOST_AUTO_TEST_CASE(modelgrad){
     vector<string> names;
     names.push_back("signal");
     names.push_back("background");
-    m.setPrediction(obs0, coeffs, histos, names);
+    m.set_prediction(obs0, coeffs, histos, names);
 
     ParValues values;
     values.set(beta1, 1.0);

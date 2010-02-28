@@ -1,23 +1,15 @@
 #ifndef DISTRIBUTION_HPP
 #define	DISTRIBUTION_HPP
 
-//#include "boost/shared_ptr.hpp"
-//#include "libconfig.h++"
+#include "interface/decls.hpp"
 #include "interface/variables.hpp"
 #include "interface/matrix.hpp"
-#include "interface/decls.hpp"
 #include "interface/plugin_so_interface.hpp"
 
 #include <memory>
 #include <vector>
 
-namespace libconfig{
-    class Setting;
-}
-
 namespace theta{
-
-    class AbsRandomProxy;
 
     /** \brief A class representing a probability distribution of parameters in one or more dimensions.
      * 
@@ -70,84 +62,19 @@ namespace theta{
         */
         virtual double evalNL_withDerivatives(const ParValues & values, ParValues & derivatives) const = 0;
 
-        /** \brief Get the parameters this Distribution depends on.
+        /** \brief Get the parameters this Distribution depends on and provides values for
          */
         ParIds getParameters() const{
             return par_ids;
         }
+        
+        /// declare destructor as virtual, as polymorhpic access will happen.
         virtual ~Distribution(){};
     protected:
         ParIds par_ids;
     };
 
-    /** \brief A lognormal distribution in one variable.
-     */
-    class LogNormalDistribution: public Distribution{
-    public:
-        /** Construct a new LogNormal distribution in variable v_id with parameters
-         * mu and sigma. Only sigma > 0 is allowed; otherwise, an InvalidArgumentException is thrown.
-         */
-        LogNormalDistribution(const ParId & p_id, double mu, double sigma);
-        
-        /** \brief Sample random values. 
-         */
-        virtual void sample(ParValues & result, Random & rnd, const VarIdManager & vm) const;
-        virtual double evalNL(const ParValues & values) const;
-        virtual double evalNL_withDerivatives(const ParValues & values, ParValues & derivatives) const;
-        virtual ~LogNormalDistribution(){}
-    private:
-        double mu, sigma;
-    };
-
-/** \brief A Gaussian normal distribution in one or more dimensions. 
- * 
- * A one-dimensional case is configured with a setting group like 
- * <pre> 
- * { 
- *  type = "gauss"; 
- *  parameter = "p0"; 
- *  mean = 2.0; 
- *  width = 0.5; 
- * } 
- * </pre> 
- * \c parameter specifies the parameter the normal distribution depends on
- *
- * \c mean is a floating point value specifying the mean value of the distribution, \c width is its standard deviation.
- *
- * A multi-dimensional normal distribution can be specified with a setting like 
- * <pre> 
- * { 
- *  type = "gauss"; 
- *  parameters = ("p0", "p1"); 
- *  mean = [2.0, 3.0]; 
- *  covariance = ([1.0, 0.2], [0.2, 1.0]); 
- * } 
- * </pre> 
- *
- * \c mean specifies, in the same order as parameters, the mean values to use for the gaussian. 
- * 
- * \c covariance is the (symmetric) covariance matrix for the normal distribution. Note that 
- *     you give it as list of arrays (as it is symmetric anyway, it is left open what the "rows" and "columns" are). 
- */ 
-    class gauss: public Distribution{
-    public:
-        /** Construct a GaussDistribution which depends on the variable ids v_ids, have a mean of mu
-         *  and a covariance matrix cov.
-         *  If dimensions of v_ids, mu and cov mismatch, an InvalidArgumentException is thrown.
-         *  If cov is not positive definite, a MathException is thrown.
-         */
-        gauss(plugin::Configuration & cfg);
-        virtual void sample(ParValues & result, Random & rnd, const VarIdManager & vm) const;
-        virtual double evalNL(const ParValues & values) const;
-        virtual double evalNL_withDerivatives(const ParValues & values, ParValues & derivatives) const;
-    private:
-        std::vector<ParId> v_par_ids;
-        std::vector<double> mu;
-        Matrix sqrt_cov; //required for sampling
-        Matrix inverse_cov;//required for density evaluation
-    };
-
 }
 
-#endif	/* _DISTRIBUTION_HPP */
+#endif
 

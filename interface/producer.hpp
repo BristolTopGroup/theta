@@ -15,7 +15,8 @@ namespace theta {
 /** \brief The abstract base class for all statistical methods.
  *
  * It is called "producer" as it produces statistical results, given Data and
- * a Model. Usually, it is called on many different pseudodata.
+ * a Model. One important usage is that of Run, which holds a list of producers and calls them
+ * on some pseudodata.
  */
 class Producer{
 public:
@@ -32,7 +33,6 @@ public:
      * available through the Run object).
      *
      * Derived classes may assume that subsequent calls are done with the same \c model.
-     * \todo this assumption should be reflected in the code: 
      *
      * In case of an error, the method should through an Exception.
      * In case of warnings, a log entry should be made calling Run::log_warning.
@@ -64,19 +64,6 @@ private:
     std::string name;
     std::string type;
 };
-
-
-/*class MCMCQuantileProducer: public Producer{
-public:
-   MCMCQuantileProducer(const ParId & p_id, const std::vector<double> & quantiles, database::Database & db, database::LogTable & log);
-   virtual void pre_run(const Run & run);
-   virtual void produce(int runid, int eventid, const Data & data, const Model & model);
-private:
-   ParId p_id;
-   std::vector<double> quantiles;
-   database::MCMCQuantileTable table;
-};*/
-
 
 }
 

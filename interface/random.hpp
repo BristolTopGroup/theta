@@ -108,10 +108,9 @@ public:
     }
 };
 
-
     /** \brief Tausworthe generator
      *
-     * See Pierre L'Ecuyer: "Maximally Equidistributed Combined Tausworthe Generators", Math. Comp. 65, 1996<br/>
+     * See Pierre L'Ecuyer: "Maximally Equidistributed Combined Tausworthe Generators", Math. Comp. 65, 1996 <br>
      * with seeding modifications described in Pierre L'Ecuyer: "Tables of Maximally Equidistributed Combined LFSR Generators", Math. Comp. 68, 1999.
      */
     class RandomSourceTaus: public RandomSource{
@@ -131,7 +130,7 @@ public:
     
     /** \brief The Mersenne Twister generator MT19937
      *
-     * See Matsumoto, Makoto and Nishimura, Takuji:</em> \link http://doi.acm.org/10.1145/272991.272995 "Mersenne twister: a 623-dimensionally equidistributed uniform pseudo-random number generator"\endlink,
+     * See Matsumoto, Makoto and Nishimura, Takuji: "Mersenne twister: a 623-dimensionally equidistributed uniform pseudo-random number generator"
      * ACM Trans. Model. Comput. Simul. 1, 1998
      *
      * This algorithm is approximately 50% slower than the \link RandomSourceTaus Tausworthe generator \endlink.

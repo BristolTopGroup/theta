@@ -8,11 +8,30 @@ namespace theta{
    
       /** \brief Populate VarIdManager from a Setting.
        *
-       * Uses the "observables" and "parameters" settings to fill the VarIdManager instance in \c ctx.
+       * This function uses the "observables" and "parameters" setting groups in cfg.setting to
+       * populate cfg.VarIdManager.
        *
-       * \todo document more here (setting parsed)
+       * If \c cfg.settings is this settings group:
+       * <pre>
+       * {
+       *  observables = {
+       *     mass = {
+       *        nbins = 200;
+       *        range = [0.0, 10.0];
+       *    };
+       *  };
+       *
+       *  parameters = {
+       *     p0 = {
+       *         default = 20.0;
+       *         range = (0.0, "inf");
+       *   };
+       *  };
+       * }
+       * </pre>
+       * then this function will call VarIdManager::createParId("p0", 20, 0, inf) and VarIdManager::createObsId("mass", 200, 0.0, 10.0).
        */
-      void apply_settings(theta::plugin::Configuration & ctx);
+      void apply_settings(theta::plugin::Configuration & cfg);
    }
 }
 

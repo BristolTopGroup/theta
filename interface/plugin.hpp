@@ -18,12 +18,17 @@ namespace theta {
      */
     namespace plugin {
         template<typename> class PluginManager;
-        /* classes used internally by the PluginManager: The PluginManager keeps track
-         * of a bunch of factories which provide means to construct the desired object of type product type
-         * which is derived from a base_type. All plugin lookup, tec. is done with base_type.
+        /** \brief Class used internally for the PluginManager
          *
-         * Template specializations of the factory are constructed in the REGISTER_PLUGIN
-         * macro.
+         * You usually do not have to care about it, as this is a detail handeled by the REGISTER_PLUGIN macro.
+         *
+         * This is the abstract factory class for a certain \c base_type. For each \c base_type, there
+         * an instance of PluginManager&lt;base_type&gt; will save pointers to all currently registered
+         * factories.
+         *
+         * By use of the REGISTER_PLUGIN(some_concrete_type), a derived class of factory&lt;some_concrete_type::base_type&gt;
+         * will be created which handles the construction of \c some_concrete_type. This factory will be registered
+         * at the PluginManager&lt;some_conrete_type::base_type&gt; as soon as the shared object file is loaded.
          */
          template<typename base_type>
          class factory{
@@ -35,8 +40,6 @@ namespace theta {
                  PluginManager<base_type>::register_factory(this);
              }
          };
-
-         //#define REGISTER_FACTORY(factory_type) namespace{ static theta::plugin::register_factory<factory_type> CONCAT(f, __LINE__); }
 
          //helper macros for REGISTER_PLUGIN
          #define CONCAT(a,b) CONCAT2(a,b)
@@ -70,16 +73,6 @@ namespace theta {
         template<typename product_type>
         class PluginManager : private boost::noncopyable {
         public:
-            //typedef boost::ptr_vector<factory_type> plugin_array;
-            //typedef typename factory_type::product_type product_type;
-            
-
-            /** \brief returns the singleton instance of this PluginManager.
-             */
-            /*static PluginManager* get_instance() {
-                if (instance.get() == 0) instance.reset(new PluginManager);
-                return instance.get();
-            }*/
 
             /** \brief Use the registered factories to build an instance from a configuration settings block.
              *
@@ -157,30 +150,35 @@ namespace theta {
             factories.push_back(new_factory);
         }
 
-        /** \brief Class responsible to load the shared object files containing the plugins.
+        /** \brief Class responsible to load the shared object files containing plugins
          */
         class PluginLoader {
         public:
 
-            /** \brief Run the loader according to the plugins Setting \c s.
+            /** \brief Run the loader according to the plugins Setting \c s
              *
              * s must contain the "filenames" setting, a list of strings with paths of .so files.
              */
             static void execute(const libconfig::Setting & s, theta::utils::SettingUsageRecorder & rec);
 
-            /** \brief print a list of all currently available plugins to cout.
+            /** \brief print a list of all currently available plugins to standard out, grouped by type
              *
              * This is mainly for debugging.
              */
             static void print_plugins();
 
-            /** \brief load a plugin file.
+            /** \brief load a plugin file
              *
-             * soname is the filename of the plugin (a .so file). The .so file
-             * will be loaded which will trigger the plugin registration via the
-             * REGISTER_FACTORY macro automagically.
+             * The given shared object file will be loaded which will trigger the plugin registration of all plugins
+             * defined via the REGISTER_PLUGIN macro automagically. If the method is called more than once for the same filename,
+             * all but the first call are ignored.
+             *
+             * \param soname is the filename of the plugin (a .so file), including the path from the current directory
              */
             static void load(const std::string & soname);
+            
+        private:
+            static std::vector<std::string> loaded_files;
         };
     }
 }

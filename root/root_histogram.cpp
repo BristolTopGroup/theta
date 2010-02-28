@@ -1,6 +1,8 @@
 #include "interface/plugin_so_interface.hpp"
 #include "interface/plugin.hpp"
 #include "interface/histogram-function.hpp"
+#include "root/root_histogram.hpp"
+
 #include "TH1.h"
 #include "TFile.h"
 
@@ -8,34 +10,7 @@ using namespace theta;
 using namespace theta::plugin;
 using namespace std;
 
-
-/** \brief Factory to read a Histogram from a root file.
- *
- * Configuration: anywhere, where a (constant) Histogram has to be defined,
- * use a setting like:
- * <pre>
- * {
- * type = "root-histogram";
- * filename = "path/to/file.root";
- * histoname = "hitoname-in-file";
- * normalize_to = 1.0;
- * use_errors = true;
- * }
- * </pre>
- *
- * If \c use_errors is true, the errors in the Histogram will be used to
- * build a \c ConstantHistogramFunctionError instance which implements bin-by-bin
- * fluctuations for pseudodata creation (for deails, see documentation of
- * \c ConstantHistogramFunctionError).
- *
- * Otherwise, an instance of \c ConstantHistogramFunction
- * is returned which does not treat parametrization errors.
- *
- * \sa ConstantHistogramFunctionError ConstantHistogramFunction
- */
-class root_histogram: public ConstantHistogramFunctionError{
-public:
-   root_histogram(Configuration & ctx){
+   root_histogram::root_histogram(Configuration & ctx){
       string filename = ctx.setting["filename"];
       ctx.rec.markAsUsed(ctx.setting["filename"]);
       string histoname = ctx.setting["histoname"];
@@ -73,6 +48,5 @@ public:
       h *= norm/integral;
       set_histos(h, h_error);
    }
-};
 
 REGISTER_PLUGIN(root_histogram)

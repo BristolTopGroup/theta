@@ -228,7 +228,6 @@ public:
      *
      * The default loglevel is warning.
      *
-     * \param db The Database the table should be created in.
      * \param name The name of the table. Has to pass Table::checkName()
      */
     LogTable(const std::string & name);
@@ -248,16 +247,22 @@ public:
     
     /** \brief Append message to log table, if severity is larger than currently configured level
      * 
-     * \param runid The run id the log entry is associted with.
-     * \param eventid The event id the log entry is associted with or 0 if no particular event is referred.
-     * \param message The log message, in human-readable english.
+     * \param run The Run instance to ask for the current runid and eventid
+     * \param s The severity level of the log message
+     * \param message The log message, in human-readable english
      */
     void append(const theta::Run & run, severity::e_severity s, const std::string & message){
         //define inline as hint to the compiler; keep this function as short as possible to
-        // encourage the compiler actually inlining it.
+        // encourage the compiler actually inlining it and to have high performance benefits in
+        // case the user disables logging.
         if(s <= level) really_append(run, s, message);
     }
     
+    /** \brief Returns the number of messages
+     *
+     * Use severity::e_severity converted to int to access the number of messages written to the log.
+     * Messages suppressed by the set_loglevel() method <em>not</em> counted.
+     */
     const int* get_n_messages() const;
 
 private:
@@ -273,7 +278,7 @@ private:
 };
 
 
-/**\brief Table to store per-run information about all active producers.
+/** \brief Table to store per-run information about all active producers.
  *
  * This table object is used by an instance of \link theta::Run Run \endlink.
  * 
@@ -290,14 +295,13 @@ class ProducerInfoTable: public Table {
 public:
     /** \brief Construct a new producer table in Database \c db with name \c name.
      *
-     * \param db The Database the table should be created in.
      * \param name The name of the table. Has to pass Table::checkName()
      */
     ProducerInfoTable(const std::string & name): Table(name){}
     
     /** \brief Append an entry to the ProducerInfoTable.
      * 
-     * \param runid The run id
+     * \param run The Run instance to ask for the runid
      * \param index The index for this producer in the current run configuration
      * \param p_name The name of the producer
      * \param p_type The right hand side of the type="..."; setting used to configure this producer
@@ -310,7 +314,7 @@ private:
     virtual void create_table();
 };
 
-/**\brief Table to store per-run information about the random number seed.
+/** \brief Table to store per-run information about the random number seed.
  *
  * This table object is used by an instance of \link theta::Run Run \endlink.
  *
@@ -335,14 +339,6 @@ private:
      */
     virtual void create_table();
 };
-
-/*class MCMCQuantileTable: public Table {
-public:
-    MCMCQuantileTable(const std::string & name_) : Table(name_){}
-    void append(const theta::Run & run, double quantile, double parvalue);
-private:
-    virtual void create_table();
-};*/
 
 class ParamTable: public Table {
 public:

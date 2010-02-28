@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(getset){
 
 //test +=
 BOOST_AUTO_TEST_CASE(test_plus){
-    RandomTaus rnd;
+    Random rnd(new RandomSourceTaus());
     Histogram m0(100, 0, 1);
     Histogram m1(m0);
     Histogram m_expected(m0);
@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE(test_plus){
 
 //test *=
 BOOST_AUTO_TEST_CASE(test_multiply){
-    RandomTaus rnd;
+    Random rnd(new RandomSourceTaus());
     Histogram m0(100, 0, 1);
     Histogram m1(m0);
     Histogram m0m1(m0);

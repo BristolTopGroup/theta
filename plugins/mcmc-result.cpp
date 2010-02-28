@@ -1,5 +1,6 @@
-#include "interface/mcmc-result.hpp"
+#include "plugins/mcmc-result.hpp"
 #include "interface/exception.hpp"
+
 #include <cmath>
 #include <sstream>
 

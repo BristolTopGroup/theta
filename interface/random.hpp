@@ -1,32 +1,25 @@
 #ifndef RANDOM_HPP
 #define RANDOM_HPP
 
-//#include "interface/exception.hpp"
 #include "interface/decls.hpp"
 
 #include <vector>
 #include <memory>
+#include <limits>
 #include <boost/utility.hpp>
+#include <boost/static_assert.hpp>
+
+// the random number algorithms use "unsigned int" as 32 bit field. It is ok to be larger,
+// but must not be smaller:
+BOOST_STATIC_ASSERT(std::numeric_limits<unsigned int>::digits >= 32);
 
 namespace theta {
-
-/** \file random2.hpp Random number generators are divided in two parts:
- * <ol>
- *  <li>The actual random number generator, which derives from RandomSource
- *      and only provides very few methods to generate uniform random numbers</li>
- *  <li>A RandomAlgos class which has a RandomSource member and provides
- *      more random number distributions.</li>
- * </ol>
- *
- * An end user will almost certainly use a RandomAlgos class. Note that
- * such pre-templated classes are available as typedefs.
- */
 
 /// abstract base class for pseudo random number generators
 class RandomSource{
     friend class Random;
     protected:
-        /** \brief Fill the buffer with 32 bit random numbers.
+        /** \brief Fill the buffer with full 32 bit pseudorandom numbers.
          */
         virtual void fill(std::vector<unsigned int> & buffer) throw() = 0;
         
@@ -35,7 +28,11 @@ class RandomSource{
         virtual void set_seed(unsigned int seed) = 0;
 };
 
-/// class using an internal RandomSource to produce various common distributions
+/** \brief Random number distribution generator
+ *
+ * This class is used to generate pseudo random number in user code. For the actual generation of "bare"
+ * pseudo-randomness, it can use any class derived from RandomSource.
+ */
 class Random: private boost::noncopyable {
 private:
     /* The Gauss Zigurrat method. */
@@ -64,7 +61,7 @@ public:
     
     /** \brief Construct a generator with \c rnd_ as underlying source
      *
-     * Note that RandomAlgos will take ownership of rnd_.
+     * Note that RandomAlgos will take ownership of the memory pointed to by rnd_.
      */
     //While larger buffer sizes help very much for small buffers, tests have shown that
     // choosing a buffer sizes larger than around 100 does not increase performance significantly.
@@ -113,6 +110,9 @@ public:
 
 
     /** \brief Tausworthe generator
+     *
+     * See Pierre L'Ecuyer: "Maximally Equidistributed Combined Tausworthe Generators", Math. Comp. 65, 1996<br/>
+     * with seeding modifications described in Pierre L'Ecuyer: "Tables of Maximally Equidistributed Combined LFSR Generators", Math. Comp. 68, 1999.
      */
     class RandomSourceTaus: public RandomSource{
     private:
@@ -128,7 +128,14 @@ public:
         /// Default constructor; uses the same seed each time
         RandomSourceTaus();
     };
-
+    
+    /** \brief The Mersenne Twister generator MT19937
+     *
+     * See Matsumoto, Makoto and Nishimura, Takuji:</em> \link http://doi.acm.org/10.1145/272991.272995 "Mersenne twister: a 623-dimensionally equidistributed uniform pseudo-random number generator"\endlink,
+     * ACM Trans. Model. Comput. Simul. 1, 1998
+     *
+     * This algorithm is approximately 50% slower than the \link RandomSourceTaus Tausworthe generator \endlink.
+     */
     class RandomSourceMersenneTwister: public RandomSource{
     private:
         static const int N = 624;

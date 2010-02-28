@@ -226,6 +226,10 @@ namespace theta {
         const std::pair<double, double> & get_range(const ParId & id) const;
         //@}
         
+        /** \brief Return all default values.
+         */
+        ParValues get_defaults() const;
+        
         //@{
         /** \brief Return the number of bins and range for an observable identified by the ObsId id.
          */
@@ -316,6 +320,20 @@ namespace theta {
             }
             values[id] = val;
             return *this;
+         }
+         
+         /** \brief Set all values contained in rhs.
+          *
+          * This is equivalent to calling set(pid, val) for each pair (pid, val) contained in rhs.
+          */
+         void set(const ParValues & rhs){
+             if(rhs.values.size() > values.size()){
+                 values.resize(rhs.values.size(), NAN);
+             }
+             for(size_t i=0; i<rhs.values.size(); ++i){
+                 if(std::isnan(rhs.values[i]))continue;
+                 values[i] = rhs.values[i];
+             }
          }
         
         /** \brief Add a value to a parameter.

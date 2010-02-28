@@ -15,10 +15,12 @@ void Run::run(){
     }
     //write random seeds to rndinfo_table:
     rndinfo_table.append(*this, seed);
+    eventid = 0;
+    logtable->append(*this, database::severity::info, "run start");
     //call the run implementation of the subclass:
     run_impl();
     eventid = 0; // to indicate in the log table that this is an "event-wide" entry
-    log_run_end();
+    logtable->append(*this, database::severity::info, "run end");
     if(log_report){
         const int* n_messages = logtable->get_n_messages();
         database::severity::e_severity s = logtable->get_loglevel();

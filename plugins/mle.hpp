@@ -24,15 +24,22 @@
  */
 class MLETable: public database::Table {
 public:
-  /** create a new MLETable with name \c name_
+  /** \brief Create a new MLETable, given its name
+  
+  with name \c name_
    * 
-   * \parameter name is the name of the table in the database
-   * \parameter vm is the VarIdManager used to translate ParId into column names
-   * \parameter ids are the parameters to save in the table
    */
-  //MLETable(const std::string & name, const theta::VarIdManager & vm, const theta::ParIds & ids);
   MLETable(const std::string & name_): database::Table(name_){}
+  
+  /** \brief Initialize the table
+   *
+   * Before append(), this method must be called in order to ensure table creation with the correct columns.
+   *
+   * \param vm is the VarIdManager used to translate ParId into column names
+   * \param ids are the parameters to save in the table
+   */
   void init(const theta::VarIdManager & vm, const theta::ParIds & ids);
+  
   /// append a new entry at the end of the table
   void append(const theta::Run & run, double nll, const theta::ParValues & values, const theta::ParValues & errors);
 private:
@@ -47,42 +54,29 @@ private:
  * It is configuared via a setting group like
  *<pre>
  * {
- *   type = "maximum-likelihood";
+ *   type = "mle";
  *   parameters = ("signal", "background");
  *   minimizer = "myminuit";
  * }
  * myminuit = {}; // minimizer definition
  *</pre>
  *
- * Given data and a model, this producer will find the maximum likelihood. It will write out the
- * parameters and errors at the minimum (as estimated by the minimizer) to the result table.
- * For the table format, see MLETable.
- *
- * In case the minimizer does not provide errors, -1 will be saved as error value.
+ * This producer will find the parameter values which minimize the negative-log-likelihood. It will write out these
+ * parameter values. The error estimates provided by the \link theta::Minimizer minimizer \endlink are also written to the table (note that these are -1 in case
+ * the minimizer does not provide errors). For the table format, see MLETable.
  */
 class mle: public theta::Producer{
 public:
-    /** \brief Constructor of MLEProducer
-     *
-     * \param vm is the VarIdManager used for the table column names
-     * \param save_ids the parameters who's value at the minimum and error to save in the table
-     * \param min Minimizer to use
-     * \param name Name of the producer in the config file (for the table name).
+    /** \brief Construct MLEProducer from a Configuration
      */
     mle(theta::plugin::Configuration & cfg);
+    
+    /** \brief Run the method and write out results.
+     */
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
 private:
     std::auto_ptr<theta::Minimizer> minimizer;
     MLETable table;
 };
-
-
-/*class MLEProducerFactory: public theta::plugin::ProducerFactory{
-public:
-    virtual std::auto_ptr<theta::Producer> build(theta::plugin::Configuration & ctx) const;
-    virtual std::string getTypeName() const{
-        return "maximum-likelihood";
-    }
-};*/
 
 #endif

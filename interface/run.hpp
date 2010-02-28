@@ -115,6 +115,7 @@ public:
  */
 class Run {
 public:
+    // required for the plugin system
     typedef Run base_type;
 
    /** \brief Register progress listener.
@@ -127,42 +128,36 @@ public:
     /** \brief Perform the actual run.
      * 
      * The actual meaning depends on the derived classes. Common to all is
-     * that a number of pseudo experiments is performed whose data is
+     * that some pseudo experiments is performed whose data is
      * passed to each of the producers.
      */
     void run();
 
-    /** \brief Add a producer to the list of producers to run.
-     *
-     * Add \c p to the internal list of producers. Memory ownership will be transferred,
-     * i.e., p.get() will be 0 after this function returns.
-     * 
-     * It is only valid to call this function after creation, before any calls to the *run methods.
-     * If violating this, the behavior is undefined.
-     */
-    void addProducer(std::auto_ptr<Producer> & p);
-
     /// declare destructor virtual as polymorphic access to derived classes is likely
     virtual ~Run() {}
 
-    /** \brief Get the database of the run.
+    //@{
+    /** \brief Get information about the current Run state
      *
-     * This method is mainly used by Producers to initialize their tables
-     * in the first call.
+     * These methods are meant to be used by the producers which are passed
+     * a reference to the current run each time.
      */
     boost::shared_ptr<database::Database> get_database(){
        return db;
     }
-
-    /// Get the currect run id.
+    
+    Random & get_random(){
+        return rnd;
+    }
+    
     int get_runid() const{
         return runid;
     }
 
-    /// Get the currently processed event id.
     int get_eventid() const{
         return eventid;
     }
+    //@}
 
 protected:
     
@@ -172,6 +167,39 @@ protected:
     // protected, as Run is purley virtual.
     Run(plugin::Configuration & cfg);
     
+    /** \brief Add a producer to the list of producers to run.
+    *
+    * Add \c p to the internal list of producers. Memory ownership will be transferred,
+    * i.e., p.get() will be 0 after this function returns.
+    * 
+    * It is only valid to call this function after creation, before any calls to the *run methods.
+    * If violating this, the behavior is undefined.
+    */
+    void addProducer(std::auto_ptr<Producer> & p);
+    
+    /** \brief Actual run implementation
+    *
+    * This is the method to implement in subclasses of run. It is the method to implement
+    * for derived classes which does all the work.
+    */
+    virtual void run_impl() = 0;
+    
+    /** \brief Make an informational log entry to indicate the start of a pseudo experiment.
+    * 
+    * Should be called by derived classes before pseudo data generation.
+    */
+    void log_event_start() {
+        logtable->append(*this, database::severity::info, "start");
+    }
+    
+    /** \brief Make an informational log entry to indicate the end of a pseudo experiment.
+    * 
+    * Should be called by derived classes after all producers have been run.
+    */
+    void log_event_end() {
+        logtable->append(*this, database::severity::info, "end");
+    }
+
     //random number generator seed and generator:
     unsigned int seed;
     Random rnd;
@@ -205,44 +233,6 @@ protected:
     const int n_event;
     
     boost::shared_ptr<ProgressListener> progress_listener;
-    
-    /** \brief Actual run implementation
-     *
-     * This is the method to implement in subclasses of run.
-     */
-    virtual void run_impl() = 0;
-
-    /** \brief Make an informational log entry to indicate the start of a pseudo experiment.
-     * 
-     * Should be called before pseudo data generation.
-     */
-    void log_event_start() {
-        logtable->append(*this, database::severity::info, "start");
-    }
-    
-    /** \brief Make an informational log entry to indicate the end of a pseudo experiment.
-     * 
-     * Should be called after all producers have been run.
-     */
-    void log_event_end() {
-        logtable->append(*this, database::severity::info, "end");
-    }
-
-    /** \brief Make an informational log entry to indicate the start of the run.
-     * 
-     * Called during pre_run.
-     */
-    void log_run_start() {
-        logtable->append(*this, database::severity::info, "run start");
-    }
-    
-    /** Make an informational log entry to indicate the end of the run.
-     * 
-     * Called during post_run.
-     */
-    void log_run_end() {
-        logtable->append(*this, database::severity::info, "run end");
-    }
 };
 
 

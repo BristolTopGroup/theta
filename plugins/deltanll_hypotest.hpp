@@ -9,14 +9,14 @@
 
 #include <string>
 
-/** \brief Result table for the DeltaNLLHypotestProducer.
+/** \brief Result table for the deltanll_hypotest producer
  *
  * The table contains the following columns:
  * <ol>
  * <li> runid INT(4)</li>
  * <li> eventid INT(4)</li>
- * <li> nll_sb DOUBLE</li>
- * <li> nll_b DOUBLE</li>
+ * <li> posterior_sb DOUBLE</li>
+ * <li> posterior_b DOUBLE</li>
  * </ol>
  *
  * For every event, one entry is made, containing the result of the \link deltanll_hypotest deltanll_hypotest \endlink.
@@ -25,7 +25,7 @@ class DeltaNLLHypotestTable: public database::Table {
 public:
     /// Construct a DeltaNLLHypotestTable with name \c name_.
     DeltaNLLHypotestTable(const std::string & name_): database::Table(name_){}
-    /// Save the \c nll_sb and \c nll_b values to the table using current \c runid and \c eventid rrom \c run.
+    /// Save the \c nll_sb and \c nll_b values to the table using current \c runid and \c eventid from \c run.
     void append(const theta::Run & run, double nll_sb, double nll_b);
 private:
     /// overrides Table::create_table
@@ -58,8 +58,10 @@ private:
  *   define the values to fix during the minimization, see below.
  *
  * Given data and a model, this producer will construct the negative-loglikelihood for the "signal-plus-background" parameters
- * fixed as specified in the configuration file and for the "background-only" parameters fixed. The found values of
- * the likelihood are saved in the \c nll_sb and \c nll_b columns of the \link DeltaNLLHypotestTable result table \endlink.
+ * fixed as specified in the configuration file and for the "background-only" parameters fixed and minimize the negative log-likelihood
+ * with respect to all other parameters (while any constraints configured in the model apply, of course).
+ *
+ * The found values of the negativ log-likelihood are saved in the \c nll_sb and \c nll_b columns of the \link DeltaNLLHypotestTable result table \endlink.
  *
  * For a typical application, the "signal-plus-background" setting does not impose any fixed values and is the
  * empty settings group ("{};"), whereas the "background-only" settings group sets the signal to zero. Only
@@ -68,7 +70,7 @@ private:
  * unequality can only come from the numerical minimization of the likelihood not finding the correct minimum.
  *
  * If the number of observed events is large, \code 2 * sqrt(nll_b - nll_sb) \endcode will be a good estimate of
- * the significance with which the "background only" null-hypothesis "background-only" can be rejected. Even if you are not
+ * the significance (in sigma) with which the "background only" null-hypothesis "background-only" can be rejected. Even if you are not
  * in the asymptotic regime where this is true, you can sill use this test by generating the distribution of
  * \code 2 * sqrt(nll_b - nll_sb) \endcode for pseudo data generated under the "background only" assumption to define
  * the critical region in your particular case.

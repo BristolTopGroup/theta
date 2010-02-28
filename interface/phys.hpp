@@ -224,9 +224,9 @@ namespace theta {
 
         /** Returns the prediction for the observable \c obs_id using the variable values \c parameters into \c result.
         *   The returned Histogram is built as a linear combination of HistogramFunctions using coefficients as previously set
-        *   by \c setPrediction. The HistogramFunctions and coefficients are evaluated using the values in \c parameters.
+        *   by \c set_prediction. The HistogramFunctions and coefficients are evaluated using the values in \c parameters.
         *
-        *  \sa setPrediction
+        *  \sa set_prediction
         */
         void get_prediction(Histogram & result, const ParValues & parameters, const ObsId & obs_id) const;
 

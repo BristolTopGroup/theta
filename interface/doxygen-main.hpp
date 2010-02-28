@@ -26,7 +26,7 @@
  *
  * \section ack Acknowledgement
  *
- * I would like to thank the authors of the software packages used by %theta:
+ * I would like to thank the authors of the excellent software packages used by %theta:
  * <ul>
  * <li>\link http://www.hyperrealm.com/libconfig/libconfig.html libconfig \endlink A
  *      well-written, well-documented C/C++ library for processing configuration files with a very simple and elegant API.</li>
@@ -35,15 +35,26 @@
  * </ul>
  * These libraries are included in the distribution of %theta.
  *
- * Furthermore, some parts of the random number algorithm code and for the matrix code
- * have been copied from the excellent \link http://www.gnu.org/software/gsl/ GNU Scientific Library (GSL) \endlink.
+ * Furthermore, some parts of numerical algorithms have been copied from the excellent \link http://www.gnu.org/software/gsl/ GNU Scientific Library (GSL) \endlink.
  *
  * Last but not least, I want to thank Jasmin Gruschke who tested %theta from an end-user point of view, made useful
- * suggestions and bravely endured some backward-incompatible changes.
+ * suggestions and bravely endured backward-incompatible changes.
  *
  * \section license License
  *
  * %theta is licensed under the \link http://www.gnu.org/copyleft/gpl.html GPL \endlink.
+ *
+ * \section ref References
+ * The %theta make use of:
+ * <ol>
+ *   <li><em>Matsumoto, Makoto and Nishimura, Takuji:</em> \link http://doi.acm.org/10.1145/272991.272995 "Mersenne twister: a 623-dimensionally equidistributed uniform pseudo-random number generator"\endlink,
+ *        ACM Trans. Model. Comput. Simul. 1, 1998</li>
+ *   <li><em>Pierre L'Ecuyer:</em> "Maximally Equidistributed Combined Tausworthe Generators", Math. Comp. 65, 1996</li>
+ *   <li><em>Pierre L'Ecuyer:</em> "Tables of Maximally Equidistributed Combined LFSR Generators", Math. Comp. 68, 1999</li>
+ *   <li><em>George Marsaglia and Wai Wan Tsang:</em> "The Ziggurat Method for Generating Random Variables", Journal of Statistical Software 8, 2000</li>
+ *   <li><em>A. Gelman, G. O. Roberts, and W. R. Gilks:</em> "Efficient Metropolis Jumping Rules", Bayesian Statistics 5, 1996</li>
+ *   <li><em>TODO:</em> quantile estimation ...</li>
+ * </ol>
  */
 
 
@@ -55,6 +66,8 @@
  * <pre>
  * svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
  * </pre>
+ * If you want to sompile it within CMSSW (which provides the dependencies), make sure to
+ * check it out in a CMSSW area.
  *
  * \section building Building theta
  *
@@ -95,7 +108,7 @@
  *
  * <tt>CMSSW_3_5_0</tt> is an example, you can poick another version. It is recommended to pick a recent one, as %theta
  * was not tested with older versions of CMSSW which contain older versions of boost which %theta depends on. However,
- * your chances are good that it compiles under many different versions.
+ * your chances are good that it compiles as well under older versions.
  *
  * \subsection without_cmssw Without CMSSW
  *

@@ -15,15 +15,7 @@ namespace theta {
 /** \brief The abstract base class for all statistical methods.
  *
  * It is called "producer" as it produces statistical results, given Data and
- * a Model.
- *
- * To implement your own Producer,
- * <ol>
- * <li>Derive a class from Producer and implement all pure virtual functions</li>
- * <li>Subclass a ProducerFactory and implement all pure virtual methods. This
- *   is where an instance of your new producer class will be built from the
- *   configuration. Make sure to use the REGISTER_FACTORY macro on your ProducerFactory.</li>
- * </ol>
+ * a Model. Usually, it is called on many different pseudodata.
  */
 class Producer{
 public:
@@ -33,9 +25,14 @@ public:
      */
     virtual ~Producer(){}
     
-    /** The method \c produce is called for each pseudo experiment. It should execute
-     * the method and write the result to the results databse (which is
+    /** \brief Run a statistical algorithm on the data and model and write out the results.
+     *
+     * The method \c produce is called for each pseudo experiment. It should execute
+     * the method and write the result to the results database (which is
      * available through the Run object).
+     *
+     * Derived classes may assume that subsequent calls are done with the same \c model.
+     * \todo this assumption should be reflected in the code: 
      *
      * In case of an error, the method should through an Exception.
      * In case of warnings, a log entry should be made calling Run::log_warning.

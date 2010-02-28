@@ -129,6 +129,14 @@ const pair<double, double> & VarIdManager::get_range(const ParId & id) const{
     return it->second;
 }
 
+ParValues VarIdManager::get_defaults() const{
+    ParValues result;
+    for(std::map<ParId, double>::const_iterator it = pid_to_default.begin(); it!= pid_to_default.end(); ++it){
+        result.set(it->first, it->second);
+    }
+    return result;
+}
+
 size_t VarIdManager::get_nbins(const ObsId & id) const{
     std::map<ObsId, size_t>::const_iterator it = oid_to_nbins.find(id);
     if (it == oid_to_nbins.end()) {

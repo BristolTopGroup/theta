@@ -6,7 +6,7 @@
 
 using namespace theta;
 
-/*
+
 Result::Result(size_t n) :
     npar(n), count(0), count_different_points(0), sum(n), sumsquares(n, n) {
 }
@@ -91,6 +91,7 @@ Matrix Result::getCov() const {
     return result;
 }
 
+/*
 // FullResult Mem implementation:
 inline void FullResultMem::ensureCapacity(size_t cap) {
     if (nallocvec < cap) {

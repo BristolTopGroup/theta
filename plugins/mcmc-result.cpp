@@ -6,7 +6,7 @@
 
 using namespace theta;
 
-/*Result implementation: */
+/*
 Result::Result(size_t n) :
     npar(n), count(0), count_different_points(0), sum(n), sumsquares(n, n) {
 }
@@ -91,7 +91,7 @@ Matrix Result::getCov() const {
     return result;
 }
 
-/* FullResult Mem implementation: */
+// FullResult Mem implementation:
 inline void FullResultMem::ensureCapacity(size_t cap) {
     if (nallocvec < cap) {
         if (nallocvec == 0) {
@@ -111,7 +111,7 @@ inline void FullResultMem::ensureCapacity(size_t cap) {
     }
 }
 
-FullResultMem::FullResultMem(size_t n, size_t cap/*=1024*/) :
+FullResultMem::FullResultMem(size_t n, size_t cap) :
     Result(n) {
     nallocvec = 0;
     ensureCapacity(cap);
@@ -182,3 +182,4 @@ const Histogram & HistoResult::getHistogram(size_t i) const {
     return histos[i];
 }
 
+*/

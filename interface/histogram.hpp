@@ -41,32 +41,39 @@ public:
     ///Destructor.
     ~Histogram();
 
-    /** Set all entries to zero.
+    /** \brief Set all entries to zero.
      *
      * If \c nbins!=0, also change the number of bins and range to the parameters given. Otherwise,
      * binning and range remain unchanged.
      */
     void reset(size_t nbins=0, double xmin=0, double xmax=0);
 
-    /** Set all bin entries to 1.0.
+    /** \brief Set all bin entries to 1.0.
+     *
      * This is mainly useful for resetting Histograms subsequently used for multiplication.
      */
     void reset_to_1();
 
-    /** Get the entry for bin \c i.
-    */
+    /** \brief Returns the entry for bin i
+     *
+     * See bin index convention in the class documentation.
+     */
     double get(size_t i) const{
         return histodata[i];
     }
 
-    /** Set bin entry i to \c weight.
-    */
+    /** \brief Set bin entry i to weight.
+     *
+     * See bin index convention in the class documentation.
+     */
     void set(size_t i, double weight){
        sum_of_bincontents += weight - histodata[i];
        histodata[i] = weight;
     }
 
-    /** Return a pointer to the raw Histogram data. Note that the binning convention applies, i.e.
+    /** \brief Return a pointer to the raw Histogram data.
+     *
+     * The bin index convention applies, i.e.
      * valid indices for the returned pointer are 0 to nbins+1.
      */
     const double* getData() const{
@@ -78,17 +85,17 @@ public:
         return nbins;
     }
 
-    /// Get \c xmin for this Histogram.
+    /// Get the minimum x value for this Histogram.
     double get_xmin() const{
        return xmin;
     }
 
-    // Get \c xmax of this Histogram.
+    /// Get the maximum x value of this Histogram.
     double get_xmax() const{
        return xmax;
     }
 
-    /** Add \c weight corresponding to the bin of \c xvalue.
+    /** \brief Add weight corresponding to the bin of xvalue
      *
      * In case of xvalue &lt; xmin, \c weigt is added to the underflow bin 0.
      * If xvalue &gt; xmax, \c weight is added to bin nbins+1.
@@ -100,19 +107,22 @@ public:
         return sum_of_bincontents;
     }
 
-    /** the x value for the bin center of bin \c ibin.
+    /** \brief Returns the x value for the bin center of bin ibin
+     *
      *  The returned value is only valid for ibin>=1 && ibin&lt;=nbins
      */
     double get_bincenter(int ibin) const{
         return xmin + (ibin-0.5) * (xmax - xmin) / nbins;
     }
 
-    /** Add the Histogram \c other to this.
+    /** \brief Add another Histogram to this
+     *
      * Throws an \c InvalidArgumentException if \c other is not compatible to this.
      */
     Histogram & operator+=(const Histogram & other);
 
-    /** Multiply the Histogram \c other with this, bin-by-bin.
+    /** \brief Multiply the Histogram \c other with this, bin-by-bin
+     *
      * Throws an \c InvalidArgumentException if \c other is not compatible with this Histogram.
      * \c &other must be different from \c this.
      */
@@ -121,18 +131,22 @@ public:
     /// Multiply the entry of each bin by \c a.
     Histogram & operator*=(const double a);
 
-    /** check compatibility of \c this to the \c other Histogram. A Histogram is considered compatible
-     * if it has the exact same number of bins and range. In case if incompatibility, an 
-     * \c InvalidArgumentException is thrown.*/
+    /** \brief check compatibility of \c this to the \c other Histogram.
+     *
+     * A Histogram is considered compatible if it has the exact same number of bins and range. In case if incompatibility, an 
+     * \c InvalidArgumentException is thrown.
+     */
     void check_compatibility(const Histogram & h) const;
     
     
-    /** Calculate this = this * (nominator/denominator)^exponent, bin-by-bin.
+    /** \brief Calculate this = this * (nominator/denominator)^exponent, bin-by-bin.
+    *
     * An \c InvalidArgumentException is thrown if either \c nominator or \c denominator are not compatible with this.
     */
     void multiply_with_ratio_exponented(const Histogram & nominator, const Histogram & denominator, double exponent);
 
-    /** Calculate this = this + coeff * other.
+    /** \brief Calculate this = this + coeff * other.
+    *
     * An \c InvalidArgumentException is thrown if \c other is not compatible with this.
     */
     void add_with_coeff(double coeff, const Histogram & other);

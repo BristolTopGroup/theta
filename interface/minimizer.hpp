@@ -93,9 +93,11 @@ namespace theta{
      */
     class Minimizer{
     public:
+        
+        /// Define us as the base_type for derived classes; required for the plugin system
         typedef Minimizer base_type;
 
-        // declare destructor virtual as we expect polymorphic access to derived classes
+        /// declare destructor virtual as we expect polymorphic access to derived classes
         virtual ~Minimizer(){}
 
         /** Attempts to minimize the function.
@@ -157,8 +159,10 @@ namespace theta{
         }
 
     protected:
+        /// Pointer to the relevant VarIdManager instance. Used to control parameter limits
         const boost::shared_ptr<theta::VarIdManager> vm;
-
+        
+        /// The configured tolerance. Meaning depends on the derived class
         double tolerance;
 
         /** \brief Get the currently valid range of parameter \c pid.
@@ -178,6 +182,7 @@ namespace theta{
          */
         double get_initial_stepsize(const theta::ParId & pid) const;
         
+        /// Construct Miimizer setting vm to vm_
         Minimizer(const boost::shared_ptr<theta::VarIdManager> & vm_): vm(vm_){}
 
     private:

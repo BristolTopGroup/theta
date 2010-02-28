@@ -77,7 +77,7 @@ private:
  */
 class deltanll_hypotest: public theta::Producer{
 public:
-    /// Construct a deltanll_hypotest Producer from a Configuration
+    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     deltanll_hypotest(theta::plugin::Configuration & ctx);
     /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);

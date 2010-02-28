@@ -25,9 +25,6 @@
 class MLETable: public database::Table {
 public:
   /** \brief Create a new MLETable, given its name
-  
-  with name \c name_
-   * 
    */
   MLETable(const std::string & name_): database::Table(name_){}
   
@@ -67,8 +64,8 @@ private:
  */
 class mle: public theta::Producer{
 public:
-    /** \brief Construct MLEProducer from a Configuration
-     */
+    
+    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     mle(theta::plugin::Configuration & cfg);
     
     /** \brief Run the method and write out results.

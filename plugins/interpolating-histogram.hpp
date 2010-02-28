@@ -39,6 +39,9 @@
  */
 class interpolating_histo : public theta::HistogramFunction {
 public:
+    
+    /** \brief Constructor used by the plugin system to build an instance from settings in a configuration file
+     */
     interpolating_histo(theta::plugin::Configuration & ctx);
         
     /** Returns the interpolated Histogram as documented in the class documentation.

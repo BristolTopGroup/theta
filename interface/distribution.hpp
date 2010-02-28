@@ -18,8 +18,9 @@ namespace theta{
      */
     class Distribution{
     public:
-        // required for the plugin system:
+        /// Define us as the base_type for derived classes; required for the plugin system
         typedef Distribution base_type;
+        
         /** Sample values from this distribution using \c rnd as random number generator
          *  and respecting limits set for the parameters in \c vm.
          *

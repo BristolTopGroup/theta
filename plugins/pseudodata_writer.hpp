@@ -34,6 +34,9 @@
 class PseudodataTable: public database::Table {
 friend class pseudodata_writer;
 public:
+    
+    /** \brief Construct a new PseudodataTable of the given name.
+     */
     PseudodataTable(const std::string & name_): database::Table(name_){}
 
     /** \brief append an entry to the table
@@ -78,8 +81,8 @@ private:
  */
 class pseudodata_writer: public theta::Producer {
 public:
-    /** \brief Construct pseudodata_writer from a setting.
-     */
+
+    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     pseudodata_writer(theta::plugin::Configuration & cfg);
 
     /** \brief Run the writer and write out the pseudo data \c Data to the database.

@@ -115,7 +115,7 @@ public:
  */
 class Run {
 public:
-    // required for the plugin system
+    /// Define us as the base_type for derived classes; required for the plugin system
     typedef Run base_type;
 
    /** \brief Register progress listener.

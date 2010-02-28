@@ -24,7 +24,7 @@
  */
 class mcmc_posterior_ratio_table: public database::Table {
 public:
-    /// Construct a DeltaNLLHypotestTable with name \c name_.
+    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     mcmc_posterior_ratio_table(const std::string & name_): database::Table(name_){}
     
     /// Save the \c posterior_sb and \c posterior_b values to the table using current \c runid and \c eventid from \c run.
@@ -76,7 +76,7 @@ private:
  */
 class mcmc_posterior_ratio: public theta::Producer{
 public:
-    /// Construct a deltanll_hypotest Producer from a Configuration
+    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     mcmc_posterior_ratio(theta::plugin::Configuration & ctx);
     /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);

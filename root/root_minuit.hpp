@@ -42,7 +42,7 @@ class root_minuit: public theta::Minimizer{
 public:
     /** \brief Constructor used by the plugin system to build an instance from a configuration file.
      */
-    root_minuit(Configuration & cfg);
+    root_minuit(theta::plugin::Configuration & cfg);
 
     /** \brief Implement the Minimizer::minimize routine.
      *
@@ -54,7 +54,7 @@ public:
      * If still an error is reported, a MinimizerException is thrown which contains the status
      * code returned by ROOT::Minuit2::Minuit2Minimizer::Status().
      */
-    virtual MinimizationResult minimize(const theta::Function & f);
+    virtual theta::MinimizationResult minimize(const theta::Function & f);
 private:
     void set_printlevel(int p);
     

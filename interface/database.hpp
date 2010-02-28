@@ -293,7 +293,7 @@ private:
  */
 class ProducerInfoTable: public Table {
 public:
-    /** \brief Construct a new producer table in Database \c db with name \c name.
+    /** \brief Construct a new producer table in with name \c name.
      *
      * \param name The name of the table. Has to pass Table::checkName()
      */
@@ -326,6 +326,8 @@ private:
  */
 class RndInfoTable: public Table {
 public:
+    /** \brief Construct a new RndInfoTable with name \c name.
+     */
     RndInfoTable(const std::string & name_): Table(name_){}
 
     /** \brief append an entry to the RndInfoTable
@@ -340,16 +342,31 @@ private:
     virtual void create_table();
 };
 
+/** \brief Table to store per-event information about which parameter values have been used to create pseudo data
+ *
+ * This table object is used by an instance of \link theta::Run Run \endlink.
+ *
+ * The corresponding SQL table has following fields:
+ * <ol>
+ * <li>\c runid \c INTEGER(4): the run id the entry refers to.</li>
+ * <li>\c eventid \c INTEGER(4): the event id the entry refers to.</li>
+ * <li>for each parameter a column &lt;param_name&gt; DOUBLE with the parameter value used.</li>
+ * </ol>
+ */
 class ParamTable: public Table {
 public:
-
+  /** \brief Append a new entry to the table
+   *
+   * \param run is the current Run. It is used to query the current runid and eventid
+   * \param values contain the parameter values to write to the table.
+   */
   void append(const theta::Run & run, const theta::ParValues & values);
 
-  /** Create a new table with name \c tablename in the given database.
-   * The columns of the table are
-   * - INT runid
-   * - INT eventid
-   * - DOUBLE param for each parameter in \c ids. These columns have the name of the parameter as defined in \c vm.
+  /** \brief Construct a ParamTable
+   *
+   * \param name is the table name in the database
+   * \param vm is used to query the parameter names, which are used as column names
+   * \param ids the parameter ids which to write in the table (usually all from the pseudodata Model)
    */
   ParamTable(const std::string & name, const theta::VarIdManager & vm, const theta::ParIds & ids);
 private:

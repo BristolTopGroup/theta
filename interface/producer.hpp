@@ -20,7 +20,9 @@ namespace theta {
  */
 class Producer{
 public:
+    /// Define us as the base_type for derived classes; required for the plugin system
     typedef Producer base_type;
+    
     /** Declare the destructor as virtual, as we expect polymorphic
      *  access to derived classes.
      */

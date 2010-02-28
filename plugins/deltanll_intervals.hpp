@@ -28,6 +28,8 @@
  */
 class deltanll_interval_table: public database::Table {
 public:
+    
+    /// Construct a deltanll_interval_table with name \c name_.
     deltanll_interval_table(const std::string & name_): database::Table(name_){}
 
     /** \brief append an entry to the table
@@ -87,8 +89,8 @@ private:
  */
 class deltanll_intervals: public theta::Producer{
 public:
-    /** \brief Construct deltanll_intervals from a Conmfiguration.
-     */
+
+    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     deltanll_intervals(theta::plugin::Configuration & cfg);
 
     /** \brief Run the statistical method with Data and model and write out the result  to the database.

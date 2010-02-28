@@ -33,9 +33,13 @@ namespace theta {
          template<typename base_type>
          class factory{
          public:
+             /// build an instance from a Configuration object
              virtual std::auto_ptr<base_type> build(Configuration & cfg) = 0;
+             
+             /// the type of the object this factory is responsible for; it corresponds to the type="..." configuration file setting
              virtual std::string get_typename() = 0;
          protected:
+             /// register this factory at the correct PluginManager
              void reg(){
                  PluginManager<base_type>::register_factory(this);
              }

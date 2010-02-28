@@ -12,9 +12,14 @@ class Exception: virtual public std::exception{
 public:
     /// The human-readable, english message 
     std::string message;
+    
+    /// Constructor taking a message intended for the user which will be written to Exception::message
     Exception(const std::string & msg);
-    //Exception();
+    
+    /// Declare destructor virtual
     virtual ~Exception() throw(){}
+    
+    /// override std::exception::what to print out the message
     virtual const char* what()throw(){
          std::stringstream ss;
          ss << std::exception::what() << ": " << message;
@@ -22,6 +27,7 @@ public:
          return whatstring.c_str();
     }
 protected:
+    /// buffer for the const char * returned by what()
     std::string whatstring;
 };
 
@@ -29,6 +35,7 @@ protected:
  */
 class NotFoundException: public Exception{
 public:
+    /// Constructor taking a message intended for the user which will be written to Exception::message
    NotFoundException(const std::string & message);
 };
 
@@ -36,6 +43,7 @@ public:
  */
 class ConfigurationException: public Exception{
 public:
+    /// Constructor taking a message intended for the user which will be written to Exception::message
     ConfigurationException(const std::string & msg);
 };
 
@@ -43,32 +51,39 @@ public:
  */  
 class IllegalStateException: public Exception{
 public:
+    /// Constructor taking a message intended for the user which will be written to Exception::message
     IllegalStateException(const std::string & msg=""): Exception(msg){}
 };
 
+/** \brief Thrown in case of invalid mathematical constructs like domain errors
+ */
 class MathException: public Exception{
 public:
+    /// Constructor taking a message intended for the user which will be written to Exception::message
     MathException(const std::string &);
 };
 
 /// \brief General exception to indicate that arguments passed to a function are invalid (=do not correspond to documentation)
 class InvalidArgumentException: public Exception{
-private:
-    void print_message() const;
 public:
-    //InvalidArgumentException(const char* mes);
+    /// Constructor taking a message intended for the user which will be written to Exception::message
     InvalidArgumentException(const std::string &);
 };
 
 /// \brief Thrown in case of database errors.
 class DatabaseException: public Exception{
 public:
+    /// Constructor taking a message intended for the user which will be written to Exception::message
     DatabaseException(const std::string & s): Exception(s){}
 };
 
-/// \brief Thrown in case of minimization errors.
+/** \brief Thrown in case of minimization errors.
+ *
+ * \sa theta::Minimizer
+ */
 class MinimizationException: public Exception{
 public:
+    /// Constructor taking a message intended for the user which will be written to Exception::message
     MinimizationException(const std::string & s): Exception(s){}
 };
 

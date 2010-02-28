@@ -28,10 +28,6 @@ private:
     const size_t ndim;
 };
 
-//method is either "simplex" or "migrad". Otherwise, an InvalidArgumentException
-// is thrown.
-root_minuit::root_minuit(Configuration & cfg);
-
 void root_minuit::set_printlevel(int p){
     min->SetPrintLevel(p);
 }

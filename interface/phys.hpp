@@ -27,7 +27,9 @@ namespace theta {
     /** A real-valued function which depends on some variables. */
     class Function{
     public:
+        /// Define us as the base_type for derived classes; required for the plugin system
         typedef Function base_type;
+        
         /** \brief Evaluate the function at the given parameter values.
          *
          * @return The function value at \c v.
@@ -116,10 +118,18 @@ namespace theta {
      */
     class MultFunction: public Function{
     public:
+        /** \brief Construct a MultFunction from the given list of parameters
+         */
+        MultFunction(const ParIds & v_ids);        
+
+        //@{
+        /** \brief Definitions of the pure virtual methods of Function
+         *
+         * See documentation of Function for their meaning.
+         */
         virtual double operator()(const ParValues & v) const;
-        MultFunction(const ParIds & v_ids);
-        virtual ~MultFunction(){}
         virtual double gradient(const ParValues & v, const ParId & pid) const;
+        //@}
     };
     
     
@@ -361,12 +371,24 @@ namespace theta {
          */
         double operator()(const ParValues & values) const;
         
-       /** Calculate the gradient and function value at \c x and fill the result into \c g and \c nll, respectively.
+       /** \brief Calculate the gradient and function value at \c x and fill the result into \c g and \c nll, respectively.
         *
         *  \c g must be allocated by the caller (and is owned by the caller).
+        *
+        * The gradient is calculated numerically by evaluating, for each component \f$ i \f$
+        * \f$ nll(x + \epsilon * x_i) - nll(x - \epsilon * x_i) / (2*\epsilon) \f$
+        * where \f$ x_i \f$ is the unit vector in direction \f$ i \f$ and \f$ \epsilon \f$
+        * a small positive number.
         */
         void gradient(const double* x, double* g, double & nll) const;
         
+        /** \brief As gradient() but with more accuracy
+         *
+         * The derivative is first calculated analytically, then numerically, whereas gradient() does a black-box
+         * approximation.
+         *
+         * This function is still experimental.
+         */
         void gradient2(const double* x, double* g, double & nll) const;
 
         virtual double gradient(const ParValues & v, const ParId & pid) const;

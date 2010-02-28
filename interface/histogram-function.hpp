@@ -23,6 +23,8 @@ namespace theta {
      */
     class HistogramFunction{
     public:
+        
+        /// Define us as the base_type for derived classes; required for the plugin system
         typedef HistogramFunction base_type;
         
         /** \brief Returns the Histogram for the given parameter values.

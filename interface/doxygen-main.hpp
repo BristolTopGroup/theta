@@ -38,7 +38,7 @@
  * Furthermore, some parts of numerical algorithms have been copied from the excellent <a href="http://www.gnu.org/software/gsl/">GNU Scientific Library (GSL)</a>.
  *
  * Last but not least, I want to thank Jasmin Gruschke who tested %theta from an end-user point of view, made useful
- * suggestions and bravely endured backward-incompatible changes.
+ * suggestions and bravely endured many backward-incompatible changes.
  *
  * \section license License
  *
@@ -53,7 +53,6 @@
  *   <li><em>Pierre L'Ecuyer:</em> "Tables of Maximally Equidistributed Combined LFSR Generators", Math. Comp. 68, 1999</li>
  *   <li><em>George Marsaglia and Wai Wan Tsang:</em> "The Ziggurat Method for Generating Random Variables", Journal of Statistical Software 8, 2000</li>
  *   <li><em>A. Gelman, G. O. Roberts, and W. R. Gilks:</em> "Efficient Metropolis Jumping Rules", Bayesian Statistics 5, 1996</li>
- *   <li><em>TODO:</em> quantile estimation ...</li>
  * </ol>
  */
 
@@ -66,33 +65,25 @@
  * <pre>
  * svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
  * </pre>
- * If you want to sompile it within CMSSW (which provides the dependencies), make sure to
- * check it out in a CMSSW area.
+ * If you want to compile it within CMSSW (which provides the dependencies), make sure to check it out in the \c src directory of a CMSSW directory.
  *
  * \section building Building theta
  *
  * \subsection with_cmssw With CMSSW
  *
- * Copy the source tree to an initialized \c CMSSW directory structure and run
- * \c make. In this case, boost and sqlite3 which are shipped with CMSSW will be used.
- * The main executable will be located in
- * <pre>
- * bin/theta
- * </pre>
- *
- * Before running it, execute
+ * Go to the \c theta directory and run \c make. Before running the main executable \c bin/theta, execute
  * <pre>
  * source setenv.sh
  * </pre>
  * from the installation root to adapt \c LD_LIBRARY_PATH for the shared objects of boost and sqlite3. This ensures
- * that the ones from the CMSSW distribution will be used.
+ * that the ones from the CMSSW distribution will be used (with which it was compiled).
  *
  * If you want to test that everything is Ok, you can run the unit-tests provided with %theta, by running
  * <pre>
  * make run-test
  * </pre>
  *
- * In summary, a complete set of commands to check out, compile, test and run %theta with cmssw
+ * So a complete set of commands to check out, compile, test and run %theta with CMSSW
  * would be (assuming that cmssw was set up):
  * <pre>
  *  scram project CMSSW CMSSW_3_5_0
@@ -119,7 +110,7 @@
  * </ol>
  * There are packages available for these on many distribution.
  *
- * Then, you can follow the instructions above:
+ * Then, you can follow the instructions above, skipping the CMSSW part:
  *<pre>
  *  svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
  *  cd theta
@@ -135,7 +126,7 @@
  /**
  * \page intro Introduction
  *
- * %Theta is about modeling and statistical inference. For %theta, "model" means
+ * %theta is about modeling and statistical inference. For %theta, "model" means
  * a specification of the probability density of one or more observables as function of
  * some parameters, including possible probability densities of the parameters. To make this
  * more clear, a concrete example is discussed first where you get an overview over how %theta works
@@ -150,13 +141,13 @@
  * you have events containing candidates of your new particle.
  * For each of these events, you can reconstruct the mass. From your Monte-Carlo simulation,
  * you conclude that your signal has a distribution in this reconstructed mass in the
- * form of a gaussian with mean 1000 GeV/c^2 and width 250 GeV/c^2, whereas your background
- * is expected to be flat in the region from 500 to 1500 GeV/c^2 which should be used to further constrain
+ * form of a gaussian with mean \f$ 1000\,\mathrm{GeV}/c^2 \f$ and width \f$ 250\,\mathrm{GeV}/c^2 \f$, whereas your background
+ * is expected to be flat in the region from 500 to \f$ 1500\,\mathrm{GeV}/c^2 \f$ which should be used to further constrain
  * your background.
  *
  * You do the studies mainly at one fixed integrated luminosity L. From a background fit
  * to a sideband you expect that you can constrain your background poisson mean in the signal
- * region to 1600 +- 200 events. The model of your signal allows for a large variety of signal
+ * region to \f$ 1600 \pm 200 \f$ events. The model of your signal allows for a large variety of signal
  * cross sections; the standard model predicts predicts no "signal".
  *
  * In this analysis, there are many questions frequently asked. Some of them are:
@@ -180,14 +171,15 @@
  * <li>(optional:) merging the output produced by different runs of %theta</li>
  * <li>analyzing the output</li>
  *</ol>
- *All but the last point are well supported by %theta and explained below in more detail.
+ * All but the last point are well supported by %theta and explained below in more detail.
  *
  * \subsection model_def Model definition
  *
  * The first step to do in any analysis with %theta is to translate you model (like the one above) into a %theta
  * configuration.
  *
- * Now, have a look at the <tt>examples/gaussoverflat.cfg</tt> configuration file. For now, only two
+ * Now, have a look at the <tt>examples/gaussoverflat.cfg</tt> configuration file. The syntax is actually quite simple
+ * but might require some time to get used to. For now, only two
  * recurring terms are introduced: "setting" is any statement of the form "parameter = value;" and
  * "setting group" which is a set of settings enclosed in curly braces, e.g., in
  * <pre>
@@ -197,10 +189,10 @@
  * };
  * </pre>
  * the right hand side of the "mass" setting is a setting group containing a "range" setting (which has a list as type) and "nbins"
- * setting (an integer type). See the libconfig reference linked from the \ref mainpage "main page" for a detailed description of the configuration file syntax.
+ * setting (an integer type). See the libconfig reference linked in the \ref ack section for a detailed description of the configuration file syntax.
  *
  * At the top of the configuration file, the parameters and observables you want to use are defined:
- * there is one observable "mass" with the range [500, 1500] and 200 bins. Note that theta does
+ * there is one observable "mass" with the range [500, 1500] and 200 bins. Note that %theta does
  * not care at all about units and that observables are <em>always</em> binned.
  * The parameter this model depends on are defined next: "s" is
  * the (poisson) mean number of signal events after your selection, "b" is the mean number of
@@ -282,12 +274,12 @@
  *
  * \section internal Overview of theta internals
  *
- * In the previous section you have seen a simple use case of theta. Most of the components and concepts of
- * theta have been touched there. To better understand the documentation, it is useful to know what happens "behind the scenes".
+ * In the previous section you have seen a simple use case of %theta. Most of the components and concepts of
+ * %theta have been touched there. To better understand the documentation, it is useful to know what happens "behind the scenes".
  *
  * First of all, you might have noticed that the configuration file format is <i>hierarchical</i> and consists of many
  * named setting groups. %theta has a very modular architecture which makes it easy to write extensions for; one important
- * thing to remember at this point is:<b>Any setting group containing a "type="&lt;typaname&gt;";" setting is used to construct a C++ object of class &lt;typename&gt; via a plugin system.</b>
+ * thing to remember at this point is:<b>Any setting group containing a "type="&lt;typename&gt;";" setting is used to construct a C++ object of class &lt;typename&gt; via a plugin system.</b>
  *
  * This is very useful if you search for documentation: if you encounter a setting like type="deltanll_hypotest", you now know that you have
  * to search for the documentation at \link deltanll_hypotest \endlink.
@@ -305,7 +297,7 @@
  * To define and use your own plugin, you have to:
  *<ol>
  * <li>Define a new class derived from one classes in the list above and implement all its pure virtual methods and a constructor
- *     taking a \link theta::plugin::Configuration & Configuration \endlink object as the only argument.</li>
+ *     taking a \link theta::plugin::Configuration Configuration \endlink object as the only argument.</li>
  * <li>In a .cpp-file, call the REGISTER_PLUGIN(yourclass) macro</li>
  * <li>Make sure to compile and link this definition to a shared-object file.</li>
  * <li>In the configuration file, make sure to load the shared-object file as plugin. You can now use the plugin defined as any other %theta component via
@@ -322,41 +314,41 @@
  * <ul>
  * <li>\link theta::HistogramFunction HistogramFunction\endlink: used in the "histogram=..."-setting in the observables specification of a model:
  *     <ul>
- *         <li>\link fixed_gauss <b>fixed_gauss</b>\endlink for defining a normal distribution with fixed (i.e., not parameter dependent) mean and standard deviation</li>
- *         <li>\link fixed_poly <b>fixed_poly</b>\endlink for a polynomial of arbitrary order with fixed (i.e., not parameter dependent) coefficients</li>
- *         <li>\link interpolating_histo <b>interpolating_histo</b>\endlink to interpolate between one "nominal" and several "distorted" histograms for the generic treatment of systematic uncertainties</li>
- *         <li>\link root_histogram <b>root_histogram</b>\endlink to read a histogram from a root file</li>
+ *         <li>fixed_gauss for defining a normal distribution with fixed (i.e., not parameter dependent) mean and standard deviation</li>
+ *         <li>fixed_poly for a polynomial of arbitrary order with fixed (i.e., not parameter dependent) coefficients</li>
+ *         <li>interpolating_histo to interpolate between one "nominal" and several "distorted" histograms for the generic treatment of systematic uncertainties</li>
+ *         <li>root_histogram to read a histogram from a root file</li>
  *     </ul>
  *   </li>
  * <li>\link theta::Function Function\endlink: used as coefficients of the components of an observable specification in a model. Currently, no core plugins are available.</li>
  * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood, profile likelihood methods:
  *     <ul>
- *       <li>\link root_minuit <b>root_minuit</b>\endlink using MINUIT via ROOT</li>
- *       <li>(not yet implemented) \link lbfgs <b>lbfgs</b>\endlink using liblbfgs</li>
+ *       <li>root_minuit using MINUIT via ROOT</li>
+ *       <li>(not yet implemented) lbfgs using liblbfgs</li>
  *     </ul>
  * </li>
- * <li>\link theta::Run Run \endlink: the top-level object which invokes the pseudo data creation and producers:
+ * <li>\link theta::Run Run\endlink: the top-level object which invokes the pseudo data creation and producers:
  *    <ul>
- *       <li>\link plain_run <b>plain_run</b> \endlink throwing pseudo data and calling all producers</li>
- *       <li>\link scan_run <b>scan_run</b> \endlink scanning through a given model parameter. For each fixed parameter value, throw pseudo data and call the producers</li>
- *       <li>(not yet implemented:) \link data_run <b>data_run</b> \endlink apply the list of statistical methods to data</li>
+ *       <li>plain_run throwing pseudo data and calling all producers</li>
+ *       <li>scan_run scanning through a given model parameter. For each fixed parameter value, throw pseudo data and call the producers</li>
+ *       <li>(not yet implemented:) data_run apply the list of statistical methods to data</li>
  *    </ul>
  * </li>
  * <li>\link theta::Distribution Distribution\endlink: used in model constraints or as priors in a statistical method:
  *    <ul>
- *       <li>\link gauss <b>gauss</b>\endlink normal distribution in one or more dimensions, including arbitrary correlations</li>
- *       <li>\link log_normal <b>log_normal</b>\endlink log-normal distribution in one dimension</li>
+ *       <li>gauss normal distribution in one or more dimensions, including arbitrary correlations</li>
+ *       <li>log_normal log-normal distribution in one dimension</li>
  *     </ul>
  * </li>
  * <li>\link theta::Producer Producer\endlink: statistical method called by a Run object</li>
  *    <ul>
- *       <li>\link deltanll_hypotest <b>deltanll_hypotest</b>\endlink creates likelihood-ratio test statistics to find the critical region for rejecting a "background only" null hypothesis</li>
- *       <li>(not yet implemented:) \link deltanll_intervals <b>deltanll_intervals</b>\endlink interval creation based on the difference in the negative-log-likelihood function</li>
- *       <li>\link mle <b>mle</b>\endlink maximum likelihood estimator estimates parameter values and errors using a minimizer on the negative-log-likelihood function</li>
- *       <li>(not yet implemented:)\link mcmc_quantiles <b>mcmc_quantiles</b>\endlink Quantile estimator based on Markov-Chain Monte-Carlo to be used for interval estimation</li>
- *       <li>(not yet implemented:)\link mcmc_marginal <b>mcmc_marginal</b>\endlink Determine the marginal distribution (as Histogram) for a parameter</li>
- *       <li>\link mcmc_posterior_ratio <b>mcmc_posterior_ratio</b>\endlink analogue of deltanll_hypotest, but integrates over any free parameters instead of minimizing</li>
- *       <li>\link pseudodata_writer <b>pseudodata_writer</b>\endlink writes out the created pseudo data. Not really a statistical method, but technically implemented as a Producer as well</li>
+ *       <li>deltanll_hypotest creates likelihood-ratio test statistics to find the critical region for rejecting a "background only" null hypothesis</li>
+ *       <li>(not yet implemented:) deltanll_intervals interval creation based on the difference in the negative-log-likelihood function</li>
+ *       <li>mle maximum likelihood estimator estimates parameter values and errors using a minimizer on the negative-log-likelihood function</li>
+ *       <li>(not yet implemented:) mcmc_quantiles Quantile estimator based on Markov-Chain Monte-Carlo to be used for interval estimation</li>
+ *       <li>(not yet implemented:) mcmc_marginal Determine the marginal distribution (as Histogram) for a parameter</li>
+ *       <li>mcmc_posterior_ratio analogue of deltanll_hypotest, but integrates over any free parameters instead of minimizing</li>
+ *       <li>pseudodata_writer writes out the created pseudo data. Not really a statistical method, but technically implemented as a Producer as well</li>
  *    </ul>
  * </ul>
  */
@@ -446,7 +438,7 @@
  * because it will make some design choices clearer and because I truly believe in these principles and actually affect
  * the day-to-day work with the code, as they make me re-think all design choices I make (even after having implemented them).
  *
- * The main design goals of theta are:
+ * The main design goals of %theta are:
  * <ul>
  * <li>correctness</li>
  * <li>simplicity</li>
@@ -456,7 +448,7 @@
  * <li>use best practices</li>
  * </ul>
  *
- * Theta is <b>not</b> designed to implement every method you can think because this would contradict
+ * %theta is <b>not</b> designed to implement every method you can think because this would contradict
  * the "simplicity" and "ease of use" almost inevitably and would also make it much harder to achieve
  * "correctness" and "performance".
  *
@@ -464,17 +456,22 @@
  * prevents the method from performing correctly, it should fail as soon as possible and not produce wrong result or cause a failure much later.
  * (iii) Each unit (class, method) should have a unit test which tests its functionality, including failure behaviour.
  *
- * <b>Simplicity</b> implies that theta has a limited scope of application. It is not intended to be the tool for every problem you
- * can think of. As consequence, (i) there have been some fundamental design choices, e.g., only to support binned representations of pdfs and data. Usually
- * this is not a problem as you can always choose a fine binning, but there will never be support for unbinned pdfs or data.
+ * <b>Simplicity</b> implies that %theta has a limited scope of application. It is not intended to be the tool for every problem you
+ * can think of. As consequence, (i) there have been some fundamental design choices, e.g., only to support binned representations of pdfs and data (which,
+ * for many applications, is not a problem at all as the binning can always be chosen to be well beloe detector resolution),
  * (ii) any class and method has one simple, well-defined task only. This implies that classes generally have only very few public methods an that classes
- * and methods are relatively easy to document (if (required) documentation is lengthy, it is generally a sign of too much functionality pressed into
- * a class / method).
+ * and methods are relatively easy to document (if the required documentation is lengthy, it is generally a sign of too much functionality pressed into
+ * one class or method).
  *
  * <b>Performance</b> has to stand back of correctness and simplicity. However, many code changes increasing performance
  * do not need a re-design of a class' public interface at all. All changes which <i>provably</i>(!) increase performance should actually be done.
+ * An example of a trade-off in favour of simplicity was a re-design of the random number generator interface: if one defines
+ * all functions and method which require a random number generator as argument as template functions with the random number generator type as template
+ * parameter, one can gain up to 50% performance compared to a system using an \link theta::RandomSource abstract class \endlink implementing
+ * \link theta::RandomSourceTaus concrete \endlink random number \link theta::RandomSourceMersenneTwister generators \endlink
+ * by implementing this interface as the latter requires additional virtual function table lookups.
  *
- * <b>ease of use</b> means good documentation and examples. It is also closely
+ * <b>Ease of use</b> means good documentation and examples. It is also closely
  * related to simplicity: simple classes are easy to document and easier to understand as they have
  * a clear and narrowly scoped functionality. There is also less to document
  * if the classes are not bloated. <em>ease of use</em> also means that it should be easy to
@@ -484,9 +481,9 @@
  *
  * <b>Extensibility</b>  means that it should be easy to re-use parts of the application and have totally different definitions of other parts.
  * For example, you might want to use the Markov-Chain Monte-Carlo functions with a completely different likelihood / posterior. Or you want to use the same
- * likelihood and statistical methods, but with a completely different model definition. This is possible in theta via the use of a
+ * likelihood and statistical methods, but with a completely different model definition. This is possible in %theta via the use of a
  * <i>plugin system</i>, in which plugins are just shared objects files you write loaded at runtime. Plugins integrate seamlessly in the program in that
- * you can configure them in the exact same way as the "native" parts of theta.
+ * you can configure them in the exact same way as the "native" parts of %theta.
  *
  * <b>Best practices</b> beyond the points already mentioned include (mainly taken from python's zen):
  * (i) explicit is better than implicit: avoid "magic names" or "magic numbers" which trigger special behaviour or which have special meaning.
@@ -495,7 +492,7 @@
  * something done.
  */
 
-/** \brief Common namespace for almost all classes of %theta.
+/** \brief Common namespace for %theta.
  */
 namespace theta{}
 

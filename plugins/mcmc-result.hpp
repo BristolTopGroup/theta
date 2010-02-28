@@ -8,6 +8,7 @@
 
 namespace theta {
 
+    /*
     class Result {
     protected:
         size_t npar;
@@ -18,8 +19,7 @@ namespace theta {
     public:
         Result(size_t);
         virtual ~Result();
-        /* resets everything to collect data from a new chain (which is based on
-         * the a likelihood of the same dimension) */
+        //resets everything to collect data from a new chain (which is based on the a likelihood of the same dimension)
         void reset();
         //called at the end of a chain:
         void end();
@@ -44,8 +44,7 @@ namespace theta {
         FullResultMem(size_t npar, size_t cap = 1024);
         ~FullResultMem();
         void fill(const double * p, double nll, size_t weight);
-        /* i has to be 0 to i<getCountDifferent().   getCountRes(i) is the count (=weight)
-           of the given point, getResult(i) is the point itself. */
+        //i has to be 0 to i<getCountDifferent().   getCountRes(i) is the count (=weight) of the given point, getResult(i) is the point itself. 
         const double* getResult(size_t i) const;
         size_t getCountRes(size_t i) const;
     };
@@ -63,7 +62,7 @@ namespace theta {
 
         //returns a pointer to the histogram for the i-th parameter.
         const Histogram & getHistogram(size_t i) const;
-    };
+    };*/
 
 }
 

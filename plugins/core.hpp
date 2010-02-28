@@ -6,55 +6,97 @@
 #include "interface/distribution.hpp"
 #include "interface/matrix.hpp"
 
+/** \brief A polynomial distribution where coefficients do not depend on any parameters
+ *
+ * Configuration is done with a setting group like
+ *<pre>
+ * {
+ *  type = "fixed_poly";
+ *  observable = "mass";
+ *  normalize_to = 1.0;
+ *  coefficients = [1.0, 2.0, 5.0];
+ * }
+ *</pre>
+ *
+ * \c type must always be "fixed_poly" to construct an instance of this type
+ *
+ * \c observable is the name of a defined observable. This is used to construct a Histogram with the correct range and binning
+ *
+ * \c normalize_to is the sum of bin contents the returned histogram should have
+ *
+ * \c coefficients is an array (or list) of floating point values which define the polynomial, starting at x^0. The example above defines
+ *  a polynomial 1 + 2*x + 5*x^2
+ */
 class fixed_poly: public theta::ConstantHistogramFunction{
 public:
-   fixed_poly(theta::plugin::Configuration & cfg);
+    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
+    fixed_poly(theta::plugin::Configuration & cfg);
 };
 
+/** \brief A normal distribution where mean and width do not depend on any parameters
+ *
+ * Configuration is done with a setting group like
+ *<pre>
+ * {
+ *  type = "fixed_gauss";
+ *  observable = "mass";
+ *  normalize_to = 1.0;
+ *  mean = 1.0;
+ *  width = 0.2;
+ * }
+ *</pre>
+ *
+ * \c type must always be "fixed_gauss" to construct an instance of this type
+ *
+ * \c observable is the name of a defined observable. This is used to construct a Histogram with the correct range and binning
+ *
+ * \c normalize_to is the sum of bin contents the returned histogram should have
+ *
+ * \c mean and \c width are the mean value and standard deviation for the distribution to construct.
+ */
 class fixed_gauss: public theta::ConstantHistogramFunction{
 public:
+    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
    fixed_gauss(theta::plugin::Configuration & cfg);
 };
 
-    /** \brief A lognormal distribution in one dimension.
-     *
-     * It is configured with a setting group like
-     * <pre> 
-     * { 
-     *  type = "log_normal"; 
-     *  parameter = "p0"; 
-     *  mu = 2.0; 
-     *  sigma = 0.5; 
-     * } 
-     * </pre> 
-     * \c parameter specifies the parameter the normal distribution depends on
-     *
-     * \c mu and \c sigma are floating point constants used to define the distribution.
-     * 
-     * In the parametrization used, the density is proportional to:
-     *   exp( - (ln(x) - mu)^2 / (2 * sigma^2) )
-     * for x > 0 and 0 otherwise. x is the parameter the density depends on, mu and sigma are the configuration parameters.
-     *
-     */
-    class log_normal: public theta::Distribution{
-    public:
-        /** Construct a new LogNormal distribution in variable v_id with parameters
-         * mu and sigma. Only sigma > 0 is allowed; otherwise, an InvalidArgumentException is thrown.
-         */
-        log_normal(theta::plugin::Configuration & cfg);
-        
-        //@{
-        /** \brief Implementation of the pure methods of theta::Distribution
-         *
-         * See documentation of theta::Distribution.
-         */
-        virtual void sample(theta::ParValues & result, theta::Random & rnd, const theta::VarIdManager & vm) const;
-        virtual double evalNL(const theta::ParValues & values) const;
-        virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
-        //@}
-    private:
-        double mu, sigma;
-    };
+/** \brief A lognormal distribution in one dimension.
+    *
+    * It is configured with a setting group like
+    * <pre>
+    * {
+    *  type = "log_normal";
+    *  parameter = "p0";
+    *  mu = 2.0;
+    *  sigma = 0.5;
+    * }
+    * </pre> 
+    * \c parameter specifies the parameter the normal distribution depends on
+    *
+    * \c mu and \c sigma are floating point constants used to define the distribution.
+    * 
+    * In the parametrization used, the density is proportional to:
+    *   \f$ \exp( - (\ln(x) - \mu)^2 / (2 * \sigma^2) ) \f$
+    * for x > 0 and 0 otherwise. x is the parameter the density depends on, mu and sigma are the configuration parameters.
+    *
+    */
+class log_normal: public theta::Distribution{
+public:
+    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
+    log_normal(theta::plugin::Configuration & cfg);
+    
+    //@{
+    /** \brief Implementation of the pure methods of theta::Distribution
+        *
+        * See documentation of theta::Distribution.
+        */
+    virtual void sample(theta::ParValues & result, theta::Random & rnd, const theta::VarIdManager & vm) const;
+    virtual double evalNL(const theta::ParValues & values) const;
+    virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
+    //@}
+private:
+    double mu, sigma;
+};
 
 /** \brief A Gaussian normal distribution in one or more dimensions. 
  * 
@@ -88,11 +130,7 @@ public:
  */
 class gauss: public theta::Distribution{
    public:
-        /** Construct a GaussDistribution which depends on the variable ids v_ids, have a mean of mu
-         *  and a covariance matrix cov.
-         *  If dimensions of v_ids, mu and cov mismatch, an InvalidArgumentException is thrown.
-         *  If cov is not positive definite, a MathException is thrown.
-         */
+        /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
         gauss(theta::plugin::Configuration & cfg);
         virtual void sample(theta::ParValues & result, theta::Random & rnd, const theta::VarIdManager & vm) const;
         virtual double evalNL(const theta::ParValues & values) const;

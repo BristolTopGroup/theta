@@ -11,7 +11,7 @@ void Run::set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
 void Run::run(){
     //record all producers in prodinfo_table:
     for(size_t i=0; i<producers.size(); i++){
-        prodinfo_table.append(*this, (int)i, producers[i].get_name(), producers[i].get_type());
+        prodinfo_table.append(static_cast<int>(i), producers[i].get_name(), producers[i].get_type());
     }
     //write random seeds to rndinfo_table:
     rndinfo_table.append(*this, seed);

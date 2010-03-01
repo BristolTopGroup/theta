@@ -96,22 +96,23 @@ public:
  *      severity level equal to or exceeding the level given here are actually logged. Valid values are "error", "warning", "info"
  *      and "debug". Note that it is not possible to disable logging of error messages.
  *
- * \c log-report is a boolean specifying whether or not to print a logging report to standard out at the end of the run. This report
- *       summarizes how many messages there have been from any non-suppressed level. This allows for a quick check by the user whether
- *       everything went Ok or whether there have been obvious errors.
+ * \c log-report is a boolean specifying whether or not to print a logging report to standard output at
+ *       the end of the run. This report summarizes how many messages there have been from any non-suppressed
+ *       level. This allows for a quick check by the user whether everything went Ok or whether there have been obvious errors.
  *  
  *  Handling of result tables is done in the individual producers. Only run-wide tables
  *  are managed here, that is
  *  <ul>
- *   <li>A database::LogTable called 'log', where all log entries of the run are stored.</li>
- *   <li>A database::ProdInfoTable called 'prodinfo', where the list of configured producers for this run is stored.</li>
- *   <li>A database::RndInfoTable called 'rndinfo', where the random number generator configuration for this run is stored.</li>
- *   <li>A database::ParamInfoTable called 'params', where for each pseudo experiment,
- *       the actually used parameter values used to generate the pseudo data from 
- *       the pseusodata model are saved.</li>
+ *   <li>A \link database::LogTable LogTable \endlink called 'log', where all log entries of the run are stored.</li>
+ *   <li>A \link database::ProducerInfoTable ProducerInfoTable \endlink called 'prodinfo', where the list of configured
+ *        producers are stored.</li>
+ *   <li>A \link database::RndInfoTable RndInfoTable \endlink called 'rndinfo', where the random number generator
+         seed used for this run is stored.</li>
+ *   <li>A \link database::ParamTable ParamTable \endlink called 'params', where for each event (=pseudo experiment),
+ *       the actually used parameter values used to generate the pseudo data from the pseusodata model are saved.</li>
  *  </ul>
  *
- *  For more information about these tables, see the documentation of the corresponding class.
+ *  For more information about these tables, refer to the documentation of the of the corresponding Table classes.
  */
 class Run {
 public:

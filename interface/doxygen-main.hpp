@@ -17,8 +17,9 @@
  * The documentation is split into several pages. If you are new to %theta, read them in this order:
  * <ol>
  *   <li>\subpage installation Installation explains how to obtain and compile %theta</li>
- *   <li>\subpage intro Introduction describes how to run %theta; a first example is discussed and an introduction to the internals of %theta.
- *        In also contains a \ref plugins "list of available plugins".</li>
+ *   <li>\subpage intro Introduction describes how to run %theta; a first example is discussed and
+ *        an introduction to the internals of %theta. In also contains a \ref plugins "list of available plugins".</li>
+ *   <li>\subpage cmd_interface "Command line interface" described the command line tools of %theta</li>
  *   <li>\subpage design "Design Goals of theta" contains some thoughts about what the code of %theta should be like.
  *       You should read that either if you want to contribute code to %theta or if you want to know what makes %theta
  *       different to other software you often deal with in high-energy physics.</li>
@@ -353,6 +354,46 @@
  * </ul>
  */
  
+ 
+ /** \page cmd_interface Command line interface
+  *
+  * %theta comes with two programs meant to be run from the command line: %theta and merge.
+  *
+  * \section cmd_theta theta
+  *
+  * The %theta command expects one or two arguments: the configuration file and (optionally) the name of the run setting
+  * in this file. If the run name is not given, "main" is assumed as name for the run.
+  *
+  * %theta parses the configuration file, constructs the \link theta::Run Run \endlink object from the specified setting group
+  * and invoke its \link theta::Run::run run method \endlink.
+  *
+  * %theta will output the current progress if running on a tty, unless disabled via the \c -q (or \c --quiet) option.
+  *
+  * \section cmd_merge merge
+  *
+  * The \c merge program is used to merge result databases from different runs of the %theta command into a single one.
+  * The \c merge program will only work on <em>compatible</em> databases, i.e., databases which contain the same tables
+  * and where tables contain the same columns. Usually, you should only attempt to merge result databases which were produced
+  * using the same configuration file.
+  *
+  * \c merge re-maps the runid entry in the input files such that the output file contains unique runid entries.
+  *
+  * \c merge will refuse to merge result databases which use the same random number generator seed.
+  *
+  * A typical invocation is :
+  * <pre>
+  * merge --outfile=merged.db result1.db result2.db result3.db
+  * </pre>
+  * which merges the files result{1,2,3}.db into the output file merged.db. If the output file exists,
+  * it will be overwritten.
+  *
+  * Another possibility is to merge all files matching \c *.db within one directory via
+  * <pre>
+  * merge --outfile=merged.db --in-dir=results
+  * </pre>
+  *
+  * The only other supported option is \c -v or \c --verbose which increses the verbosity of merge.
+  */
  
  /*
  * A typical execution of the <tt>%theta</tt> main program consists of:

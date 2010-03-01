@@ -17,12 +17,6 @@ using namespace theta;
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
 
-/** TODO: rewrite such that:
- *  - only compatible runs (=with same prodinfo entries) are merged
- *  - adjust runid, if necessary
- *  - merging is faster for many files
- */
-
 void sqlite3_exec(sqlite3 * db, const char * query){
    char * err = 0;
    sqlite3_exec(db, query, 0, 0, &err);
@@ -49,6 +43,62 @@ sqlite3_stmt* sqlite3_prepare(sqlite3 * db, const char* sql){
     return statement;
 }
 
+void sqlite_error(int code, const string & function){
+    //TODO: translate code to english.
+    cerr << "SQL error " << code << " in " << function << ". Exiting." << endl;
+    exit(1);
+}
+
+//returns a list of column names in the given table
+vector<string> get_column_names(sqlite3 * db, const string & table, const string & database=""){
+    vector<string> result;
+    stringstream ss;
+    if(database!="")
+        ss << "PRAGMA " << database << ".";
+    else
+        ss << "PRAGMA ";
+    ss << "table_info('" << table << "');";
+    sqlite3_stmt * statement = sqlite3_prepare(db, ss.str().c_str());
+    int ret;  
+    while((ret=sqlite3_step(statement))==SQLITE_ROW){
+        result.push_back((const char*)sqlite3_column_text(statement, 1));
+    }
+    sqlite3_finalize(statement);
+    if(ret!=SQLITE_DONE){
+        sqlite_error(ret, __FUNCTION__); //exits
+    }    
+    return result;
+}
+
+//returns a list of sorted table names in the given database
+vector<string> get_tables(sqlite3 * db, const string & database = ""){
+    vector<string> result;
+    string master_table = "sqlite_master";
+    if(database!="") master_table = database + ".sqlite_master";
+    stringstream ss;
+    ss << "SELECT name FROM " << master_table << " WHERE type='table' ORDER BY name;";
+    sqlite3_stmt * statement = sqlite3_prepare(db, ss.str().c_str());
+    int ret;  
+    while((ret=sqlite3_step(statement))==SQLITE_ROW){
+        result.push_back((const char*)sqlite3_column_text(statement, 0));
+    }
+    sqlite3_finalize(statement);
+    if(ret!=SQLITE_DONE){
+        sqlite_error(ret, __FUNCTION__); //exits
+    }
+    return result;
+}
+
+int select_int(sqlite3* db, const string & sql){
+    sqlite3_stmt * statement = sqlite3_prepare(db, sql.c_str());
+    int ret;
+    if((ret = sqlite3_step(statement))!=SQLITE_ROW){
+        sqlite_error(ret, __FUNCTION__);
+    }
+    int result = sqlite3_column_int(statement, 0);
+    sqlite3_finalize(statement);
+    return result;
+}
 
 //merge the sqlite databases in file1 and file2 into file1.
 //The files must contain the same tables with the same schema.
@@ -57,6 +107,7 @@ sqlite3_stmt* sqlite3_prepare(sqlite3 * db, const char* sql){
 // some tables might already be merged, others not.
 //TODO: could be done better (=faster), if merging more than two
 // files at once ...
+// errorflag is set to a non-zero value in case of errors
 void merge(const string & file1, const string & file2){
     sqlite3 * db=0;
     sqlite3_open(file1.c_str(), &db);
@@ -65,56 +116,84 @@ void merge(const string & file1, const string & file2){
     sqlite3_exec(db, "PRAGMA cache_size=5000;");
 
     stringstream ss;
-    ss << "ATTACH \"" << file2 << "\" AS o";
+    ss << "attach \"" << file2 << "\" as o";
     sqlite3_exec(db, ss.str().c_str());
 
-    //get tables from file1:
-    vector<string> tables;
-    ss.str("");
-    ss << "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;";
-    sqlite3_stmt * statement = sqlite3_prepare(db, ss.str().c_str());
-    int ret;
-    while((ret=sqlite3_step(statement))==SQLITE_ROW){
-        tables.push_back((const char*)sqlite3_column_text(statement, 0));
+    //checks:    
+    //1. compare tables in the files
+    vector<string> tables = get_tables(db);
+    vector<string> other_tables = get_tables(db, "o");
+    if(tables != other_tables){
+        cerr << "Error: tables are not identical in the files to merge ('" << file1 << "', '" << file2 << "'). Skipping." << endl;
+        return;
     }
-    sqlite3_finalize(statement);
-    if(ret!=SQLITE_DONE){
-        cout << "error: " << ret << endl;
-        throw Exception("");
+    
+    //2. compare list of producers
+    //two sets A, B are identical if   A | B  and  B \ A  are both empty, so this should return 0:
+    /*int count = select_int(db, "select count(*) from ((select * from 'prodinfo' except select * from o.'prodinfo') "
+          "union all (select * from o.'prodinfo' except select * from 'prodinfo'));");*/
+    //two sets A, B are identical if   A union B contains the same number of elements as A and B alone
+    int n_ab = select_int(db, "select count(*) from (select distinct * from (select * from prodinfo union all select * from o.prodinfo));");
+    int n_a = select_int(db, "select count(*) from prodinfo;");
+    int n_b = select_int(db, "select count(*) from o.prodinfo;");
+    if(not (n_a == n_b && n_b==n_ab)){
+        cerr << "Error: the list of producers is different in the files to merge ('" << file1 << "', '" << file2 << "')." << endl;
+        throw Exception("list of producers is different");
+        return;
     }
-    //compare with tables from file2:
-    ss.str("");
-    ss << "SELECT name FROM o.sqlite_master WHERE type='table' ORDER BY name;";
-    statement = sqlite3_prepare(db, ss.str().c_str());
-    int i=0;
-    while((ret=sqlite3_step(statement))==SQLITE_ROW){
-        string tablename((const char*)sqlite3_column_text(statement, 0));
-        if(tablename!=tables[i]){
-            sqlite3_finalize(statement);
-            stringstream error_ss;
-            error_ss << "merge: table '"<< tables[i]<<"' in '" << file1 << "' not found in '" << file2 << "' or wrong unmatching number of tables.";
-            throw Exception(error_ss.str());
-        }
-        i++;
+    
+    //3. compare random number seed
+    int count_rnd = select_int(db, "select count(*) from 'rndinfo' as r, o.'rndinfo' as s where r.seed = s.seed;");
+    if(count_rnd!=0){
+        cerr << "Error: the random seeds are identical in the files to merge ('" << file1 << "', '" << file2 << "')." << endl;
+        throw Exception("random seeds are the same");
+        return;
     }
-    sqlite3_finalize(statement);
-    if(i!=(int)tables.size()){
-        stringstream error_ss;
-        error_ss << "merge: different number of tables in '" << file1 << "' and '" << file2 << "'.";
-        throw Exception(error_ss.str());
-    }
-    if(ret!=SQLITE_DONE){
-        cout << "error: " << ret << endl;
-        throw Exception("");
-    }
+    
+    //Ok, we are through with the checks; now compute the runid offset.
+    //find out the runids in the first and second table:
+    int max_runid_file1, min_runid_file2;
+    //use the 'rndinfo' table:
+    max_runid_file1 = select_int(db, "select max(runid) from 'rndinfo';");
+    min_runid_file2 = select_int(db, "select min(runid) from o.'rndinfo';");
+    int offset = max_runid_file1 - min_runid_file2 + 1;
 
-    //If we are here, the list of table names in file1 and file2 is the same. Go through the tables
-    // and merge the result, if the schema matches:
+    //Go through the tables and merge the result:
     try{
         sqlite3_exec(db, "BEGIN");
         for(size_t itable=0; itable<tables.size(); itable++){
-            ss.str("");
-            ss << "INSERT INTO " << tables[itable] << " SELECT * FROM o." << tables[itable];
+            vector<string> column_names1 = get_column_names(db, tables[itable]);
+            vector<string> column_names2 = get_column_names(db, tables[itable], "o");
+            if(column_names1!=column_names2){
+                cerr << "Error: columns in table '"<< tables[itable] << "' not identical in the files to merge ('"
+                     << file1 << "', '" << file2 << "'): " << endl << "   columns in file 1: ";
+                for(size_t i=0; i<column_names1.size(); ++i){
+                    cerr << column_names1[i] << " ";
+                }
+                cerr << endl << "   columns in file 2: ";
+                for(size_t i=0; i<column_names2.size(); ++i){
+                    cerr << column_names2[i] << " ";
+                }
+                cerr << endl;
+                throw Exception("columns not identical");
+            }
+            if(column_names1[0]=="runid"){
+                ss.str("");
+                ss << "INSERT INTO '" << tables[itable] << "' SELECT runid + " << offset;
+                //skip runid, which should be the first column in all tables
+                for(size_t ic=1; ic<column_names1.size(); ++ic){
+                    ss << ", '" << column_names1[ic] << "'";
+                }
+                ss << " FROM o.'" << tables[itable] << "';";
+            }
+            else{
+                //Should only happen for the prodinfo table ...
+                if(tables[itable]!="prodinfo"){
+                    cerr << "Error: table '" << tables[itable] << "' does not contain runid! Exiting." << endl;
+                    throw Exception("no runid in a table");
+                }
+                //prodinfo table does not have to be merged.
+            }
             sqlite3_exec(db, ss.str().c_str());
         }
         sqlite3_exec(db, "END");
@@ -149,7 +228,7 @@ void find_files(const string & path, const string & pattern, vector<string> & fi
 
 
 int main(int argc, char** argv){
-    po::options_description desc("Allowed options");
+    po::options_description desc("Supported options");
     desc.add_options()("help", "show help message")
     ("outfile", po::value<string>(), "output file of merging")
     ("verbose,v", "verbose output (with progress)")
@@ -221,7 +300,6 @@ int main(int argc, char** argv){
             }
             try{
                 if(fs::exists(outfile)){
-                    //cout << "Note: overwriting existing output file '" << outfile << "'" << endl;
                     fs::remove(outfile);
                 }
                 fs::copy_file(input_files[i], outfile);
@@ -244,8 +322,9 @@ int main(int argc, char** argv){
             }
             catch(Exception & e){
                 cerr << "Error while merging '" << input_files[i] << "': " << e.message << endl;
-                cerr << "Aborting." << endl;
-                exit(2);
+                cerr << "Deleting output and exiting." << endl;
+                fs::remove(outfile);
+                exit(1);
             }
             if(verbose){
                 cout << "done." << endl;

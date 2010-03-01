@@ -92,7 +92,22 @@ private:
  * <li>an \c append() method which inserts a new row at the end of the table.
  *     The signature of this method depends on the fields for the particular table.</li>
  * </ol>
+ *
+ * Any producer table MUST have, as first two fields:
+ * <ol>
+ *   <li>runid INT(4)</li>
+ *   <li>eventid INT(4)</li>
+ * </ol>
+ * and write the current runid and eventid of the event for which the result was produced to the table.
  */
+//TODO: This runid, eventod column requirement should be enforced by design. For example,
+// Table could provide protected methods
+//   column addColumn(string, data_type::type) (called at the beginning)
+//then, repeatedly:
+//    void setColumn(column, value) for each column and
+//    void addRow() for each row to add, after setting all columns
+//which provide an abstraction to SQL.
+// namespace data_type { enum type { double_, int_, string_, blob_ }; }
 class Table: private boost::noncopyable {
     /** Validate table (or column) names. Throws a theta::DatabaseException if the name
      * is not considered a valid name for a table or column.
@@ -181,17 +196,16 @@ protected:
 
 namespace severity {
 
-/** \brief Severity levels in for LogTable.
+/** \brief Severity levels in for LogTable
  * 
  * <ol>
  * <li>\c error should be used if a serious condition is reported which will likely
- *     lead to abnormal program termination or invalidation of the result.</li>
+ *     affect the whole result.</li>
  * <li>\c warning should be used if a problem is not as serious as \c error, but might affect
  *     the result in an undesired way. </li>
  * <li>\c info is used purely informational, without the implicit action request of
- *    \c error and \c warning. It covers such entries like the start and end of a pseudo experiment. </li>
- * <li>\c debug is used like \c info, but for very detailed reporting which is usually not required
- *   and can be turned off for a whole run (whereas logging on other levels is always on).</li>
+ *    \c error and \c warning. It covers such events like the start and end of a pseudo experiment. </li>
+ * <li>\c debug is used like \c info, but for very detailed reporting which is usually not required.</li>
  * </ol>
  **/
 enum e_severity {
@@ -199,7 +213,7 @@ enum e_severity {
 };
 }
 
-/** \brief Central table to store any logging information.
+/** \brief Table to store all logging information
  *
  * The corresponding SQL table has following fields:
  * <ol>
@@ -278,18 +292,20 @@ private:
 };
 
 
-/** \brief Table to store per-run information about all active producers.
+/** \brief Table to store information about all producers
  *
  * This table object is used by an instance of \link theta::Run Run \endlink.
  * 
  * The corresponding SQL table has following fields:
  * <ol>
- * <li>\c runid \c INTEGER(4): the run id the entry refers to.</li>
  * <li>\c ind \c INTEGER(4): the index (starting from 0) for this producer in the current run configuration,
  *   i.e. the index it appeared in the producers = ("...") list in the configuration. </li>
  * <li>\c type \c TEXT: the type setting used to configure this producer, as given in the type="..."  setting for this producer</li> 
  * <li>\c name \c TEXT: the name of the producer, as defined in the setting (via the setting name).</li>
  * </ol>
+ *
+ * This table is the only table without a "runid" entry as its contents information is not run-dependent
+ * and each database file only contains information with consistent producers.
  */
 class ProducerInfoTable: public Table {
 public:
@@ -301,12 +317,11 @@ public:
     
     /** \brief Append an entry to the ProducerInfoTable.
      * 
-     * \param run The Run instance to ask for the runid
      * \param index The index for this producer in the current run configuration
      * \param p_name The name of the producer
      * \param p_type The right hand side of the type="..."; setting used to configure this producer
      */
-    void append(const theta::Run & run, int index, const std::string & p_name, const std::string & p_type);
+    void append(int index, const std::string & p_name, const std::string & p_type);
 
 private:
     /** \brief Implementation of Table::create_table to do the actual table creation.

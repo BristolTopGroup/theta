@@ -8,6 +8,7 @@
 #include "libconfig/libconfig.h++"
 
 #include <boost/filesystem.hpp>
+#include <boost/program_options.hpp>
 
 using namespace std;
 using namespace theta;
@@ -16,6 +17,7 @@ using namespace theta::plugin;
 using namespace libconfig;
 
 namespace fs = boost::filesystem;
+namespace po = boost::program_options;
 
 class MyProgressListener: public ProgressListener{
 public:
@@ -36,19 +38,48 @@ private:
 };
 
 int main(int argc, char** argv) {
-    if (argc < 2 || strcmp("-h", argv[1])==0 || strcmp("--help", argv[1])==0) {
-        cerr << "Usage: " << argv[0] << " <configuration file> [run name]" << endl;
-        cerr << "If no run name is given, 'main' is assumed." << endl;
-        exit(1);
+    po::options_description desc("Supported options");
+    desc.add_options()("help", "show help message")
+    ("quiet,q", "quiet mode (supress progress message)");
+
+    po::options_description hidden("Hidden options");
+
+    hidden.add_options()
+    ("cfg-file", po::value<string>(), "config file")
+    ("run-name", po::value<string>(), "run name");
+
+    po::positional_options_description p;
+    p.add("cfg-file", 1);
+    p.add("run-name", 1);
+
+    po::options_description cmdline_options;
+    cmdline_options.add(desc).add(hidden);
+
+    po::variables_map cmdline_vars;
+    try{
+        po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(p).run(), cmdline_vars);
     }
-    string run_name;
-    if(argc == 2){
-       run_name = "main";
+    catch(std::exception & ex){
+        cerr << "Error parsing command line options: " << ex.what() << endl;
+        return 1;
     }
-    else{
-       run_name = argv[2];
+    po::notify(cmdline_vars);
+    
+    if(cmdline_vars.count("help")){
+        cout << desc << endl;
+        return 0;
     }
-    string cfg_filename = argv[1];
+    
+    if(cmdline_vars.count("cfg-file")==0){
+        cerr << "Error: you have to specify a configuration file" << endl;
+        return 1;
+    }
+    
+    string cfg_filename = cmdline_vars["cfg-file"].as<string>();
+    string run_name = "main";
+    if(cmdline_vars.count("run-name")) run_name = cmdline_vars["run-name"].as<string>();
+    bool quiet = cmdline_vars.count("quiet");
+    
 
     Config cfg;
     
@@ -96,8 +127,10 @@ int main(int argc, char** argv) {
         Setting & runsetting = root[run_name];
         Configuration run_context(vm_context, runsetting);
         run = PluginManager<Run>::build(run_context);
-        boost::shared_ptr<ProgressListener> l(new MyProgressListener());
-        run->set_progress_listener(l);
+        if(not quiet){
+            boost::shared_ptr<ProgressListener> l(new MyProgressListener());
+            run->set_progress_listener(l);
+        }
     } catch (ConfigurationException & ex) {
         cerr << "Error while building Model from config: " << ex.message << "." << endl;
     } catch (SettingNotFoundException & ex) {

@@ -5,7 +5,13 @@
 #include <boost/serialization/vector.hpp>
 
 namespace theta {
-/** \brief Represents a matrix of doubles.
+
+/** \brief A matrix of doubles
+ *
+ * Beyond mere data, this matrix class provides algortihms commonly required for
+ * positive definite matrices: cholesky decomposition and matrix inversion based
+ * on cholesky decomposition. A usage example for these transformation is the random number generation
+ * of a multivariate normal distribution with a non-trivial covariance matrix.
  */
 class Matrix {
 private:

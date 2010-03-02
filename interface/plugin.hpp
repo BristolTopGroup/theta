@@ -1,10 +1,10 @@
 #ifndef PLUGIN_HPP
 #define PLUGIN_HPP
 
+#include "interface/decls.hpp"
 #include "interface/plugin_so_interface.hpp"
 #include "interface/exception.hpp"
 #include "interface/cfg-utils.hpp"
-#include "libconfig/libconfig.h++"
 
 #include <boost/utility.hpp>
 

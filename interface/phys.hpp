@@ -2,15 +2,6 @@
 #define PHYS_HPP
 
 #include "interface/decls.hpp"
-
-/*#include "interface/histogram.hpp"
-#include "interface/histogram-function.hpp"
-#include "interface/exception.hpp"
-#include "interface/matrix.hpp"
-#include "interface/random.hpp"
-#include "interface/metropolis.hpp"
-#include "interface/distribution.hpp"*/
-
 #include "interface/variables.hpp"
 
 #include <vector>
@@ -18,13 +9,14 @@
 #include <limits>
 #include <set>
 #include <map>
-//#include <boost/math/special_functions/fpclassify.hpp>
-
 #include <boost/ptr_container/ptr_vector.hpp>
 
 namespace theta {
     
-    /** A real-valued function which depends on some variables. */
+    /** A real-valued function which depends on one or more parameters
+     *
+     * This is the base class for function plugins.
+     */
     class Function{
     public:
         /// Define us as the base_type for derived classes; required for the plugin system
@@ -35,35 +27,6 @@ namespace theta {
          * @return The function value at \c v.
          */
         virtual double operator()(const ParValues & v) const = 0;
-
-        #if 0
-        /** \brief Evaluate the gradient of the function at \c.
-         *
-         * The result is written to \c grad.
-         *
-         * Derived classes should override that if either the gradient can be calculated
-         * analytically first or if they have a better value for the stepsize.
-         *
-         * @return The function value at \c v.
-         */
-        virtual double gradient(const ParValues & v, ParValues & grad) const{
-            ParValues v_new(v);
-            for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
-                v_new = v;
-                double epsilon = 1e-8 * fabs(v.get(*it));
-                if(epsilon == 0.0)epsilon = 1e-8;
-                v_new.set(v.get(*it) + epsilon);
-                double f_plus = operator()(v_new);
-                v_new.set(v.get(*it) - epsilon);
-                double f_minus = operator()(v_new);
-                grad.set(*it, (f_plus - f_minus) / (2*epsilon));
-            }
-            return operator()(v);
-        }
-        #endif
-
-        ///gradient at \c v w.r.t. \c pid.
-        virtual double gradient(const ParValues & v, const ParId & pid) const = 0;
 
         /** \brief Evaluate the function, using the parameter values given as array of doubles.
          *
@@ -91,13 +54,13 @@ namespace theta {
         }
 
 
-        /** @return the parameters this function depends on.
+        /** \brief Returns the parameters this function depends on
          */
         ParIds getParameters() const{
             return par_ids;
         }
 
-        /** \brief The number of parameters this function depends on.
+        /** \brief The number of parameters this function depends on
          *
          * Same as \c getParameters().size().
          */
@@ -114,7 +77,10 @@ namespace theta {
         Function(const ParIds & pids): par_ids(pids){}
     };
     
-    /** \brief A function which multiplies a list of variables.
+    /** \brief A function which multiplies all its parameters
+     *
+     * For example, defining a Function to depend on ParId p0 and ParId p1,
+     * operator(values) will always return values.get(p0)*values.get(p1).
      */
     class MultFunction: public Function{
     public:
@@ -128,7 +94,6 @@ namespace theta {
          * See documentation of Function for their meaning.
          */
         virtual double operator()(const ParValues & v) const;
-        virtual double gradient(const ParValues & v, const ParId & pid) const;
         //@}
     };
     
@@ -256,12 +221,6 @@ namespace theta {
          * This function should be used in place of \c get_prediction, if sampling pseudo data from the model.
          */
         void get_prediction_randomized(Random & rnd, Histogram &result, const ParValues & parameters, const ObsId & obs_id) const;
-        
-        /** \brief The derivative of getPredition w.r.t. \c pid.
-         *
-         * Make sure to copy the returned Histogram as the function returns a reference to intrenal data which is overwritten in the next call to \c getPredictionDerivative
-         */
-        void get_prediction_derivative(Histogram & result, const ParValues & parameters, const ObsId & obs_id, const ParId & pid) const;
 
         /** \brief get a single component of the prediction for a given observable.
          *
@@ -305,8 +264,7 @@ namespace theta {
         boost::shared_ptr<VarIdManager> vm;
         ParIds parameters;
         ObsIds observables;
-        //the shared_ptr is required as the Data part of a std::map<Key, Data>
-        //needs to be copy-constructible.
+        //the shared_ptr is required as the Data part of a std::map<Key, Data> needs to be copy-constructible.
         //However, for ptr_vector to be copy-contructible, we need new_clone function to
         // implement cloning for HistogramFunctions and Functions. As this
         // requires more implementation work by plugin writers, let's do it a bit more complicated
@@ -319,7 +277,6 @@ namespace theta {
         typedef std::map<ObsId, boost::shared_ptr<boost::ptr_vector<HistogramFunction> > > histos_type;
         std::map<ObsId, std::vector<std::string> > names;
 
-        //boost::ptr_vector<Distribution> priors;
         std::vector<boost::shared_ptr<Distribution> > priors;
     };
     
@@ -371,28 +328,6 @@ namespace theta {
          */
         double operator()(const ParValues & values) const;
         
-       /** \brief Calculate the gradient and function value at \c x and fill the result into \c g and \c nll, respectively.
-        *
-        *  \c g must be allocated by the caller (and is owned by the caller).
-        *
-        * The gradient is calculated numerically by evaluating, for each component \f$ i \f$
-        * \f$ nll(x + \epsilon * x_i) - nll(x - \epsilon * x_i) / (2*\epsilon) \f$
-        * where \f$ x_i \f$ is the unit vector in direction \f$ i \f$ and \f$ \epsilon \f$
-        * a small positive number.
-        */
-        void gradient(const double* x, double* g, double & nll) const;
-        
-        /** \brief As gradient() but with more accuracy
-         *
-         * The derivative is first calculated analytically, then numerically, whereas gradient() does a black-box
-         * approximation.
-         *
-         * This function is still experimental.
-         */
-        void gradient2(const double* x, double* g, double & nll) const;
-
-        virtual double gradient(const ParValues & v, const ParId & pid) const;
-                
         /** \brief The set of observables that enter the likelihood calculation.
          * 
          * The returned reference is only valid as long as this object exists.
@@ -414,8 +349,6 @@ namespace theta {
 
         //values used internally if called with the double* functions.
         mutable ParValues values;
-        //the derivatives of the priors:
-        mutable ParValues p_derivatives;
         //cached predictions:
         mutable std::map<ObsId, Histogram> predictions;
         mutable std::map<ObsId, Histogram> predictions_d;

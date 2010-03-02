@@ -4,11 +4,7 @@
 #include <sstream>
 
 using namespace std;
-//using namespace theta::utils;
 using namespace libconfig;
-
-//using theta::utils::remove_empty_groups;
-//using theta::utils::get_paths;
 
 namespace theta{ namespace utils{
 

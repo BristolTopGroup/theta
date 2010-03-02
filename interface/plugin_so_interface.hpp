@@ -7,10 +7,12 @@
 namespace theta{
     namespace plugin{
 
-/** \brief A container class which is used by plugins
+/** \brief A container class which is used to construct conrete types managed by the plugin system
  *
- * An instance of this class is passed to the constructor of plugin classes. They can use
- * it to read the configuration settings.
+ * An instance of this class is passed to the constructor of classes managed by the plugin system.
+ * It contains the required information for plugins to construct an instance of the plugin class,
+ * the most important being \c setting, which is the setting group from the configuration file
+ * for which this plugin class should be created.
  */
 class Configuration{
 public:
@@ -20,7 +22,7 @@ public:
     /// The root setting of the configuration file, to resolve any references to other settings
     const libconfig::Setting & rootsetting;
 
-    /// The setting to be used to construct the object:
+    /// The setting to be used to construct the object
     const libconfig::Setting & setting;
 
     /// To mark the settings as used (for warning the user if there are unused settings)

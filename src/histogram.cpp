@@ -179,27 +179,3 @@ void Histogram::fill_with_pseudodata(Histogram & m, Random & rnd, double mu, boo
     }
 }
 
-
-/*double Histogram::get_quantile(double q) const {
-    q *= sum_of_bincontents;
-    //if quantile under underflow requested: return -inf:
-    if (q < histodata[0]) return -std::numeric_limits<double>::infinity();
-    if (mcmcutils::close_to(q, sum_of_bincontents - histodata[nbins + 1], sum_of_bincontents)) return xmax;
-    if (q > sum_of_bincontents - histodata[nbins + 1]) return std::numeric_limits<double>::infinity();
-    double sum = histodata[0];
-    size_t bin = 1;
-    while (sum <= q && bin <= nbins + 1) {
-        sum += histodata[bin++];
-    }
-    bin--;
-    //bin is now the index of the bin in which the quantile is
-    // reached.
-    if (bin == nbins + 1) {
-        //should not happen or our event weight was wrong ...
-        // So this only happens for rounding errors and q close to 1.
-        return xmax;
-    }
-    //interpolate last bin linearly:
-    double last_bin_fraction = 1 - (sum - q) / histodata[bin];
-    return (xmax - xmin) / nbins * (bin - 1 + last_bin_fraction) + xmin;
-}*/

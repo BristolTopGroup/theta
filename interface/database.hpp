@@ -9,8 +9,8 @@
 #include <sqlite3.h>
 #include <boost/utility.hpp>
 
-#include "interface/variables.hpp"
 #include "interface/decls.hpp"
+#include "interface/variables.hpp"
 #include "interface/exception.hpp"
 
 /** \brief Namespace for the Database and Table objects to save any data created during a run.

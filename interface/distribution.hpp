@@ -1,13 +1,10 @@
 #ifndef DISTRIBUTION_HPP
-#define	DISTRIBUTION_HPP
+#define DISTRIBUTION_HPP
 
 #include "interface/decls.hpp"
 #include "interface/variables.hpp"
-#include "interface/matrix.hpp"
-#include "interface/plugin_so_interface.hpp"
-
-#include <memory>
-#include <vector>
+//#include "interface/matrix.hpp"
+//#include "interface/plugin_so_interface.hpp"
 
 namespace theta{
 
@@ -74,8 +71,6 @@ namespace theta{
     protected:
         ParIds par_ids;
     };
-
 }
 
 #endif
-

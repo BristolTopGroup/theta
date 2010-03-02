@@ -33,15 +33,6 @@ double MultFunction::operator()(const ParValues & v) const{
     return result;
 }
 
-double MultFunction::gradient(const ParValues & v, const ParId & pid) const{
-    if(not par_ids.contains(pid)) return 0.0;
-    double result = 1.0;
-    for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end() && *it!=pid; it++){
-        result *= v.get(*it);
-    }
-    return result;
-}
-
 /* DATA */
 ObsIds Data::getObservables() const{
     ObsIds result;
@@ -157,45 +148,6 @@ void Model::get_prediction_randomized(Random & rnd, Histogram &result, const Par
             result = (*h_producers)[i].getRandomFluctuation(rnd, parameters);
             result *= (*h_coeffs)[i](parameters);
             result_init = true;
-        }
-    }
-    if(not result_init){
-        const pair<double, double> & o_range = vm->get_range(obs_id);
-        result.reset(vm->get_nbins(obs_id), o_range.first, o_range.second);
-    }
-}
-
-void Model::get_prediction_derivative(Histogram & result, const ParValues & parameters, const ObsId & obs_id, const ParId & pid) const{
-    histos_type::const_iterator it = histos.find(obs_id);
-    if (it == histos.end()) throw InvalidArgumentException("Model::get_prediction_derivative: invalid obs_id");
-    const histos_type::mapped_type & h_producers = it->second;
-    coeffs_type::const_iterator it2 = coeffs.find(obs_id);
-    const coeffs_type::mapped_type & h_coeffs = it2->second;
-
-    //Histogram & result = predictions_d[obs_id];
-    //save whether result has already been initialized:
-    bool result_init = false;
-    for (size_t i = 0; i < h_producers->size(); i++) {
-        if((*h_producers)[i].dependsOn(pid)){
-            if(result_init){
-                result.add_with_coeff((*h_coeffs)[i](parameters), (*h_producers)[i].gradient(parameters, pid));
-            }
-            else{
-                result = (*h_producers)[i].gradient(parameters, pid);
-                result *= (*h_coeffs)[i](parameters);
-                result_init = true;
-            }
-        }
-        double coeff_g = (*h_coeffs)[i].gradient(parameters, pid);
-        if(coeff_g!=0.0){
-            if(result_init){
-                result.add_with_coeff(coeff_g, (*h_producers)[i](parameters));
-            }
-            else{
-                result = (*h_producers)[i](parameters);
-                result *= coeff_g;
-                result_init = true;
-            }
         }
     }
     if(not result_init){
@@ -325,7 +277,7 @@ std::auto_ptr<Model> ModelFactory::buildModel(Configuration & ctx) {
 
 /* NLLIKELIHOOD */
 NLLikelihood::NLLikelihood(const boost::shared_ptr<VarIdManager> & vm_, const Model & m, const Data & dat, const ObsIds & obs, const ParIds & pars): Function(pars), vm(vm_), model(m),
-        data(dat), obs_ids(obs), values(*vm), p_derivatives(*vm){
+        data(dat), obs_ids(obs), values(*vm){
 }
 
 double NLLikelihood::operator()(const ParValues & values) const{
@@ -367,98 +319,5 @@ double NLLikelihood::operator()(const ParValues & values) const{
         throw MathException("NLLikelihood:Loperator() would return nan (2)");
     }
     return result;
-}
-
-void NLLikelihood::gradient(const double* x, double* g, double & nll) const{
-    nll = Function::operator()(x);
-    boost::scoped_array<double> xnew(new double[getnpar()]);
-    memcpy(xnew.get(), x, getnpar() * sizeof(double));
-    for(size_t i=0; i<getnpar(); i++){
-        double epsilon = 1e-8 * fabs(x[i]);
-        if(epsilon == 0.0)epsilon = 1e-8;
-        xnew[i] = x[i] + epsilon;
-        double nll_plus = Function::operator()(xnew.get());
-        xnew[i] = x[i] - epsilon;
-        double nll_minus = Function::operator()(xnew.get());
-        xnew[i] = x[i];
-        g[i] = (nll_plus - nll_minus) / (2*epsilon);
-    }
-}
-
-void NLLikelihood::gradient2(const double* x, double* g, double & result) const{
-    size_t i=0;
-    for(ParIds::const_iterator parit=par_ids.begin(); parit!=par_ids.end(); parit++, i++){
-        values.set(*parit, x[i]);
-        g[i] = 0.0;
-    }
-    
-    result = 0.0;
-    //go through all observables:
-    for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
-        const ObsId & obs_id = *obsit;
-        Histogram & model_prediction = predictions[obs_id];
-        model.get_prediction(model_prediction, values, obs_id);
-        const Histogram & data_hist = data.getData(obs_id);
-        const size_t nbins = model_prediction.get_nbins();
-        const double * pred_data = model_prediction.getData();
-        const double * data_data = data_hist.getData();
-        for(size_t k=1; k<=nbins; k++){
-             if(pred_data[k]>0.0)
-                 result -= data_data[k] * theta::utils::log(pred_data[k]);
-        }
-        result += model_prediction.get_sum_of_bincontents();
-        
-        //derivatives:
-        i=0;
-        for(ParIds::const_iterator parit=par_ids.begin(); parit!=par_ids.end(); parit++, i++){
-            Histogram & model_prediction_d = predictions_d[obs_id];
-            model.get_prediction_derivative(model_prediction_d, values, obs_id, *parit);
-            const double * pred_d_data = model_prediction_d.getData();
-            for(size_t k=1; k<=nbins; k++){
-                 if(pred_data[k]>0.0)
-                     g[i] -= data_data[k] * pred_d_data[k] / pred_data[k];
-            }
-            g[i] += model_prediction_d.get_sum_of_bincontents();
-        }
-    }
-    
-    //the model priors:
-    for(size_t k=0; k<model.priors.size(); k++){
-        result += model.priors[k]->evalNL_withDerivatives(values, p_derivatives);
-        //write derivatives to g:
-        i=0;
-        for(ParIds::const_iterator parit=par_ids.begin(); parit!=par_ids.end(); parit++, i++){
-            if(p_derivatives.contains(*parit))
-                g[i] += p_derivatives.get(*parit);
-        }
-    }
-}
-
-double NLLikelihood::gradient(const ParValues & values, const ParId & pid) const{
-    double der = 0.0;
-    for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
-        const ObsId & obs_id = *obsit;
-        Histogram & model_prediction = predictions[obs_id];
-        model.get_prediction(model_prediction, values, obs_id);
-        const Histogram & data_hist = data.getData(obs_id);
-        const size_t nbins = model_prediction.get_nbins();
-        const double * pred_data = model_prediction.getData();
-        const double * data_data = data_hist.getData();
-
-        Histogram & model_prediction_d = predictions_d[obs_id];
-        model.get_prediction_derivative(model_prediction_d, values, obs_id, pid);
-        const double * pred_d_data = model_prediction_d.getData();
-        for(size_t k=1; k<=nbins; k++){
-             if(pred_data[k]>0.0)
-                 der -= data_data[k] * pred_d_data[k] / pred_data[k];
-        }
-        der += model_prediction_d.get_sum_of_bincontents();
-    }
-    for(size_t k=0; k<model.priors.size(); k++){
-        model.priors[k]->evalNL_withDerivatives(values, p_derivatives);
-        if(p_derivatives.contains(pid))
-               der += p_derivatives.get(pid);
-    }
-    return der;
 }
 

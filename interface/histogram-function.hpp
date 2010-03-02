@@ -73,10 +73,6 @@ namespace theta {
          */
         virtual bool dependsOn(const ParId & pid) const = 0;
         
-        /** \brief Returns the gradient of the Histogram w.r.t. \c pid at \c values.
-        */
-        virtual const Histogram & gradient(const ParValues & values, const ParId & pid) const = 0;
-        
         /// Declare the destructor virtual as there will be polymorphic access to derived classes
         virtual ~HistogramFunction(){}
     };
@@ -115,17 +111,6 @@ namespace theta {
             return false;
         }
 
-        /** \brief Always returns a zero Histogram.
-         *
-         * As this HistogramFunction does not depend on parameters by definition, the gradient is always zero.
-         *
-         * Assuming well-written client code, this method should never be called, as any code calling it can check dependsOn() first
-         * see that it would be a zero-return anyway.
-         */
-        virtual const Histogram & gradient(const ParValues & values, const ParId & pid) const{
-            return grad;
-        }
-
     protected:
         /** \brief Set the constant Histogram to return
          *
@@ -136,14 +121,12 @@ namespace theta {
            h = h_;
            h.set(0,0);
            h.set(h.get_nbins()+1,0);
-           grad.reset(h.get_nbins(), h.get_xmin(), h.get_xmax());
         }
         /** \brief Default constructor to be used by derived classes
          */
         ConstantHistogramFunction(){}
      private:
         Histogram h;
-        Histogram grad;
     };
 
 
@@ -207,12 +190,6 @@ namespace theta {
             return false;
         }
 
-        /** \brief Always returns a zero as this HistogramFunction is constant and does not depend on any parameters.
-         */
-        virtual const Histogram & gradient(const ParValues & values, const ParId & pid) const{
-            return grad;
-        }
-
     protected:
         /** \brief Set the Histogram and the errors to to return
          *
@@ -228,7 +205,6 @@ namespace theta {
             h.check_compatibility(error);//throws if not compatible
             h.set(0,0);
             h.set(h.get_nbins()+1,0);
-            grad.reset(h.get_nbins(), h.get_xmin(), h.get_xmax());
             fluc.reset(h.get_nbins(), h.get_xmin(), h.get_xmax());
             //check that errors are positive:
             for(size_t i=1; i<=h.get_nbins(); ++i){
@@ -242,7 +218,6 @@ namespace theta {
     private:
         Histogram h;
         Histogram err;
-        Histogram grad;
         mutable Histogram fluc; // the fluctuated Histogram returned by getFluctuatedHistogram
     };
 

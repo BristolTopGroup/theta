@@ -203,6 +203,4 @@ namespace theta{
 
 }
 
-
-#endif /* _MINIMIZER_HPP */
-
+#endif

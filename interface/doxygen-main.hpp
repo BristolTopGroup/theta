@@ -16,6 +16,7 @@
  *
  * The documentation is split into several pages. If you are new to %theta, read them in this order:
  * <ol>
+ *   <li>\subpage whatistheta "What theta can do" explains which kind of questions are addressed with %theta</li>
  *   <li>\subpage installation Installation explains how to obtain and compile %theta</li>
  *   <li>\subpage intro Introduction describes how to run %theta; a first example is discussed and
  *        an introduction to the internals of %theta. In also contains a \ref plugins "list of available plugins".</li>
@@ -24,6 +25,8 @@
  *       You should read that either if you want to contribute code to %theta or if you want to know what makes %theta
  *       different to other software you often deal with in high-energy physics.</li>
  * </ol>
+ *
+ * %theta contains examples in the \c examples directory.
  *
  * \section ack Acknowledgement
  *
@@ -46,7 +49,7 @@
  * %theta is licensed under the <a href="http://www.gnu.org/copyleft/gpl.html">GPL</a>.
  *
  * \section ref References
- * The %theta make use of:
+ * %theta includes algorithms based on:
  * <ol>
  *   <li><em>Matsumoto, Makoto and Nishimura, Takuji:</em> <a href="http://doi.acm.org/10.1145/272991.272995">"Mersenne twister: a 623-dimensionally equidistributed uniform pseudo-random number generator"</a>,
  *        ACM Trans. Model. Comput. Simul. 1, 1998</li>
@@ -55,6 +58,40 @@
  *   <li><em>George Marsaglia and Wai Wan Tsang:</em> "The Ziggurat Method for Generating Random Variables", Journal of Statistical Software 8, 2000</li>
  *   <li><em>A. Gelman, G. O. Roberts, and W. R. Gilks:</em> "Efficient Metropolis Jumping Rules", Bayesian Statistics 5, 1996</li>
  * </ol>
+ */
+
+
+/** \page whatistheta What %theta can do
+ *
+ * %theta is about modeling and statistical inference. For %theta, "model" means
+ * a specification of the probability density of one or more observables as function of
+ * some parameters, including possible probability densities of the parameters.
+ *
+ * In %theta, models are always given as a linear combination of templates (i.e., histograms), where
+ * both the coefficients and the templates can depend on the parameters of the model. %theta uses this
+ * model for both, pseudo data creation and to make statistical inferences.
+ *
+ * %theta uses a plugin system which enables you to easily extend %theta. For example, you can define
+ * your own parameter-dependend template or template coefficient. But you can also use one of the already supplied
+ * methods for these tasks, including
+ * <ul>
+ *  <li>reading histograms from a ROOT file</li>
+ *  <li>specifying a histogram by a polynomial or gaussian</li>
+ *  <li>specifying a histogram interpolation (sometimes called "morphing") which  uses model parameters
+ *     to interpolate between a "nominal" and several "distorted" templates. This can be used as generic model to
+ *     treat systematic uncertainties</li>
+ * </ul>
+ *
+ * Some typical statistical questions which can be addresses are (of course, this can be done
+ * with the full modeling available, e.g., for models using template interpolation to treat systematic uncertainties):
+ * <ul>
+ * <li>Determine the quantiles of the marginal posterior using markov chains. This can be used for upper limits or symmetrical
+ *    credible intervals.</li>
+ * <li>Determine the marginal posterior density, given data.</li>
+ * <li>Create large-scale likelihood ratio test statistic to find out the critical region of a hypothesis test</li>
+ * <li>Run MINUIT minimization and error estimation on the negative log-likelihood to estimate a parameter (cross section or other);
+ *     make pseudo experiments as consistency check and to cite the expected statistical and systematic uncertainty.</li>
+ * </ul>
  */
 
 
@@ -106,8 +143,10 @@
  *
  * Be sure to get the external dependencies:
  * <ol>
- * <li>Boost</li>
- * <li>sqlite3</li>
+ * <li><a href="http://boost.org/">Boost</a>, a bundle of general-purpose C++ libraries, which is used in %theta for filesystem interface, 
+ *    option parsing, memory management through smart pointers, and multi-threading.</li>
+ * <li><a href="http://sqlite.org/">sqlite3</a>, a light-weight, SQL-based %database engine which is used to
+ *    store the results in %theta</li>
  * </ol>
  * There are packages available for these on many distribution.
  *
@@ -126,13 +165,9 @@
 
  /**
  * \page intro Introduction
- *
- * %theta is about modeling and statistical inference. For %theta, "model" means
- * a specification of the probability density of one or more observables as function of
- * some parameters, including possible probability densities of the parameters. To make this
- * more clear, a concrete example is discussed first where you get an overview over how %theta works
+
+ * This page discusses  a concrete example where you get an overview over how %theta works
  * from the point of view of a user.
- *
  * In the second section, some internals of %theta are explained which are good to know even if you
  * do not plan to extend %theta.
  *
@@ -149,19 +184,11 @@
  * You do the studies mainly at one fixed integrated luminosity L. From a background fit
  * to a sideband you expect that you can constrain your background poisson mean in the signal
  * region to \f$ 1600 \pm 200 \f$ events. The model of your signal allows for a large variety of signal
- * cross sections; the standard model predicts predicts no "signal".
+ * cross sections; the standard model predicts no "signal".
  *
- * In this analysis, there are many questions frequently asked. Some of them are:
- * <ol>
- * <li>At some fixed integrated luminosity, and assuming that the SM is true, what is your expected upper limit
- *  on the signal cross section?</li>
- * <li>Given the actually measured data, what is your upper limit?</li>
- * <li>Assume that your signal has cross section such that in the mean case 200 signal events pass your event selection.
- *    Can you exclude the standard model null-hypothesis at 3 (5) sigma in this case?
- * </ol>
- *
- * For this introduction, we consider the creation of likelihood-ratio test statistics for the
- * "background only" null hypothesis in order to address the last question.
+ * For this introduction, we consider the creation of likelihood-ratio test statistic distribution for the
+ * "background only" null hypothesis in order to find out the critical region for the hypothesis test attempting
+ * to reject the null hypothesis at some confidence level.
  *
  * Analysis with %theta always consists of several steps, namely:
  *<ol>
@@ -195,7 +222,7 @@
  * At the top of the configuration file, the parameters and observables you want to use are defined:
  * there is one observable "mass" with the range [500, 1500] and 200 bins. Note that %theta does
  * not care at all about units and that observables are <em>always</em> binned.
- * The parameter this model depends on are defined next: "s" is
+ * The parameters of this model are defined next: "s" is
  * the (poisson) mean number of signal events after your selection, "b" is the mean number of
  * background events. Their "default" values are used later for pseudo data generation. As we want to create test statistics for the
  * "background only" hypothesis, we set the signal parameter to zero. The range of these parameters
@@ -266,7 +293,7 @@
  *
  * The output of a run of %theta is saved as SQLite %database to the output file configured in the run
  * settings group. %theta does not (at least so far) provide any tools to analyze this output. However
- * it is not hard to write you own program which goes through the result tables and makes some plots; see
+ * it is not hard to write your own program which goes through the result tables and makes some plots; see
  * \c root/histos.cxx for a starting point.
  *
  * In order to know which tables are in the file, have a look at the documentation of the theta::Run
@@ -297,19 +324,16 @@
  *
  * To define and use your own plugin, you have to:
  *<ol>
- * <li>Define a new class derived from one classes in the list above and implement all its pure virtual methods and a constructor
+ * <li>Define a new class derived from a class in the list above and implement all its pure virtual methods and a constructor
  *     taking a \link theta::plugin::Configuration Configuration \endlink object as the only argument.</li>
  * <li>In a .cpp-file, call the REGISTER_PLUGIN(yourclass) macro</li>
  * <li>Make sure to compile and link this definition to a shared-object file.</li>
  * <li>In the configuration file, make sure to load the shared-object file as plugin. You can now use the plugin defined as any other %theta component via
  *     a setting group containing type="yourclass";
  *</ol>
- * For all these cases, you can have a look at the \c plugins/ directory, which contains the core plugins of %theta. E.g., a
- * complete, more complex example is given by plugins/interpolating-histogram.{cpp,hpp} which defines Histogram interpolation
- * via additional model parameters, meant for a generic treatment of systematic uncertainties. You will find that, given the complexity of the problem,
- * the required code is manageable.
+ * For all these cases, you can have a look at the \c plugins/ directory, which contains the core plugins of %theta.
  *
- * \section plugins Plugins
+ * \section plugins Available Plugins
  *
  * Core and root plugins, by type:
  * <ul>
@@ -392,7 +416,7 @@
   * merge --outfile=merged.db --in-dir=results
   * </pre>
   *
-  * The only other supported option is \c -v or \c --verbose which increses the verbosity of merge.
+  * The only other supported option is \c -v or \c --verbose which increases the verbosity of merge.
   */
  
  /*
@@ -498,16 +522,16 @@
  * (iii) Each unit (class, method) should have a unit test which tests its functionality, including failure behaviour.
  *
  * <b>Simplicity</b> implies that %theta has a limited scope of application. It is not intended to be the tool for every problem you
- * can think of. As consequence, (i) there have been some fundamental design choices, e.g., only to support binned representations of pdfs and data (which,
- * for many applications, is not a problem at all as the binning can always be chosen to be well beloe detector resolution),
- * (ii) any class and method has one simple, well-defined task only. This implies that classes generally have only very few public methods an that classes
- * and methods are relatively easy to document (if the required documentation is lengthy, it is generally a sign of too much functionality pressed into
- * one class or method).
+ * can think of. As consequence, (i) there have been some fundamental design choices, e.g., only to support binned
+ *  representations of pdfs and data (which, for many applications, is not a problem at all as the bin size can be made arbitrarily small),
+ * (ii) any class and method has one simple, well-defined task only. This implies that classes
+ *  generally have only very few public methods and that classes and methods are relatively easy to
+ *  document (and very lengthy documentation is generally a sign of too much functionality pressed into one class or method).
  *
  * <b>Performance</b> has to stand back of correctness and simplicity. However, many code changes increasing performance
  * do not need a re-design of a class' public interface at all. All changes which <i>provably</i>(!) increase performance should actually be done.
  * An example of a trade-off in favour of simplicity was a re-design of the random number generator interface: if one defines
- * all functions and method which require a random number generator as argument as template functions with the random number generator type as template
+ * all functions and methods which require a random number generator as argument as template functions with the random number generator type as template
  * parameter, one can gain up to 50% performance compared to a system using an \link theta::RandomSource abstract class \endlink implementing
  * \link theta::RandomSourceTaus concrete \endlink random number \link theta::RandomSourceMersenneTwister generators \endlink
  * by implementing this interface as the latter requires additional virtual function table lookups.

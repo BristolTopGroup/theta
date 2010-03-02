@@ -38,6 +38,9 @@ void scan_run::run_impl() {
 scan_run::scan_run(Configuration & cfg): Run(cfg){
     string parameter = cfg.setting["scan-parameter"];
     int n = cfg.setting["scan-parameter-values"].getLength();
+    if(n==0){
+        throw ConfigurationException("scan-parameter-values is empty (or not a list/array)");
+    }
     pid = cfg.vm->getParId(parameter);
     for(int i=0; i<n; ++i){
        scan_values.push_back(cfg.setting["scan-parameter-values"][i]);

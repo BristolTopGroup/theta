@@ -28,6 +28,9 @@
  *
  * %theta contains examples in the \c examples directory.
  *
+ * %theta logos are available here as <a href="../logos/theta.pdf">pdf</a>, <a href="../logos/theta.eps">eps</a> and
+ * <a href="../logos/theta.png">png</a>.
+ *
  * \section ack Acknowledgement
  *
  * I would like to thank the authors of the excellent software packages used by %theta:
@@ -39,7 +42,8 @@
  * </ul>
  * These libraries are included in the distribution of %theta.
  *
- * Furthermore, some parts of numerical algorithms have been copied from the excellent <a href="http://www.gnu.org/software/gsl/">GNU Scientific Library (GSL)</a>.
+ * Furthermore, some parts of numerical algorithms have
+ * been copied from the excellent <a href="http://www.gnu.org/software/gsl/">GNU Scientific Library (GSL)</a>.
  *
  * Last but not least, I want to thank Jasmin Gruschke who tested %theta from an end-user point of view, made useful
  * suggestions and bravely endured many backward-incompatible changes.
@@ -67,8 +71,8 @@
  * a specification of the probability density of one or more observables as function of
  * some parameters, including possible probability densities of the parameters.
  *
- * In %theta, models are always given as a linear combination of templates (i.e., histograms), where
- * both the coefficients and the templates can depend on the parameters of the model. %theta uses this
+ * In %theta, models are <em>always</em> given as a linear combination of templates (i.e., histograms), where
+ * both the coefficients and the templates depend in general on the parameters of the model. %theta uses this
  * model for both, pseudo data creation and to make statistical inferences.
  *
  * %theta uses a plugin system which enables you to easily extend %theta. For example, you can define
@@ -85,13 +89,85 @@
  * Some typical statistical questions which can be addresses are (of course, this can be done
  * with the full modeling available, e.g., for models using template interpolation to treat systematic uncertainties):
  * <ul>
- * <li>Determine the quantiles of the marginal posterior using markov chains. This can be used for upper limits or symmetrical
- *    credible intervals.</li>
+ * <li>Determine the quantiles of the marginal posterior using markov chains. This can be used for
+ *    upper limits or symmetrical credible intervals.</li>
  * <li>Determine the marginal posterior density, given data.</li>
- * <li>Create large-scale likelihood ratio test statistic to find out the critical region of a hypothesis test</li>
- * <li>Run MINUIT minimization and error estimation on the negative log-likelihood to estimate a parameter (cross section or other);
- *     make pseudo experiments as consistency check and to cite the expected statistical and systematic uncertainty.</li>
+ * <li>Dicovery or observation in a signal search by create large-scale
+ *   likelihood ratio test statistic to find out the critical region of
+ *   a hypothesis test</li>
+ * <li>Run MINUIT minimization and error estimation on the negative log-likelihood to estimate a
+ *    parameter (cross section or other); make pseudo experiments as consistency check and to cite the expected
+ *    statistical and systematic uncertainty.</li>
  * </ul>
+ *
+ *
+ * \section boostedtop Z' search
+ *
+ * A complete analysis example which makes use of many features of %theta is currently in preparation.
+ * However, to get an impression of what can be done, an example analysis searching for \f$ Z^\prime \rightarrow
+ * t \bar t \f$ in the semileptonic muon channel
+ *  at Z' masses in the TeV regime at the LHC. For some background, you can read the
+ * <a href="http://cdsweb.cern.ch/record/1194498/files/EXO-09-008-pas.pdf">CMS PAS 2009-09-008</a>, but it is
+ * not required for further reading. Note that %theta was not
+ * used for the results presented there, but it was designed for such a case.
+ *
+ * In this analysis, after the event selection, the invariant mass of the ttbar system, \f$ M_{t\bar t} \f$,
+ * is estimated event-by-event. For a fixed Z' mass, a Monte-Carlo model predicts this \f$ M_{t\bar t} \f$ distribution
+ * for signal. For the background distribution, usually Monte-Carlo templates are used, the main backgrounds being
+ * vector-boson (W,Z) + jets, QCD, and standard-model \f$ t\bar t\f$.
+ * As the QCD processes is assumed to be not well modeled by Monte-Carlo,
+ * its shape is extracted from a background-enriched data sideband. To determine an upper limit for a fixed Z' mass,
+ * two variables are fitted simultaneously: \f$ H_{T}^{lep} \f$, the scalar sum of missing \f$ E_T \f$ and muon \f$ p_T \f$,
+ * and the reconstructed invariant top-quark pair mass, \f$ M_{t\bar t} \f$. By fitting both templates simultaneously,
+ * the QCD background normalization can be extracted from data instead on relying on Monte-Carlo prediction.
+ *
+ * So far, the model (and therefore the liklihood built from this model, given data), depends on
+ * 4 parameters: (i) the vector-boson + jets mean, (ii) the standard model \f$ t\bar t\f$ mean,
+ * (iii) the QCD mean and (iv) the signal mean. All these parameters are mean values of the expected number of
+ * events after the event selection. They can be translated to a cross section, given the selection acceptance and
+ * integrated luminosity. It is assumed that inferences about the mean values after selection can be transformed
+ * to statements about the cross sections easily. Two of these parameters, namely the rate for
+ * vector-boson + jets and standard model \f$ t\bar t\f$, are assumed to be fairly well modeled by Monte-Carlo simulation.
+ * However, instead of fixing these parameters in the model to their predicted value, some degree of mismodeling is
+ * accounted for by treating the parameter as free parameter in the likelihood function but adding
+ * a Gaussian term keeping it close to the predicted one where the width corresponds to the uncertainty of the prediction
+ * (Bayesians would call this "prior" but this constraint can also be justified as part of the model freqentistically).
+ *
+ * The situation is further complicated by the presence of different systematic uncertainties which affect the
+ * templates used in the model in both the shape and the rate. For example, jet energy scale uncertainty,
+ * theoretical uncertainties like scale uncertainty, modeling of initial- and final-state radiation and more.
+ *
+ * These systematic uncertainties are incorporated in the model by template interpolation described above. This introduces
+ * one additional parameter per systematic uncertainty. Assuming we have 3 systematic uncertainties
+ *
+ * \subsection boostedtop_upperlimit Upper limit
+ *
+ * Once the templates have been built, %theta can be used to perform this fit and extract the upper limit using
+ * a fully Bayesian method. This method constructs the poterior density and uses a Markov-Chain Monte-Carlo
+ * method to find the 95% quantile of the signal cross-section marginal posterior.
+ *
+ * This can be used to compute the median upper limit expected in the case that there is no Z'.
+ *
+ * \subsection boostedtop_discovery Discovery and frequentist intervals
+ *
+ * The same model can be used to produce likelihood ratio test stistics distribution which, once created, can easily
+ * be used to find out the critical region of a hypothesis test attempting to find signal.
+ *
+ * The likelihood ratio in %theta is defined by the ratio of two likelihood values obtained for two different
+ * special cases of the same model: the "signal-plus-background" case and the "background-only" case. It is assumed
+ * that these special cases can be expressed by fixing parameters in the more general model.
+ * The likelihood value used for the ratio is then found by minimizing with respect to all
+ * other (i.e., non-fixed) parameters.
+ *
+ * However, as numerical is hard in case of many free parameters (what easily happens if adding more and more systematic
+ * uncertainties), %theta also supports the creation of an alternate likelihood-ratio statistic which integrates over all
+ * non-fixed parameters instead of minimizing.
+ *
+ * If scanning through the signal parameter, this likelihood-ratio test statistic can also be used to construct frequentist
+ * confidence intervals (including upper limits).
+ *
+ * Note that, however, %theta so far only assists in the large-scale creation of test statistics, not in the
+ * subsequent statistical inferences making use of it.
  */
 
 
@@ -103,7 +179,8 @@
  * <pre>
  * svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
  * </pre>
- * If you want to compile it within CMSSW (which provides the dependencies), make sure to check it out in the \c src directory of a CMSSW directory.
+ * If you want to compile it within CMSSW (which provides the dependencies), make sure to check it
+ * out in the \c src directory of a CMSSW directory.
  *
  * \section building Building theta
  *
@@ -393,6 +470,14 @@
   *
   * %theta will output the current progress if running on a tty, unless disabled via the \c -q (or \c --quiet) option.
   *
+  * If you send the \c SIGINT signal to %theta (e.g., by hitting ctrl+C on a terminal running %theta),
+  * it will exit gracefully as soon as possible (which usually means
+  * after the run has called all producers on the current pseudo data). This feature is useful for
+  * interactive use if the whole run takes too long but you still want to be able to
+  * analyze the output produced so far. It is also useful part of a batch job script
+  * which can send this signal just before the job reaches
+  * the maximum time by which it is killed by the batch system.
+  *
   * \section cmd_merge merge
   *
   * The \c merge program is used to merge result databases from different runs of the %theta command into a single one.
@@ -419,84 +504,6 @@
   * The only other supported option is \c -v or \c --verbose which increases the verbosity of merge.
   */
  
- /*
- * A typical execution of the <tt>%theta</tt> main program consists of:
- * <ol>
- * <li>Read in and parse the config file supplied as command-line argument</li>
- * <li>Use the "parameters" and "observables" blocks to save the information supplied there in a \link theta::VarIdManager VarIdManager \endlink
- *     instance. This object saves information about parameters and observables like the ones supplied in the configuration file. </li>
- * <li>Locate the "main" settings block (or the one supplied on the command line) and use it to
- *     create an instance of the configured \link theta::RunT Run \endlink object.
- *     The creation of the this object, in turn, will invoke:
- *   <ol>
- *     <li>Create the model(s). The model will create some histograms defined
- *        in the model (as these histograms depend on model parameters, they are called HistogramFunctions).
- *        The constraints definition in a model will lead to the creation of Distributions and
- *        the coefficients of the HistogramFunction will be created in for of Functions.
- *     </li>
- *   <li>Create an instance of each of the configured producers. This might involve creating
- *    a minimizer, if the producer depends on minimization of the negative log-likelihood.</li>
- *   <li>Create the pseudo-random number generator</li>
- *   <li>Create the output database</li>
- *   </ol>
- * <li>Execute the <tt>Run</tt>. What execution means depends on the configured type of the Run. Typically,
- *   it will throw pseudo experiments and, for each pseudo experiment, apply some statistical methods ("producers").</li>
- * </ol>
- *
- * \section resultfile Result File
- *
- * The result file is a SQLite %database file. It always contains some tables created by the \link theta::RunT Run \endlink object
- * which are documented there. Note that derived classes of %Run can create additional tables.
- *
- * Additionally, one table per producer is created. The table names match the producer names, as given in the configuration file. The
- * table format is producer-specific and documented seperately for each producer.
- *
- * For example, the "hypotest" producer in the gaussoverflat example will write its results into a table called "hypotest"
- * with a format documented in DeltaNLLHypotestTable.
- *
- * \section config Configuration file format
- *
- * %Theta uses \link http://www.hyperrealm.com/libconfig/ libconfig \endlink as configuration file
- * format. The format is described in detail
- * \link http://www.hyperrealm.com/libconfig/libconfig_manual.html#Configuration-Files here \endlink.
- */
- 
- 
-/* \page arch Architecture of %theta
- *
- * A large part of theta is already thouroughly documented. However, to use the
- * documentation effectively, some knowledge of the architecture of %theta is
- * essential.
- *
- * While the original goal of %theta was to implement some statistical methods and
- * utilities for it (e.g., make it easy to define a model, create the likelihood function for the model, given data,
- * run a large number of pseudo experiments with some statistical methods, compare different methods to each other, etc.),
- * %theta has developed to a <i>framework</i> in the sense that it provides interfaces
- * (in the form of abstract C++ classes) for new functionality.
- *
- * A typical execution of the <tt>%theta</tt> main program consists of:
- * <ol>
- * <li>Read in and parse the config file supplied as command-line argument</li>
- * <li>Create an instance of the configured <tt>Run</tt> object. This, in turn, will invoke:
- *   <ol>
- *     <li>Create the model(s). The model will create some histograms defined
- *        in the model (as these histograms depend on model parameters, they are called HistogramFunctions).
- *        The constraints definition in a model will lead to the creation of Distributions and
- *        the coefficients of the HistogramFunction will be created in for of Functions.
- *     </li>
- *   <li>Create an instance of each of the configured producers. This might involve creating
- *    a minimizer, if the producer depends on minimization of the negative log-likelihood.</li>
- *   <li>Create the pseudo-random number generator</li>
- *   <li>Create the output database</li>
- *   </ol>
- * <li>Execute the <tt>Run</tt>. What execution means depends on the configured type of the Run. Typically,
- *   it will throw pseudo experiments and, for each pseudo experiment, apply some statistical methods ("producers").</li>
- * </ol>
- *
- * Now, everywhere in the above list where the word "create" was used, you might want
- * to extent %theta and provide your own version of what follows this word "create".
- */
-
 /** \page design Design Goals of Theta
  *
  * I'm not a friend of some general statements of intention one can write about the meta-goals of a program. Still, I do raise some points here
@@ -557,7 +564,6 @@
  * something done.
  */
 
-/** \brief Common namespace for %theta.
+/** \brief Common namespace for %theta
  */
 namespace theta{}
-

@@ -8,6 +8,7 @@ using namespace std;
 
 void plain_run::run_impl() {
     for (eventid = 1; eventid <= n_event; eventid++) {
+        if(stop_execution)break;
         log_event_start();
         ParValues values = m_pseudodata.sampleValues(rnd);
         data = m_pseudodata.samplePseudoData(rnd, values);

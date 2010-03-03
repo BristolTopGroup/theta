@@ -8,6 +8,7 @@ using namespace std;
 
 void scan_run::run_impl() {
     for(runid=1; runid<=(int)scan_values.size(); ++runid){
+        if(stop_execution)break;
         const double scan_value = scan_values[runid-1];
         if(scan_parameter_fixed){
             vm->set_range_default(pid, scan_value, scan_value, scan_value);

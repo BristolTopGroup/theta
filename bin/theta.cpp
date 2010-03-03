@@ -160,6 +160,11 @@ int main(int argc, char** argv) {
         cout << "Comment out these settings to get rid of this message." << endl << endl;
     }
 
+    //install signal handler only now, just before the run.
+    // Doing iut very early in the program could lead to problems as
+    // some plugins might install their own signal handlers (such as those dependend on root?!).
+    install_sigint_handler();
+
     try {
         run->run();
     } catch (Exception & ex) {
@@ -167,6 +172,8 @@ int main(int argc, char** argv) {
         return 1;
     }
     cout << endl;
-
+    if(theta::stop_execution){
+        cout << "(exiting on SIGINT)" << endl;
+    }
     return 0;
 }

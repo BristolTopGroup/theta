@@ -1,8 +1,26 @@
 #include "interface/run.hpp"
 #include "interface/histogram.hpp"
 
+#include <signal.h>
+
 using namespace theta;
 using namespace std;
+
+bool theta::stop_execution = false;
+
+static void sigint_handler(int sig){
+   if(stop_execution) exit(1);
+   stop_execution = true;
+}
+
+void theta::install_sigint_handler(){
+    struct sigaction siga;
+    siga.sa_handler = sigint_handler;
+    siga.sa_flags = 0;
+    sigemptyset(&siga.sa_mask);
+    siga.sa_restorer = 0;
+    sigaction(SIGINT, &siga, 0);
+}
 
 void Run::set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
     progress_listener = l;

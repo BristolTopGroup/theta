@@ -22,6 +22,27 @@
 
 namespace theta{
 
+/** \brief A global flag indicating whether to stop execution as soon as possible
+ *
+ * All Run classes should check this flag regulary. If set to true, the run object
+ * should return as soon as possible without violating the consistency of the result, i.e.,
+ * the current (pseudo) data should be passed to all producers.
+ *
+ * This variable is set to true once theta receives SIGINT.
+ *
+ * It is defined in run.cpp.
+ */
+extern bool stop_execution;
+
+/** \brief Install the SIGINT signal handler which sets stop_execution
+ *
+ * Calling this function will use the sigaction function to install a signal handler for
+ * SIGINT which sets stop_execution to true to indicate to the run
+ * to terminate as soon as possible. If stop_execution is already set to true,
+ * exit(1) will be called immediately by the handler.
+ */
+void install_sigint_handler();
+
 /** \brief A callback class called by the run to signal progress.
  *
  * User interfaces can derive their classes from  ProgressListener and implement

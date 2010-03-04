@@ -58,6 +58,20 @@ public:
     std::string get_type() const{
         return type;
     }
+    
+    /** \brief Additional information to add to the info field of a ProducerInfoTable
+     *
+     * The value returned by this method will be written to the \link ProducerInfoTable ProducerInfoTable \endlink
+     * of the current \link Run Run \endlink.
+     *
+     * Subclasses can override this and define their own semantics for it. Typically, it contains
+     * some information about a setting.
+     *
+     * The default implementation is to return the empty string.
+     */
+    virtual std::string get_information() const {
+        return "";
+    }
 protected:
     /// to be called by derived classes in order to fill name and type.
     Producer(const plugin::Configuration & cfg): name(cfg.setting.getName()), type(static_cast<const char*>(cfg.setting["type"])){

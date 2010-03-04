@@ -302,6 +302,7 @@ private:
  *   i.e. the index it appeared in the producers = ("...") list in the configuration. </li>
  * <li>\c type \c TEXT: the type setting used to configure this producer, as given in the type="..."  setting for this producer</li> 
  * <li>\c name \c TEXT: the name of the producer, as defined in the setting (via the setting name).</li>
+ * <li>\c info \c TEXT: a info field defined by the producer; see Producer::get_comment()</li> 
  * </ol>
  *
  * This table is the only table without a "runid" entry as its contents information is not run-dependent
@@ -320,8 +321,9 @@ public:
      * \param index The index for this producer in the current run configuration
      * \param p_name The name of the producer
      * \param p_type The right hand side of the type="..."; setting used to configure this producer
+     * \param info The information of the producer (result of Producer::get_information())
      */
-    void append(int index, const std::string & p_name, const std::string & p_type);
+    void append(int index, const std::string & p_name, const std::string & p_type, const std::string & info);
 
 private:
     /** \brief Implementation of Table::create_table to do the actual table creation.

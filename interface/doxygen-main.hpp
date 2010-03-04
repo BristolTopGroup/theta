@@ -62,6 +62,19 @@
  *   <li><em>George Marsaglia and Wai Wan Tsang:</em> "The Ziggurat Method for Generating Random Variables", Journal of Statistical Software 8, 2000</li>
  *   <li><em>A. Gelman, G. O. Roberts, and W. R. Gilks:</em> "Efficient Metropolis Jumping Rules", Bayesian Statistics 5, 1996</li>
  * </ol>
+ *
+ * \section contact Contact
+ *
+ * The of the author of %theta can be reached under 
+ * <a href="mailto:ott@ekp.uni-karlsruhe.de">ott@ekp.uni-karlsruhe.de</a>. <br>
+ * Or, if you prefer snail mail:
+ * <pre>
+ * Jochen Ott
+ * KIT-Karlsruher Institut f&uuml;r Technologie
+ * Institut f&uuml;r Experimentelle Kernphysik
+ * Wolfgang-Gaede-Str. 1
+ * 76131 Karlsruhe
+ * </pre>
  */
 
 

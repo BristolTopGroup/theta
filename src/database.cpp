@@ -196,17 +196,18 @@ void LogTable::create_table(){
 
 void ProducerInfoTable::create_table() {
     stringstream ss;
-    ss << "CREATE TABLE '" << name << "' (ind INTEGER(4), name TEXT, type TEXT);";
+    ss << "CREATE TABLE '" << name << "' (ind INTEGER(4), name TEXT, type TEXT, info TEXT);";
     exec(ss.str().c_str());
     ss.str("");
-    ss << "INSERT INTO '" << name << "' VALUES(?,?,?);";
+    ss << "INSERT INTO '" << name << "' VALUES(?,?,?,?);";
     insert_statement = prepare(ss.str());
 }
     
-void ProducerInfoTable::append(int index, const std::string & p_name, const std::string & p_type){
+void ProducerInfoTable::append(int index, const std::string & p_name, const std::string & p_type, const std::string & info){
     sqlite3_bind_int(insert_statement, 1, index);
     sqlite3_bind_text(insert_statement, 2, p_name.c_str(), p_name.size(), SQLITE_TRANSIENT);
     sqlite3_bind_text(insert_statement, 3, p_type.c_str(), p_type.size(), SQLITE_TRANSIENT);
+    sqlite3_bind_text(insert_statement, 4, info.c_str(), info.size(), SQLITE_TRANSIENT);
     int res = sqlite3_step(insert_statement);
     sqlite3_reset(insert_statement);
     if (res != 101) {

@@ -82,6 +82,10 @@ MinimizationResult root_minuit::minimize(const theta::Function & f){
 
     //3. setup tolerance
     if(!isnan(tolerance))  min->SetTolerance(tolerance);
+    //3.a. error definition. Unfortunately, SetErrorDef in ROOT is not documented, so I had to guess.
+    // 0.5 seems to work somehow.
+    min->SetErrorDef(0.5);
+    
     
     //4. minimize. In case of failure, try harder
     bool success;

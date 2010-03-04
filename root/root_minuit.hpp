@@ -37,6 +37,8 @@
  *  Default is the one used by ROOT::Minuit2::Minuit2Minimizer and which should be documented by ROOT (if
  *  you find this documentation, write me a mail, so I can point other users to it here).
  *
+ * Please note that this plugin relies on the Minuit2 implementation of ROOT which is hardly documented.
+ * Please double or triple check the results.
  */
 class root_minuit: public theta::Minimizer{
 public:

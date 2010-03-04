@@ -16,7 +16,7 @@
  *
  * The documentation is split into several pages. If you are new to %theta, read them in this order:
  * <ol>
- *   <li>\subpage whatistheta "What theta can do" explains which kind of questions are addressed with %theta</li>
+ *   <li>\subpage whatistheta "What theta can do" explains which kind of questions can (or cannot) be addressed with the help of %theta</li>
  *   <li>\subpage installation Installation explains how to obtain and compile %theta</li>
  *   <li>\subpage intro Introduction describes how to run %theta; a first example is discussed and
  *        an introduction to the internals of %theta. In also contains a \ref plugins "list of available plugins".</li>
@@ -84,6 +84,8 @@
  *  <li>specifying a histogram interpolation (sometimes called "morphing") which  uses model parameters
  *     to interpolate between a "nominal" and several "distorted" templates. This can be used as generic model to
  *     treat systematic uncertainties</li>
+ *  <li>Template uncertainties can be treated effectively by fluctuating the templates before throwing the pseudo
+ *    data from the tempaltes. This can be bin-by-bin independent errors or (if the user provides own plugins) any other errors.</li>
  * </ul>
  *
  * Some typical statistical questions which can be addresses are (of course, this can be done
@@ -100,6 +102,29 @@
  *    statistical and systematic uncertainty.</li>
  * </ul>
  *
+ * Combining models is an easy task: just extend the parameter and observable list and extend the model appropriately.
+ *
+ * \section whatcant What theta cannot do
+ *
+ * While %theta was written with a rather general use-case in mind, it is certainly not suited for all tasks, nor does it
+ * do more than the core of the work. Specifically,
+ * <ul>
+ *  <li>%theta cannot plot. While it is not hard to get plots from the result database %theta produces, %theta itself
+ *    has no plotting routines.</li>
+ *  <li>%theta is not suited for cases where you have more than one observable per event, i.e., if to do multi-dimensional
+ *     fits. In principle, handling multidimensional fits can be implmented in %theta via user-supplied plugins. However, it is
+ *     not foreseen to suport this natively.</li>
+ *  <li>%theta only supports binned distributions. While binning can also be chosen very fine, it is not foreseen to support trule 
+ *     continuos distributions.</li>
+ *  <li>%theta is mainly useful if only one parameter is of interest (i.e., if only one parameter in the model is not a nuisance parameter).
+ *      For example, it is not implemented (or foreseen) to have confidence regions in a two-dimensional plane. This is not an
+ *      architectural limitation of %theta but a limitation mainly of the current implementation of statistical methods. You are free
+ *      to implement such a method as %theta plugin, using %theta as framework, though.</li>
+ * </ul>
+ *
+ * These restrictions are intentional: by doing only a small number of tasks, these can be done efficiently and correctness
+ * is easier to achieve. Also, %theta is easier to document and to understand if not bloated by additional code.
+ * See \ref design for more information about this point.
  *
  * \section boostedtop Z' search
  *

@@ -42,7 +42,7 @@ public:
     
     /** \brief Constructor used by the plugin system to build an instance from settings in a configuration file
      */
-    interpolating_histo(theta::plugin::Configuration & ctx);
+    interpolating_histo(const theta::plugin::Configuration & ctx);
         
     /** Returns the interpolated Histogram as documented in the class documentation.
      * throws a NotFoundException if a parameter is missing.
@@ -61,7 +61,7 @@ private:
     *
     * Will throw an InvalidArgumentException if the Histogram is not constant.
     */
-    static theta::Histogram getConstantHistogram(theta::plugin::Configuration & ctx, const libconfig::Setting & s);    
+    static theta::Histogram getConstantHistogram(const theta::plugin::Configuration & ctx, theta::SettingWrapper s);
     
     theta::Histogram h0;
     std::vector<theta::Histogram> hplus;

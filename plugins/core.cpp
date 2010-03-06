@@ -10,14 +10,13 @@ using namespace theta::plugin;
 using namespace libconfig;
 using namespace std;
 
-fixed_poly::fixed_poly(Configuration & ctx){
-    const Setting & s = ctx.setting;
+fixed_poly::fixed_poly(const Configuration & ctx){
+    SettingWrapper s = ctx.setting;
     ObsId obs_id = ctx.vm->getObsId(s["observable"]);
-    ctx.rec.markAsUsed(s["observable"]);
-    int order = s["coefficients"].getLength() - 1;
+    int order = s["coefficients"].size() - 1;
     if (order == -1) {
         stringstream ss;
-        ss << "Empty definition of coefficients for polynomial on line " << s["coefficients"].getSourceLine();
+        ss << "Empty definition of coefficients for polynomial at path " << s["coefficients"].getPath();
         throw ConfigurationException(ss.str());
     }
     size_t nbins = ctx.vm->get_nbins(obs_id);
@@ -42,13 +41,11 @@ fixed_poly::fixed_poly(Configuration & ctx){
         throw ConfigurationException("Histogram specification is zero (can't normalize)");
     }
     h *= norm_to / norm;
-    ctx.rec.markAsUsed(s["coefficients"]);
-    ctx.rec.markAsUsed(s["normalize_to"]);
     set_histo(h);
 }
 
-fixed_gauss::fixed_gauss(Configuration & ctx){
-    const Setting & s = ctx.setting;
+fixed_gauss::fixed_gauss(const Configuration & ctx){
+    SettingWrapper s = ctx.setting;
     double width = s["width"];
     double mean = s["mean"];
     ObsId obs_id = ctx.vm->getObsId(s["observable"]);
@@ -66,21 +63,15 @@ fixed_gauss::fixed_gauss(Configuration & ctx){
         throw ConfigurationException("Histogram specification is zero (can't normalize)");
     }
     h *= norm_to / norm;
-    ctx.rec.markAsUsed(s["width"]);
-    ctx.rec.markAsUsed(s["mean"]);
-    ctx.rec.markAsUsed(s["normalize_to"]);
     set_histo(h);
 }
 
-log_normal::log_normal(Configuration & cfg){
-    const Setting & s = cfg.setting;
+log_normal::log_normal(const Configuration & cfg){
+    SettingWrapper s = cfg.setting;
     mu = s["mu"];
     sigma = s["sigma"];
     string par_name = s["parameter"];
     par_ids.insert(cfg.vm->getParId(par_name));
-    cfg.rec.markAsUsed(s["mu"]);
-    cfg.rec.markAsUsed(s["sigma"]);
-    cfg.rec.markAsUsed(s["parameter"]);
 }
 
 double log_normal::evalNL(const ParValues & values) const {
@@ -207,7 +198,7 @@ double gauss::evalNL_withDerivatives(const ParValues & values, ParValues & deriv
     return e;
 }
 
-gauss::gauss(Configuration & cfg){
+gauss::gauss(const Configuration & cfg){
     Matrix cov;
       if(cfg.setting.exists("parameter")){
             mu.resize(1);
@@ -216,15 +207,12 @@ gauss::gauss(Configuration & cfg){
             mu[0] = cfg.setting["mean"];
             double width = cfg.setting["width"];
             cov(0,0) = width*width;
-            cfg.rec.markAsUsed(cfg.setting["mean"]);
-            cfg.rec.markAsUsed(cfg.setting["parameter"]);
-            cfg.rec.markAsUsed(cfg.setting["width"]);
         }
         else{ //multi-dimensional case:
-           size_t n = cfg.setting["parameters"].getLength();
+           size_t n = cfg.setting["parameters"].size();
            if(n==0){
                stringstream ss;
-               ss << "While building gauss distribution defined on line " << cfg.setting.getSourceLine() << ": expected one or more 'parameters'.";
+               ss << "While building gauss distribution defined at path " << cfg.setting.getPath() << ": expected one or more 'parameters'.";
                throw ConfigurationException(ss.str());
            }
            mu.resize(n);
@@ -236,9 +224,6 @@ gauss::gauss(Configuration & cfg){
                    cov(i,j) = cfg.setting["covariance"][i][j];
                }
            }
-           cfg.rec.markAsUsed(cfg.setting["mean"]);
-           cfg.rec.markAsUsed(cfg.setting["parameters"]);
-           cfg.rec.markAsUsed(cfg.setting["covariance"]);
       }
       
     const size_t n = v_par_ids.size();

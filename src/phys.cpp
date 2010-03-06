@@ -54,7 +54,7 @@ void Data::addData(const ObsId & obs_id, const Histogram & dat){
 }
 
 /* MODEL */
-Model::Model(boost::shared_ptr<VarIdManager> & vm_):
+Model::Model(const boost::shared_ptr<VarIdManager> & vm_):
                    vm(vm_){
 }
 
@@ -219,41 +219,40 @@ NLLikelihood Model::getNLLikelihood(const Data & data) const{
 }
 
 /* ModelFactory */
-std::auto_ptr<Model> ModelFactory::buildModel(Configuration & ctx) {
-    const libconfig::Setting & s = ctx.setting;
+std::auto_ptr<Model> ModelFactory::buildModel(const Configuration & ctx) {
+    SettingWrapper s = ctx.setting;
     std::auto_ptr<Model> result(new Model(ctx.vm));
     ObsIds observables = ctx.vm->getAllObsIds();
     //go through observables to find the template definition for each of them:
     for (ObsIds::const_iterator obsit = observables.begin(); obsit != observables.end(); obsit++) {
         string obs_name = ctx.vm->getName(*obsit);
         if(not s.exists(obs_name)) continue;
-        libconfig::Setting & obs_setting = s[obs_name];
+        SettingWrapper obs_setting = s[obs_name];
         boost::ptr_vector<HistogramFunction> histos;
         boost::ptr_vector<Function> coeffs;
         vector<string> names;
-        for (int i = 0; i < obs_setting.getLength(); i++) {
+        for (size_t i = 0; i < obs_setting.size(); i++) {
             Configuration context(ctx, obs_setting[i]["histogram"]);
             auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::build(context);
             //the coefficients:
-            int n_coeff = obs_setting[i]["coefficients"].getLength();
+            size_t n_coeff = obs_setting[i]["coefficients"].size();
             if (n_coeff == 0) {
                 stringstream ss;
-                ss << "observable " << obs_name << ", component " << obs_setting[i].getName() << ", defined on line "
-                        << obs_setting[i]["coefficients"].getSourceLine() << " has wrong type (use a list!)";
+                ss << "observable " << obs_name << ", component " << obs_setting[i].getName() << ", defined at path "
+                        << obs_setting[i]["coefficients"].getPath() << " has wrong length (use a list!)";
                 throw ConfigurationException(ss.str());
             }
             ParIds coeff_factors;
             try {
-                for (int j = 0; j < n_coeff; j++) {
+                for (size_t j = 0; j < n_coeff; j++) {
                     coeff_factors.insert(ctx.vm->getParId(obs_setting[i]["coefficients"][j]));
                 }
             } catch (NotFoundException & e) {
                 stringstream ss;
-                ss << "while parsing coefficients for observable " << obs_name << ", component " << obs_setting[i].getName() << ", defined on line "
-                        << obs_setting[i]["coefficients"].getSourceLine() << ": NotFoundException occured: " << e.message;
+                ss << "while parsing coefficients for observable " << obs_name << ", component " << obs_setting[i].getName() << ", defined at path "
+                        << obs_setting[i]["coefficients"].getPath() << ": NotFoundException occured: " << e.message;
                 throw ConfigurationException(ss.str());
             }
-            ctx.rec.markAsUsed(obs_setting[i]["coefficients"]);
             histos.push_back(hf);
             //hf should have lost pointer ownership:
             assert(hf.get() == 0);
@@ -264,8 +263,8 @@ std::auto_ptr<Model> ModelFactory::buildModel(Configuration & ctx) {
     }
     //priors:
     if (s.exists("constraints")) {
-        int n = s["constraints"].getLength();
-        for (int i = 0; i < n; i++) {
+        size_t n = s["constraints"].size();
+        for (size_t i = 0; i < n; i++) {
             Configuration ctx2(ctx, s["constraints"][i]);
             std::auto_ptr<Distribution> d = PluginManager<Distribution>::build(ctx2);
             result->addPrior(d);

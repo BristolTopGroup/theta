@@ -8,19 +8,17 @@
 
 using namespace theta::plugin;
 
-void PluginLoader::execute(const libconfig::Setting & s, theta::utils::SettingUsageRecorder & rec) {
+void PluginLoader::execute(const Configuration & cfg) {
     bool verbose = false;
-    if (s.exists("verbose")) {
-        verbose = s["verbose"];
-        rec.markAsUsed(s["verbose"]);
+    if (cfg.setting.exists("verbose")) {
+        verbose = cfg.setting["verbose"];
     }
-    int n = s["files"].getLength();
-    const libconfig::Setting & files = s["files"];
-    for (int i = 0; i < n; i++) {
+    size_t n = cfg.setting["files"].size();
+    SettingWrapper files = cfg.setting["files"];
+    for (size_t i = 0; i < n; i++) {
         std::string filename = files[i];
         load(filename);
     }
-    rec.markAsUsed(s["files"]);
     if (verbose) {
         std::cout << "Known plugins:" << std::endl;
         print_plugins();
@@ -71,10 +69,7 @@ void PluginLoader::print_plugins() {
     std::cout << std::endl;
 }
 
-std::vector<std::string> PluginLoader::loaded_files;
-
 void PluginLoader::load(const std::string & soname) {
-    if(find(loaded_files.begin(), loaded_files.end(), soname)!=loaded_files.end()) return;
     void* handle = 0;
     try {
         handle = dlopen(soname.c_str(), RTLD_NOW);
@@ -88,5 +83,4 @@ void PluginLoader::load(const std::string & soname) {
         s << "PluginLoader::load: error loading plugin file '" << soname << "': " << error << std::endl;
         throw InvalidArgumentException(s.str());
     }
-    loaded_files.push_back(soname);
 }

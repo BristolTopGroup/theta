@@ -23,8 +23,8 @@ namespace theta {
          * You usually do not have to care about it, as this is a detail handeled by the REGISTER_PLUGIN macro.
          *
          * This is the abstract factory class for a certain \c base_type. For each \c base_type, there
-         * an instance of PluginManager&lt;base_type&gt; will save pointers to all currently registered
-         * factories.
+         * is an instance of PluginManager&lt;base_type&gt; which will save pointers to all currently registered
+         * factories of type factory&lt;base_type&gt;
          *
          * By use of the REGISTER_PLUGIN(some_concrete_type), a derived class of factory&lt;some_concrete_type::base_type&gt;
          * will be created which handles the construction of \c some_concrete_type. This factory will be registered
@@ -34,7 +34,7 @@ namespace theta {
          class factory{
          public:
              /// build an instance from a Configuration object
-             virtual std::auto_ptr<base_type> build(Configuration & cfg) = 0;
+             virtual std::auto_ptr<base_type> build(const Configuration & cfg) = 0;
              
              /// the type of the object this factory is responsible for; it corresponds to the type="..." configuration file setting
              virtual std::string get_typename() = 0;
@@ -53,7 +53,7 @@ namespace theta {
          */
          #define REGISTER_PLUGIN_NAME(type,name) namespace { class CONCAT(factory,__LINE__): public theta::plugin::factory<type::base_type>{ \
          public:\
-         virtual std::auto_ptr<type::base_type> build(theta::plugin::Configuration & cfg){return auto_ptr<type::base_type>(new type(cfg)); }\
+         virtual std::auto_ptr<type::base_type> build(const theta::plugin::Configuration & cfg){return auto_ptr<type::base_type>(new type(cfg)); }\
          virtual std::string get_typename(){ return #name ;}\
          CONCAT(factory,__LINE__)(){reg();}\
          }; CONCAT(factory,__LINE__) CONCAT(factory_instance,__LINE__);}
@@ -83,7 +83,7 @@ namespace theta {
              * This will go through all registered factories of that C++-type and
              * find the factory responsible by using the "type=..." setting in ctx.setting.
              */
-            static std::auto_ptr<product_type> build(Configuration & ctx);
+            static std::auto_ptr<product_type> build(const Configuration & cfg);
 
             /** \brief get all currently registered types.
              */
@@ -119,25 +119,24 @@ namespace theta {
         }
 
         template<typename product_type>
-        std::auto_ptr<product_type> PluginManager<product_type>::build(Configuration & ctx){
+        std::auto_ptr<product_type> PluginManager<product_type>::build(const Configuration & ctx){
             std::string type = ctx.setting["type"];
-            ctx.rec.markAsUsed(ctx.setting["type"]);
             for (size_t i = 0; i < factories.size(); ++i) {
                 if (factories[i]->get_typename() == type) {
                     try {
                         return factories[i]->build(ctx);
                     } catch (Exception & ex) {
                         std::stringstream ss;
-                        ss << "PluginManager::build, configuration path '" << ctx.setting.getPath()
-                                << "', type='" << type << "' error while building from plugin: " << ex.message;
+                        ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
+                           << "', type='" << type << "' error while building from plugin: " << ex.message;
                         ex.message = ss.str();
                         throw;
                     }
                 }
             }
             std::stringstream ss;
-            ss << "PluginManager::build, configuration path '" << ctx.setting.getPath()
-                    << "': no plugin found to create type='" << type << "'";
+            ss << "PluginManager::build<" << typeid(product_type).name() << ">, configuration path '" << ctx.setting.getPath()
+               << "': no plugin found to create type='" << type << "'";
             throw ConfigurationException(ss.str());
         }
 
@@ -159,11 +158,13 @@ namespace theta {
         class PluginLoader {
         public:
 
-            /** \brief Run the loader according to the plugins Setting \c s
+            /** \brief Run the loader according to the setting cfg.setting
              *
-             * s must contain the "filenames" setting, a list of strings with paths of .so files.
+             * cfg.sertting must contain the "filenames" setting, a list of strings with paths of .so files.
+             * Optionally, it may contain a boolean "verbose" which controls the verbosity level of
+             * the plugin loader.
              */
-            static void execute(const libconfig::Setting & s, theta::utils::SettingUsageRecorder & rec);
+            static void execute(const theta::plugin::Configuration & cfg);
 
             /** \brief print a list of all currently available plugins to standard out, grouped by type
              *
@@ -174,15 +175,11 @@ namespace theta {
             /** \brief load a plugin file
              *
              * The given shared object file will be loaded which will trigger the plugin registration of all plugins
-             * defined via the REGISTER_PLUGIN macro automagically. If the method is called more than once for the same filename,
-             * all but the first call are ignored.
+             * defined via the REGISTER_PLUGIN macro automagically.
              *
              * \param soname is the filename of the plugin (a .so file), including the path from the current directory
              */
             static void load(const std::string & soname);
-            
-        private:
-            static std::vector<std::string> loaded_files;
         };
     }
 }

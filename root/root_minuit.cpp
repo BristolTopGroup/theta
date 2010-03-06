@@ -147,15 +147,15 @@ MinimizationResult root_minuit::minimize(const theta::Function & f){
     return result;
 }
 
-root_minuit::root_minuit(Configuration & ctx): Minimizer(ctx.vm), tolerance(NAN){
+root_minuit::root_minuit(const Configuration & ctx): Minimizer(ctx.vm), tolerance(NAN){
        min.reset(new ROOT::Minuit2::Minuit2Minimizer(type));
        int printlevel = 0;
-       if(ctx.setting.lookupValue("printlevel", printlevel)){
-           ctx.rec.markAsUsed(ctx.setting["printlevel"]);
+       if(ctx.setting.exists("printlevel")){
+           printlevel = ctx.setting["printlevel"];
        }
        string method = "migrad";
-       if(ctx.setting.lookupValue("method", method)){
-           ctx.rec.markAsUsed(ctx.setting["method"]);
+       if(ctx.setting.exists("method")){
+           method = (string)ctx.setting["method"];
        }
        if(method=="migrad"){
             type = ROOT::Minuit2::kMigrad;
@@ -169,8 +169,8 @@ root_minuit::root_minuit(Configuration & ctx): Minimizer(ctx.vm), tolerance(NAN)
            throw InvalidArgumentException(s.str());
        }       
        double tol = NAN;
-       if(ctx.setting.lookupValue("tolerance", tol)){
-           ctx.rec.markAsUsed(ctx.setting["tolerance"]);
+       if(ctx.setting.exists("tolerance")){
+           tol = ctx.setting["tolerance"];
        }
        set_printlevel(printlevel);
        set_tolerance(tol);

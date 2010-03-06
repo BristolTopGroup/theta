@@ -187,7 +187,7 @@ protected:
      *
      */
     // protected, as Run is purley virtual.
-    Run(plugin::Configuration & cfg);
+    Run(const plugin::Configuration & cfg);
     
     /** \brief Add a producer to the list of producers to run.
     *

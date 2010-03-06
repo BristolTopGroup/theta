@@ -14,10 +14,7 @@ namespace theta{
     class Minimizer;
     class Producer;
     class Distribution;
-    
-    namespace utils{
-        class SettingUsageRecorder;
-    }
+    class SettingUsageRecorder;
     namespace plugin{
           class Configuration;
     }

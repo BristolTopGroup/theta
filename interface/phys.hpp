@@ -147,7 +147,7 @@ namespace theta {
     public:
        /** \brief Create a new Model with the VarIdManager \c vm.
         */
-        Model(boost::shared_ptr<VarIdManager> & vm);
+        Model(const boost::shared_ptr<VarIdManager> & vm);
         
         /** \brief Get all parameters the model prediction depends upon
          */
@@ -301,7 +301,7 @@ namespace theta {
          * 
          * \param ctx The Configuration to use to build the Model.
          */
-        static std::auto_ptr<Model> buildModel(plugin::Configuration & ctx);
+        static std::auto_ptr<Model> buildModel(const plugin::Configuration & ctx);
     };    
 
     /** \brief Function object of a negative log likelihood of a model, given data.

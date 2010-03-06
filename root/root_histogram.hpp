@@ -35,5 +35,5 @@ using namespace std;
 class root_histogram: public ConstantHistogramFunctionError{
 public:
     /// Constructor used by the plugin system
-    root_histogram(Configuration & ctx);
+    root_histogram(const Configuration & ctx);
 };

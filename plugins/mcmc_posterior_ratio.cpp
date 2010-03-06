@@ -138,28 +138,24 @@ void mcmc_posterior_ratio::produce(Run & run, const Data & data, const Model & m
 }
 
 
-mcmc_posterior_ratio::mcmc_posterior_ratio(theta::plugin::Configuration & cfg): Producer(cfg), init(false), init_failed(false), table(get_name()){
+mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), init(false), init_failed(false), table(get_name()){
     vm = cfg.vm;
-    const Setting & s = cfg.setting;
-    int sb_i = s["signal-plus-background"].getLength();
-    for (int i = 0; i < sb_i; i++) {
+    SettingWrapper s = cfg.setting;
+    size_t sb_i = s["signal-plus-background"].size();
+    for (size_t i = 0; i < sb_i; i++) {
         string par_name = s["signal-plus-background"][i].getName();
         double par_value = s["signal-plus-background"][i];
         s_plus_b.set(cfg.vm->getParId(par_name), par_value);
     }
-    cfg.rec.markAsUsed(s["signal-plus-background"]);
-    int b_i = s["background-only"].getLength();
-    for (int i = 0; i < b_i; i++) {
+    size_t b_i = s["background-only"].size();
+    for (size_t i = 0; i < b_i; i++) {
         string par_name = s["background-only"][i].getName();
         double par_value = s["background-only"][i];
         b_only.set(cfg.vm->getParId(par_name), par_value);
     }
-    cfg.rec.markAsUsed(s["background-only"]);
     iterations = s["iterations"];
-    cfg.rec.markAsUsed(s["iterations"]);
     if(s.exists("burn-in")){
         burn_in = s["burn-in"];
-        cfg.rec.markAsUsed(s["burn-in"]);
     }
     else{
         burn_in = iterations / 10;

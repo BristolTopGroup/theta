@@ -28,7 +28,7 @@ void plain_run::run_impl() {
 }
 
 
-plain_run::plain_run(Configuration & cfg): Run(cfg){
+plain_run::plain_run(const Configuration & cfg): Run(cfg){
 }
 
 REGISTER_PLUGIN(plain_run)

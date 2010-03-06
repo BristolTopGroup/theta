@@ -23,7 +23,7 @@ class plain_run: public theta::Run {
 public:
     
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    plain_run(theta::plugin::Configuration & ctx);
+    plain_run(const theta::plugin::Configuration & ctx);
 protected:
     /** \brief Actual run implementation.
      *

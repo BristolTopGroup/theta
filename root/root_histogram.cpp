@@ -10,11 +10,9 @@ using namespace theta;
 using namespace theta::plugin;
 using namespace std;
 
-   root_histogram::root_histogram(Configuration & ctx){
+   root_histogram::root_histogram(const Configuration & ctx){
       string filename = ctx.setting["filename"];
-      ctx.rec.markAsUsed(ctx.setting["filename"]);
       string histoname = ctx.setting["histoname"];
-      ctx.rec.markAsUsed(ctx.setting["histoname"]);
       TFile file(filename.c_str(), "read");
       if(file.IsZombie()){
           stringstream s;
@@ -33,7 +31,6 @@ using namespace std;
       theta::Histogram h(nbins, xmin, xmax);
       theta::Histogram h_error(nbins, xmin, xmax);
       bool use_errors = ctx.setting["use_errors"];
-      ctx.rec.markAsUsed(ctx.setting["use_errors"]);      
       for(int i=0; i<=nbins+1; i++){
           double content = histo->GetBinContent(i);
           h.set(i, content);
@@ -43,7 +40,6 @@ using namespace std;
           }
       }
       double norm = ctx.setting["normalize_to"];
-      ctx.rec.markAsUsed(ctx.setting["normalize_to"]);
       double integral = h.get_sum_of_bincontents();
       h *= norm/integral;
       set_histos(h, h_error);

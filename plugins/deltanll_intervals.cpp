@@ -46,24 +46,18 @@ void deltanll_intervals::produce(Run & run, const Data & data, const Model & mod
     //TODO: scan the parameter of interest ...
 }
 
-deltanll_intervals::deltanll_intervals(theta::plugin::Configuration & ctx): Producer(ctx), table(get_name()){
-    const Setting & s = ctx.setting;
-    std::auto_ptr<Producer> result;
-    string minimizer_path = s["minimizer"];
-    Setting & minimizer_setting = ctx.rootsetting[minimizer_path];
-    theta::plugin::Configuration ctx_min(ctx, minimizer_setting);
-    minimizer = theta::plugin::PluginManager<Minimizer>::build(ctx_min);
+deltanll_intervals::deltanll_intervals(const theta::plugin::Configuration & cfg): Producer(cfg), table(get_name()){
+    SettingWrapper s = cfg.setting;
+    minimizer = theta::plugin::PluginManager<Minimizer>::build(theta::plugin::Configuration(cfg, s["minimizer"]));
         string par_name = s["parameter"];
-        ctx.rec.markAsUsed(s["parameter"]);
-        pid = ctx.vm->getParId(par_name);
-        int ic = s["clevels"].getLength();
+        pid = cfg.vm->getParId(par_name);
+        size_t ic = s["clevels"].size();
         if (ic == 0) {
             throw ConfigurationException("buildProducer[type=deltanll]: empty clevels.");
         }
-        for (int i = 0; i < ic; i++) {
+        for (size_t i = 0; i < ic; i++) {
             clevels.push_back(s["clevels"][i]);
         }
-        ctx.rec.markAsUsed(s["clevels"]);
     for(size_t i=0; i<clevels.size(); ++i){
         if(clevels[i] < 0.0) throw InvalidArgumentException("deltanll_intervals: clevel < 0 not allowed.");
         if(clevels[i] >= 1.0) throw InvalidArgumentException("deltanll_intervals: clevel >= 1.0 not allowed.");

@@ -57,43 +57,29 @@ void Run::addProducer(std::auto_ptr<Producer> & p){
     producers.push_back(p);
 }
 
-Run::Run(plugin::Configuration & cfg): seed(-1), rnd(new RandomSourceTaus()),
+Run::Run(const plugin::Configuration & cfg): seed(-1), rnd(new RandomSourceTaus()),
       vm(cfg.vm), m_pseudodata(cfg.vm), m_producers(cfg.vm), db(new database::Database(cfg.setting["result-file"])),
       logtable(new database::LogTable("log")), log_report(true), prodinfo_table("prodinfo"), rndinfo_table("rndinfo"),
       runid(1), eventid(0), n_event(cfg.setting["n-events"]){
-          
-      const libconfig::Setting & s = cfg.setting;
-      if(s.lookupValue(static_cast<const char*>("run-id"), runid)){
-         cfg.rec.markAsUsed(s["run-id"]);
-      }
+      SettingWrapper s = cfg.setting;
+      if(s.exists("run-id")) runid = s["run-id"];
       int i_seed = -1;
-      if(s.lookupValue(static_cast<const char*>("seed"), i_seed)){
-         cfg.rec.markAsUsed(s["seed"]);
-      }
+      if(s.exists("seed")) i_seed = s["seed"];
       if(i_seed==-1) i_seed = time(0);
       seed = i_seed;
       rnd.set_seed(seed);
       if (s.exists("model")) {
-        std::string model_path = s["model"];
-        plugin::Configuration context(cfg, cfg.rootsetting[model_path]);
-        std::auto_ptr<Model> model = ModelFactory::buildModel(context);
-        m_pseudodata = *model;
-        m_producers = *model;
-        cfg.rec.markAsUsed(s["model"]);
+          std::auto_ptr<Model> model = ModelFactory::buildModel(plugin::Configuration(cfg, s["model"]));
+          m_pseudodata = *model;
+          m_producers = *model;
       }
       if (s.exists("model-pseudodata")) {
-         std::string model_path = s["model-pseudodata"];
-         plugin::Configuration context(cfg, cfg.rootsetting[model_path]);
-         m_pseudodata = *ModelFactory::buildModel(context);
-         cfg.rec.markAsUsed(s["model-pseudodata"]);
-         s["model-producers"];//will throw if not found
+          m_pseudodata = *ModelFactory::buildModel(plugin::Configuration(cfg, s["model-pseudodata"]));
+          s["model-producers"];//will throw if not found
        }
        if (s.exists("model-producers")) {
-         std::string model_path = s["model-producers"];
-         plugin::Configuration context(cfg, cfg.rootsetting[model_path]);
-         m_producers = *ModelFactory::buildModel(context);
-         cfg.rec.markAsUsed(s["model-producers"]);
-         s["model-pseudodata"];//will throw if not found
+          m_producers = *ModelFactory::buildModel(plugin::Configuration(cfg, s["model-producers"]));
+          s["model-pseudodata"];//will throw if not found
        }
        
       logtable->connect(db);
@@ -110,8 +96,7 @@ Run::Run(plugin::Configuration & cfg): seed(-1), rnd(new RandomSourceTaus()),
          else if(loglevel=="debug")level = database::severity::debug;
          else{
              std::stringstream ss;
-             ss << "log level given in " << s["log-level"].getPath() << " on line "
-                << s["log-level"].getSourceLine() << " unknown (given '" << loglevel << "'; only allowed values are "
+             ss << "log level given in " << s["log-level"].getPath() << " unknown (given '" << loglevel << "'; only allowed values are "
                 << "'error', 'warning', 'info' and 'debug')";
             throw ConfigurationException(ss.str());
          }
@@ -120,20 +105,16 @@ Run::Run(plugin::Configuration & cfg): seed(-1), rnd(new RandomSourceTaus()),
       if(s.exists("log-report")){
           log_report = s["log-report"];
       }
-      
       eventid = 0;
-      
       //add the producers:
-      int n_p = s["producers"].getLength();
+      size_t n_p = s["producers"].size();
       if (n_p == 0)
          throw ConfigurationException("no producers in run specified!");
-      for (int i = 0; i < n_p; i++) {
-        std::string prod_path = s["producers"][i];
-        plugin::Configuration cfg2(cfg, cfg.rootsetting[prod_path]);
-        std::auto_ptr<Producer> p = plugin::PluginManager<Producer>::build(cfg2);
+      for (size_t i = 0; i < n_p; i++) {
+        SettingWrapper producer_setting = s["producers"][i];
+        std::auto_ptr<Producer> p = plugin::PluginManager<Producer>::build(plugin::Configuration(cfg, producer_setting));
         addProducer(p);
         //should transfer ownership:
         assert(p.get()==0);
       }
-      cfg.rec.markAsUsed(s["producers"]);
     }

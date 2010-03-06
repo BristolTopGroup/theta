@@ -74,7 +74,7 @@ public:
     }
 protected:
     /// to be called by derived classes in order to fill name and type.
-    Producer(const plugin::Configuration & cfg): name(cfg.setting.getName()), type(static_cast<const char*>(cfg.setting["type"])){
+    Producer(const plugin::Configuration & cfg): name(cfg.setting.getName()), type(cfg.setting["type"]){
     }
 private:
     std::string name;

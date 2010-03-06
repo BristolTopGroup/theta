@@ -44,7 +44,7 @@ class root_minuit: public theta::Minimizer{
 public:
     /** \brief Constructor used by the plugin system to build an instance from a configuration file.
      */
-    root_minuit(theta::plugin::Configuration & cfg);
+    root_minuit(const theta::plugin::Configuration & cfg);
 
     /** \brief Implement the Minimizer::minimize routine.
      *

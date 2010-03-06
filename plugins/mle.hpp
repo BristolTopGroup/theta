@@ -66,7 +66,7 @@ class mle: public theta::Producer{
 public:
     
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    mle(theta::plugin::Configuration & cfg);
+    mle(const theta::plugin::Configuration & cfg);
     
     /** \brief Run the method and write out results.
      */

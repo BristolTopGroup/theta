@@ -51,7 +51,7 @@ class scan_run: public theta::Run {
 public:
     
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    scan_run(theta::plugin::Configuration & ctx);
+    scan_run(const theta::plugin::Configuration & ctx);
 protected:
     
     /** \brief Actual run implementation.

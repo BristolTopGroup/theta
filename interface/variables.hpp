@@ -177,6 +177,7 @@ namespace theta {
         /** \brief Creates a new parameter or observable ids (ParId, ObsId) and associates it with the given name.
          *
          * If the name is already used for another parameter / observable, an InvalidArgumentException is thrown.
+         * If the given range is empty or the default value is outside the range, or zero bins, an InvalidArgumentException will be thrown.
          */
         ParId createParId(const std::string & name, double def = 0.0, double xmin=-std::numeric_limits<double>::infinity(), double xmax=std::numeric_limits<double>::infinity());
         ObsId createObsId(const std::string & name, size_t nbins, double xmin, double xmax);

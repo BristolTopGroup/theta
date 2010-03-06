@@ -9,6 +9,7 @@
 using namespace theta;
 using namespace std;
 using namespace libconfig;
+using namespace theta::plugin;
 
 void MLETable::init(const theta::VarIdManager & vm, const theta::ParIds & ids){
     save_ids=ids;
@@ -60,20 +61,16 @@ void mle::produce(Run & run, const Data & data, const Model & model) {
     table.append(run, minres.fval, minres.values, minres.errors_plus);
 }
 
-mle::mle(theta::plugin::Configuration & ctx): Producer(ctx), table(get_name()){
-    const Setting & s = ctx.setting;
-    string minimizer_path = s["minimizer"];
-    Setting & minimizer_setting = ctx.rootsetting[minimizer_path];
-    theta::plugin::Configuration ctx_min(ctx, minimizer_setting);
-    minimizer = theta::plugin::PluginManager<Minimizer>::build(ctx_min);
-    int n_parameters = s["parameters"].getLength();
+mle::mle(const theta::plugin::Configuration & cfg): Producer(cfg), table(get_name()){
+    SettingWrapper s = cfg.setting;
+    minimizer = PluginManager<Minimizer>::build(Configuration(cfg, s["minimizer"]));
+    size_t n_parameters = s["parameters"].size();
     ParIds save_ids;
-    for (int i = 0; i < n_parameters; i++) {
+    for (size_t i = 0; i < n_parameters; i++) {
         string par_name = s["parameters"][i];
-        save_ids.insert(ctx.vm->getParId(par_name));
+        save_ids.insert(cfg.vm->getParId(par_name));
     }
-    ctx.rec.markAsUsed(s["parameters"]);
-    table.init(*ctx.vm, save_ids);
+    table.init(*cfg.vm, save_ids);
 }
 
 REGISTER_PLUGIN(mle)

@@ -122,26 +122,22 @@ std::string mcmc_quantiles::get_information() const{
     return ss.str();
 }
 
-mcmc_quantiles::mcmc_quantiles(theta::plugin::Configuration & cfg): Producer(cfg), init(false), init_failed(false), table(get_name()){
+mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Producer(cfg), init(false), init_failed(false), table(get_name()){
     vm = cfg.vm;
-    const Setting & s = cfg.setting;
+    SettingWrapper s = cfg.setting;
     string parameter = s["parameter"];
     par_id = vm->getParId(parameter);
-    cfg.rec.markAsUsed(s["parameter"]);
-    int n = s["quantiles"].getLength();
+    size_t n = s["quantiles"].size();
     if(n==0){
         throw ConfigurationException("mcmc_quantiles: list of requested quantiles is empty");
     }
     quantiles.reserve(n);
-    for(int i=0; i<n; ++i){
+    for(size_t i=0; i<n; ++i){
         quantiles.push_back(s["quantiles"][i]);
     }
-    
     iterations = s["iterations"];
-    cfg.rec.markAsUsed(s["iterations"]);
     if(s.exists("burn-in")){
         burn_in = s["burn-in"];
-        cfg.rec.markAsUsed(s["burn-in"]);
     }
     else{
         burn_in = iterations / 10;

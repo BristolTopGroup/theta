@@ -67,7 +67,7 @@ private:
 class mcmc_quantiles: public theta::Producer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    mcmc_quantiles(theta::plugin::Configuration & ctx);
+    mcmc_quantiles(const theta::plugin::Configuration & ctx);
     
     /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
@@ -90,8 +90,8 @@ private:
     
     boost::shared_ptr<theta::VarIdManager> vm;
     
-    size_t iterations;
-    size_t burn_in;
+    unsigned int iterations;
+    unsigned int burn_in;
     
     //the matrices and startvalues to use for the Markov chains:
     theta::Matrix sqrt_cov;

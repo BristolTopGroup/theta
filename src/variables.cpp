@@ -13,15 +13,20 @@ using namespace libconfig;
 
 ParId VarIdManager::createParId(const std::string & name, double def, double min, double max) {
     if (parNameExists(name)) {
-        //check default, min and max:
-        ParId id = getParId(name);
-        if(get_default(id)!=def or get_range(id).first!=min or get_range(id).second!=max){
             stringstream ss;
             ss << "VarIdManager::createParId: name '"<< name <<"' already in use with different specification.";
             throw InvalidArgumentException(ss.str());
-        }
-        return id;
     }
+    if (min >= max) {
+        stringstream ss;
+        ss << "Parameter " << name << " has min >= max, i.e., empty range.";
+        throw InvalidArgumentException(ss.str());
+    }
+    if (def < min || def > max) {
+        stringstream ss;
+        ss << "Parameter " << name << " has default value outside of its range.";
+        throw InvalidArgumentException(ss.str());
+    }    
     ParId result(next_pid_id);
     next_pid_id++;
     pid_to_name[result] = name;
@@ -33,14 +38,21 @@ ParId VarIdManager::createParId(const std::string & name, double def, double min
 
 ObsId VarIdManager::createObsId(const std::string & name, size_t nbins, double min, double max) {
     if (obsNameExists(name)) {
-        ObsId id = getObsId(name);
-        if(get_nbins(id)!=nbins or min!=get_range(id).first or max!=get_range(id).second){
             stringstream ss;
             ss << "VarIdManager::createObsId: name '" << name << "' already in use with different specification.";
             throw InvalidArgumentException(ss.str());
-        }
-        return id;
     }
+    if (min >= max) {
+         stringstream ss;
+         ss << "Observable " << name << " has min >= max, i.e., empty range.";
+         throw InvalidArgumentException(ss.str());
+    }
+    if(nbins==0){
+        stringstream ss;
+        ss << "Observable " << name << " has no bins.";
+        throw InvalidArgumentException(ss.str());
+    }
+    
     ObsId result(next_oid_id);
     next_oid_id++;
     oid_to_name[result] = name;
@@ -106,7 +118,7 @@ void VarIdManager::set_range_default(const ParId & id, double low, double high, 
         throw NotFoundException("VarIdManager::set_range_default: did not find given ParId.");
     }
     if(def < low || def > high){
-       throw InvalidArgumentException("VarIdManagerLLset_range_default: default not included in range!");
+       throw InvalidArgumentException("VarIdManager::set_range_default: default not included in range!");
     }
     it->second = def;
     itt->second.first = low;
@@ -182,56 +194,33 @@ ParIds ParValues::getAllParIds() const {
 }
 
 void theta::VarIdManagerUtils::apply_settings(theta::plugin::Configuration & ctx){
-    const Setting & s = ctx.setting;
-    int nobs = s["observables"].getLength();
+    SettingWrapper s = ctx.setting;
+    size_t nobs = s["observables"].size();
     if (nobs == 0){
         stringstream ss;
         ss << "No observables defined in " << s["observables"].getPath();
         throw ConfigurationException(ss.str());
     }
-    for (int i = 0; i < nobs; i++) {
+    for (size_t i = 0; i < nobs; i++) {
         string obs_name = s["observables"][i].getName();
-        double min = get_double_or_inf(s["observables"][i]["range"][0]);
-        double max = get_double_or_inf(s["observables"][i]["range"][1]);
-        int nbins = s["observables"][i]["nbins"];
-        ctx.rec.markAsUsed(s["observables"][i]["range"]);
-        ctx.rec.markAsUsed(s["observables"][i]["nbins"]);
-        if (min >= max) {
-            stringstream ss;
-            ss << "Observable " << obs_name << " has min >= max, i.e., empty range.";
-            throw ConfigurationException(ss.str());
-        }
-        if (nbins <= 0) {
-            stringstream ss;
-            ss << "Observable " << obs_name << " has nbins<=0.";
-            throw ConfigurationException(ss.str());
-        }
+        double min = s["observables"][i]["range"][0].get_double_or_inf();
+        double max = s["observables"][i]["range"][1].get_double_or_inf();
+        unsigned int nbins = s["observables"][i]["nbins"];
         ctx.vm->createObsId(obs_name, (size_t) nbins, min, max);
     }
     //get parameters:
-    int npar = s["parameters"].getLength();
+    size_t npar = s["parameters"].size();
     if (npar == 0){
         stringstream ss;
         ss << "No parameters defined in " << s["parameters"].getPath();
         throw ConfigurationException(ss.str());
     }
-    for (int i = 0; i < npar; i++) {
+    for (size_t i = 0; i < npar; i++) {
         string par_name = s["parameters"][i].getName();
         double def = s["parameters"][i]["default"];
-        double min = get_double_or_inf(s["parameters"][i]["range"][0]);
-        double max = get_double_or_inf(s["parameters"][i]["range"][1]);
-        ctx.rec.markAsUsed(s["parameters"][i]["range"]);
-        ctx.rec.markAsUsed(s["parameters"][i]["default"]);
-        if (min >= max) {
-            stringstream ss;
-            ss << "Parameter " << par_name << " has min >= max, i.e., empty range.";
-            throw ConfigurationException(ss.str());
-        }
-        if (def < min || def > max) {
-            stringstream ss;
-            ss << "Parameter " << par_name << " has default value outside of its range.";
-            throw ConfigurationException(ss.str());
-        }
+        double min = s["parameters"][i]["range"][0].get_double_or_inf();
+        double max = s["parameters"][i]["range"][1].get_double_or_inf();
+
         ctx.vm->createParId(par_name, def, min, max);
     }
 }

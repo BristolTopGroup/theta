@@ -84,7 +84,6 @@ int main(int argc, char** argv) {
     Config cfg;
     
     std::auto_ptr<Run> run;
-    Setting * proot = 0;
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
     SettingUsageRecorder rec;
 
@@ -113,20 +112,17 @@ int main(int argc, char** argv) {
             s << "Error parsing the given configuration file: " << p.getError() << " in line " << p.getLine();
             throw ConfigurationException(s.str());
         }
-        Setting & root = cfg.getRoot();
-        proot = &root;
+        SettingWrapper root(cfg.getRoot(), cfg.getRoot(), rec);
+        Configuration config(vm, root);
         
         //load plugins:
         if(root.exists("plugins")){
-            PluginLoader::execute(root["plugins"], rec);
+            PluginLoader::execute(Configuration(config, root["plugins"]));
         }
         //fill VarIdManager:
-        Configuration vm_context(vm, root, root, rec);
-        VarIdManagerUtils::apply_settings(vm_context);
+        VarIdManagerUtils::apply_settings(config);
         //build run:
-        Setting & runsetting = root[run_name];
-        Configuration run_context(vm_context, runsetting);
-        run = PluginManager<Run>::build(run_context);
+        run = PluginManager<Run>::build(Configuration(config, root[run_name]));
         if(not quiet){
             boost::shared_ptr<ProgressListener> l(new MyProgressListener());
             run->set_progress_listener(l);
@@ -134,7 +130,7 @@ int main(int argc, char** argv) {
     } catch (ConfigurationException & ex) {
         cerr << "Error while building Model from config: " << ex.message << "." << endl;
     } catch (SettingNotFoundException & ex) {
-        cerr << "The required configuration parameter " << ex.getPath() << " was not found." << endl;
+        cerr << "The required configuration parameter '" << ex.getPath() << "' was not found." << endl;
     } catch (SettingTypeException & ex) {
         cerr << "The configuration parameter " << ex.getPath() << " has the wrong type." << endl;
     } catch (SettingException & ex) {
@@ -143,26 +139,24 @@ int main(int argc, char** argv) {
         cerr << "An exception occured while processing the configuration: " << e.message << endl;
     }
 
-    if (run.get() == 0 || proot==0) {
+    if (run.get() == 0) {
         cerr << "Could not build run object due to occurred errors. Exiting." << endl;
         return 1;
     }
     
-    Setting & root = *proot;
-    rec.remove_used(root);
-    remove_empty_groups(root);
-    vector<string> unused = get_paths(root);
+    vector<string> unused;
+    rec.get_unused(unused, cfg.getRoot());
     if (unused.size() > 0) {
         cout << "WARNING: following setting paths in the configuration file have not been used: " << endl;
         for (size_t i = 0; i < unused.size(); ++i) {
             cout << "  " << (i+1) << ". " << unused[i] << endl;
         }
-        cout << "Comment out these settings to get rid of this message." << endl << endl;
+        cout << "Comment out these settings to get rid of this message." << endl;
+        cout << "(NOTE: this warning feature is still experimental. If false positives were reported, please write a ticket.)" << endl << endl;
     }
 
-    //install signal handler only now, just before the run.
-    // Doing iut very early in the program could lead to problems as
-    // some plugins might install their own signal handlers (such as those dependend on root?!).
+    //install signal handler now, not much earlier. Otherwise, plugin loading
+    // might change it ...
     install_sigint_handler();
 
     try {

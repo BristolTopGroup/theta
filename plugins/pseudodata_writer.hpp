@@ -83,7 +83,7 @@ class pseudodata_writer: public theta::Producer {
 public:
 
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    pseudodata_writer(theta::plugin::Configuration & cfg);
+    pseudodata_writer(const theta::plugin::Configuration & cfg);
 
     /** \brief Run the writer and write out the pseudo data \c Data to the database.
      */

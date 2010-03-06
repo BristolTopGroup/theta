@@ -30,7 +30,7 @@
 class fixed_poly: public theta::ConstantHistogramFunction{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    fixed_poly(theta::plugin::Configuration & cfg);
+    fixed_poly(const theta::plugin::Configuration & cfg);
 };
 
 /** \brief A normal distribution where mean and width do not depend on any parameters
@@ -57,7 +57,7 @@ public:
 class fixed_gauss: public theta::ConstantHistogramFunction{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-   fixed_gauss(theta::plugin::Configuration & cfg);
+   fixed_gauss(const theta::plugin::Configuration & cfg);
 };
 
 /** \brief A lognormal distribution in one dimension.
@@ -83,7 +83,7 @@ public:
 class log_normal: public theta::Distribution{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    log_normal(theta::plugin::Configuration & cfg);
+    log_normal(const theta::plugin::Configuration & cfg);
     
     //@{
     /** \brief Implementation of the pure methods of theta::Distribution
@@ -131,7 +131,7 @@ private:
 class gauss: public theta::Distribution{
    public:
         /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-        gauss(theta::plugin::Configuration & cfg);
+        gauss(const theta::plugin::Configuration & cfg);
         virtual void sample(theta::ParValues & result, theta::Random & rnd, const theta::VarIdManager & vm) const;
         virtual double evalNL(const theta::ParValues & values) const;
         virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;

@@ -53,32 +53,31 @@ theta::ParIds interpolating_histo::getParameters() const {
     return result;
 }
 
-interpolating_histo::interpolating_histo(Configuration & ctx){
-    const Setting & psetting = ctx.setting["parameters"];
+interpolating_histo::interpolating_histo(const Configuration & ctx){
+    SettingWrapper psetting = ctx.setting["parameters"];
     vector<ParId> par_ids;
     //build nominal histogram:
     h0 = getConstantHistogram(ctx, psetting["nominal-histogram"]);
-    int n = psetting.getLength();
+    size_t n = psetting.size();
     //note: allow n==0 to allow the user to disable systematics.
     // In case of unintentional type error (parameters="delta1,delta2";), user will get a warning about
     // the unused delta*-{plus,minus}-histogram blocks anyway ...
-    for(int i=0; i<n; i++){
+    for(size_t i=0; i<n; i++){
         string par_name = psetting[i];
         ParId pid = ctx.vm->getParId(par_name);
         par_ids.push_back(pid);
         stringstream setting_name;
         //plus:
         setting_name << par_name << "-plus-histogram";
-        hplus.push_back(getConstantHistogram(ctx, ctx.setting[setting_name.str()]));
+        hplus.push_back(getConstantHistogram(ctx, ctx.setting[setting_name.str()] ));
         //minus:
         setting_name.str("");
         setting_name << par_name << "-minus-histogram";
-        hminus.push_back(getConstantHistogram(ctx, ctx.setting[setting_name.str()]));
+        hminus.push_back(getConstantHistogram(ctx, ctx.setting[setting_name.str()] ));
     }
     assert(hplus.size()==hminus.size());
     assert(par_ids.size()==hminus.size());
-    assert(static_cast<int>(par_ids.size())==n);
-    ctx.rec.markAsUsed(psetting);
+    assert(par_ids.size()==n);
     h = h0;
     
     //do some checks and set overflow  underflow to zero:
@@ -105,9 +104,8 @@ interpolating_histo::interpolating_histo(Configuration & ctx){
     h0.set(h0.get_nbins()+1,0);
 }
 
-Histogram interpolating_histo::getConstantHistogram(Configuration & ctx, const libconfig::Setting & s){
-    Configuration cfg(ctx, s);
-    std::auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::build(cfg);
+Histogram interpolating_histo::getConstantHistogram(const Configuration & cfg, SettingWrapper s){
+    std::auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::build(Configuration(cfg, s));
     if(hf->getParameters().size()!=0){
         stringstream ss;
         ss << "Histogram defined in path " << s.getPath() << " is not constant (but has to be).";

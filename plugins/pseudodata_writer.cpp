@@ -60,10 +60,10 @@ void pseudodata_writer::produce(Run & run, const Data & data, const Model & mode
     table.append(run, data);
 }
 
-pseudodata_writer::pseudodata_writer(theta::plugin::Configuration & cfg): Producer(cfg), table(get_name()){
-    int n = cfg.setting["observables"].getLength();
+pseudodata_writer::pseudodata_writer(const theta::plugin::Configuration & cfg): Producer(cfg), table(get_name()){
+    size_t n = cfg.setting["observables"].size();
     table.observable_names.reserve(n);
-    for(int i=0; i<n; i++){
+    for(size_t i=0; i<n; i++){
         table.observable_names.push_back(cfg.setting["observables"][i]);
         table.observables.insert(cfg.vm->getObsId(table.observable_names.back()));
     }

@@ -91,7 +91,7 @@ class deltanll_intervals: public theta::Producer{
 public:
 
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    deltanll_intervals(theta::plugin::Configuration & cfg);
+    deltanll_intervals(const theta::plugin::Configuration & cfg);
 
     /** \brief Run the statistical method with Data and model and write out the result  to the database.
      *

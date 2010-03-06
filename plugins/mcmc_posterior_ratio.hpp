@@ -77,7 +77,7 @@ private:
 class mcmc_posterior_ratio: public theta::Producer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    mcmc_posterior_ratio(theta::plugin::Configuration & ctx);
+    mcmc_posterior_ratio(const theta::plugin::Configuration & ctx);
     /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
 private:
@@ -91,8 +91,8 @@ private:
     theta::ParValues b_only;
     boost::shared_ptr<theta::VarIdManager> vm;
     
-    size_t iterations;
-    size_t burn_in;
+    unsigned int iterations;
+    unsigned int burn_in;
     
     //the matrices and startvalues to use for the Markov chains in the two cases:
     theta::Matrix sqrt_cov_sb;

@@ -52,36 +52,24 @@ double Minimizer::get_initial_stepsize(const theta::ParId & pid) const {
 }
 
 
-void theta::MinimizerUtils::apply_settings(Minimizer & m, theta::plugin::Configuration & ctx){
+void theta::MinimizerUtils::apply_settings(Minimizer & m, const theta::plugin::Configuration & ctx){
     if(ctx.setting.exists("override-ranges")){
-        const libconfig::Setting & s_ranges = ctx.setting["override-ranges"];
-        if(not s_ranges.isGroup()){
-            stringstream s;
-            s << "Setting '" << s_ranges.getPath() << "' must be a setting group.";
-            throw ConfigurationException(s.str());
-        }
-        int size = s_ranges.getLength();
-        for(int i=0; i<size; ++i){
+        SettingWrapper s_ranges = ctx.setting["override-ranges"];
+        size_t size = s_ranges.size();
+        for(size_t i=0; i<size; ++i){
             string parname = s_ranges[i].getName();
             double lower = s_ranges[i][0];
             double upper = s_ranges[i][1];
-            ctx.rec.markAsUsed(s_ranges[i]);
             m.override_range(ctx.vm->getParId(parname), lower, upper);
         }
     }
 
     if(ctx.setting.exists("initial-step-sizes")){
-        const libconfig::Setting & s_steps = ctx.setting["initial-step-sizes"];
-        if(not s_steps.isGroup()){
-            stringstream s;
-            s << "Setting '" << s_steps.getPath() << "' must be a setting group.";
-            throw ConfigurationException(s.str());
-        }
-        int size = s_steps.getLength();
-        for(int i=0; i<size; ++i){
+        SettingWrapper s_steps = ctx.setting["initial-step-sizes"];
+        size_t size = s_steps.size();
+        for(size_t i=0; i<size; ++i){
             string parname = s_steps[i].getName();
             double step = s_steps[i];
-            ctx.rec.markAsUsed(s_steps[i]);
             m.set_initial_stepsize(ctx.vm->getParId(parname), step);
         }
     }

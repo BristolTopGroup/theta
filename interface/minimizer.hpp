@@ -198,7 +198,7 @@ namespace theta{
          *
          * This function is usually called only from a derived class of MinimizerFactory.
          */
-        void apply_settings(Minimizer & m, theta::plugin::Configuration & ctx);
+        void apply_settings(Minimizer & m, const theta::plugin::Configuration & ctx);
     }
 
 }

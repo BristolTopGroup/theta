@@ -11,27 +11,6 @@ using namespace theta;
 using namespace std;
 using namespace libconfig;
 
-void mcmc_posterior_ratio_table::create_table() {
-    stringstream ss;
-    ss << "CREATE TABLE '" << name << "' (runid INTEGER(4), eventid INTEGER(4), nl_posterior_sb DOUBLE, nl_posterior_b DOUBLE);";
-    exec(ss.str());
-    ss.str("");
-    ss << "INSERT INTO '" << name << "' VALUES(?,?,?,?);";
-    insert_statement = prepare(ss.str());
-}
-
-void mcmc_posterior_ratio_table::append(const Run & run, double nl_posterior_sb, double nl_posterior_b) {
-    sqlite3_bind_int(insert_statement, 1, run.get_runid());
-    sqlite3_bind_int(insert_statement, 2, run.get_eventid());
-    sqlite3_bind_double(insert_statement, 3, nl_posterior_sb);
-    sqlite3_bind_double(insert_statement, 4, nl_posterior_b);
-    int res = sqlite3_step(insert_statement);
-    sqlite3_reset(insert_statement);
-    if (res != 101) {
-        error(__FUNCTION__);//throws exception
-    }
-}
-
 //the result class for the metropolisHastings routine.
 class MCMCPosteriorRatioResult{
     public:
@@ -76,7 +55,6 @@ class MCMCPosteriorRatioResult{
 };
 
 void mcmc_posterior_ratio::produce(Run & run, const Data & data, const Model & model) {
-    if(!table) table.connect(run.get_database());
     if(!init){
         try{
             if(init_failed){
@@ -134,11 +112,17 @@ void mcmc_posterior_ratio::produce(Run & run, const Data & data, const Model & m
     if(std::isnan(nl_posterior_sb) || std::isnan(nl_posterior_b)){
         throw Exception("average posterior was NAN");
     }
-    table.append(run, nl_posterior_sb, nl_posterior_b);
+    table->set_column(c_nl_posterior_sb, nl_posterior_sb);
+    table->set_column(c_nl_posterior_b, nl_posterior_b);
 }
 
 
-mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), init(false), init_failed(false), table(get_name()){
+void mcmc_posterior_ratio::define_table(){
+    c_nl_posterior_sb = table->add_column(*this, "nl_posterior_sb", ProducerTable::typeDouble);
+    c_nl_posterior_b =  table->add_column(*this, "nl_posterior_b",  ProducerTable::typeDouble);
+}
+
+mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), init(false), init_failed(false){
     vm = cfg.vm;
     SettingWrapper s = cfg.setting;
     size_t sb_i = s["signal-plus-background"].size();

@@ -32,9 +32,6 @@ BOOST_AUTO_TEST_CASE(parids){
     BOOST_REQUIRE(ex);
     ParId var1 = vm.createParId("var1");
     BOOST_REQUIRE(var0!=var1);
-    //same id is returned in case of same specification:
-    ParId var0_2 = vm.createParId("var0");
-    BOOST_REQUIRE(var0==var0_2);
 }
 
 

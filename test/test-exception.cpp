@@ -33,8 +33,10 @@ BOOST_AUTO_TEST_CASE(etest_plugin) {
     s["files"].add(Setting::TypeString);
     s["files"][0] = "test/test-ex.so";
     SettingUsageRecorder rec;
+    boost::shared_ptr<VarIdManager> vm(new VarIdManager);
+    Configuration ctx(vm, SettingWrapper(s, s, rec));
     try{
-        PluginLoader::execute(s, rec);
+        PluginLoader::execute(ctx);
     }
     catch(Exception & ex){
         BOOST_REQUIRE_EQUAL(ex.message, "");
@@ -43,8 +45,6 @@ BOOST_AUTO_TEST_CASE(etest_plugin) {
     //test-ex.so defines a Function named "test-exception":
     s.add("type", Setting::TypeString);
     s["type"] = "test_exception";
-    boost::shared_ptr<VarIdManager> vm(new VarIdManager);
-    Configuration ctx(vm, s, s, rec);
     BOOST_REQUIRE(true); // create checkpoint
     std::auto_ptr<Function> f;
     try{
@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(etest_plugin_build) {
     s.add("type", Setting::TypeString);
     s["type"] = "test_ex_during_build";
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
-    Configuration ctx(vm, s, s, rec);
+    Configuration ctx(vm, SettingWrapper(s, s, rec));
     BOOST_REQUIRE(true); // create checkpoint
     bool exception = false;
     try{
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(etest_plugin_plugin) {
     s["block"].add("type", Setting::TypeString);
     s["block"]["type"] = "test_exception";
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
-    Configuration ctx(vm, s, s, rec);
+    Configuration ctx(vm, SettingWrapper(s, s, rec));
     BOOST_REQUIRE(true); // create checkpoint
     auto_ptr<Function> proxy_function = PluginManager<Function>::build(ctx);
     

@@ -1,15 +1,13 @@
-#ifndef METROPOLIS_H
-#define METROPOLIS_H
+#ifndef THETA_MCMC_HPP
+#define THETA_MCMC_HPP
 
 #include "interface/matrix.hpp"
 #include "interface/exception.hpp"
-//#include "interface/utils.hpp"
 #include "interface/random.hpp"
 #include "interface/phys.hpp"
 
 #include <vector>
 #include <cmath>
-//#include <iostream>
 
 #include <boost/scoped_array.hpp>
 
@@ -120,6 +118,19 @@ namespace theta {
      * \param[out] startvalues will contain the suggested startvalues. The contents when calling this function will be ignored.
      */
     Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, const ParValues & fixed_parameters, const boost::shared_ptr<VarIdManager> vm, std::vector<double> & startvalues);
+   
+/** \brief Claculate the cholesky decomposition, but allow zero eigenvalues.
+ *
+ *
+ * Writes the cholesky decomposition into \c result. This function treats the case of fixing a parameter through
+ * setting its covariance diagonal entry to zero correctly in only decomposing the non-zero part of the matrix
+ * and keeping the zero entries where they were.
+ *
+ * If \c expect_reduced is non-negative, it will be checked whether it matches the determined number
+ * of redued (=non-fxed) dimensions. If it does not, an Exception will be thrown. If \c expect_reduced
+ * is negative, no check will be done.
+ */
+void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced = -1);
     
 /* High level functions of Markov Chain Monte Carlo
 including diagnostics and automatic choice of re-runs.

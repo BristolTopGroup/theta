@@ -21,12 +21,19 @@
  *   <li>\subpage intro Introduction describes how to run %theta; a first example is discussed and
  *        an introduction to the internals of %theta. In also contains a \ref plugins "list of available plugins".</li>
  *   <li>\subpage cmd_interface "Command line interface" described the command line tools of %theta</li>
- *   <li>\subpage design "Design Goals of theta" contains some thoughts about what the code of %theta should be like.
- *       You should read that either if you want to contribute code to %theta or if you want to know what makes %theta
- *       different to other software you often deal with in high-energy physics.</li>
  * </ol>
  *
  * %theta contains examples in the \c examples directory.
+ *
+ * Some additional information not necessarily of interest for every user:
+ * <ol>
+ *   <li>\subpage design "Design Goals of theta" contains some thoughts about what the code of %theta should be like.
+ *       You should read that either if you want to contribute code to %theta or if you want to know what makes %theta
+ *       different to other software you often deal with in high-energy physics.</li>
+ *   <li>\subpage testing "Testing" describes how %theta is tested. It also describes some examples which however are not explained
+ *         in great detail.</li>
+ * </ol>
+ *
  *
  * %theta logos are available here as <a href="../logos/theta.pdf">pdf</a>, <a href="../logos/theta.eps">eps</a> and
  * <a href="../logos/theta.png">png</a>.
@@ -482,13 +489,13 @@
  * </li>
  * <li>\link theta::Producer Producer\endlink: statistical method called by a Run object</li>
  *    <ul>
- *       <li>deltanll_hypotest creates likelihood-ratio test statistics to find the critical region for rejecting a "background only" null hypothesis</li>
+ *       <li>\link deltanll_hypotest deltanll_hypotest \endlink creates likelihood-ratio test statistics to find the critical region for rejecting a "background only" null hypothesis</li>
  *       <li>(not yet implemented:) deltanll_intervals interval creation based on the difference in the negative-log-likelihood function</li>
- *       <li>mle maximum likelihood estimator estimates parameter values and errors using a minimizer on the negative-log-likelihood function</li>
- *       <li>(not yet implemented:) mcmc_quantiles Quantile estimator based on Markov-Chain Monte-Carlo to be used for interval estimation</li>
+ *       <li>\link mle mle \endlink maximum likelihood estimator estimates parameter values and errors using a minimizer on the negative-log-likelihood function</li>
+ *       <li>\link mcmc_quantiles mcmc_quantiles \endlink Quantile estimator based on Markov-Chain Monte-Carlo to be used for interval estimation</li>
  *       <li>(not yet implemented:) mcmc_marginal Determine the marginal distribution (as Histogram) for a parameter</li>
- *       <li>mcmc_posterior_ratio analogue of deltanll_hypotest, but integrates over any free parameters instead of minimizing</li>
- *       <li>pseudodata_writer writes out the created pseudo data. Not really a statistical method, but technically implemented as a Producer as well</li>
+ *       <li>\link mcmc_posterior_ratio mcmc_posterior_ratio \endlink analogue of deltanll_hypotest, but integrates over any free parameters instead of minimizing</li>
+ *       <li>\link pseudodata_writer pseudodata_writer \endlink writes out the created pseudo data. Not really a statistical method, but technically implemented as a Producer as well</li>
  *    </ul>
  * </ul>
  */
@@ -602,6 +609,125 @@
  * something done.
  */
 
+/** \page testing Testing
+ *
+ * There are two types of tests in %theta: unit tests which focus on testing the functionality of
+ * a single class or method and statistical test cases which compare results obtained from %theta
+ * with results analytically obtainable. For the unit tests, look at the source files in the \c test source
+ * directory; only the second kind of testing will be discussed here. The source code of these
+ * tests can be found in the \c test-stat directory.
+ *
+ * To run the unit tests, execute
+ * <pre>
+ * make
+ * source setenv.sh
+ * make run-test
+ * </pre>
+ * from the %theta directory.
+ *
+ * \section testing_counting-nobkg Counting experiment without background
+ *
+ * As first test case, consider a model with poisson signal around a true mean \f$ \Theta \ge 0 \f$. The outcome of an experiment is completely
+ * described by the number of observed events, \f$ n \f$. The likelihood function is given by
+ * \f[
+ *   L(\Theta | n) = \frac{\Theta^n e^{-\Theta}}{n!}
+ * \f]
+ * which is maximized by the choice \f$ \Theta = n \f$.
+ *
+ * A model template is defined in \c test-stat/counting-nobkg.cfg.tpl; the tests will be done for \f$ \Theta=5.0 \f$ (called "low n case" below)
+ * and the for \f$ \Theta=10000.0 \f$ (called "asymptotic case" below). Some methods are not expected to have the
+ * desired properties for these models. However, this is not what is to be tested here; rather, the implementation
+ * of the algorithms is the interest of these tests.
+ *
+ * \subsection testing_counting-nobkg_mle Maximum likelihood method (mle)
+ *
+ * <em>Test script:</em> <tt>test-stat/counting-nobkg-mle.sh</tt>
+ *
+ * 500 pseudo experiments are performed by throwing a Poisson random number around \f$ \Theta \f$ which is passed
+ * as number of observed events \f$ n \f$ to the mle implementation.
+ *
+ * The maximum likelihood method should always estimate \f$ \hat\Theta = n \f$. A small deviation due to numerical evaluation
+ * is tolerated. The relative deviation must not exceed \f$ 10^{-4} \f$. In the asymptotic case, also the error estimate
+ * \f$ \hat\sigma_{\Theta} \f$ from the minimizer is checked: \f$ \hat\sigma_{\Theta}^2 = \hat\Theta \f$ should hold with
+ * a maximum relative error of \f$ 10^{-4} \f$.
+ *
+ * \subsection testing_counting-nobkg_mcmc_quantiles Marginal posterior quantiles with Markov-Chain Monte-Carlo (mcmc_quantiles)
+ *
+ * <em>Test script:</em> <tt>test-stat/counting-nobkg-mcmc_quant.sh</tt>
+ *
+ * With a flat prior on the signal mean \f$ \Theta \f$, the posterior in
+ * case of \f$ n \f$ observed events, \f$ \pi(\Theta | n)\f$, is the same as the likelihood function given above
+ * (it is already properly normalized):
+ * \f[
+ *   \pi(\Theta | n) = \frac{\Theta^n e^{-\Theta}}{n!}.
+ * \f]
+ *
+ * Given an estimate for the q-quantile, \f$ \hat{\Theta}_q \f$, the true value of \f$ q \f$ is given by
+ * \f[
+ *  q = \int_0^{\hat{\Theta}_q} d\Theta\,\pi(\Theta | n) = \frac{\gamma(n+1, \hat{\Theta}_q)}{\Gamma(n+1)}
+ * \f]
+ * where \f$ \Gamma \f$ is the gamma function and \f$ \gamma \f$ the incomplete lower gamma function.
+ *
+ * The tested quantiles correspond to the median, the one-sigma central interval and a 95% upper limit: 0.5, 0.16, 0.84, 0.95.
+ * The Markov chain length is 10,000.
+ *
+ * The test calculates the error on \f$ q \f$ (<em>not</em> on \f$ \hat{\Theta}_q \f$) for 50 pseudo experiments for each of
+ * the 4 quantiles. If the deviation is larger than 0.015 (absolute), then the pseudo-experiment is marked as "estimate too low" or "estimate too high"
+ * depending whether the requested value of \f$ q \f$ was lower or high than the estimated value. (A pseudo-experiment can have both marks
+ * as there are 4 quantiles which are tested.)
+ *
+ * If there are more than 15 pseudo experiments in either of the categories, the test is considered failed, otherwise, it is considered passed.
+ * As additional diagnostics, the number of pseudo experiments marked "too low" and "too high" are printed. In a bias-free method, these
+ * two values should be similar, i.e., the value estimated should be sometimes too low and sometimes too high, and not prefer
+ * one side. However, no automatic diagnostics is run, as these numbers are small.
+ *
+ * \subsection testing_counting-nobkg_deltanll Confidence intervals based on asymptotic properties of the likelihood ratio (deltanll_intervals)
+ *
+ * <em>Test script:</em> <tt>test-stat/counting-nobkg-deltanll_intervals.sh</tt>
+ *
+ * Given the number of observed events, \f$ n \f$, the logarithm of the likelihood ratio between
+ * a free value \f$ \Theta \f$ and the value which maximizes the likelihood function (i.e., \f$ \Theta = n \f$) is
+ * \f[
+ *    \log LR(\Theta | n) = n \log\frac n \Theta - n + \Theta.
+ * \f]
+ *
+ * For a given confidence level \f$ c \f$, the interval construction finds the two values of \f$ \Theta \f$,
+ * \f$ l_c \f$ and \f$ u_c \f$ with \f$ l_c \le u_c \f$ for which the likelihood ratio equals 
+ *
+ * The requested confidence levels tested correspond to one-sigma and two-sigma interals and the maximum likelihood value, i.e.,
+ * confidence levels 0.6827, 0.9545 and 0. The outcome if the method are estimates for the lower and upper values of
+ * the intervals for \f$ |Theta \f$. Below, they will be called
+ * \f$ l_{1\sigma}, u_{1\sigma}, l_{2\sigma}, u_{2\sigma}, l_{0} \f$.
+ *
+ * In the asymptotic case, it is also checked that the one-sigma and two-sigma intervals are where expected, i.e.,
+ * \{eqnarray*}
+ *   (l_{1\sigma} - l_0)^2 &= l_0 \\
+ *   (u_{1\sigma} - l_0)^2 &= l_0 \\
+ *   (l_{2\sigma} - l_0)^2 &= 4\cdot l_0 \\
+ *   (u_{2\sigma} - l_0)^2 &= 4\cdot l_0 \\
+ * \}
+ * with a maximum relative difference of \f$ 10^{-4} \f$, where "relative difference" means dividing the difference of the
+ * left and right hand side of these equations by the right hand side.
+ *
+ * \section testing_counting-fixedbkg Counting experiment with fixed background mean
+ *
+ * As second test case, consider a counting experiment with poisson signal with true mean \f$ \Theta \ge 0 \f$ and
+ * background mean \f$ \mu \ge 0 \f$ which is assumed to be known.
+ *
+ * \section testing_counting-constraintbkg Counting experiment with background sideband fit
+ *
+ * As third test case, consider a counting experiment with poisson signal with true mean \f$ \Theta \ge 0 \f$ and
+ * a background mean \f$ \mu \ge 0 \f$ which is assumed to be unknown a-priori. The counting is done in two channels:
+ * the first channel, \f$ c_1 \f$, is a selection specifically for signal events. The model assumes that the number
+ * of observed events follows a Poisson distribution around \f$ \Theta + \mu \f$. In a statistically independent
+ * background channel, \f$ c_2 \f$, no signal is expected at all and the model assumes that the number of observed events
+ * follows a Poisson distribution around \f$ R\times\mu \f$, where \f$ R \f$ is the acceptance ratio for background events of
+ * the two channels. It is assumed that \f$ R \f$ is known.
+ *
+ *
+ */
+
 /** \brief Common namespace for %theta
  */
 namespace theta{}
+

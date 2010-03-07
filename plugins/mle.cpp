@@ -11,66 +11,33 @@ using namespace std;
 using namespace libconfig;
 using namespace theta::plugin;
 
-void MLETable::init(const theta::VarIdManager & vm, const theta::ParIds & ids){
-    save_ids=ids;
-    pid_names.reserve(ids.size());
-    for(ParIds::const_iterator it=ids.begin(); it!=ids.end(); ++it){
-        pid_names.push_back(vm.getName(*it));
-    }
-}
-
-void MLETable::create_table() {
-    stringstream ss;
-    ss << "CREATE TABLE '" << name << "' (runid INTEGER(4), eventid INTEGER(4), nll DOUBLE";
-    for (vector<string>::const_iterator it = pid_names.begin(); it != pid_names.end(); ++it) {
-        ss << ", '" << *it << "' DOUBLE, '" << *it << "_error' DOUBLE";
-    }
-    ss << ");";
-    exec(ss.str());
-    ss.str("");
-    ss << "INSERT INTO '" << name << "' VALUES(?,?,?";
-    for (vector<string>::const_iterator it = pid_names.begin(); it != pid_names.end(); ++it) {
-        ss << ",?,?";
-    }
-    ss << ");";
-    insert_statement = prepare(ss.str());
-}
-
-void MLETable::append(const Run & run, double nll, const ParValues & values, const ParValues & errors) {
-    sqlite3_bind_int(insert_statement, 1, run.get_runid());
-    sqlite3_bind_int(insert_statement, 2, run.get_eventid());
-    sqlite3_bind_double(insert_statement, 3, nll);
-    int i=4;
-    for(ParIds::const_iterator it=save_ids.begin(); it!=save_ids.end(); ++it){
-        sqlite3_bind_double(insert_statement, i, values.get(*it));
-        i++;
-        sqlite3_bind_double(insert_statement, i, errors.get(*it));
-        i++;
-    }
-    int res = sqlite3_step(insert_statement);
-    sqlite3_reset(insert_statement);
-    if (res != 101) {
-        error(__FUNCTION__);//throws exception
+void mle::define_table(){
+    c_nll = table->add_column(*this, "nll", ProducerTable::typeDouble);
+    for(size_t i=0; i<save_ids.size(); ++i){
+        parameter_columns.push_back(table->add_column(*this, vm->getName(save_ids[i]), ProducerTable::typeDouble));
+        error_columns.push_back(table->add_column(*this, vm->getName(save_ids[i]) + "_error", ProducerTable::typeDouble));
     }
 }
 
 void mle::produce(Run & run, const Data & data, const Model & model) {
-    if(!table) table.connect(run.get_database());
     NLLikelihood nll = model.getNLLikelihood(data);
     MinimizationResult minres = minimizer->minimize(nll);
-    table.append(run, minres.fval, minres.values, minres.errors_plus);
+    table->set_column(c_nll, minres.fval);
+    for(size_t i=0; i<save_ids.size(); ++i){
+        table->set_column(parameter_columns[i], minres.values.get(save_ids[i]));
+        table->set_column(error_columns[i], 0.5 * (minres.errors_plus.get(save_ids[i]) + minres.errors_minus.get(save_ids[i])) );
+    }
 }
 
-mle::mle(const theta::plugin::Configuration & cfg): Producer(cfg), table(get_name()){
+mle::mle(const theta::plugin::Configuration & cfg): Producer(cfg), vm(cfg.vm){
     SettingWrapper s = cfg.setting;
     minimizer = PluginManager<Minimizer>::build(Configuration(cfg, s["minimizer"]));
     size_t n_parameters = s["parameters"].size();
-    ParIds save_ids;
     for (size_t i = 0; i < n_parameters; i++) {
         string par_name = s["parameters"][i];
-        save_ids.insert(cfg.vm->getParId(par_name));
+        save_ids.push_back(cfg.vm->getParId(par_name));
     }
-    table.init(*cfg.vm, save_ids);
+    //table.init(*cfg.vm, save_ids);
 }
 
 REGISTER_PLUGIN(mle)

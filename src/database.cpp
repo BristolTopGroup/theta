@@ -17,7 +17,6 @@
 
 using namespace std;
 using namespace theta;
-using namespace database;
 
 namespace fs = boost::filesystem;
 
@@ -118,14 +117,14 @@ void Database::error(const string & functionName) {
     throw DatabaseException(ss.str());
 }
 
-Table::Table(const string & name_) :
-    name(name_), insert_statement(0) {
-    Table::checkName(name);
+Table::Table(const string & name_, const boost::shared_ptr<Database> & db_) :
+    name(name_), table_created(false), insert_statement(0), next_column(1), db(db_) {
+    checkName(name);
 }
 
 void Table::checkName(const string & name) {
     if (name.size() == 0)
-        throw DatabaseException("Table::validateName: name was empty.");
+        throw DatabaseException("Table::checkName: name was empty.");
     if (not ((name[0] >= 'A' && name[0] <= 'Z') or (name[0] >= 'a' && name[0] <= 'z'))) {
         stringstream ss;
         ss << "Table::checkName: name '" << name << "' does not start with a letter as is required.";
@@ -146,10 +145,95 @@ void Table::checkName(const string & name) {
     }
 }
 
-LogTable::LogTable(const std::string & name): Table (name), level(severity::info){
+Table::column Table::add_column(const std::string & name, const data_type & type){
+    if(table_created) throw IllegalStateException("Table::add_column called after table already created (via call to set_column / add_row).");
+    checkName(name);
+    column_definitions << ", '" << name << "' ";
+    switch(type){
+        case typeDouble: column_definitions << "DOUBLE"; break;
+        case typeInt: column_definitions << "INTEGER(4)"; break;
+        case typeString: column_definitions << "TEXT"; break;
+        case typeBlob: column_definitions << "BLOB"; break;
+        default:
+            throw InvalidArgumentException("Table::add_column: invalid type parameter given.");
+    };
+    return next_column++;
+}
+
+void Table::create_table(){
+    stringstream ss;
+    string col_def = column_definitions.str();
+    col_def.erase(0, 1);//delete first ','
+    ss << "CREATE TABLE '" << name << "' (" << col_def << ");";
+    db->exec(ss.str());
+    ss.str("");
+    ss << "INSERT INTO '" << name << "' VALUES(";
+    for(int i=1; i<next_column; ++i){
+        if(i > 1) ss << ", ?";
+        else ss << "?";
+    }
+    ss << ");";
+    insert_statement = db->prepare(ss.str());
+    table_created = true;
+}
+
+
+void Table::set_column(const Table::column & c, double d){
+    if(not table_created) create_table();
+    sqlite3_bind_double(insert_statement, c, d);
+}
+
+void Table::set_column(const Table::column & c, int i){
+    if(not table_created) create_table();
+    sqlite3_bind_int(insert_statement, c, i);
+}
+
+void Table::set_column(const Table::column & c, const std::string & s){
+    if(not table_created) create_table();
+    sqlite3_bind_text(insert_statement, c, s.c_str(), s.size(), SQLITE_TRANSIENT);
+}
+
+void Table::set_column(const Table::column & c, const void * data, size_t nbytes){
+    if(not table_created) create_table();
+    sqlite3_bind_blob(insert_statement, c, data, nbytes, SQLITE_TRANSIENT);
+}
+
+void Table::add_row(){
+    int res = sqlite3_step(insert_statement);
+    sqlite3_reset( insert_statement);
+    //reset all to NULL
+    sqlite3_clear_bindings(insert_statement);
+    if (res != 101) {
+        throw DatabaseException("Table::add_row: sql returned error"); //TODO: more error info
+    }
+}
+
+/* ProducerTable */
+ProducerTable::ProducerTable(const std::string & name, const boost::shared_ptr<Database> & db): Table(name, db){
+    c_runid = Table::add_column("runid", typeInt);
+    c_eventid = Table::add_column("eventid", typeInt);
+}
+
+ProducerTable::column ProducerTable::add_column(const Producer & p, const std::string & name, const data_type & type){
+    return Table::add_column(name, type);
+}
+
+void ProducerTable::add_row(const Run & run){
+    set_column(c_runid, run.get_runid());
+    set_column(c_eventid, run.get_eventid());
+    Table::add_row();
+}
+
+/* LogTable */
+LogTable::LogTable(const std::string & name, const boost::shared_ptr<Database> & db): Table (name, db), level(info){
    for(int i=0; i<4; ++i){
        n_messages[i]=0;
    }
+   c_runid = add_column("runid", typeInt);
+   c_eventid = add_column("eventid", typeInt);
+   c_severity = add_column("severity", typeInt);
+   c_message = add_column("message", typeString);
+   c_time = add_column("time", typeDouble);
 }
 
 const int* LogTable::get_n_messages() const{
@@ -157,120 +241,75 @@ const int* LogTable::get_n_messages() const{
 }
     
 
-void LogTable::set_loglevel(severity::e_severity s){
+void LogTable::set_loglevel(e_severity s){
     level = s;
 }
 
-severity::e_severity LogTable::get_loglevel() const{
+LogTable::e_severity LogTable::get_loglevel() const{
     return level;
 }
 
-void LogTable::really_append(const Run & run, severity::e_severity s, const string & message) {
+void LogTable::really_append(const Run & run, e_severity s, const string & message) {
     n_messages[s]++;
-    sqlite3_bind_int(insert_statement, 1, run.get_runid());
-    sqlite3_bind_int(insert_statement, 2, run.get_eventid());
-    sqlite3_bind_int(insert_statement, 3, s);
-    sqlite3_bind_text(insert_statement, 4, message.c_str(), -1, SQLITE_TRANSIENT);
+    set_column(c_runid, run.get_runid());
+    set_column(c_eventid, run.get_eventid());
+    set_column(c_severity, s);
+    set_column(c_message, message);
     using namespace boost::posix_time;
     using namespace boost::gregorian;
     ptime t(microsec_clock::universal_time());
     time_duration td = t - ptime(date(1970, 1, 1));
     double time = td.total_microseconds() / 1000000.0;
-    sqlite3_bind_double(insert_statement, 5, time);
-    int res = sqlite3_step(insert_statement);
-    sqlite3_reset( insert_statement);
-    if (res != 101) {
-        error(__FUNCTION__);//throws exception
-    }
+    set_column(c_time, time);
+    add_row();
 }
 
-void LogTable::create_table(){
-    stringstream ss;
-    ss << "CREATE TABLE '" << name << "' (runid INTEGER(4), eventid INTEGER(4), severity INTEGER(1), message TEXT, time DOUBLE);";
-    exec(ss.str().c_str());
-    ss.str("");
-    ss << "INSERT INTO '" << name << "' VALUES(?,?,?,?,?);";
-    insert_statement = prepare(ss.str());
-}
-
-
-void ProducerInfoTable::create_table() {
-    stringstream ss;
-    ss << "CREATE TABLE '" << name << "' (ind INTEGER(4), name TEXT, type TEXT, info TEXT);";
-    exec(ss.str().c_str());
-    ss.str("");
-    ss << "INSERT INTO '" << name << "' VALUES(?,?,?,?);";
-    insert_statement = prepare(ss.str());
+// ProducerInfoTable
+ProducerInfoTable::ProducerInfoTable(const std::string & name, const boost::shared_ptr<Database> & db): Table(name, db){
+    c_ind = add_column("ind", typeInt);
+    c_name = add_column("name", typeString);
+    c_type = add_column("type", typeString);
+    c_info = add_column("info", typeString);
 }
     
 void ProducerInfoTable::append(int index, const std::string & p_name, const std::string & p_type, const std::string & info){
-    sqlite3_bind_int(insert_statement, 1, index);
-    sqlite3_bind_text(insert_statement, 2, p_name.c_str(), p_name.size(), SQLITE_TRANSIENT);
-    sqlite3_bind_text(insert_statement, 3, p_type.c_str(), p_type.size(), SQLITE_TRANSIENT);
-    sqlite3_bind_text(insert_statement, 4, info.c_str(), info.size(), SQLITE_TRANSIENT);
-    int res = sqlite3_step(insert_statement);
-    sqlite3_reset(insert_statement);
-    if (res != 101) {
-        error(__FUNCTION__);//throws exception
-    }
+    set_column(c_ind, index);
+    set_column(c_name, p_name);
+    set_column(c_type, p_type);
+    set_column(c_info, info);
+    add_row();
 }
 
-void RndInfoTable::create_table(){
-    stringstream ss;
-    ss << "CREATE TABLE '" << name << "' (runid INTEGER(4), seed INTEGER(8));";
-    exec(ss.str().c_str());
-    ss.str("");
-    ss << "INSERT INTO '" << name << "' VALUES(?,?);";
-    insert_statement = prepare(ss.str());
+//RndInfoTable
+RndInfoTable::RndInfoTable(const std::string & name_, const boost::shared_ptr<Database> & db): Table(name_, db){
+    c_runid = add_column("runid", typeInt);
+    c_seed = add_column("seed", typeInt);
 }
 
-void RndInfoTable::append(const Run & run, long seed){
-    sqlite3_bind_int(insert_statement, 1, run.get_runid());
-    sqlite3_bind_int64(insert_statement, 2, seed);
-    int res = sqlite3_step(insert_statement);
-    sqlite3_reset(insert_statement);
-    if (res != 101) {
-        error(__FUNCTION__);//throws exception
-    }
+void RndInfoTable::append(const Run & run, int seed){
+    set_column(c_runid, run.get_runid());
+    set_column(c_seed, seed);
+    add_row();
 }
 
-ParamTable::ParamTable(const std::string & name_, const theta::VarIdManager & vm, const theta::ParIds & ids):
-    Table(name_), par_ids(ids){
-    pid_names.reserve(par_ids.size());
-    for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
-        pid_names.push_back(vm.getName(*it));
+//ParamTable
+ParamTable::ParamTable(const std::string & name_, const boost::shared_ptr<Database> & db, const theta::VarIdManager & vm, const theta::ParIds & ids):
+        Table(name_, db), par_ids(ids){
+    c_runid = add_column("runid", typeInt);
+    c_eventid = add_column("eventid", typeInt);
+    columns.reserve(par_ids.size());
+    for(ParIds::const_iterator it=ids.begin(); it!=ids.end(); ++it){
+        columns.push_back(add_column(vm.getName(*it), typeDouble));
     }
-}
-
-void ParamTable::create_table() {
-    stringstream ss;
-    ss << "CREATE TABLE '" << name << "' (runid INTEGER(4), eventid INTEGER(4)";
-    for (vector<string>::const_iterator it = pid_names.begin(); it != pid_names.end(); ++it) {
-        ss << ", '" << *it << "' DOUBLE";
-    }
-    ss << ");";
-    exec(ss.str());
-    //prepare insert statement:
-    ss.str("");
-    ss << "INSERT INTO " << name << " VALUES(?, ?";
-    for (vector<string>::const_iterator it = pid_names.begin(); it != pid_names.end(); ++it) {
-        ss << ", ?";
-    }
-    ss << ");";
-    insert_statement = prepare(ss.str());
 }
 
 void ParamTable::append(const Run & run, const ParValues & values) {
-    sqlite3_bind_int(insert_statement, 1, run.get_runid());
-    sqlite3_bind_int(insert_statement, 2, run.get_eventid());
-    int next_col = 3;
-    for (ParIds::const_iterator it = par_ids.begin(); it != par_ids.end(); it++) {
-        sqlite3_bind_double(insert_statement, next_col, values.get(*it));
-        next_col++;
+    set_column(c_runid, run.get_runid());
+    set_column(c_eventid, run.get_runid());
+    int icol = 0;
+    for (ParIds::const_iterator it = par_ids.begin(); it != par_ids.end(); ++it, ++icol) {
+        set_column(columns[icol], values.get(*it));
     }
-    int res = sqlite3_step(insert_statement);
-    sqlite3_reset( insert_statement);
-    if (res != 101) {
-        error(__FUNCTION__);//throws exception
-    }
+    add_row();
 }
+

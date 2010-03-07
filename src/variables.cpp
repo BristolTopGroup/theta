@@ -86,10 +86,10 @@ std::string VarIdManager::getName(const ObsId & id) const {
     return it->second;
 }
 
-VarIdManager::VarIdManager(const VarIdManager & rhs): pid_to_name(rhs.pid_to_name), name_to_pid(rhs.name_to_pid),
+/*VarIdManager::VarIdManager(const VarIdManager & rhs): pid_to_name(rhs.pid_to_name), name_to_pid(rhs.name_to_pid),
         pid_to_default(rhs.pid_to_default),  pid_to_range(rhs.pid_to_range), next_pid_id(rhs.next_pid_id),
         oid_to_name(rhs.oid_to_name), name_to_oid(rhs.name_to_oid), oid_to_range(rhs.oid_to_range), oid_to_nbins(rhs.oid_to_nbins), next_oid_id(rhs.next_oid_id)
-        {}
+        {}*/
 
 ParId VarIdManager::getParId(const std::string & name) const {
     std::map<std::string, ParId>::const_iterator it = name_to_pid.find(name);

@@ -56,7 +56,7 @@ namespace theta {
 
         /** \brief Returns the parameters this function depends on
          */
-        ParIds getParameters() const{
+        const ParIds & getParameters() const{
             return par_ids;
         }
 

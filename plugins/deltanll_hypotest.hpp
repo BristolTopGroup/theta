@@ -9,29 +9,6 @@
 
 #include <string>
 
-/** \brief Result table for the deltanll_hypotest producer
- *
- * The table contains the following columns:
- * <ol>
- * <li> runid INT(4)</li>
- * <li> eventid INT(4)</li>
- * <li> posterior_sb DOUBLE</li>
- * <li> posterior_b DOUBLE</li>
- * </ol>
- *
- * For every event, one entry is made, containing the result of the \link deltanll_hypotest deltanll_hypotest \endlink.
- */
-class DeltaNLLHypotestTable: public database::Table {
-public:
-    /// Construct a DeltaNLLHypotestTable with name \c name_.
-    DeltaNLLHypotestTable(const std::string & name_): database::Table(name_){}
-    /// Save the \c nll_sb and \c nll_b values to the table using current \c runid and \c eventid from \c run.
-    void append(const theta::Run & run, double nll_sb, double nll_b);
-private:
-    /// overrides Table::create_table
-    virtual void create_table();
-};
-
 /** \brief A producer to create test statistics based on likelihood ratio in case of signal search.
  *
  * This producer assumes that you search for a signal and can use special parameter values in your model to define
@@ -61,7 +38,8 @@ private:
  * fixed as specified in the configuration file and for the "background-only" parameters fixed and minimize the negative log-likelihood
  * with respect to all other parameters (while any constraints configured in the model apply, of course).
  *
- * The found values of the negativ log-likelihood are saved in the \c nll_sb and \c nll_b columns of the \link DeltaNLLHypotestTable result table \endlink.
+ * The result table will contain the columns "nll_sb" and "nll_b", which contain the found value of the negative log-likelihood
+ * for the "signal-plus-background" and "background-only" hypotheses, respectively.
  *
  * For a typical application, the "signal-plus-background" setting does not impose any fixed values and is the
  * empty settings group ("{};"), whereas the "background-only" settings group sets the signal to zero. Only
@@ -79,14 +57,18 @@ class deltanll_hypotest: public theta::Producer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     deltanll_hypotest(const theta::plugin::Configuration & ctx);
+    
     /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
+    
+    /// Define the table columns "nll_sb" and "nll_b" in the result table
+    virtual void define_table();
 private:
     theta::ParValues s_plus_b;
     theta::ParValues b_only;
     std::auto_ptr<theta::Minimizer> minimizer;
     theta::ParIds par_ids_constraints;
-    DeltaNLLHypotestTable table;
+    theta::ProducerTable::column c_nll_b, c_nll_sb;
 };
 
 #endif

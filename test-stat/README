@@ -1,0 +1,7 @@
+For a decription of the tests, refer to the Testing page in the doxygen documentation.
+
+To run the tests, you need additional dependencies, namely:
+ * bc
+ * sqlite3 command line interface
+
+Both should be available through packages on almost any distribution.

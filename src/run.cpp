@@ -27,21 +27,25 @@ void Run::set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
 }
 
 void Run::run(){
-    //record all producers in prodinfo_table:
+    //record all producers in prodinfo_table and setup the tables of the producers:
     for(size_t i=0; i<producers.size(); i++){
         prodinfo_table.append(static_cast<int>(i), producers[i].get_name(), producers[i].get_type(), producers[i].get_information());
+        producer_tables.push_back(boost::shared_ptr<ProducerTable>(new ProducerTable(producers[i].get_name(), db)));
+        producers[i].set_table(producer_tables[i]);
+        producers[i].define_table();
     }
     //write random seeds to rndinfo_table:
     rndinfo_table.append(*this, seed);
+    //log the start of the run:
     eventid = 0;
-    logtable->append(*this, database::severity::info, "run start");
+    logtable->append(*this, LogTable::info, "run start");
     //call the run implementation of the subclass:
     run_impl();
     eventid = 0; // to indicate in the log table that this is an "event-wide" entry
-    logtable->append(*this, database::severity::info, "run end");
+    logtable->append(*this, LogTable::info, "run end");
     if(log_report){
         const int* n_messages = logtable->get_n_messages();
-        database::severity::e_severity s = logtable->get_loglevel();
+        LogTable::e_severity s = logtable->get_loglevel();
         cout << endl << endl << "Log report:" << endl;
         cout << "  errors:   " << setw(6) << n_messages[0] << endl;
         if(s > 0)
@@ -58,8 +62,8 @@ void Run::addProducer(std::auto_ptr<Producer> & p){
 }
 
 Run::Run(const plugin::Configuration & cfg): seed(-1), rnd(new RandomSourceTaus()),
-      vm(cfg.vm), m_pseudodata(cfg.vm), m_producers(cfg.vm), db(new database::Database(cfg.setting["result-file"])),
-      logtable(new database::LogTable("log")), log_report(true), prodinfo_table("prodinfo"), rndinfo_table("rndinfo"),
+      vm(cfg.vm), m_pseudodata(cfg.vm), m_producers(cfg.vm), db(new Database(cfg.setting["result-file"])),
+      logtable(new LogTable("log", db)), log_report(true), prodinfo_table("prodinfo", db), rndinfo_table("rndinfo", db),
       runid(1), eventid(0), n_event(cfg.setting["n-events"]){
       SettingWrapper s = cfg.setting;
       if(s.exists("run-id")) runid = s["run-id"];
@@ -81,19 +85,14 @@ Run::Run(const plugin::Configuration & cfg): seed(-1), rnd(new RandomSourceTaus(
           m_producers = *ModelFactory::buildModel(plugin::Configuration(cfg, s["model-producers"]));
           s["model-pseudodata"];//will throw if not found
        }
-       
-      logtable->connect(db);
-      prodinfo_table.connect(db);
-      rndinfo_table.connect(db);
-      params_table.reset(new database::ParamTable("params", *vm, m_pseudodata.getParameters()));
-      params_table->connect(db);
-      database::severity::e_severity level = database::severity::warning;
+      params_table.reset(new ParamTable("params", db, *vm, m_pseudodata.getParameters()));
+      LogTable::e_severity level = LogTable::warning;
       if(s.exists("log-level")){
          std::string loglevel = s["log-level"];
-         if(loglevel=="error") level = database::severity::error;
-         else if(loglevel=="warning") level = database::severity::warning;
-         else if(loglevel=="info")level = database::severity::info;
-         else if(loglevel=="debug")level = database::severity::debug;
+         if(loglevel=="error") level = LogTable::error;
+         else if(loglevel=="warning") level = LogTable::warning;
+         else if(loglevel=="info")level = LogTable::info;
+         else if(loglevel=="debug")level = LogTable::debug;
          else{
              std::stringstream ss;
              ss << "log level given in " << s["log-level"].getPath() << " unknown (given '" << loglevel << "'; only allowed values are "

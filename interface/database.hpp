@@ -13,13 +13,11 @@
 #include "interface/variables.hpp"
 #include "interface/exception.hpp"
 
-/** \brief Namespace for the Database and Table objects to save any data created during a run.
- */
-namespace database {
+namespace theta {
 
-/** \brief Used as abstraction to a %database file, where one or more tables can reside.
+/** \brief Used as abstraction to a database file, where one or more tables can reside
  * 
- * There is a one-to-one correspondence between a file on the file system and a "Database" object.
+ * There is a one-to-one correspondence between a file on the file system and a Database instance.
  */
 class Database: private boost::noncopyable {
     /** Table objects make use of the private methods \c exec, \c error, and \c prepare.
@@ -52,15 +50,15 @@ public:
         
 private:
     /** Execute the sql string \c query.
-     * */
+     */
     void exec(const std::string & query);
     
     /** Prepare the sql statement \c query.
-     * */
+     */
     sqlite3_stmt* prepare(const std::string & query);
     
     /** Start a Transaction. In case of an error, a DatabaseException is thrown.
-     * */
+     */
     void beginTransaction();
     
     /** End a transaction previously started with \c beginTransaction. Calling
@@ -82,136 +80,148 @@ private:
 
 
 /** \brief Abstract base class for all tables stored in a Database.
- * 
- * Classes derived from this abstract class usually implement -- apart from a
- * constructor -- only two methods:
- * <ol>
- * <li>the virtual method create_table() which created the actual table in the databse instance (note that
- *   at construction time, the Database instance might not yet be available. Therefore, the actual
- *   table creation is not done in the constructor)</li>
- * <li>an \c append() method which inserts a new row at the end of the table.
- *     The signature of this method depends on the fields for the particular table.</li>
- * </ol>
  *
- * Any producer table MUST have, as first two fields:
+ * Writing information to the output database is done via subclasses of Table.
+ * Producers always write their result in an instance of ProducerTableInfo, namely
+ * Producer::table.
+ *
+ * A derived class uses this class by:
  * <ol>
- *   <li>runid INT(4)</li>
- *   <li>eventid INT(4)</li>
+ *   <li>calling add_column one or more times at initialization and saving the result in some data member of the derived class</li>
+ *   <li>To write out a row, call the set_column methods on all columns defined and add_row</li>
  * </ol>
- * and write the current runid and eventid of the event for which the result was produced to the table.
  */
-//TODO: This runid, eventod column requirement should be enforced by design. For example,
-// Table could provide protected methods
-//   column addColumn(string, data_type::type) (called at the beginning)
-//then, repeatedly:
-//    void setColumn(column, value) for each column and
-//    void addRow() for each row to add, after setting all columns
-//which provide an abstraction to SQL.
-// namespace data_type { enum type { double_, int_, string_, blob_ }; }
 class Table: private boost::noncopyable {
-    /** Validate table (or column) names. Throws a theta::DatabaseException if the name
+    /** \brief Validate table (or column) names.
+     *
+     * Throws a theta::DatabaseException if the name
      * is not considered a valid name for a table or column.
-     * valid names start with a letter and are only composed of
+     *
+     * Valid names start with a letter and are only composed of
+     * <pre>
      * A-Za-z0-9_-
-     * This is (almost) the same as the name of Settings accepted by libconfig.
+     * </pre>
+     * only. This is (almost) the same as the name of Settings accepted by libconfig.
      */
     static void checkName(const std::string & name);
-    
-public:
 
-    /** \brief Returns whether the setup was run correctly.
-     *
-     * After a table instance has been created, it is <b>not</b> automatically
-     * associated with a particular Databse instance. Rather, connect() has to be
-     * called before writing data to the table. To check whether this setup has already run,
-     * use this function.
-     */
-    operator bool(){
-        return db.get()!=0;
-    }
-
-    /** \brief setup a connection to a Database instance.
-     *
-     * It is not valid to call this method twice on the same table instance
-     * (be it the same or a different Database). In such a case, an
-     * IllegalStateException will be thrown.
-     */
-    void connect(const boost::shared_ptr<Database> & db_){
-        //if already connected: throw
-        if(*this){
-            throw theta::IllegalStateException("Table::connect: table was already connected!");
-        }
-        //well, maybe the word "connection" is an exaggeration ...
-        db = db_;
-        create_table();
-    }
-    
 protected:
-    /** \brief create the tables.
+
+    /** \brief Data types of columns
      *
-     * This function has to be overridden by derived classes which will create
-     * their tables here.
+     * These data types are the supported types for columns in a table.
      */
-    virtual void create_table() = 0;
+    enum data_type { typeDouble, typeInt, typeString, typeBlob };
+
+    /** \brief the columns type to use for set_column and add_column
+     *
+     * For now, we just use an integer, starting from 1. It will be passed to
+     * the sqlite_bind-functions.
+     */
+    typedef int column;
 
     /// constructor setting the table name.
-    Table(const std::string & name_);
+    Table(const std::string & name, const boost::shared_ptr<Database> & db);
 
     /// default destructor declared virtual, as polymorphic access to derived classes might occur
     virtual ~Table() {}
     
-    /// Proxy to Database::exec for derived classes.
-    void exec(const std::string & query){
-        db->exec(query);
-    }
-    /// Proxy to Database::beginTransaction
-    void beginTransaction(){
-        db->beginTransaction();
-    }
+    /** \brief Add a column to the table
+     *
+     * The column will have name \c name and a data type scpecified by \c type.
+     *
+     * The result can be used as first argument to the set_column() methods. Other than saving it
+     * and using it there, you should not do anything with it.
+     *
+     * This method should only be called at the beginning, after the construction of the object and
+     * before using it to actually write any data. If this method is called after a call
+     * to either set_column or add_row, an IllegalStateException will be thrown.
+     */
+    column add_column(const std::string & name, const data_type & type);
     
-    ///Proxy to Database::endTransaction
-    void endTransaction(){
-        db->endTransaction();
-    }    
+    //@{
+    /** \brief Set column contents
+     *
+     * The first argument is a column as returned by add_column.
+     *
+     * After setting all columns, add_row() has to be called to actually write
+     * a row to the result table.
+     */
+    void set_column(const column & c, double d);
+    void set_column(const column & c, int i);
+    void set_column(const column & c, const std::string & s);
+    void set_column(const column & c, const void * data, size_t nbytes);
+    //@}
     
-    /// Proxy to Database::prepare for derived classes.
-    sqlite3_stmt* prepare(const std::string & query){
-        return db->prepare(query);
-    }
+    
+    /** \brief Add a row to the table
+     *
+     * This uses the column values previously set with the set_column methods.
+     * If set_column was not called for all columns in the table, the contents of these columns
+     * will be NULL.
+     */
+    void add_row();
 
-    /// Proxy to Database::error for derived classes.
-    void error(const std::string & functionName){
-        db->error(functionName);
-    }
-
-    /// the name of the table in the database
+private:
     std::string name;
-    /// a pointer to the database object. Is zero
+    std::stringstream column_definitions; // use by the add_column method
+    bool table_created;
+    sqlite3_stmt * insert_statement; // associated memory is managed by Database object, which calls finalize on it ...
+    column next_column; // next free column to return by add_column
     boost::shared_ptr<Database> db;
-    /// the insert_statement for the table. Should be created by create_table()
-    sqlite3_stmt * insert_statement; //associated memory is managed by Database object, which calls finalize on any
-    //associated sqlite3_stmt.
+    
+    void create_table();
 };
 
-
-namespace severity {
-
-/** \brief Severity levels in for LogTable
- * 
- * <ol>
- * <li>\c error should be used if a serious condition is reported which will likely
- *     affect the whole result.</li>
- * <li>\c warning should be used if a problem is not as serious as \c error, but might affect
- *     the result in an undesired way. </li>
- * <li>\c info is used purely informational, without the implicit action request of
- *    \c error and \c warning. It covers such events like the start and end of a pseudo experiment. </li>
- * <li>\c debug is used like \c info, but for very detailed reporting which is usually not required.</li>
- * </ol>
- **/
-enum e_severity {
-    error = 0, warning, info, debug
+/** \brief A Table object to be used by the producers to save their result
+ *
+ * Each instance of the Producer class (from which all Producers derive by definition) holds an
+ * instance of a ProducerTable in order to store the results of this producer.
+ *
+ * Producers define their table by calling add_column repeatedly in theta::Producer::define_table.
+ *
+ * During theta::Producer::produce, they can call set_column to set the value to write for this event.
+ *
+ * The actual write is done via a call to add_row by theta::Run; the producer does not have to
+ * (and should not) call this method.
+ */
+class ProducerTable: private Table{
+    public:
+        //@{
+        /** \brief Make some protected definitions from Table public
+         */
+        using Table::typeDouble;
+        using Table::typeInt;
+        using Table::typeString;
+        using Table::typeBlob;
+        using Table::column;
+        using Table::set_column;
+        //@}
+        
+        /** \brief Add a column to this table
+         *
+         * Similar to Table::add_column, but expects the producer which this table belongs
+         * to as first argument.
+         */
+        column add_column(const theta::Producer & p, const std::string & name, const data_type & type);
+        
+        /** \brief Construct a new producer table with a given name
+         *
+         * This constructor will set up the "runid" and "eventid" columns which every ProducerTable has.
+         */
+        ProducerTable(const std::string & name, const boost::shared_ptr<Database> & db);
+        
+        /** \brief Add a row to the table, given the current run
+         *
+         * This is called by theta::Run after a producer has executed.
+         *
+         * \c run will be used to fill the \c runid and \c eventid columns.
+         */
+        void add_row(const theta::Run & run);
+        
+    private:
+        column c_runid, c_eventid;
 };
-}
 
 /** \brief Table to store all logging information
  *
@@ -238,13 +248,30 @@ enum e_severity {
  **/
 class LogTable: public Table {
 public:
+    /** \brief Severity levels for log messages
+     * 
+     * <ol>
+     * <li>\c error should be used if a serious condition is reported which will likely
+     *     affect the whole result.</li>
+     * <li>\c warning should be used if a problem is not as serious as \c error, but might affect
+     *     the result in an undesired way. </li>
+     * <li>\c info is used purely informational, without the implicit action request of
+     *    \c error and \c warning. It covers such events like the start and end of a pseudo experiment. </li>
+     * <li>\c debug is used like \c info, but for very detailed reporting which is usually not required.</li>
+     * </ol>
+     **/
+    enum e_severity {
+        error = 0, warning, info, debug
+    };
+    
     /** \brief Construct a new table in Database \c db with name \c name.
      *
      * The default loglevel is warning.
      *
      * \param name The name of the table. Has to pass Table::checkName()
+     * \param db The Database to create the table in
      */
-    LogTable(const std::string & name);
+    LogTable(const std::string & name, const boost::shared_ptr<Database> & db);
     
     /** \brief Set the current log level.
      *
@@ -253,11 +280,11 @@ public:
      *
      * Note that is it not possible to disable logging of error messages.
      */
-    void set_loglevel(severity::e_severity s);
+    void set_loglevel(e_severity s);
     
     /** \brief Get the currently active log level
      */
-    severity::e_severity get_loglevel() const;
+    e_severity get_loglevel() const;
     
     /** \brief Append message to log table, if severity is larger than currently configured level
      * 
@@ -265,7 +292,7 @@ public:
      * \param s The severity level of the log message
      * \param message The log message, in human-readable english
      */
-    void append(const theta::Run & run, severity::e_severity s, const std::string & message){
+    void append(const theta::Run & run, e_severity s, const std::string & message){
         //define inline as hint to the compiler; keep this function as short as possible to
         // encourage the compiler actually inlining it and to have high performance benefits in
         // case the user disables logging.
@@ -280,15 +307,12 @@ public:
     const int* get_n_messages() const;
 
 private:
-    /** \brief Implementation of Table::create_table to do the actual table creation.
-     */
-    virtual void create_table();
-    
+
     /// really append the log message. Called from append() in case severity is large enough
-    void really_append(const theta::Run & run, severity::e_severity s, const std::string & message);
-    
-    severity::e_severity level;
+    void really_append(const theta::Run & run, e_severity s, const std::string & message);
+    e_severity level;
     int n_messages[4];
+    column c_runid, c_eventid, c_severity, c_message, c_time;
 };
 
 
@@ -312,9 +336,9 @@ class ProducerInfoTable: public Table {
 public:
     /** \brief Construct a new producer table in with name \c name.
      *
-     * \param name The name of the table. Has to pass Table::checkName()
+     * See Table::Table.
      */
-    ProducerInfoTable(const std::string & name): Table(name){}
+    ProducerInfoTable(const std::string & name, const boost::shared_ptr<Database> & db);
     
     /** \brief Append an entry to the ProducerInfoTable.
      * 
@@ -326,9 +350,7 @@ public:
     void append(int index, const std::string & p_name, const std::string & p_type, const std::string & info);
 
 private:
-    /** \brief Implementation of Table::create_table to do the actual table creation.
-     */
-    virtual void create_table();
+    column c_ind, c_type, c_name, c_info;
 };
 
 /** \brief Table to store per-run information about the random number seed.
@@ -338,25 +360,23 @@ private:
  * The corresponding SQL table has following fields:
  * <ol>
  * <li>\c runid \c INTEGER(4): the run id the entry refers to.</li>
- * <li>\c seed \c INTEGER(8): the seed of the random number generator used in the run.</li>
+ * <li>\c seed \c INTEGER(4): the seed of the random number generator used in the run.</li>
  * </ol>
  */
 class RndInfoTable: public Table {
 public:
     /** \brief Construct a new RndInfoTable with name \c name.
      */
-    RndInfoTable(const std::string & name_): Table(name_){}
+    RndInfoTable(const std::string & name_, const boost::shared_ptr<Database> & db);
 
     /** \brief append an entry to the RndInfoTable
      *
      * \param run is the current Run. It is used to query the current runid
      * \param seed is the seed to save in the table
      */
-    void append(const theta::Run & run, long seed);
+    void append(const theta::Run & run, int seed);
 private:
-    /** \brief Implementation of Table::create_table to do the actual table creation.
-     */
-    virtual void create_table();
+    column c_runid, c_seed;
 };
 
 /** \brief Table to store per-event information about which parameter values have been used to create pseudo data
@@ -382,17 +402,17 @@ public:
   /** \brief Construct a ParamTable
    *
    * \param name is the table name in the database
+   * \param db is the Database instance to create the table in
    * \param vm is used to query the parameter names, which are used as column names
    * \param ids the parameter ids which to write in the table (usually all from the pseudodata Model)
    */
-  ParamTable(const std::string & name, const theta::VarIdManager & vm, const theta::ParIds & ids);
+  ParamTable(const std::string & name, const boost::shared_ptr<Database> & db, const theta::VarIdManager & vm, const theta::ParIds & ids);
 private:
-    virtual void create_table();
-
     theta::ParIds par_ids;
-    std::vector<std::string> pid_names;
+    column c_runid, c_eventid;
+    std::vector<column> columns;
 };
 
-}//namespace database
+}
 
-#endif /* DATABASE_HPP */
+#endif

@@ -14,11 +14,10 @@ using namespace theta::plugin;
 
 class test_exception: public Function{
 public:
-    test_exception(Configuration & cfg): Function(ParIds()){}
+    test_exception(const Configuration & cfg): Function(ParIds()){}
     virtual double operator()(const ParValues & v) const{
        throw Exception("test-exception message 42");
     }
-    virtual double gradient(const ParValues & v, const ParId & pid) const{ return 0.0;}
 };
 
 REGISTER_PLUGIN(test_exception)

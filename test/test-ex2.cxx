@@ -13,7 +13,7 @@ using namespace theta::plugin;
 
 class proxy_function: public Function{
 public:
-    proxy_function(Configuration & cfg): Function(ParIds()){
+    proxy_function(const Configuration & cfg): Function(ParIds()){
          Configuration ctx2(cfg,cfg.setting["block"]);
          f = PluginManager<Function>::build(ctx2);
          par_ids = f->getParameters();
@@ -27,9 +27,6 @@ public:
            ex.message = "exception caught by proxy_function: " + ex.message;
            throw;
        }
-    }
-    virtual double gradient(const ParValues & v, const ParId & pid) const{
-        return f->gradient(v, pid);
     }
 private:
    auto_ptr<Function> f;

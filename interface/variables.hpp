@@ -11,6 +11,8 @@
 #include "interface/exception.hpp"
 #include "interface/utils.hpp"
 
+#include <boost/utility.hpp>
+
 namespace theta {
 
     class VarIdManager;
@@ -165,12 +167,12 @@ namespace theta {
      * This class
      * <ul>
      * <li>keeps track of the association between parameter / observable names and ParId / ObsId objects</li>
-     * <li>saves the configured range and binning for the observables and the range and default value for parameters</li>
+     * <li>saves the configured range and binning (for observables) and the range / default value (for parameters)</li>
      * </ul>
      *
      * Note that there does not exist any global "current value" of a variable.
      */
-    class VarIdManager {
+    class VarIdManager: private boost::noncopyable {
         friend class ParValues;
     public:
         //@{
@@ -274,9 +276,6 @@ namespace theta {
         std::map<ObsId, std::pair<double, double> > oid_to_range;
         std::map<ObsId, size_t> oid_to_nbins;
         int next_oid_id;
-        
-        //prevent copying (Model will copy it, though):
-        VarIdManager(const VarIdManager &);
     };
 
     /** \brief A mapping-like class storing parameter values.

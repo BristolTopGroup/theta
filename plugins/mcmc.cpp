@@ -297,12 +297,7 @@ double calcBIC(char* z, size_t count, size_t kt){
 }
 */
 
-// writes the cholesky decomposition into result. This function treats the case of fixing a parameter through
-// setting its covariance diagonal entry to zero correctly in only decomposing the non-zero part of the matrix
-// and keeping the zero entries.
-//If expect_reduced is positive, it will be checked whether it macthes the determined number of reduec (=non-fxed) dimensions.
-// If it does not, an Exception will be thrown.
-static void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced = -1){
+void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
     size_t npar_reduced = cov.getRows();
     size_t npar = npar_reduced;
     result.reset(npar, npar);
@@ -313,7 +308,7 @@ static void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced
     }
     bool par_has_zero_cov[npar];
     for (size_t i = 0; i < npar; i++) {
-       if((par_has_zero_cov[i] = theta::utils::close_to(cov(i,i), 0, m)))
+       if((par_has_zero_cov[i] = utils::close_to(cov(i,i), 0, m)))
             npar_reduced--;
     }
     if(npar_reduced==0){

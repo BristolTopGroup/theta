@@ -79,7 +79,7 @@ public:
  * {
  *   type = "..."; //depends on which subclass you want
  *   result-file = "result/abc.db";
- *   producers = ("hypotest", "hupotest2");
+ *   producers = ("@hypotest", "@hypotest2");
  *   n-events = 10000;
  *   model = "gaussoverflat";
  *
@@ -98,7 +98,7 @@ public:
  *
  * \c result-file gives the path to the result database file to create to save the result in
  *
- * \c producers is a list of configuration file paths which contain the
+ * \c producers is a list of links within the configuration file to setting groups which contain the
  *    definition of the producers to run.
  *
  * \c n-events is the number of pseudo experiments to run. This is ignored for some subclasses.
@@ -124,12 +124,12 @@ public:
  *  Handling of result tables is done in the individual producers. Only run-wide tables
  *  are managed here, that is
  *  <ul>
- *   <li>A \link database::LogTable LogTable \endlink called 'log', where all log entries of the run are stored.</li>
- *   <li>A \link database::ProducerInfoTable ProducerInfoTable \endlink called 'prodinfo', where the list of configured
+ *   <li>A \link LogTable LogTable \endlink called 'log', where all log entries of the run are stored.</li>
+ *   <li>A \link ProducerInfoTable ProducerInfoTable \endlink called 'prodinfo', where the list of configured
  *        producers are stored.</li>
- *   <li>A \link database::RndInfoTable RndInfoTable \endlink called 'rndinfo', where the random number generator
+ *   <li>A \link RndInfoTable RndInfoTable \endlink called 'rndinfo', where the random number generator
          seed used for this run is stored.</li>
- *   <li>A \link database::ParamTable ParamTable \endlink called 'params', where for each event (=pseudo experiment),
+ *   <li>A \link ParamTable ParamTable \endlink called 'params', where for each event (=pseudo experiment),
  *       the actually used parameter values used to generate the pseudo data from the pseusodata model are saved.</li>
  *  </ul>
  *
@@ -164,8 +164,8 @@ public:
      * These methods are meant to be used by the producers which are passed
      * a reference to the current run each time.
      */
-    boost::shared_ptr<database::Database> get_database(){
-       return db;
+    boost::shared_ptr<theta::Database> get_database(){
+        return db;
     }
     
     Random & get_random(){
@@ -203,6 +203,19 @@ protected:
     *
     * This is the method to implement in subclasses of run. It is the method to implement
     * for derived classes which does all the work.
+    *
+    * This method should contain a loop over \c n_event, which, for each event, does the following:
+    * <ol>
+    *  <li>set \c eventid to the correct value</li>
+    *  <li>call \c log_event_start </li>
+    *  <li>Get/create the (pseudo-)data</li>
+    *  <li>call each of the producers[j].produce routines, followed by a call to producer_table[j].add_row(*this)</li>
+    *  <li>call \c log_event_end </li>
+    * </ol>
+    * Additionally, the method should check the \c stop_execution variable regularly and exit as soon as possible if
+    * it is set. It should also indicate progress to the \c progress_listener from time to time, if it is set.
+    *
+    * Look at \link plain_run plain_run \endlink for a complete example.
     */
     virtual void run_impl() = 0;
     
@@ -211,7 +224,7 @@ protected:
     * Should be called by derived classes before pseudo data generation.
     */
     void log_event_start() {
-        logtable->append(*this, database::severity::info, "start");
+        logtable->append(*this, LogTable::info, "start");
     }
     
     /** \brief Make an informational log entry to indicate the end of a pseudo experiment.
@@ -219,7 +232,7 @@ protected:
     * Should be called by derived classes after all producers have been run.
     */
     void log_event_end() {
-        logtable->append(*this, database::severity::info, "end");
+        logtable->append(*this, LogTable::info, "end");
     }
 
     //random number generator seed and generator:
@@ -236,17 +249,18 @@ protected:
     Model m_producers;
 
     //database and logtable as shared_ptr, as they are used by the producers:
-    boost::shared_ptr<database::Database> db;
-    boost::shared_ptr<database::LogTable> logtable;
+    boost::shared_ptr<Database> db;
+    boost::shared_ptr<LogTable> logtable;
     bool log_report;
 
     //the tables only used by run (and only by run):
-    database::ProducerInfoTable prodinfo_table;
-    database::RndInfoTable rndinfo_table;
-    std::auto_ptr<database::ParamTable> params_table;
+    theta::ProducerInfoTable prodinfo_table;
+    theta::RndInfoTable rndinfo_table;
+    std::auto_ptr<ParamTable> params_table;
 
     //the producers to be run on the pseudo data:
     boost::ptr_vector<Producer> producers;
+    std::vector<boost::shared_ptr<ProducerTable> > producer_tables;
 
     
     //the runid, eventid and the total number of events to produce:

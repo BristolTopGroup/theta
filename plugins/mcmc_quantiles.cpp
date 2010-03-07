@@ -11,75 +11,54 @@ using namespace theta;
 using namespace std;
 using namespace libconfig;
 
-void mcmc_quantiles_table::create_table() {
-    stringstream ss;
-    ss << "CREATE TABLE '" << name << "' (runid INTEGER(4), eventid INTEGER(4)";
-    exec(ss.str());
-    ss.str("");
-    ss << "INSERT INTO '" << name << "' VALUES(?,?,";
-    insert_statement = prepare(ss.str());
-}
-
-void mcmc_quantiles_table::append(const Run & run, const vector<double> & quantiles) {
-    sqlite3_bind_int(insert_statement, 1, run.get_runid());
-    sqlite3_bind_int(insert_statement, 2, run.get_eventid());
-    int next_col = 3;
+void mcmc_quantiles::define_table(){
     for(size_t i=0; i<quantiles.size(); ++i){
-        sqlite3_bind_double(insert_statement, next_col, quantiles[i]);
-        ++next_col;
-    }
-    int res = sqlite3_step(insert_statement);
-    sqlite3_reset(insert_statement);
-    if (res != 101) {
-        error(__FUNCTION__);//throws exception
+        stringstream ss;
+        ss << "quant" << setw(5) << setfill('0') << static_cast<int>(quantiles[i] * 10000 + 0.5);
+        columns.push_back(table->add_column(*this, ss.str(), ProducerTable::typeDouble));
     }
 }
 
 //the result class for the metropolisHastings routine.
-/*class MCMCPosteriorRatioResult{
+class MCMCPosteriorQuantilesResult{
     public:
-        MCMCPosteriorRatioResult(size_t npar_): npar(npar_), min_nll_value(numeric_limits<double>::infinity()), n_total(0){}
+        //ipar_ is the parameter of interest
+        MCMCPosteriorQuantilesResult(size_t npar_, size_t ipar_, size_t n_iterations_): npar(npar_), ipar(ipar_), n_iterations(n_iterations_){
+            par_values.reserve(n_iterations);
+        }
         
         size_t getnpar() const{
             return npar;
         }
         
-        void fill(const double *, double nll, size_t n_){
-            nll_values.push_back(nll);
-            if(nll < min_nll_value) min_nll_value = nll;
-            n.push_back(n_);
-            n_total += n_;
+        //just save the parameter value we are interested in
+        void fill(const double * x, double, size_t n_){
+            for(size_t i=0; i<n_; ++i){
+               par_values.push_back(x[ipar]);
+            }
         }
-        
+
         void end(){}
         
-        //return the negative logarithm of the average posterior
-        double get_nl_average_posterior(){
-            double posterior_sum = 0.0;
-            //instead of calculating
-            // - log (   1/N  * sum_{i=1}^N exp (-nll_i)    )
-            // calculate
-            // - log (  exp(-min_nll) * 1/N * sum_{i=1}^N  exp(-nll_i + min_nll)   ) = min_nll - log (  1/N * sum_{i=1}^N  exp (-nll_i + min_nll)   )
-            // which is the same , but numerically much better
-            for(size_t i=0; i<n.size(); ++i){
-                posterior_sum += n[i] * exp(min_nll_value - nll_values[i]);
+        //return the quantile q
+        double get_quantile(double q){
+            if(par_values.size()!=n_iterations){
+                throw InvalidArgumentException("MCMCPosteriorQuantilesResult: called get_quantile before chain has finished!");
             }
-            return min_nll_value - log(posterior_sum / n_total);
+            int index = static_cast<int>(q * n_iterations);
+            if(index >= static_cast<int>(n_iterations)) index = n_iterations-1;
+            std::nth_element(par_values.begin(), par_values.begin() + index, par_values.end());
+            return par_values[index];
         }
         
-        double get_jump_rate(){
-            return (1.0 * n.size()) / n_total;
-        }
     private:
         size_t npar;
-        vector<double> nll_values;
-        double min_nll_value;
-        vector<size_t> n;
-        size_t n_total;
-};*/
+        size_t ipar;
+        size_t n_iterations;
+        vector<double> par_values;
+};
 
 void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) {
-    if(!table) table.connect(run.get_database());
     if(!init){
         try{
             if(init_failed){
@@ -97,6 +76,13 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
             NLLikelihood nll = model.getNLLikelihood(d);
             sqrt_cov = get_sqrt_cov(run.get_random(), nll, ParValues(), vm, startvalues);
             
+            ParIds nll_pars = nll.getParameters();
+            ipar=0;
+            for(ParIds::const_iterator it=nll_pars.begin(); it!=nll_pars.end(); ++it, ++ipar){
+                if(*it == par_id) break;
+            }
+            //now ipar has the correct value ...
+            
             init = true;
         }catch(Exception & ex){
             init_failed = true;
@@ -106,23 +92,15 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
     }
     
     NLLikelihood nll = model.getNLLikelihood(data);
-    //TODO: save result, return quantiles
-    vector<double> quants;
-    //MCMCPosteriorRatioResult res_sb(nll.getnpar());
-    //metropolisHastings(nll, res_sb, run.get_random(), startvalues_sb, sqrt_cov_sb, iterations, burn_in);
+    MCMCPosteriorQuantilesResult result(nll.getnpar(), ipar, iterations);
+    metropolisHastings(nll, result, run.get_random(), startvalues, sqrt_cov, iterations, burn_in);
     
-    table.append(run, quants);
-}
-
-std::string mcmc_quantiles::get_information() const{
-    stringstream ss;
-    for(vector<double>::const_iterator it=quantiles.begin(); it!=quantiles.end(); ++it){
-        ss << *it << " ";
+    for(size_t i=0; i<quantiles.size(); ++i){
+        table->set_column(columns[i], result.get_quantile(quantiles[i]));
     }
-    return ss.str();
 }
 
-mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Producer(cfg), init(false), init_failed(false), table(get_name()){
+mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Producer(cfg), init(false), init_failed(false){
     vm = cfg.vm;
     SettingWrapper s = cfg.setting;
     string parameter = s["parameter"];
@@ -134,6 +112,9 @@ mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Produc
     quantiles.reserve(n);
     for(size_t i=0; i<n; ++i){
         quantiles.push_back(s["quantiles"][i]);
+        if(quantiles[i]<=0.0 || quantiles[i]>=1.0){
+            throw ConfigurationException("mcmc_quantiles: quantiles out of range (must be strictly between 0 and 1)");
+        }
     }
     iterations = s["iterations"];
     if(s.exists("burn-in")){
@@ -144,4 +125,4 @@ mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Produc
     }
 }
 
-//REGISTER_PLUGIN(mcmc_quantiles)
+REGISTER_PLUGIN(mcmc_quantiles)

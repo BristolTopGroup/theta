@@ -20,8 +20,13 @@ void Minimizer::override_range(const theta::ParId & pid, double lower_limit, dou
     overridden_ranges[pid] = std::make_pair(lower_limit, upper_limit);
 }
 
-void Minimizer::reset_range_override(const theta::ParId & pid) {
+void Minimizer::override_default(const theta::ParId & pid, double def){
+    overridden_defaults[pid] = def;
+}
+
+void Minimizer::reset_override(const theta::ParId & pid) {
     overridden_ranges.erase(pid);
+    overridden_defaults.erase(pid);
 }
 
 void Minimizer::set_initial_stepsize(const theta::ParId & pid, double stepsize) {
@@ -34,10 +39,16 @@ void Minimizer::set_initial_stepsize(const theta::ParId & pid, double stepsize) 
     initial_stepsizes[pid] = stepsize;
 }
 
-std::pair<double, double> Minimizer::get_range(const theta::ParId & pid) const {
+const std::pair<double, double> & Minimizer::get_range(const theta::ParId & pid) const {
     std::map<theta::ParId, std::pair<double, double> >::const_iterator it = overridden_ranges.find(pid);
     if (it != overridden_ranges.end()) return it->second;
     return vm->get_range(pid);
+}
+
+double Minimizer::get_default(const theta::ParId & pid) const{
+    std::map<theta::ParId, double>::const_iterator it = overridden_defaults.find(pid);
+    if (it != overridden_defaults.end()) return it->second;
+    return vm->get_default(pid);
 }
 
 double Minimizer::get_initial_stepsize(const theta::ParId & pid) const {
@@ -51,7 +62,7 @@ double Minimizer::get_initial_stepsize(const theta::ParId & pid) const {
     return 0.05 * interval_size;
 }
 
-
+/*
 void theta::MinimizerUtils::apply_settings(Minimizer & m, const theta::plugin::Configuration & ctx){
     if(ctx.setting.exists("override-ranges")){
         SettingWrapper s_ranges = ctx.setting["override-ranges"];
@@ -73,8 +84,5 @@ void theta::MinimizerUtils::apply_settings(Minimizer & m, const theta::plugin::C
             m.set_initial_stepsize(ctx.vm->getParId(parname), step);
         }
     }
-
-
 }
-
-
+*/

@@ -165,7 +165,6 @@ int main(int argc, char** argv) {
         cerr << "An exception ocurred: " << ex.what() << endl;
         return 1;
     }
-    cout << endl;
     if(theta::stop_execution){
         cout << "(exiting on SIGINT)" << endl;
     }

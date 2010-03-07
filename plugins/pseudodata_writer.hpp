@@ -4,58 +4,10 @@
 #include "interface/decls.hpp"
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
-
-//#include "interface/plugin_so_interface.hpp"
-
-
 #include "interface/variables.hpp"
 
 #include <vector>
 #include <string>
-
-
-/** \brief Table to store results of a \link pseudodata_writer pseudodata_writer \endlink
- *
- * The corresponding SQL table has following fields:
- * <ol>
- *  <li>\c runid \c INTEGER(4): the run id the entry refers to</li>
- *  <li>\c eventid \c INTEGER(4): the event id the entry refers to</li>
- *  <li>For each observable: \c n_events_&lt;observable&gt; \c DOUBLE: the total number of events and \c data_&lt;observable&gt; \c BLOB : the data of the histogram</li>
- * </ol>
- * 
- * Note that the data_* columns might be missing depending on the configuration of \link pseudodata_writer pseudodata_writer \endlink
- *
- * n_events is a double rather than int as special runs might produce asimov data (i.e., not throw possion data around
- * some mean, but pass the mean itself as data).
- *
- * The \c data_* columns save a raw double array. It saves underflow or overflow bin, so for an
- * observable with 3 bins, 5 doubles will be saved.
- */
-class PseudodataTable: public database::Table {
-friend class pseudodata_writer;
-public:
-    
-    /** \brief Construct a new PseudodataTable of the given name.
-     */
-    PseudodataTable(const std::string & name_): database::Table(name_){}
-
-    /** \brief append an entry to the table
-     *
-     * \param run the theta::Run instance used to extract the current runid and eventid
-     * \param data the pseudodata to write to the table
-     */
-    void append(const theta::Run & run, const theta::Data & data);
-private:
-    /** \brief Implementation of Table::create_table to do the actual table creation.
-     */
-    virtual void create_table();
-    
-    //write actually data (or only n_events)?
-    bool write_data;
-    //observables for which to write out data:
-    theta::ObsIds observables;
-    std::vector<std::string> observable_names;
-};
 
 /** \brief Producer to save the pseudo data used in the pseudo experiments
  *
@@ -78,6 +30,10 @@ private:
  * \c write-data is a boolean which specifies whether or not to actually write the data: if \c true, the
  *    data will be saved as a SQL-blob for each observable (see PseudodataTable). If set to \c false, only
  *    the number of events will be saved for each event.
+ *
+ * For each observable, the result table will contain a column of the name "n_events_&lt;observable name&gt;" and -- if \c write-data
+ * is true -- a column "data_&lt;observable name&gt;" with the histogram data as BLOB. This blob contains the raw double
+ * array of the histogram, including underflow and overflow.
  */
 class pseudodata_writer: public theta::Producer {
 public:
@@ -88,8 +44,15 @@ public:
     /** \brief Run the writer and write out the pseudo data \c Data to the database.
      */
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
+    
+    /// Define the columns as described in the class documentation
+    virtual void define_table();
 private:
-    PseudodataTable table;
+    boost::shared_ptr<theta::VarIdManager> vm;
+    std::vector<theta::ObsId> observables;
+    std::vector<theta::ProducerTable::column> n_events_columns;
+    std::vector<theta::ProducerTable::column> data_columns;
+    bool write_data;
 };
 
 #endif

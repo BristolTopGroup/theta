@@ -15,6 +15,8 @@ namespace theta{
     class Producer;
     class Distribution;
     class SettingUsageRecorder;
+    
+    class ProducerTable;
     namespace plugin{
           class Configuration;
     }

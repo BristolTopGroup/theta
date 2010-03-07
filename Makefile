@@ -7,6 +7,7 @@ all:
 clean:
 	@for d in $(DIRS); do make -C $$d clean; done
 	@make -C test clean
+	@make -C test-stat clean
 
 test:
 	@make -C test
@@ -15,8 +16,9 @@ test:
 # serious developer, it should work well:
 doc:
 	@doxygen
-	@( warn=`wc -l doxygen-warn.txt | cut -f 1 -d" "`; if [ $$warn -gt 0 ]; then echo There have been $$warn warnings from doxygen, see doxygen-warn.txt; fi )
-	@if [ "`hostname`" = "ekplx22" ]; then cp doc/tabs.css doc/html; rsync -a --del doc/* /usr/users/ott/public_html/theta; fi
+	@( warn=`wc -l doxygen-warn.txt | cut -f 1 -d" "`; if [ $$warn -gt 0 ]; then echo There have been about $$warn warnings from doxygen, see doxygen-warn.txt; fi )
+	@cp doc/tabs.css doc/html
+	@if [ "`hostname`" = "ekplx22" ]; then rsync -a --del doc/* /usr/users/ott/public_html/theta; fi
 
 run-test: test
 	@test/test

@@ -30,8 +30,8 @@ namespace theta{
          *
          * Searches recursively for unused settings.
          *
-         * \param unused[out] The unused paths will be stored here
-         * \param aggregate_setting[in] The setting to start the recursion; usually the root setting of the configuration file
+         * \param[out] unused The unused paths will be stored here
+         * \param[in] aggregate_setting The setting to start the recursion; usually the root setting of the configuration file
          */
         void get_unused(std::vector<std::string> & unused, const libconfig::Setting & aggregate_setting) const;
 
@@ -53,7 +53,7 @@ namespace theta{
      * For many methods, this class is merely a proxy to libconfig::Setting. Therefore, there will be many
      * references to the (very detailed) libconfig documentation in the documentation of this class.
      *
-     * A setting is considered <it>used</it> one of the following methods are called on it:
+     * A setting is considered <em>used</em> one of the following methods are called on it:
      * <ul>
      *  <li>a casting operator</li>
      *  <li>access to a member in a compound with operator[]</li>
@@ -170,6 +170,16 @@ namespace theta{
                 return setting.getPath();
             }
             
+            /** \brief Construct a SettingWrapper from a Setting, the root Setting and a setting recorder
+             *
+             * The SettingRecorder \c recorder will be used to record the usage of all settings accessed through
+             * the constructed SettingWrapper.
+             *
+             * \c root is the root setting of a configuration file used to resolve any links.
+             *
+             * \c s is the Setting which to be wrapped, i.e., the access and casting methods of SettingWrapper will
+             *    forward these requests to \c s.
+             */
             SettingWrapper(const libconfig::Setting & s, const libconfig::Setting & root, SettingUsageRecorder & recorder);
     };
 }

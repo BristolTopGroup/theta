@@ -7,32 +7,7 @@
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
 #include "interface/matrix.hpp"
-
 #include <string>
-
-/** \brief Result table for the mcmc_poterior_ratio.
- *
- * The table contains the following columns:
- * <ol>
- * <li> runid INT(4)</li>
- * <li> eventid INT(4)</li>
- * <li> nl_posterior_sb DOUBLE</li>
- * <li> nl_posterior_b DOUBLE</li>
- * </ol>
- *
- * For every event, one entry is made, containing the result of the \link mcmc_posterior_ratio mcmc_posterior_ratio \endlink.
- */
-class mcmc_posterior_ratio_table: public database::Table {
-public:
-    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    mcmc_posterior_ratio_table(const std::string & name_): database::Table(name_){}
-    
-    /// Save the \c posterior_sb and \c posterior_b values to the table using current \c runid and \c eventid from \c run.
-    void append(const theta::Run & run, double posterior_sb, double posteiror_b);
-private:
-    /// overrides Table::create_table
-    virtual void create_table();
-};
 
 /** \brief A producer to create test statistics based on the ratio of the posterior in case of signal search.
  *
@@ -71,15 +46,20 @@ private:
  *
  * Given data and a model, this producer will construct the negative-loglikelihood for the "signal-plus-background" parameters
  * fixed as specified in the configuration file and for the "background-only" parameters fixed and integrate over all non-fixed parameters.
- * The negative logarithm of the found average values of the likelihood (which takes the role of a posterior here) are saved in the \c nl_posterior_sb and \c nl_posterior_b columns of the
- * \link mcmc_posterior_ratio_table result table \endlink.
+ *
+ * The negative logarithm of the found average values of the likelihood (which takes the role of a posterior here) are
+ * saved in the \c nl_posterior_sb and \c nl_posterior_b columns of the result table.
  */
 class mcmc_posterior_ratio: public theta::Producer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     mcmc_posterior_ratio(const theta::plugin::Configuration & ctx);
+    
     /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
+    
+    /// Define the table columns of the result table, nl_posterior_sb and nl_posterior_b
+    virtual void define_table();
 private:
     //whether sqrt_cov* and startvalues* have been initialized:
     bool init;
@@ -100,7 +80,7 @@ private:
     theta::Matrix sqrt_cov_b;
     std::vector<double> startvalues_b;
     
-    mcmc_posterior_ratio_table table;
+    theta::ProducerTable::column c_nl_posterior_sb, c_nl_posterior_b;
 };
 
 #endif

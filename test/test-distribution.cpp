@@ -29,8 +29,8 @@ BOOST_AUTO_TEST_CASE(distribution_lognormal){
     s["type"] = "log_normal";
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
     ParId var0 = vm->createParId("var0");
-    theta::utils::SettingUsageRecorder rec;
-    Configuration cfg(vm, s, s, rec);
+    theta::SettingUsageRecorder rec;
+    Configuration cfg(vm, SettingWrapper(s, s, rec));
     std::auto_ptr<Distribution> d = PluginManager<Distribution>::build(cfg);
     //must return +infinity for argument < 0:
     ParValues values;

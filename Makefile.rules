@@ -36,6 +36,8 @@ COMPILE = echo compiling $<; $(CC) -c -Wall -fPIC -O3 $(INCLUDES) $(EXTRA_COMPIL
 #use LIBS to link any executable
 LINK_EXE = echo linking $@; $(CC) -rdynamic -L../lib -ldl -ltheta -llbfgs -lconfig -lsqlite3 $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
 
+LINK_EXE_NOLIBS = echo linking $@; $(CC) -rdynamic $(EXTRA_LINK_EXE)
+
 #use SHARED to link any .so file
 #"-rdynamic" required for correct handling of exceptions
 LINK_SO = echo linking $@; $(CC) -shared -rdynamic $(EXTRA_LINK_SO)

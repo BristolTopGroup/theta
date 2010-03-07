@@ -50,7 +50,7 @@ MinimizationResult root_minuit::minimize(const theta::Function & f){
     int ivar=0;
     for(ParIds::const_iterator it=parameters.begin(); it!=parameters.end(); ++it, ++ivar){
         pair<double, double> range = get_range(*it);
-        double def = vm->get_default(*it);
+        double def = get_default(*it);
         double step = get_initial_stepsize(*it);
         string name = vm->getName(*it);
         if(isinf(range.first)){
@@ -174,7 +174,7 @@ root_minuit::root_minuit(const Configuration & ctx): Minimizer(ctx.vm), toleranc
        }
        set_printlevel(printlevel);
        set_tolerance(tol);
-       MinimizerUtils::apply_settings(*this, ctx);
+       //MinimizerUtils::apply_settings(*this, ctx);
    }
 
 

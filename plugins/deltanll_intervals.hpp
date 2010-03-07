@@ -9,43 +9,6 @@
 
 #include <string>
 
-
-/** \brief Result table for the deltanll_interval producer
- *
- * This table object is used by an instance of deltanll_interval producer.
- *
- * The corresponding SQL table has following fields:
- * <ol>
- *  <li>\c runid \c INTEGER(4): the run id the entry refers to</li>
- *  <li>\c eventid \c INTEGER(4): the event id the entry refers to</li>
- *  <li>\c clevel \c DOUBLE: confidence level for the lower and upper entries</li>
- *  <li>\c lower \c DOUBLE: the lower limit on the parameter</li>
- *  <li>\c upper \c DOUBLE: the upper limit on the parameter</li>
- * </ol>
- *
- * Note that each DeltaNllIntervalProducer makes one entry per pseudo experiment and
- * configured confidence level (plus always an entry for the zero confidence level).
- */
-class deltanll_interval_table: public database::Table {
-public:
-    
-    /// Construct a deltanll_interval_table with name \c name_.
-    deltanll_interval_table(const std::string & name_): database::Table(name_){}
-
-    /** \brief append an entry to the table
-     *
-     * \param run the \link theta::Run Run \endlink object; used to extract the runid and eventid columns
-     * \param clevel the confidence level for the interval
-     * \param lower the lower end of the interval
-     * \param upper the upper end of the interval
-     */
-    void append(const theta::Run & run, double clevel, double lower, double upper);
-private:
-    /** \brief Implementation of Table::create_table to do the actual table creation.
-     */
-    virtual void create_table();
-};
-
 /** \brief Confidence intervals based on the difference in the negative log-likelihood.
  *
  * Configuration is done with a settings block like:
@@ -85,7 +48,13 @@ private:
  * </ol>
  *
  * L_m(p_0) is sometimes called the "profiled likelihood function" or the "reduced likelihood function",
- * as it only depends on one of the original n+1 parameters.
+ * as it only depends on 1 of the original n+1 parameters.
+ *
+ * For each confidence level c, the result table contains columns "lower" + 10000*c and "upper" + 10000*c, where
+ * the numbers are rounded and written with leading zeros. For example, if the \c clevels setting is [0.68, 0.95], the
+ * column names will be "lower06800", "upper06800", "lower09500", "upper09500". Additionally, the table always contains
+ * the parameter value at the maximum of the likelihood as "maxl". The "maxl" value is the same as you would get for
+ * a confidence level of exactly 0.
  */
 class deltanll_intervals: public theta::Producer{
 public:
@@ -99,14 +68,25 @@ public:
      * usually makes more than one entry per pseudo experiment in the result table.
      */
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
+    
+    /** \brief Define the table columns
+     *
+     * Called by theta::Run::run as part of the setup. It defined the columns as described in the class documentation.
+     */
+    void define_table();
 private:
+    boost::shared_ptr<theta::VarIdManager> vm;
     theta::ParId pid;
     std::vector<double> clevels;
-    std::auto_ptr<theta::Minimizer> minimizer;
     //at construction, save here the deltanll values corresponding to
-    //clevels:
+    //clevels:    
     std::vector<double> deltanll_levels;
-    deltanll_interval_table table;
+    std::auto_ptr<theta::Minimizer> minimizer;
+
+    //table columns:
+    std::vector<theta::ProducerTable::column> lower_columns;
+    std::vector<theta::ProducerTable::column> upper_columns;
+    theta::ProducerTable::column c_maxl;
 };
 
 #endif

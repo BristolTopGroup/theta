@@ -280,6 +280,13 @@ NLLikelihood::NLLikelihood(const boost::shared_ptr<VarIdManager> & vm_, const Mo
 }
 
 double NLLikelihood::operator()(const ParValues & values) const{
+    //check ranges:
+    for(ParIds::const_iterator p_it = par_ids.begin(); p_it != par_ids.end(); ++p_it){
+        const pair<double, double> & range = vm->get_range(*p_it);
+        double value = values.get(*p_it);
+        if(value < range.first || value > range.second)
+            return numeric_limits<double>::infinity();
+    }
     double result = 0.0;
     //go through all observables:
     for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
@@ -308,14 +315,14 @@ double NLLikelihood::operator()(const ParValues & values) const{
         result += model_prediction.get_sum_of_bincontents();
     }
     if(isnan(result)){
-        throw MathException("NLLikelihood:Loperator() would return nan (1)");
+        throw MathException("NLLikelihood::operator() would return nan (1)");
     }
     //the model prior:
     for(size_t i=0; i<model.priors.size(); i++){
         result += model.priors[i]->evalNL(values);
     }
     if(isnan(result)){
-        throw MathException("NLLikelihood:Loperator() would return nan (2)");
+        throw MathException("NLLikelihood::operator() would return nan (2)");
     }
     return result;
 }

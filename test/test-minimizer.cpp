@@ -31,13 +31,15 @@ public:
 
 BOOST_AUTO_TEST_CASE(minuit){
     Config cfg;
+    BOOST_REQUIRE(true);//create checkpoint
     Setting & s = cfg.getRoot();
     s.add("files", Setting::TypeList);
     s["files"].add(Setting::TypeString);
     s["files"][0] = "lib/root.so";
     SettingUsageRecorder rec;
+    boost::shared_ptr<VarIdManager> vm(new VarIdManager);
     try{
-       PluginLoader::execute(s, rec);
+       PluginLoader::execute(Configuration(vm, SettingWrapper(s, s, rec)));
     }
     catch(Exception & ex){
       cout << "Note: root plugin could not be loaded, not executing root tests";
@@ -49,14 +51,14 @@ BOOST_AUTO_TEST_CASE(minuit){
     s["min"].add("type", Setting::TypeString);
     s["min"]["type"] = "root_minuit";
     
-    boost::shared_ptr<VarIdManager> vm(new VarIdManager);
     ParId p0 = vm->createParId("p0");
     ParId p1 = vm->createParId("p1");
     ParIds pars;
     pars.insert(p0);
     pars.insert(p1);
     
-    Configuration ctx(vm, s, s["min"], rec);
+    Configuration ctx(vm, SettingWrapper(s["min"], s, rec));
+    BOOST_REQUIRE(true);//create checkpoint
     std::auto_ptr<Minimizer> min = PluginManager<Minimizer>::build(ctx);
     BOOST_REQUIRE(min.get());
     ImpossibleFunction f(pars);

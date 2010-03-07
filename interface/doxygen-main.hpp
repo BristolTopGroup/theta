@@ -287,7 +287,7 @@
 
  /**
  * \page intro Introduction
-
+ *
  * This page discusses  a concrete example where you get an overview over how %theta works
  * from the point of view of a user.
  * In the second section, some internals of %theta are explained which are good to know even if you
@@ -490,7 +490,7 @@
  * <li>\link theta::Producer Producer\endlink: statistical method called by a Run object</li>
  *    <ul>
  *       <li>\link deltanll_hypotest deltanll_hypotest \endlink creates likelihood-ratio test statistics to find the critical region for rejecting a "background only" null hypothesis</li>
- *       <li>(not yet implemented:) deltanll_intervals interval creation based on the difference in the negative-log-likelihood function</li>
+ *       <li>\link deltanll_intervals deltanll_intervals \endlink interval creation based on the difference in the negative-log-likelihood function</li>
  *       <li>\link mle mle \endlink maximum likelihood estimator estimates parameter values and errors using a minimizer on the negative-log-likelihood function</li>
  *       <li>\link mcmc_quantiles mcmc_quantiles \endlink Quantile estimator based on Markov-Chain Monte-Carlo to be used for interval estimation</li>
  *       <li>(not yet implemented:) mcmc_marginal Determine the marginal distribution (as Histogram) for a parameter</li>
@@ -614,16 +614,16 @@
  * There are two types of tests in %theta: unit tests which focus on testing the functionality of
  * a single class or method and statistical test cases which compare results obtained from %theta
  * with results analytically obtainable. For the unit tests, look at the source files in the \c test source
- * directory; only the second kind of testing will be discussed here. The source code of these
- * tests can be found in the \c test-stat directory.
- *
- * To run the unit tests, execute
+ * directory. To run the unit tests, execute
  * <pre>
  * make
  * source setenv.sh
  * make run-test
  * </pre>
  * from the %theta directory.
+ *
+ * In the following sections, only the statistical tests will be discussed. The source code of these
+ * tests can be found in the \c test-stat directory.
  *
  * \section testing_counting-nobkg Counting experiment without background
  *
@@ -639,9 +639,10 @@
  * desired properties for these models. However, this is not what is to be tested here; rather, the implementation
  * of the algorithms is the interest of these tests.
  *
- * \subsection testing_counting-nobkg_mle Maximum likelihood method (mle)
+ * \subsection testing_counting-nobkg_mle Maximum likelihood method
  *
- * <em>Test script:</em> <tt>test-stat/counting-nobkg-mle.sh</tt>
+ * <em>Test script:</em> <tt>test-stat/counting-nobkg-mle.sh</tt><br>
+ * <em>Relevant plugin classes:</em> \link mle mle \endlink, \link root_minuit root_minuit \endlink
  *
  * 500 pseudo experiments are performed by throwing a Poisson random number around \f$ \Theta \f$ which is passed
  * as number of observed events \f$ n \f$ to the mle implementation.
@@ -651,9 +652,10 @@
  * \f$ \hat\sigma_{\Theta} \f$ from the minimizer is checked: \f$ \hat\sigma_{\Theta}^2 = \hat\Theta \f$ should hold with
  * a maximum relative error of \f$ 10^{-4} \f$.
  *
- * \subsection testing_counting-nobkg_mcmc_quantiles Marginal posterior quantiles with Markov-Chain Monte-Carlo (mcmc_quantiles)
+ * \subsection testing_counting-nobkg_mcmc_quantiles Marginal posterior quantiles with Markov-Chain Monte-Carlo 
  *
- * <em>Test script:</em> <tt>test-stat/counting-nobkg-mcmc_quant.sh</tt>
+ * <em>Test script:</em> <tt>test-stat/counting-nobkg-mcmc_quant.sh</tt><br>
+ * <em>Relevant plugin classes:</em> \link mcmc_quantiles mcmc_quantiles \endlink
  *
  * With a flat prior on the signal mean \f$ \Theta \f$, the posterior in
  * case of \f$ n \f$ observed events, \f$ \pi(\Theta | n)\f$, is the same as the likelihood function given above
@@ -683,7 +685,8 @@
  *
  * \subsection testing_counting-nobkg_deltanll Confidence intervals based on asymptotic properties of the likelihood ratio (deltanll_intervals)
  *
- * <em>Test script:</em> <tt>test-stat/counting-nobkg-deltanll_intervals.sh</tt>
+ * <em>Test script:</em> <tt>test-stat/counting-nobkg-deltanll_intervals.sh</tt><br>
+ * <em>Relevant plugin classes:</em> \link deltanll_intervals deltanll_intervals \endlink, \link root_minuit root_minuit \endlink
  *
  * Given the number of observed events, \f$ n \f$, the logarithm of the likelihood ratio between
  * a free value \f$ \Theta \f$ and the value which maximizes the likelihood function (i.e., \f$ \Theta = n \f$) is
@@ -700,12 +703,12 @@
  * \f$ l_{1\sigma}, u_{1\sigma}, l_{2\sigma}, u_{2\sigma}, l_{0} \f$.
  *
  * In the asymptotic case, it is also checked that the one-sigma and two-sigma intervals are where expected, i.e.,
- * \{eqnarray*}
+ * \f{eqnarray*}
  *   (l_{1\sigma} - l_0)^2 &= l_0 \\
  *   (u_{1\sigma} - l_0)^2 &= l_0 \\
  *   (l_{2\sigma} - l_0)^2 &= 4\cdot l_0 \\
  *   (u_{2\sigma} - l_0)^2 &= 4\cdot l_0 \\
- * \}
+ * \f}
  * with a maximum relative difference of \f$ 10^{-4} \f$, where "relative difference" means dividing the difference of the
  * left and right hand side of these equations by the right hand side.
  *

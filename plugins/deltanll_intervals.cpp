@@ -25,8 +25,9 @@ void deltanll_intervals::define_table(){
 class ReducedNLL{
     public:
         
-        ReducedNLL(const theta::NLLikelihood & nll_, const ParId & pid_, theta::Minimizer * min_):
-           nll(nll_), pid(pid_), min(min_){
+        // set min to zero if no minimization should be done.
+        ReducedNLL(const theta::NLLikelihood & nll_, const ParId & pid_, const ParValues & pars_at_min_, theta::Minimizer * min_):
+           nll(nll_), pid(pid_), pars_at_min(pars_at_min_), min(min_){
         }
         
         void set_offset_nll(double t){
@@ -39,11 +40,15 @@ class ReducedNLL{
             for(ParIds::const_iterator it=ids.begin(); it!=ids.end(); ++it){
                 min->override_default(*it, last_minimum.get(*it));
             }*/
-            min->override_default(pid, x);
-            min->override_range(pid, x, x);
-            MinimizationResult minres = min->minimize(nll);
-            //last_minimum = minres.values;
-            return minres.fval - offset_nll;
+            if(min){
+                min->override_default(pid, x);
+                min->override_range(pid, x, x);
+                MinimizationResult minres = min->minimize(nll);
+                //last_minimum = minres.values;
+                return minres.fval - offset_nll;
+            }
+            pars_at_min.set(pid, x);
+            return nll(pars_at_min) - offset_nll;
         }
         
         ~ReducedNLL(){
@@ -51,12 +56,13 @@ class ReducedNLL{
             for(ParIds::const_iterator it=ids.begin(); it!=ids.end(); ++it){
                 min->reset_override(*it);
             }*/
-            min->reset_override(pid);
+            if(min) min->reset_override(pid);
         }
         
     private:
         const theta::NLLikelihood & nll;
         ParId pid;
+        mutable ParValues pars_at_min;
         double offset_nll;
         theta::Minimizer * min;
         //mutable ParValues last_minimum;
@@ -121,7 +127,7 @@ void deltanll_intervals::produce(Run & run, const Data & data, const Model & mod
     table->set_column(c_maxl, value_at_minimum);
     const pair<double, double> & range = vm->get_range(pid);
     
-    ReducedNLL nll_r(nll, pid, minimizer.get());
+    ReducedNLL nll_r(nll, pid, minres.values, re_minimize ? minimizer.get() : 0);
     
     for(size_t i=0; i < deltanll_levels.size(); ++i){
         nll_r.set_offset_nll(minres.fval + deltanll_levels[i]);
@@ -134,9 +140,9 @@ void deltanll_intervals::produce(Run & run, const Data & data, const Model & mod
         double x_high, f_x_high;
         int k;
         //printf("scanning high; low =  [%.5f] --> %.5f\n", x_low, f_x_low);
-        for(k=1; k<=10; ++k){
+        for(k=1; k<=20; ++k){
             x_high = value_at_minimum + step;
-            step *= 1.5;
+            step *= 2;
             if(x_high > range.second){
                 x_high = range.second;
             }
@@ -164,9 +170,9 @@ void deltanll_intervals::produce(Run & run, const Data & data, const Model & mod
         f_x_high = -deltanll_levels[i];
         step = minres.errors_minus.get(pid);
         if(step <= 0.0) step = 1.0;
-        for(k=1; k<=10; ++k){
+        for(k=1; k<=20; ++k){
             x_low = value_at_minimum - step;
-            step *= 1.5;
+            step *= 2;
             if(x_low < range.first){
                 x_low = range.first;
             }
@@ -190,7 +196,7 @@ void deltanll_intervals::produce(Run & run, const Data & data, const Model & mod
     }
 }
 
-deltanll_intervals::deltanll_intervals(const theta::plugin::Configuration & cfg): Producer(cfg), vm(cfg.vm){
+deltanll_intervals::deltanll_intervals(const theta::plugin::Configuration & cfg): Producer(cfg), vm(cfg.vm), re_minimize(true){
     SettingWrapper s = cfg.setting;
     minimizer = theta::plugin::PluginManager<Minimizer>::build(theta::plugin::Configuration(cfg, s["minimizer"]));
     string par_name = s["parameter"];
@@ -201,6 +207,9 @@ deltanll_intervals::deltanll_intervals(const theta::plugin::Configuration & cfg)
     }
     for (size_t i = 0; i < ic; i++) {
         clevels.push_back(s["clevels"][i]);
+    }
+    if(s.exists("re-minimize")){
+        re_minimize = s["re-minimize"];
     }
     deltanll_levels.resize(clevels.size());
     for(size_t i=0; i<clevels.size(); ++i){

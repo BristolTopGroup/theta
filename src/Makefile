@@ -10,4 +10,3 @@ all: ../lib/libtheta.so
 
 clean-subdir:
 	@rm -f ../lib/libtheta.so
-

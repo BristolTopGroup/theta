@@ -8,6 +8,7 @@ using namespace std;
 // "redirects" function calls to theta::Function
 class RootMinuitFunctionAdapter: public ROOT::Math::IMultiGenFunction{
 public:
+    
     virtual ROOT::Math::IBaseFunctionMultiDim*	Clone() const{
         throw Exception("RootMinuitFunctionAdapter::Clone not implemented");
     }
@@ -86,20 +87,46 @@ MinimizationResult root_minuit::minimize(const theta::Function & f){
     // 0.5 seems to work somehow.
     min->SetErrorDef(0.5);
     
-    
     //4. minimize. In case of failure, try harder
     bool success;
     for(int i=1; i<=3; i++){
         success = min->Minimize();
         if(success) break;
     }
+    //4.a. get minos errors:
+    /*ParValues minos_errors_plus;
+    ParValues minos_errors_minus;
+    if(success){
+        for(ParIds::const_iterator it=minos_parids.begin(); it!=minos_parids.end(); ++it){
+            //find the parameter index of *it:
+            ParIds::const_iterator pos_in_par = parameters.begin();
+            ivar = 0;
+            while(pos_in_par != parameters.end() && *pos_in_par!=*it){
+                ++pos_in_par;
+                ++ivar;
+            }
+            //if parameter *it is not in the list of current parameters, skip:
+            if(pos_in_par == parameters.end()) continue;
+            
+            double minos_plus;
+            double minos_minus;
+            if(not min->GetMinosError(ivar, minos_minus, minos_plus)){
+                success = false;
+                break;
+            }
+            minos_errors_plus.set(*it, minos_plus);
+            minos_errors_minus.set(*it, minos_minus);
+        }
+    }*/
 
     //5. do error handling
     if(not success){
         int status = min->Status();
+        int status_1 = status % 10;
+        //int status_2 = status / 10;
         stringstream s;
         s << "MINUIT returned status " << status;
-        switch(status){
+        switch(status_1){
             case 1: s << " (Covariance was made pos defined)"; break;
             case 2: s << " (Hesse is invalid)"; break;
             case 3: s << " (Edm is above max)"; break;
@@ -108,6 +135,15 @@ MinimizationResult root_minuit::minimize(const theta::Function & f){
             default:
                 s << " [unexpected status code]";
         }
+        /*switch(status_2){
+            case 1: s << " (MINOS needed to many calls for lower error)"; break;
+            case 2: s << " (MINOS needed to many calls for upper error)"; break;
+            case 3: s << " (MINOS found new minimum in search for lower error)"; break;
+            case 4: s << " (MINOS found new minimum in search for upper error)"; break;
+            case 5: s << " (Some other MINOS failure)"; break;
+            default:
+                s << " [unexpected status code]";
+        }*/
         throw MinimizationException(s.str());
     }
 
@@ -129,6 +165,9 @@ MinimizationResult root_minuit::minimize(const theta::Function & f){
             result.errors_minus.set(*it, -1);
         }
     }
+    //overwrite errors with minos errors:
+    /*result.errors_plus.set(minos_errors_plus);
+    result.errors_minus.set(minos_errors_minus);*/
     result.covariance.reset(parameters.size(), parameters.size());
     //I would use min->CovMatrixStatus here to check the validity of the covariance matrix,
     // if only it was documented ...
@@ -147,15 +186,15 @@ MinimizationResult root_minuit::minimize(const theta::Function & f){
     return result;
 }
 
-root_minuit::root_minuit(const Configuration & ctx): Minimizer(ctx.vm), tolerance(NAN){
+root_minuit::root_minuit(const Configuration & cfg): Minimizer(cfg.vm), tolerance(NAN){
        min.reset(new ROOT::Minuit2::Minuit2Minimizer(type));
        int printlevel = 0;
-       if(ctx.setting.exists("printlevel")){
-           printlevel = ctx.setting["printlevel"];
+       if(cfg.setting.exists("printlevel")){
+           printlevel = cfg.setting["printlevel"];
        }
        string method = "migrad";
-       if(ctx.setting.exists("method")){
-           method = (string)ctx.setting["method"];
+       if(cfg.setting.exists("method")){
+           method = (string)cfg.setting["method"];
        }
        if(method=="migrad"){
             type = ROOT::Minuit2::kMigrad;
@@ -169,12 +208,18 @@ root_minuit::root_minuit(const Configuration & ctx): Minimizer(ctx.vm), toleranc
            throw InvalidArgumentException(s.str());
        }       
        double tol = NAN;
-       if(ctx.setting.exists("tolerance")){
-           tol = ctx.setting["tolerance"];
+       if(cfg.setting.exists("tolerance")){
+           tol = cfg.setting["tolerance"];
        }
+       /*if(cfg.setting.exists("minos-errors-for")){
+           size_t n = cfg.setting["minos-errors-for"].size();
+           for(size_t i=0; i<n; ++i){
+               minos_parids.insert(cfg.vm->getParId(cfg.setting["minos-errors-for"][i]));
+           }
+       }*/
        set_printlevel(printlevel);
        set_tolerance(tol);
-       //MinimizerUtils::apply_settings(*this, ctx);
+       //MinimizerUtils::apply_settings(*this, cfg);
    }
 
 

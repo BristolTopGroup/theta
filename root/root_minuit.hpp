@@ -15,30 +15,25 @@
  * Configuration with a setting like:
  * <pre>
  * {
- * type = "root_minuit";
- * //general minimization parameters:
- * override-ranges = {
- *     some_param_name = (0.0, 2.0);
- * };
- * initial-step-sizes = {
- *     some_param_name = 0.1;
- * };
+ *  type = "root_minuit";
  *
- *  //root-minuit specific:
- *  printlevel = 1; //optional. Used in call to TMinuit::SetPrintLevel(). Default is 0/
- *  method = "simplex"; //optional. Default is "migrad".
- *  tolerance = 0.001; //optional. 
+ *  printlevel = 1; // optional. Default is 0
+ *  method = "simplex"; //optional. Default is "migrad"
+ *  tolerance = 0.001; //optional. Default as in ROOT::Minuit2
  * }
  * </pre>
  *
- * \c method must be either "simplex" or "migrad".
+ * \c printlevel is the verbosity level of the minimizer. The default of 0 does not print anything.
+ *  Increase this value in case you are debugging a problem and suspect that it has to do with the minimization.
+ *  The value is passed to ROOT::Minuit2::Minuit2Minimizer::SetPrintLevel().
+ *
+ * \c method must be either "simplex" or "migrad". Refer to the MINUIT documentation on details of these methods.
  *
  * \c tolerance is the Tolerance as should be documented in ROOT::Minuit2::Minuit2Minimizer::SetTolerance.
- *  Default is the one used by ROOT::Minuit2::Minuit2Minimizer and which should be documented by ROOT (if
- *  you find this documentation, write me a mail, so I can point other users to it here).
+ *  Default is the one used by ROOT::Minuit2::Minuit2Minimizer.
  *
- * Please note that this plugin relies on the Minuit2 implementation of ROOT which is hardly documented.
- * Please double or triple check the results.
+ * Please note that this plugin relies on the Minuit2 implementation of ROOT which is poorly documented. Minuit2
+ * is a C++ proxy to the fortran MINUIT for which you can find more documentation.
  */
 class root_minuit: public theta::Minimizer{
 public:
@@ -53,7 +48,7 @@ public:
      * The minimizer forwards the task to a ROOT::Minuit2::Minuit2Minimizer using its
      * functions also for setting limits on the parameters. If minimization fails, it
      * is attempted up to three times through repeating calls of ROOT::Minuit2::Minuit2Minimizer::Minimize.
-     * If still an error is reported, a MinimizerException is thrown which contains the status
+     * If still an error is reported, a \ref MinimizationException is thrown which contains the status
      * code returned by ROOT::Minuit2::Minuit2Minimizer::Status().
      */
     virtual theta::MinimizationResult minimize(const theta::Function & f);
@@ -66,6 +61,7 @@ private:
     ROOT::Minuit2::EMinimizerType type;
     std::auto_ptr<ROOT::Minuit2::Minuit2Minimizer> min;
     double tolerance;
+    //theta::ParIds minos_parids;
 };
 
 #endif

@@ -18,6 +18,7 @@
  *  parameter = "p0";
  *  clevels = [0.68, 0.95];
  *  minimizer = "myminuit";
+ *  re-minimize = false; //Optional. Default is true
  * }
  *
  * myminuit = {...} //see the minimizer documentation.
@@ -33,6 +34,9 @@
  *
  * \c minimizer is the configuration path to a \link theta::Minimizer Minimizer\endlink definition.
  *
+ * \c re-minimize specifies whether or not to search for a minimum of the negative log-likelihood when scanning
+ *    through the parameter of interest or to use the parameter values found at the global minimum. See below for details.
+ *
  * This producer uses the likelihood to derive confidence intervals based on the
  * based on the asymptotic property of the likelihood ratio test statistics to be distributed
  * according to a chi^2-distribution.
@@ -40,9 +44,13 @@
  * Given a likelihood function L which depends on parameters p_0 ... p_n, for which a
  * confidence interval for p0 should be constructed, the method works as follows:
  * <ol>
- * <li>vary parameters p_0 ... p_n to find the maximum value of the likelihood function, L_max</li>
- * <li>scan through the parameter p0. For each new value of po, maximize L with respect to all other
- *     parameters, yielding the maximum as function of p_0, L_m(p_0).</li>
+ * <li>vary parameters p_0 ... p_n to find the maximum value of the likelihood function, L_max, and the parameter
+ *     values at the maximum.</li>
+ * <li>starting from the value at the maximum, scan through the parameter p0 in two passes:
+ *     once to lower and once to higher values of p0.
+ *     For each new value of p0, wither (i) maximize L with respect to all other parameters, or (ii) using the
+ *     values found in step 1 for the other parameters. Which method is used depends on the \c re-minimize setting.
+ *     In both cases, one effectively has a function depending on p0 only, L_m(p_0).</li>
  * <li>The interval for p0 is given by the points where the ratio L_m(p0) / L_max corresponds to
  *     the desired confidence level.</li>
  * </ol>
@@ -78,6 +86,7 @@ private:
     boost::shared_ptr<theta::VarIdManager> vm;
     theta::ParId pid;
     std::vector<double> clevels;
+    bool re_minimize;
     //at construction, save here the deltanll values corresponding to
     //clevels:    
     std::vector<double> deltanll_levels;

@@ -10,6 +10,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
+#include <termios.h>
+
 using namespace std;
 using namespace theta;
 using namespace theta::utils;
@@ -32,7 +34,24 @@ public:
         }
     }
 
-    MyProgressListener(): chars_written(0){}
+    MyProgressListener(): chars_written(0){
+        if(not isatty(1)) return;
+        //disable terminmal echoing; we don't expect any input.
+        termios settings;
+        if (tcgetattr (1, &settings) < 0) return; //ignore error
+        settings.c_lflag &= ~ECHO;
+        tcsetattr (1, TCSANOW, &settings);
+    }
+    
+    ~MyProgressListener(){
+        if(not isatty(1)) return;
+        //enable terminmal echoing again; don't be evil
+        termios settings;
+        if (tcgetattr (1, &settings) < 0) return; //ignore error
+        settings.c_lflag |= ECHO;
+        tcsetattr (1, TCSANOW, &settings);
+    }
+    
 private:
    int chars_written;
 };
@@ -128,20 +147,18 @@ int main(int argc, char** argv) {
             boost::shared_ptr<ProgressListener> l(new MyProgressListener());
             run->set_progress_listener(l);
         }
-    } catch (ConfigurationException & ex) {
-        cerr << "Error while building Model from config: " << ex.message << "." << endl;
-        return 1;
-    } catch (SettingNotFoundException & ex) {
-        cerr << "The required configuration parameter '" << ex.getPath() << "' was not found." << endl;
+    }
+    catch (SettingNotFoundException & ex) {
+        cerr << "Error: the required configuration parameter at " << ex.getPath() << " was not found." << endl;
         return 1;
     } catch (SettingTypeException & ex) {
-        cerr << "The configuration parameter " << ex.getPath() << " has the wrong type." << endl;
+        cerr << "Error: the configuration parameter at " << ex.getPath() << " has the wrong type." << endl;
         return 1;
     } catch (SettingException & ex) {
-        cerr << "An unspecified setting exception while processing the configuration occured in path " << ex.getPath() << endl;
+        cerr << "Error while processing the configuration at " << ex.getPath() << endl;
         return 1;
     } catch (Exception & e) {
-        cerr << "An exception occured while processing the configuration: " << e.message << endl;
+        cerr << "Error: " << e.message << endl;
         return 1;
     }
     
@@ -166,7 +183,7 @@ int main(int argc, char** argv) {
     try {
         run->run();
     } catch (Exception & ex) {
-        cerr << "An exception ocurred: " << ex.what() << endl;
+        cerr << "An error ocurred during Run::run: " << ex.what() << endl;
         return 1;
     }
     if(theta::stop_execution){

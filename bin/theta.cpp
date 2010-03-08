@@ -40,7 +40,8 @@ private:
 int main(int argc, char** argv) {
     po::options_description desc("Supported options");
     desc.add_options()("help", "show help message")
-    ("quiet,q", "quiet mode (supress progress message)");
+    ("quiet,q", "quiet mode (supress progress message)")
+    ("nowarn", "do not warn about unused configuration file statements");
 
     po::options_description hidden("Hidden options");
 
@@ -79,7 +80,7 @@ int main(int argc, char** argv) {
     string run_name = "main";
     if(cmdline_vars.count("run-name")) run_name = cmdline_vars["run-name"].as<string>();
     bool quiet = cmdline_vars.count("quiet");
-    
+    bool nowarn = cmdline_vars.count("nowarn");
 
     Config cfg;
     
@@ -129,30 +130,33 @@ int main(int argc, char** argv) {
         }
     } catch (ConfigurationException & ex) {
         cerr << "Error while building Model from config: " << ex.message << "." << endl;
+        return 1;
     } catch (SettingNotFoundException & ex) {
         cerr << "The required configuration parameter '" << ex.getPath() << "' was not found." << endl;
+        return 1;
     } catch (SettingTypeException & ex) {
         cerr << "The configuration parameter " << ex.getPath() << " has the wrong type." << endl;
+        return 1;
     } catch (SettingException & ex) {
         cerr << "An unspecified setting exception while processing the configuration occured in path " << ex.getPath() << endl;
+        return 1;
     } catch (Exception & e) {
         cerr << "An exception occured while processing the configuration: " << e.message << endl;
-    }
-
-    if (run.get() == 0) {
-        cerr << "Could not build run object due to occurred errors. Exiting." << endl;
         return 1;
     }
     
-    vector<string> unused;
-    rec.get_unused(unused, cfg.getRoot());
-    if (unused.size() > 0) {
-        cout << "WARNING: following setting paths in the configuration file have not been used: " << endl;
-        for (size_t i = 0; i < unused.size(); ++i) {
-            cout << "  " << (i+1) << ". " << unused[i] << endl;
+    if(not nowarn){
+        vector<string> unused;
+        rec.get_unused(unused, cfg.getRoot());
+        if (unused.size() > 0) {
+            cout << "WARNING: following setting paths in the configuration file have not been used: " << endl;
+            for (size_t i = 0; i < unused.size(); ++i) {
+                cout << "  " << (i+1) << ". " << unused[i] << endl;
+            }
+            cout << "Comment out these settings to get rid of this message." << endl;
+            cout << "(NOTE: this warning feature is still experimental. If false positives"
+                    " were reported, please write a trac ticket.)" << endl << endl;
         }
-        cout << "Comment out these settings to get rid of this message." << endl;
-        cout << "(NOTE: this warning feature is still experimental. If false positives were reported, please write a ticket.)" << endl << endl;
     }
 
     //install signal handler now, not much earlier. Otherwise, plugin loading

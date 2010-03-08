@@ -2,8 +2,6 @@
 
 #include "sqlite3.h"
 
-//#include "interface/exception.hpp"
-
 #include "TH1.h"
 #include "TFile.h"
 
@@ -53,35 +51,18 @@ sqlite3* sqlite3_open(const string & fname){
     return db;
 }
 
-/** Create plots for a producer of type "lnQ-minimize" in directory \c dir.
- * 
-void make_plots_lnQ_minimize(sqlite3 * db, TDirectory * dir, const string & p_name){
-    
-}
-*/
-
-
-//new architecture:
-// * do_main reads prodinfo table
-// * for each producer, the correct make_plots_* command is run
-// * the make_plots_* routines create histos that summarize the most important things.
-
-
-
-
 void do_main(const string & fname, TDirectory * cd, const string & tablename){
     cd->cd();
-    TH1F* histo = new TH1F("h", "h", 2000, -100., 100.); //owned by cd
-    //    histo->SetMaximum(51.0);
-    
+    TH1F* histo = new TH1F("h", "h", 100, 22.0616, 36.2339); //owned by cd
     sqlite3 * db = sqlite3_open(fname);
     stringstream ss;
     ss << "SELECT nll_sb - nll_b FROM '" << tablename << "';";
     sqlite3_stmt* st = sqlite3_prepare(db, ss.str().c_str());
     int res;
+    int n;
     while(SQLITE_ROW == (res=sqlite3_step(st))){
         double lnq = sqlite3_column_double(st, 0);
-        histo->Fill(lnq);
+        histo->Fill(sqrt(2 * fabs(lnq)));
     }
     if(res!=SQLITE_DONE){
         ss.str("");
@@ -96,7 +77,7 @@ int main(int argc, char** argv){
         return 1;
     }
     try{
-        TFile file("out_SigAndBkg.root", "recreate");
+        TFile file("theta_significance.root", "recreate");
         do_main(argv[1], &file, argv[2]);
         file.Write();
         file.Close();

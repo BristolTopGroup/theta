@@ -72,7 +72,7 @@
  *
  * \section contact Contact
  *
- * The of the author of %theta can be reached under 
+ * The author of %theta can be reached under 
  * <a href="mailto:ott@ekp.uni-karlsruhe.de">ott@ekp.uni-karlsruhe.de</a>. <br>
  * Or, if you prefer snail mail:
  * <pre>
@@ -265,10 +265,11 @@
  *
  * Be sure to get the external dependencies:
  * <ol>
- * <li><a href="http://boost.org/">Boost</a>, a bundle of general-purpose C++ libraries, which is used in %theta for filesystem interface, 
- *    option parsing, memory management through smart pointers, and multi-threading.</li>
- * <li><a href="http://sqlite.org/">sqlite3</a>, a light-weight, SQL-based %database engine which is used to
- *    store the results in %theta</li>
+ * <li><a href="http://boost.org/">Boost</a>, a bundle of general-purpose C++ libraries, which is
+ *    used in %theta for filesystem interface, option parsing, memory management through
+ *    smart pointers, and multi-threading.</li>
+ * <li><a href="http://sqlite.org/">sqlite3</a>, a light-weight, SQL-based %database engine which
+ *    is used to store the results in %theta</li>
  * </ol>
  * There are packages available for these on many distribution.
  *
@@ -281,8 +282,9 @@
  *  make run-test
  *  bin/theta examples/gaussoverflat.cfg
  *</pre>
- * If you install the dependencies in an unusual location (i.e., if headers and libraries are not found automatically)
- * you have to edit the SQLITE_INCLUDE, SQLITE_LIBS, BOOST_INCLUDE, and BOOST_LIBS variables on top of \c Makefile.rules.
+ * If you install the dependencies in an unusual location (i.e., if headers and libraries
+ * are not found automatically) you have to edit the SQLITE_INCLUDE, SQLITE_LIBS,
+ * BOOST_INCLUDE, and BOOST_LIBS variables on top of \c Makefile.rules.
  */
 
  /**
@@ -338,8 +340,12 @@
  *   nbins = 200;
  * };
  * </pre>
- * the right hand side of the "mass" setting is a setting group containing a "range" setting (which has a list as type) and "nbins"
- * setting (an integer type). See the libconfig reference linked in the \ref ack section for a detailed description of the configuration file syntax.
+ * the right hand side of the "mass" setting is a setting group containing a
+ * "range" setting (which has a list as type) and "nbins"
+ * setting (an integer type). See the libconfig reference linked in the \ref ack section
+ * for a detailed description of the configuration file syntax. Note that any right hand side
+ * where a setting group is expected, it is also allowed to write a string of the form "@&lt;path&gt;"
+ * where &lt;path&gt; is the path in the configuration file to use at this place instead.
  *
  * At the top of the configuration file, the parameters and observables you want to use are defined:
  * there is one observable "mass" with the range [500, 1500] and 200 bins. Note that %theta does
@@ -378,26 +384,28 @@
  * by the setting group "{s=0.0;}".For the "signal-plus-background", no constraints have to be applied,
  * therefore, an empty settings group is given: "{}".
  *
- * Whenever a producer modeule runs, it will be provided with a model and data. The deltanll_hypotest producer will
+ * Whenever a producer modeule runs, it will be provided with a model and data. The \ref deltanll_hypotest producer will
  * <ol>
  * <li> Construct the likelihood function of the model, given the data</li>
  * <li> Minimize the negative logarithm of the likelihood function with the "signal-plus-background" parameter values fixed</li>
  * <li> Minimize the negative log-likelihood function with the "background-only" parameter values fixed</li>
  * <li> save the two values of the negative-log-likelihood in the result table</li>
  * </ol>
+ * For more details, refer to the documentation of \ref deltanll_hypotest.
  *
  * \subsection conf_run Configuration of the run
  *
  * Having configured the model and a statistical method, we have to glue them together. In this case, we want to make
  * many pseudo experiments in order to determine the distribution of the likelihood-ration test-statistics.
  *
- * This is done by the "main" settings group. It defines a \link plain_run plain run \endlink which
+ * This is done by the "main" settings group. It defines a \ref plain_run which
  * throws random pseudo data from a model and calls a list of producers. The results will be written
  * as SQL %database to a file with the path specified with "result-file".
  *
  * Pseudo data is thrown according to the configured model with following sequence:
  * <ol>
- *  <li>Determine a random value for each model parameter. This is done with a the constraint given in the model for that parameter, if it exists.
+ *  <li>Determine a random value for each model parameter. This is done with a the constraint given
+ *        in the model for that parameter, if it exists.
  *        Otherwise, the default value from the parameter definition is used.</li>
  *  <li>For each observable, use these parameters to evaluate the Histograms and coefficients.</li>
  *  <li>For each observable, add all components (i.e., coefficients and histograms)</li>
@@ -429,7 +437,8 @@
  *
  * First of all, you might have noticed that the configuration file format is <i>hierarchical</i> and consists of many
  * named setting groups. %theta has a very modular architecture which makes it easy to write extensions for; one important
- * thing to remember at this point is:<b>Any setting group containing a "type="&lt;typename&gt;";" setting is used to construct a C++ object of class &lt;typename&gt; via a plugin system.</b>
+ * thing to remember at this point is:<b>Any setting group containing a "type="&lt;typename&gt;";"
+ * setting is used to construct a C++ object of class &lt;typename&gt; via a plugin system.</b>
  *
  * This is very useful if you search for documentation: if you encounter a setting like type="deltanll_hypotest", you now know that you have
  * to search for the documentation at \link deltanll_hypotest \endlink.
@@ -459,15 +468,18 @@
  *
  * Core and root plugins, by type:
  * <ul>
- * <li>\link theta::HistogramFunction HistogramFunction\endlink: used in the "histogram=..."-setting in the observables specification of a model:
+ * <li>\link theta::HistogramFunction HistogramFunction\endlink: used in the "histogram=..."-setting in the observables
+ *      specification of a model:
  *     <ul>
  *         <li>fixed_gauss for defining a normal distribution with fixed (i.e., not parameter dependent) mean and standard deviation</li>
  *         <li>fixed_poly for a polynomial of arbitrary order with fixed (i.e., not parameter dependent) coefficients</li>
- *         <li>interpolating_histo to interpolate between one "nominal" and several "distorted" histograms for the generic treatment of systematic uncertainties</li>
+ *         <li>interpolating_histo to interpolate between one "nominal" and several "distorted" histograms for the
+ *             generic treatment of systematic uncertainties</li>
  *         <li>root_histogram to read a histogram from a root file</li>
  *     </ul>
  *   </li>
- * <li>\link theta::Function Function\endlink: used as coefficients of the components of an observable specification in a model. Currently, no core plugins are available.</li>
+ * <li>\link theta::Function Function\endlink: used as coefficients of the components of an observable
+ *         specification in a model. Currently, no core plugins are available.</li>
  * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood, profile likelihood methods:
  *     <ul>
  *       <li>root_minuit using MINUIT via ROOT</li>
@@ -489,13 +501,19 @@
  * </li>
  * <li>\link theta::Producer Producer\endlink: statistical method called by a Run object</li>
  *    <ul>
- *       <li>\link deltanll_hypotest deltanll_hypotest \endlink creates likelihood-ratio test statistics to find the critical region for rejecting a "background only" null hypothesis</li>
- *       <li>\link deltanll_intervals deltanll_intervals \endlink interval creation based on the difference in the negative-log-likelihood function</li>
- *       <li>\link mle mle \endlink maximum likelihood estimator estimates parameter values and errors using a minimizer on the negative-log-likelihood function</li>
- *       <li>\link mcmc_quantiles mcmc_quantiles \endlink Quantile estimator based on Markov-Chain Monte-Carlo to be used for interval estimation</li>
+ *       <li>\link deltanll_hypotest deltanll_hypotest \endlink creates likelihood-ratio test statistics to find
+ *             the critical region for rejecting a "background only" null hypothesis</li>
+ *       <li>\link deltanll_intervals deltanll_intervals \endlink interval creation based on the difference in the
+ *             negative-log-likelihood function</li>
+ *       <li>\link mle mle \endlink maximum likelihood estimator estimates parameter values and errors using a minimizer
+ *             on the negative-log-likelihood function</li>
+ *       <li>\link mcmc_quantiles mcmc_quantiles \endlink Quantile estimator based on Markov-Chain Monte-Carlo to be
+ *             used for interval estimation</li>
  *       <li>(not yet implemented:) mcmc_marginal Determine the marginal distribution (as Histogram) for a parameter</li>
- *       <li>\link mcmc_posterior_ratio mcmc_posterior_ratio \endlink analogue of deltanll_hypotest, but integrates over any free parameters instead of minimizing</li>
- *       <li>\link pseudodata_writer pseudodata_writer \endlink writes out the created pseudo data. Not really a statistical method, but technically implemented as a Producer as well</li>
+ *       <li>\link mcmc_posterior_ratio mcmc_posterior_ratio \endlink analogue of deltanll_hypotest, but integrates over
+ *           any free parameters instead of minimizing</li>
+ *       <li>\link pseudodata_writer pseudodata_writer \endlink writes out the created pseudo data. Not really a
+ *           statistical method, but technically implemented as a Producer as well</li>
  *    </ul>
  * </ul>
  */
@@ -514,6 +532,10 @@
   * and invoke its \link theta::Run::run run method \endlink.
   *
   * %theta will output the current progress if running on a tty, unless disabled via the \c -q (or \c --quiet) option.
+  *
+  * Using the \c --nowarn option will disable warnings about unused configuration file settings. Only
+  * use this if you are sure that the warnings can be savely ignored (in case of a problem, <em>always</em>
+  * reproduce it without using this option first).
   *
   * If you send the \c SIGINT signal to %theta (e.g., by hitting ctrl+C on a terminal running %theta),
   * it will exit gracefully as soon as possible (which usually means
@@ -674,19 +696,23 @@
  * The Markov chain length is 10,000.
  *
  * The test calculates the error on \f$ q \f$ (<em>not</em> on \f$ \hat{\Theta}_q \f$) for 50 pseudo experiments for each of
- * the 4 quantiles. If the deviation is larger than 0.015 (absolute), then the pseudo-experiment is marked as "estimate too low" or "estimate too high"
- * depending whether the requested value of \f$ q \f$ was lower or high than the estimated value. (A pseudo-experiment can have both marks
- * as there are 4 quantiles which are tested.)
+ * the 4 quantiles. If the deviation is larger than 0.015 (absolute), then the pseudo-experiment
+ * is marked as "estimate too low" or "estimate too high"
+ * depending whether the requested value of \f$ q \f$ was lower or high than the estimated value. (A pseudo-experiment
+ * can have both marks as there are 4 quantiles which are tested.)
  *
- * If there are more than 15 pseudo experiments in either of the categories, the test is considered failed, otherwise, it is considered passed.
- * As additional diagnostics, the number of pseudo experiments marked "too low" and "too high" are printed. In a bias-free method, these
- * two values should be similar, i.e., the value estimated should be sometimes too low and sometimes too high, and not prefer
+ * If there are more than 15 pseudo experiments in either of the categories,
+ * the test is considered failed, otherwise, it is considered passed.
+ * As additional diagnostics, the number of pseudo experiments marked "too low"
+ * and "too high" are printed. In a bias-free method, these
+ * two values should be similar, i.e., the value estimated should be sometimes too
+ * low and sometimes too high, and not prefer
  * one side. However, no automatic diagnostics is run, as these numbers are small.
  *
- * \subsection testing_counting-nobkg_deltanll Confidence intervals based on asymptotic properties of the likelihood ratio (deltanll_intervals)
+ * \subsection testing_counting-nobkg_deltanll Confidence intervals based on asymptotic properties of the likelihood ratio
  *
  * <em>Test script:</em> <tt>test-stat/counting-nobkg-deltanll_intervals.sh</tt><br>
- * <em>Relevant plugin classes:</em> \link deltanll_intervals deltanll_intervals \endlink, \link root_minuit root_minuit \endlink
+ * <em>Relevant plugin classes:</em> \ref deltanll_intervals, \ref root_minuit
  *
  * Given the number of observed events, \f$ n \f$, the logarithm of the likelihood ratio between
  * a free value \f$ \Theta \f$ and the value which maximizes the likelihood function (i.e., \f$ \Theta = n \f$) is
@@ -733,4 +759,3 @@
 /** \brief Common namespace for %theta
  */
 namespace theta{}
-

@@ -14,17 +14,17 @@ using namespace libconfig;
 ParId VarIdManager::createParId(const std::string & name, double def, double min, double max) {
     if (parNameExists(name)) {
             stringstream ss;
-            ss << "VarIdManager::createParId: name '"<< name <<"' already in use with different specification.";
+            ss << "VarIdManager::createParId: parameter '"<< name <<"' defined twice";
             throw InvalidArgumentException(ss.str());
     }
     if (min >= max) {
         stringstream ss;
-        ss << "Parameter " << name << " has min >= max, i.e., empty range.";
+        ss << "Parameter " << name << " has min >= max, i.e., empty range";
         throw InvalidArgumentException(ss.str());
     }
     if (def < min || def > max) {
         stringstream ss;
-        ss << "Parameter " << name << " has default value outside of its range.";
+        ss << "Parameter '" << name << "' has default value outside of its range";
         throw InvalidArgumentException(ss.str());
     }    
     ParId result(next_pid_id);
@@ -39,17 +39,17 @@ ParId VarIdManager::createParId(const std::string & name, double def, double min
 ObsId VarIdManager::createObsId(const std::string & name, size_t nbins, double min, double max) {
     if (obsNameExists(name)) {
             stringstream ss;
-            ss << "VarIdManager::createObsId: name '" << name << "' already in use with different specification.";
+            ss << "VarIdManager::createObsId: observable '" << name << "' defined twice";
             throw InvalidArgumentException(ss.str());
     }
     if (min >= max) {
          stringstream ss;
-         ss << "Observable " << name << " has min >= max, i.e., empty range.";
+         ss << "Observable " << name << " has min >= max, i.e., empty range";
          throw InvalidArgumentException(ss.str());
     }
     if(nbins==0){
         stringstream ss;
-        ss << "Observable " << name << " has no bins.";
+        ss << "Observable '" << name << "' has no bins";
         throw InvalidArgumentException(ss.str());
     }
     
@@ -85,11 +85,6 @@ std::string VarIdManager::getName(const ObsId & id) const {
     }
     return it->second;
 }
-
-/*VarIdManager::VarIdManager(const VarIdManager & rhs): pid_to_name(rhs.pid_to_name), name_to_pid(rhs.name_to_pid),
-        pid_to_default(rhs.pid_to_default),  pid_to_range(rhs.pid_to_range), next_pid_id(rhs.next_pid_id),
-        oid_to_name(rhs.oid_to_name), name_to_oid(rhs.name_to_oid), oid_to_range(rhs.oid_to_range), oid_to_nbins(rhs.oid_to_nbins), next_oid_id(rhs.next_oid_id)
-        {}*/
 
 ParId VarIdManager::getParId(const std::string & name) const {
     std::map<std::string, ParId>::const_iterator it = name_to_pid.find(name);

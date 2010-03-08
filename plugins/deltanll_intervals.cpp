@@ -1,4 +1,5 @@
 #include "plugins/deltanll_intervals.hpp"
+#include "plugins/reduced_nll.hpp"
 #include "interface/plugin.hpp"
 #include "interface/run.hpp"
 #include "interface/minimizer.hpp"
@@ -21,52 +22,6 @@ void deltanll_intervals::define_table(){
         upper_columns.push_back(table->add_column(*this, ss.str(), ProducerTable::typeDouble));
     }
 }
-
-class ReducedNLL{
-    public:
-        
-        // set min to zero if no minimization should be done.
-        ReducedNLL(const theta::NLLikelihood & nll_, const ParId & pid_, const ParValues & pars_at_min_, theta::Minimizer * min_):
-           nll(nll_), pid(pid_), pars_at_min(pars_at_min_), min(min_){
-        }
-        
-        void set_offset_nll(double t){
-            offset_nll = t;
-        }
-        
-        double operator()(double x) const{
-            //use the last minimum to set the start values (empty at the first iteration, which is Ok).
-            /*ParIds ids = last_minimum.getAllParIds();
-            for(ParIds::const_iterator it=ids.begin(); it!=ids.end(); ++it){
-                min->override_default(*it, last_minimum.get(*it));
-            }*/
-            if(min){
-                min->override_default(pid, x);
-                min->override_range(pid, x, x);
-                MinimizationResult minres = min->minimize(nll);
-                //last_minimum = minres.values;
-                return minres.fval - offset_nll;
-            }
-            pars_at_min.set(pid, x);
-            return nll(pars_at_min) - offset_nll;
-        }
-        
-        ~ReducedNLL(){
-            /*ParIds ids = last_minimum.getAllParIds();
-            for(ParIds::const_iterator it=ids.begin(); it!=ids.end(); ++it){
-                min->reset_override(*it);
-            }*/
-            if(min) min->reset_override(pid);
-        }
-        
-    private:
-        const theta::NLLikelihood & nll;
-        ParId pid;
-        mutable ParValues pars_at_min;
-        double offset_nll;
-        theta::Minimizer * min;
-        //mutable ParValues last_minimum;
-};
 
 
 /** \brief The secant method to find the root of a one-dimensional function

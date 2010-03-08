@@ -501,12 +501,13 @@
  * </li>
  * <li>\link theta::Producer Producer\endlink: statistical method called by a Run object</li>
  *    <ul>
- *       <li>\link deltanll_hypotest deltanll_hypotest \endlink creates likelihood-ratio test statistics to find
- *             the critical region for rejecting a "background only" null hypothesis</li>
- *       <li>\link deltanll_intervals deltanll_intervals \endlink interval creation based on the difference in the
- *             negative-log-likelihood function</li>
  *       <li>\link mle mle \endlink maximum likelihood estimator estimates parameter values and errors using a minimizer
  *             on the negative-log-likelihood function</li>
+ *       <li>\link deltanll_intervals deltanll_intervals \endlink interval creation based on the difference in the
+ *             negative-log-likelihood function</li> 
+ *       <li>\link deltanll_hypotest deltanll_hypotest \endlink creates likelihood-ratio test statistics to find
+ *             the critical region for rejecting a "background only" null hypothesis</li>
+  *       <li>\link nll_scan nll_scan \endlink scan the likelihood function in one parameter and minimize with respect to all others</li>
  *       <li>\link mcmc_quantiles mcmc_quantiles \endlink Quantile estimator based on Markov-Chain Monte-Carlo to be
  *             used for interval estimation</li>
  *       <li>(not yet implemented:) mcmc_marginal Determine the marginal distribution (as Histogram) for a parameter</li>

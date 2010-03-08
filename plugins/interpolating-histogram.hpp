@@ -13,7 +13,7 @@
  * mass = {
  *   coefficients = ("s");
  *   histogram = {
- *      type = "interpolating";
+ *      type = "interpolating_histo";
  *      parameters = ("delta1", "delta2");
  *      nominal-histogram = { / * fixed-histogram-specification * / };
  *      delta1-plus-histogram = { / * fixed-histogram-specification * / };

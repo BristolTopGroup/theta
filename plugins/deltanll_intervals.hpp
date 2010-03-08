@@ -9,60 +9,60 @@
 
 #include <string>
 
-/** \brief Confidence intervals based on the difference in the negative log-likelihood.
+/** \brief Confidence levels based on likelihood ratio
+ *
+ * Producer to construct confidence intervals based on asymptotic properties of the likelihood-ratio,
+ * or, equvalently, the difference in the negative log-likelihood.
  *
  * Configuration is done with a settings block like:
  * <pre>
  * {
- *  type = "delta-nll";
+ *  type = "deltanll_intervals";
  *  parameter = "p0";
+ *  minimizer = "@myminuit";
  *  clevels = [0.68, 0.95];
- *  minimizer = "myminuit";
  *  re-minimize = false; //Optional. Default is true
  * }
  *
  * myminuit = {...} //see the minimizer documentation.
  * </pre>
  *
- * \c type has always to be "delta-nll" in order to use this producer
+ * \c type has always to be "deltanll_intervals" in order to use this producer
  *
  * \c parameter is the name of the parameter for which the interval shall be calculated.
- *
- * \c clevels is an array (or list) of doubles of confidence levels for which the intervals
- *   shall be calculated. Note that an interval for the "0" confidence level (i.e., the
- *   interval containing the minimum) is always determined.
  *
  * \c minimizer is the configuration path to a \link theta::Minimizer Minimizer\endlink definition.
  *
  * \c re-minimize specifies whether or not to search for a minimum of the negative log-likelihood when scanning
  *    through the parameter of interest or to use the parameter values found at the global minimum. See below for details.
  *
+ * \c clevels is an array (or list) of doubles of confidence levels for which the intervals
+ *   shall be calculated. Note that an interval for the "0" confidence level (i.e., the
+ *   interval containing the minimum) is always determined.
+ *
  * This producer uses the likelihood to derive confidence intervals based on the
  * based on the asymptotic property of the likelihood ratio test statistics to be distributed
  * according to a chi^2-distribution.
  *
- * Given a likelihood function L which depends on parameters p_0 ... p_n, for which a
- * confidence interval for p0 should be constructed, the method works as follows:
+ * Given a likelihood function \f$ L(\vec p) \f$ which depends on parameters \f$ \vec p = (p_0, ..., p_n) \f$, the
+ * reduced likelihood function \f$ L_{\text{red}}(p_0)\f$ for parameter \f$ p_0 \f$ is constructed as follows:
  * <ol>
- * <li>vary parameters p_0 ... p_n to find the maximum value of the likelihood function, L_max, and the parameter
- *     values at the maximum.</li>
- * <li>starting from the value at the maximum, scan through the parameter p0 in two passes:
- *     once to lower and once to higher values of p0.
- *     For each new value of p0, wither (i) maximize L with respect to all other parameters, or (ii) using the
- *     values found in step 1 for the other parameters. Which method is used depends on the \c re-minimize setting.
- *     In both cases, one effectively has a function depending on p0 only, L_m(p_0).</li>
- * <li>The interval for p0 is given by the points where the ratio L_m(p0) / L_max corresponds to
- *     the desired confidence level.</li>
+ * <li>maximize \f$ L(\vec p) \f$ to find the parameter values at the maximum \f$ \hat{\vec p} \f$. </li>
+ * <li>scan through \f$ p_0 \f$ to find \f$ L_{\text{red}}(p_0)\f$ by either (i) maximizing \f$ L(\vec p) \f$ fixing only \f$ p_0 \f$, or (ii) using the
+ *     values found in step 1 for all parameters but \f$ p_0 \f$. Which method is used depends on the \c re-minimize setting.
+ *     The found value is divided by the maximum likelihood value \f$ L(\hat{\vec p}) \f$ such that the maximum of
+ *     \f$ L_{\text{red}}(p_0) \f$ is always 1.</li>
  * </ol>
  *
- * L_m(p_0) is sometimes called the "profiled likelihood function" or the "reduced likelihood function",
- * as it only depends on 1 of the original n+1 parameters.
+ * The result table always contains the parameter value at the maximum of the likelihood as "maxl". The "maxl" value
+ * is the same as you would get for a confidence level of 0.
  *
+ * If interval construction is requested through non-empty \c clevels list, the lower and upper bounds are saved which
+ * are determined by the point where \f$ L_{\text{red}}(p_0) \f$ takes the values corresponding to these confidence levels determined
+ * via the asymptotic chi^2 distribution property of likelihood ratios.
  * For each confidence level c, the result table contains columns "lower" + 10000*c and "upper" + 10000*c, where
  * the numbers are rounded and written with leading zeros. For example, if the \c clevels setting is [0.68, 0.95], the
- * column names will be "lower06800", "upper06800", "lower09500", "upper09500". Additionally, the table always contains
- * the parameter value at the maximum of the likelihood as "maxl". The "maxl" value is the same as you would get for
- * a confidence level of exactly 0.
+ * column names will be "lower06800", "upper06800", "lower09500", "upper09500".
  */
 class deltanll_intervals: public theta::Producer{
 public:
@@ -70,10 +70,7 @@ public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     deltanll_intervals(const theta::plugin::Configuration & cfg);
 
-    /** \brief Run the statistical method with Data and model and write out the result  to the database.
-     *
-     * As this producer can be configured to determine several intervals at once, it
-     * usually makes more than one entry per pseudo experiment in the result table.
+    /** \brief Run the method with Data and model and write out the estimated intervals to the result columns
      */
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
     

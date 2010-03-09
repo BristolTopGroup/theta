@@ -67,18 +67,18 @@ ObsIds Model::getObservables() const{
 }
 
 Data Model::samplePseudoData(Random & rnd, const ParValues & values) const{
-    Data result;
-    for (ObsIds::const_iterator it = observables.begin(); it != observables.end(); it++) {
-        Histogram pred, h;
-        get_prediction_randomized(rnd, pred, values, *it);
-        pred.fill_with_pseudodata(h, rnd);
-        result.addData(*it, h);
-    }
-    return result;
+   Data result;
+   for (ObsIds::const_iterator it = observables.begin(); it != observables.end(); it++) {
+       Histogram pred, h;
+       get_prediction_randomized(rnd, pred, values, *it);
+       pred.fill_with_pseudodata(h, rnd);
+      result.addData(*it, h);
+   }
+   return result;
 }
 
 ParValues Model::sampleValues(Random & rnd) const{
-    ParValues result;
+    ParValues result(*vm);
     for(std::vector<boost::shared_ptr<Distribution> >::const_iterator d_it=priors.begin(); d_it!=priors.end(); d_it++){
         (*d_it)->sample(result, rnd, *vm);
     }
@@ -105,6 +105,11 @@ void Model::set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & c
     names[obs_id] = component_names;
     
     for(boost::ptr_vector<Function>::const_iterator it=coeffs[obs_id]->begin(); it!=coeffs[obs_id]->end(); ++it){
+        ParIds pids = (*it).getParameters();
+        parameters.insert(pids.begin(), pids.end());
+    }
+    
+    for(boost::ptr_vector<HistogramFunction>::const_iterator it=histos[obs_id]->begin(); it!=histos[obs_id]->end(); ++it){
         ParIds pids = (*it).getParameters();
         parameters.insert(pids.begin(), pids.end());
     }
@@ -295,13 +300,7 @@ double NLLikelihood::operator()(const ParValues & values) const{
         try{
             model.get_prediction(model_prediction, values, obs_id);
         }catch(Exception & ex){
-            ex.message += " (in NLLikelihood::operator() model.get_prediction()): ";
-            ParIds ids = values.getAllParIds();
-            for(ParIds::const_iterator it=ids.begin(); it!=ids.end(); ++it){
-                ex.message += vm->getName(*it) + "=";
-                ex.message += values.get(*it);
-                ex.message += "; ";
-            }
+            ex.message += " (in NLLikelihood::operator() model.get_prediction())";
             throw;
         }
         const Histogram & data_hist = data.getData(obs_id);

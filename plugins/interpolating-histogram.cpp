@@ -55,7 +55,6 @@ theta::ParIds interpolating_histo::getParameters() const {
 
 interpolating_histo::interpolating_histo(const Configuration & ctx){
     SettingWrapper psetting = ctx.setting["parameters"];
-    vector<ParId> par_ids;
     //build nominal histogram:
     h0 = getConstantHistogram(ctx, ctx.setting["nominal-histogram"]);
     size_t n = psetting.size();
@@ -65,7 +64,7 @@ interpolating_histo::interpolating_histo(const Configuration & ctx){
     for(size_t i=0; i<n; i++){
         string par_name = psetting[i];
         ParId pid = ctx.vm->getParId(par_name);
-        par_ids.push_back(pid);
+        vid.push_back(pid);
         stringstream setting_name;
         //plus:
         setting_name << par_name << "-plus-histogram";
@@ -76,14 +75,11 @@ interpolating_histo::interpolating_histo(const Configuration & ctx){
         hminus.push_back(getConstantHistogram(ctx, ctx.setting[setting_name.str()] ));
     }
     assert(hplus.size()==hminus.size());
-    assert(par_ids.size()==hminus.size());
-    assert(par_ids.size()==n);
+    assert(vid.size()==hminus.size());
+    assert(vid.size()==n);
     h = h0;
     
-    //do some checks and set overflow  underflow to zero:
     const size_t nsys = hplus.size();
-    if (nsys != hminus.size() || nsys != vid.size())
-        throw InvalidArgumentException("interpolating_histo::interpolating_histo: number of histograms for plus/minus and number of variables mismatch!");
     std::set<ParId> pid_set;
     for(size_t i=0; i<nsys; i++){
         pid_set.insert(vid[i]);

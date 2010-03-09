@@ -57,7 +57,7 @@ interpolating_histo::interpolating_histo(const Configuration & ctx){
     SettingWrapper psetting = ctx.setting["parameters"];
     vector<ParId> par_ids;
     //build nominal histogram:
-    h0 = getConstantHistogram(ctx, psetting["nominal-histogram"]);
+    h0 = getConstantHistogram(ctx, ctx.setting["nominal-histogram"]);
     size_t n = psetting.size();
     //note: allow n==0 to allow the user to disable systematics.
     // In case of unintentional type error (parameters="delta1,delta2";), user will get a warning about

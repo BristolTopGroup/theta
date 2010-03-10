@@ -6,13 +6,25 @@
 
 /** \mainpage
  *
- * Welcome to %theta. %theta is a framework for statistical tests, focussing on problems
+ *
+ *  \image html theta-medium.png
+ *
+ * %theta is a framework for template-based statistical modeling and inference, focussing on problems
  * in high-energy physics. It provides the possibility for the user to express a "model", i.e.,
  * the expected data distribution, as function of physical parameters. This model can be used
- * to make statistical inference about the physical parameter of interest.
- * %theta make it easier to treat commonly arising tasks such as the treatment of nuisance
- * parameters, coverage tests, luminosity scans, large-scale production of test statistic points,
- * and many more.
+ * to make statistical inference about the physical parameter of interest. Modeling is "template-based"
+ * in the sense that the expected data distribution is always expressed as a sum of templates (which, in general,
+ * depend on the model parameters).
+ *
+ * %theta supports a physicist doing data analysis to answer commonly arising statistical questions
+ * such as large-scale pseudo-experiments for coverage tests, luminosity scans, definition of the critical region
+ * for a hypothesis test, etc.
+ *
+ * The intention of %theta is to <em>support</em> the user in the sense that it provides the necessary tools
+ * and documents to address many questions.
+ * However, %theta does not intent to be an all-in-one device which suits every purpose. For example,
+ * it is restricted to template-based modeling in the sense described above. Also, %theta does no sort of
+ * plotting whatsoever.
  *
  * The documentation is split into several pages. If you are new to %theta, read them in this order:
  * <ol>
@@ -20,23 +32,37 @@
  *   <li>\subpage installation Installation explains how to obtain and compile %theta</li>
  *   <li>\subpage intro Introduction describes how to run %theta; a first example is discussed and
  *        an introduction to the internals of %theta. In also contains a \ref plugins "list of available plugins".</li>
- *   <li>\subpage cmd_interface "Command line interface" described the command line tools of %theta</li>
+ *   <li>\subpage cmd_interface "Command line interface" described the command line tools of %theta, namely the \c theta
+ *     program and the \c merge program.</li>
+ *   <li>\subpage extend "Extending theta" describes how to extend %theta using the plugin system</li>
  * </ol>
  *
- * %theta contains examples in the \c examples directory.
+ * Bug tracking and feature requests are managed in the <a href="https://ekptrac.physik.uni-karlsruhe.de/trac/theta">theta trac</a>.
+ * If you find a bug or miss an essential feature, you can open a ticket there.
  *
  * Some additional information not necessarily of interest for every user:
  * <ol>
  *   <li>\subpage design "Design Goals of theta" contains some thoughts about what the code of %theta should be like.
  *       You should read that either if you want to contribute code to %theta or if you want to know what makes %theta
  *       different to other software you often deal with in high-energy physics.</li>
- *   <li>\subpage testing "Testing" describes how %theta is tested. It also describes some examples which however are not explained
- *         in great detail.</li>
+ *   <li>\subpage testing "Testing" describes how %theta is tested, i.e., unit tests and simple statistical cases
+ *       for which the solution is known analytically (or can be otherwise be found independently).</li>
  * </ol>
  *
+ * \section license License
  *
- * %theta logos are available here as <a href="../logos/theta.pdf">pdf</a>, <a href="../logos/theta.eps">eps</a> and
- * <a href="../logos/theta.png">png</a>.
+ * %theta is licensed under the <a href="http://www.gnu.org/copyleft/gpl.html">GPL</a>.
+ *
+ * \section ref References
+ * %theta includes algorithms based on:
+ * <ol>
+ *   <li><em>Matsumoto, Makoto and Nishimura, Takuji:</em> <a href="http://doi.acm.org/10.1145/272991.272995">"Mersenne twister: a 623-dimensionally equidistributed uniform pseudo-random number generator"</a>,
+ *        ACM Trans. Model. Comput. Simul. 1, 1998</li>
+ *   <li><em>Pierre L'Ecuyer:</em> "Maximally Equidistributed Combined Tausworthe Generators", Math. Comp. 65, 1996</li>
+ *   <li><em>Pierre L'Ecuyer:</em> "Tables of Maximally Equidistributed Combined LFSR Generators", Math. Comp. 68, 1999</li>
+ *   <li><em>George Marsaglia and Wai Wan Tsang:</em> "The Ziggurat Method for Generating Random Variables", Journal of Statistical Software 8, 2000</li>
+ *   <li><em>A. Gelman, G. O. Roberts, and W. R. Gilks:</em> "Efficient Metropolis Jumping Rules", Bayesian Statistics 5, 1996</li>
+ * </ol>
  *
  * \section ack Acknowledgement
  *
@@ -55,33 +81,8 @@
  * Last but not least, I want to thank Jasmin Gruschke who tested %theta from an end-user point of view, made useful
  * suggestions and bravely endured many backward-incompatible changes.
  *
- * \section license License
- *
- * %theta is licensed under the <a href="http://www.gnu.org/copyleft/gpl.html">GPL</a>.
- *
- * \section ref References
- * %theta includes algorithms based on:
- * <ol>
- *   <li><em>Matsumoto, Makoto and Nishimura, Takuji:</em> <a href="http://doi.acm.org/10.1145/272991.272995">"Mersenne twister: a 623-dimensionally equidistributed uniform pseudo-random number generator"</a>,
- *        ACM Trans. Model. Comput. Simul. 1, 1998</li>
- *   <li><em>Pierre L'Ecuyer:</em> "Maximally Equidistributed Combined Tausworthe Generators", Math. Comp. 65, 1996</li>
- *   <li><em>Pierre L'Ecuyer:</em> "Tables of Maximally Equidistributed Combined LFSR Generators", Math. Comp. 68, 1999</li>
- *   <li><em>George Marsaglia and Wai Wan Tsang:</em> "The Ziggurat Method for Generating Random Variables", Journal of Statistical Software 8, 2000</li>
- *   <li><em>A. Gelman, G. O. Roberts, and W. R. Gilks:</em> "Efficient Metropolis Jumping Rules", Bayesian Statistics 5, 1996</li>
- * </ol>
- *
- * \section contact Contact
- *
- * The author of %theta can be reached under 
- * <a href="mailto:ott@ekp.uni-karlsruhe.de">ott@ekp.uni-karlsruhe.de</a>. <br>
- * Or, if you prefer snail mail:
- * <pre>
- * Jochen Ott
- * KIT-Karlsruher Institut f&uuml;r Technologie
- * Institut f&uuml;r Experimentelle Kernphysik
- * Wolfgang-Gaede-Str. 1
- * 76131 Karlsruhe
- * </pre>
+ * %theta logos are available here as <a href="../logos/theta.pdf">pdf</a>, <a href="../logos/theta.eps">eps</a> and
+ * <a href="../logos/theta.png">png</a>.
  */
 
 
@@ -430,41 +431,11 @@
  * object which is responsible to create some general-purpose tables. Furthermore, there is one table per producer
  * for which the table format is documented there.
  *
- * \section internal Overview of theta internals
- *
- * In the previous section you have seen a simple use case of %theta. Most of the components and concepts of
- * %theta have been touched there. To better understand the documentation, it is useful to know what happens "behind the scenes".
- *
- * First of all, you might have noticed that the configuration file format is <i>hierarchical</i> and consists of many
- * named setting groups. %theta has a very modular architecture which makes it easy to write extensions for; one important
- * thing to remember at this point is:<b>Any setting group containing a "type="&lt;typename&gt;";"
- * setting is used to construct a C++ object of class &lt;typename&gt; via a plugin system.</b>
- *
- * This is very useful if you search for documentation: if you encounter a setting like type="deltanll_hypotest", you now know that you have
- * to search for the documentation at \link deltanll_hypotest \endlink.
- *
- * So far, plugins can be defined for following types:
- * <ul>
- * <li>\link theta::HistogramFunction HistogramFunction\endlink: used in the "histogram=..."-setting in the observables specification of a model</li>
- * <li>\link theta::Function Function\endlink: used as coefficients of the components of an observable specification in a model</li>
- * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood, profile likelihood methods</li>
- * <li>\link theta::Run Run \endlink: the top-level object which invokes the pseudo data creation and producers</li>
- * <li>\link theta::Distribution Distribution\endlink: used in model constraints or as priors in a statistical method</li>
- * <li>\link theta::Producer Producer\endlink: statistical method called by a Run object</li>
- * </ul>
- *
- * To define and use your own plugin, you have to:
- *<ol>
- * <li>Define a new class derived from a class in the list above and implement all its pure virtual methods and a constructor
- *     taking a \link theta::plugin::Configuration Configuration \endlink object as the only argument.</li>
- * <li>In a .cpp-file, call the REGISTER_PLUGIN(yourclass) macro</li>
- * <li>Make sure to compile and link this definition to a shared-object file.</li>
- * <li>In the configuration file, make sure to load the shared-object file as plugin. You can now use the plugin defined as any other %theta component via
- *     a setting group containing type="yourclass";
- *</ol>
- * For all these cases, you can have a look at the \c plugins/ directory, which contains the core plugins of %theta.
- *
  * \section plugins Available Plugins
+ *
+ * Everywhere in the configuration file where there is a "type=..." setting, the plugin system is used
+ * to construct an object the corresponding type. The string given in the "type=..." setting is the C++ class
+ * name used. The configuration is documented at the class documentation.
  *
  * Core and root plugins, by type:
  * <ul>
@@ -518,6 +489,148 @@
  *    </ul>
  * </ul>
  */
+ 
+ 
+ /**
+  * \page extend Extending theta
+  *
+  * This section assumes that you have read the \ref intro. One important concept introduced there was that of plugins.
+  * As rule of thumb, every setting group in a %theta configuration file corresponds to a C++ instance. More
+  * specifically, <b>any setting group containing a <em>type="<typename>"</em>
+  * setting is used to construct a C++ object of class &lt;typename&gt; via the plugin system.</b>
+  *
+  * So far, plugins can be defined for following types:
+  * <ul>
+  * <li>\link theta::HistogramFunction HistogramFunction\endlink: used in the "histogram=..."-setting
+  *      in the observables specification of a  model</li >
+  * <li>\link theta::Function Function\endlink: used as coefficients of the components of an observable specification in a model or as
+  *     additional term in the log-likelihood for a statistical method</li>
+  * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood, profile likelihood methods</li>
+  * <li>\link theta::Run Run \endlink: the "top-level" object constructed by the %theta main program responsible for creating
+  *     pseudo data and invocation of the producers</li>
+  * <li>\link theta::Distribution Distribution\endlink: used in model constraints or as priors in a statistical method</li>
+  * <li>\link theta::Producer Producer\endlink: statistical method called by a Run object</li>
+  * </ul>
+  *
+  * To define and use your own plugin, you have to:
+  *<ol>
+  * <li>Define a new class derived from a class in the list above and implement all its pure virtual methods and a constructor
+  *     taking a \link theta::plugin::Configuration Configuration \endlink object as the only argument.</li>
+  * <li>In a .cpp-file, call the REGISTER_PLUGIN(yourclass) macro</li>
+  * <li>Make sure to compile and link this definition to a shared-object file.</li>
+  * <li>In the configuration file, make sure to load the shared-object file as plugin.
+  *     You can now use the plugin defined as any other %theta component via
+  *     a setting group containing type="yourclass";
+  *</ol>
+  * For examples of plugins, you can have a look at the \c plugins/ directory, which contains the core plugins of %theta.
+  *
+  * \section extend_example Example: Function plugin
+  *
+  * To have a simple but complete example, consider you want to use a 1/sqrt(s) prior for a Bayesian method.
+  * In the corresponding producer, it is possible to pass a list of function specifications. The first thing
+  * to do is to write down the documentation, specifically addressing how it will be configured. Note that
+  * the setting group you speficy has to provide enough information to completely specify the instance to create:
+  * the constructor will <em>only</em> have accedd to the \ref theta::plugin::Configuration object which essentially
+  * contains the settings from the configuration file and the defined observables and parameters, but not more.
+  *
+  * The setting group should look like this:
+  * \code
+  *   some_name = {
+  *     type = "one_over_sqrt";
+  *     parameter = "s";
+  *   };
+  * \endcode
+  * The type setting is always there. This is required by the plugin system to delegate the construction of such an object
+  * to the right plugin. The rest of the settings is up to the author of the plugin.
+  *
+  * For the implementation, it is considered good style to use the plugin type-name as filename and you <em>have to</em>
+  * use this name as C++ class name. You should also create a separate header file which contains the class declaration and
+  * the documentation (this  is required for the documentation generation). For sake of simplicity, I will omit this
+  * complication.
+  *
+  * The code required for this plugin is:
+  * \code
+  *
+  * using namespace theta;
+  * using namespace theta::plugin;
+  *
+  * class one_over_sqrt: public Function{
+  * private:
+  *    ParId pid;
+  * public:
+  *    one_over_sqrt(const Configuration & cfg){
+  *        string parameter_name = cfg.setting["parameter"];
+  *        pid = cfg.vm->getParId(parameter_name);
+  *    }
+  *
+  *   virtual double operator()(const ParValues & values) const{
+  *      return 1.0 / sqrt(values.get(pid));
+  *   }
+  *
+  *  };
+  *
+  * REGISTER_PLUGIN(one_over_sqrt)
+  * \endcode
+  *
+  * Let's go through this step-by-step.
+  *
+  * The first lines just include the namespaces \c theta and \c theta::plugin in the lookup in order to save
+  * some typing.
+  *
+  * The class \c one_over_sqrt is defined as derived class of \ref theta::Function. Each class used in the
+  * plugin system must be derived from one of the classes of the list given in the introduction of this page.
+  *
+  * The \c one_over_sqrt class defines a private data member of type \c ParId. \c ParId instances are used to
+  * manage parameter identities: each parameter defined in the configuration file corresponds to a certain
+  * value of \c ParId. \c ParId instances can be copied, assigned and compared, but this is all what you can
+  * do with them. Any additional information about the parameter (i.e., its name, default value and range)
+  * is managed with an instance of \ref theta::VarIdManager, see below in the discussion of the constructor.
+  *
+  * The public constructor must be defined to have a \code const Configuration & \endcode as the only parameter.
+  * \c cfg.setting represents the configuration file setting group the instance is constructed from.
+  * This can be used to access the settings in this setting group through
+  * the \c operator[]. See the documentation of \link theta::SettingWrapper SettingWrapper \endlink and the
+  * libconfig documentation for details.
+  * The string configured read into \c parameter_name is then used to get the corresponding \c ParId value.
+  * This has to be done with an instance of \ref theta::VarIdManager. The currently relevant instance
+  * is available through the Configuration instance, \c cfg.vm.
+  *
+  * Before going on, it is also important to see what's <em>not</em> there:
+  * <ul>
+  *   <li>There is no code which handles the case that there is no "parameter" setting in \c cfg.setting. There does not have
+  *      to be as the call \c cfg.setting["parameter"] will throw an exception which will be caught in the %theta
+  *        main program and reported to the user.</li>
+  *   <li>There is no explicit type casting of the configuration file setting. This is done implicitely via the overloaded
+  *     casting operators of \link theta::SettingWrapper SettingWrapper \endlink (this concept is actually stolen form libconfig). In case the 
+  *     required type does not matched the one in the configuration file, an exception will be thrown, which will be caught
+  *     in %theta.</li>
+  *   <li>There is no code to handle the case that the user has mis-spelled the parameter name in the configuration.
+  *      In this case ... yes, you guessed right: an exception will be thrown by VerIdManager::getParId.</li>
+  * </ul>
+  *
+  * So these two lines of construction code are enough to have robust code with (implicitely provided) proper error handling.
+  *
+  * Next, we have a look at the \c operator(). This implements the purely virtual
+  * specification theta::Function::operator() and is what is called if the function value is requested.
+  * From the argument \c values, we can request the value of \c pid and return the result. However, this is
+  * not quite correct yet: the function does not provide proper error handling in case the parameter value is
+  * smaller than zero. Therefore, this code should be modified such that the method body is:
+  * \code
+  *   double val = values.get(pid);
+  *   if(val <= 0.0) throw MathException("one_over_sqrt: negative argument");
+  *   return 1.0 / sqrt(val);
+  * \endcode
+  * Unless you know better, always do this kind of error handling, i.e., throw the appropriate type of exception.
+  *
+  * The last line registers the new class at the plugin system with a macro. You have to do this exactly
+  * once for every plugin you ant to use (never put this line into a header, only do that in C++ source files.
+  * Otherwise, you define two plugins with the same type name and %theta will abort).
+  *
+  * You have to compile this file as part of a shared object file which is loaded through the \c plugins
+  * setting group.
+  *
+  * \todo Provide a directory which is corectly configured to compile all cpp-files as plugin.
+  */
  
  
  /** \page cmd_interface Command line interface

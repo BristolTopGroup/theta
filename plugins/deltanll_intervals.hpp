@@ -45,20 +45,22 @@
  * according to a chi^2-distribution.
  *
  * Given a likelihood function \f$ L(\vec p) \f$ which depends on parameters \f$ \vec p = (p_0, ..., p_n) \f$, the
- * reduced likelihood function \f$ L_{\text{red}}(p_0)\f$ for parameter \f$ p_0 \f$ is constructed as follows:
+ * profile likelihood function \f$ L_{\mathrm{p}}(p_0)\f$ for parameter \f$ p_0 \f$ is constructed as follows:
  * <ol>
  * <li>maximize \f$ L(\vec p) \f$ to find the parameter values at the maximum \f$ \hat{\vec p} \f$. </li>
- * <li>scan through \f$ p_0 \f$ to find \f$ L_{\text{red}}(p_0)\f$ by either (i) maximizing \f$ L(\vec p) \f$ fixing only \f$ p_0 \f$, or (ii) using the
- *     values found in step 1 for all parameters but \f$ p_0 \f$. Which method is used depends on the \c re-minimize setting.
+ * <li>scan through \f$ p_0 \f$ to find \f$ L_{\mathrm{p}}(p_0)\f$ by either (i) maximizing \f$ L(\vec p) \f$
+ *     fixing only \f$ p_0 \f$, or (ii) using the
+ *     values found in step 1 for all parameters \f$ \hat{p}_i \f$ but replace \f$ p_0 \f$. Which method is used depends
+ *     on the \c re-minimize setting.
  *     The found value is divided by the maximum likelihood value \f$ L(\hat{\vec p}) \f$ such that the maximum of
- *     \f$ L_{\text{red}}(p_0) \f$ is always 1.</li>
+ *     \f$ L_{\mathrm{p}}(p_0) \f$ is always 1.</li>
  * </ol>
  *
  * The result table always contains the parameter value at the maximum of the likelihood as "maxl". The "maxl" value
  * is the same as you would get for a confidence level of 0.
  *
  * If interval construction is requested through non-empty \c clevels list, the lower and upper bounds are saved which
- * are determined by the point where \f$ L_{\text{red}}(p_0) \f$ takes the values corresponding to these confidence levels determined
+ * are determined by the point where \f$ L_{\mathrm{p}}(p_0) \f$ takes the values corresponding to these confidence levels determined
  * via the asymptotic chi^2 distribution property of likelihood ratios.
  * For each confidence level c, the result table contains columns "lower" + 10000*c and "upper" + 10000*c, where
  * the numbers are rounded and written with leading zeros. For example, if the \c clevels setting is [0.68, 0.95], the

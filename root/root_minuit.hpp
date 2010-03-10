@@ -48,7 +48,7 @@ public:
      * The minimizer forwards the task to a ROOT::Minuit2::Minuit2Minimizer using its
      * functions also for setting limits on the parameters. If minimization fails, it
      * is attempted up to three times through repeating calls of ROOT::Minuit2::Minuit2Minimizer::Minimize.
-     * If still an error is reported, a \ref MinimizationException is thrown which contains the status
+     * If still an error is reported, a \ref theta::MinimizationException is thrown which contains the status
      * code returned by ROOT::Minuit2::Minuit2Minimizer::Status().
      */
     virtual theta::MinimizationResult minimize(const theta::Function & f);

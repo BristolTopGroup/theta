@@ -18,7 +18,7 @@
  *<pre>
  * hypotest = {
  *   type = "deltanll_hypotest";
- *   minimizer = "myminuit";
+ *   minimizer = "@myminuit";
  *   background-only = {s = 0.0;}; //assuming "s" was defined as parameter earlier
  *   signal-plus-background = {};
  * };

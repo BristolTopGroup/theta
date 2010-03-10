@@ -260,7 +260,7 @@ protected:
 
     //the producers to be run on the pseudo data:
     boost::ptr_vector<Producer> producers;
-    std::vector<boost::shared_ptr<ProducerTable> > producer_tables;
+    boost::shared_ptr<ProducerTable> producer_table;
 
     
     //the runid, eventid and the total number of events to produce:

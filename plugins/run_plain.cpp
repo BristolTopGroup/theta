@@ -16,13 +16,13 @@ void plain_run::run_impl() {
         for (size_t j = 0; j < producers.size(); j++) {
             try {
                 producers[j].produce(*this, data, m_producers);
-                producer_tables[j]->add_row(*this);
             } catch (Exception & ex) {
                 std::stringstream ss;
                 ss << "Producer '" << producers[j].get_name() << "' failed: " << ex.message;
                 logtable->append(*this, LogTable::error, ss.str());
             }
         }
+        producer_table->add_row(*this);
         log_event_end();
         if(progress_listener) progress_listener->progress(eventid, n_event);
     }

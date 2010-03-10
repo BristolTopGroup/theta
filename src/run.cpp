@@ -28,10 +28,10 @@ void Run::set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
 
 void Run::run(){
     //record all producers in prodinfo_table and setup the tables of the producers:
+    producer_table.reset(new ProducerTable("products", db));
     for(size_t i=0; i<producers.size(); i++){
         prodinfo_table.append(static_cast<int>(i), producers[i].get_name(), producers[i].get_type(), producers[i].get_information());
-        producer_tables.push_back(boost::shared_ptr<ProducerTable>(new ProducerTable(producers[i].get_name(), db)));
-        producers[i].set_table(producer_tables[i]);
+        producers[i].set_table(producer_table);
         producers[i].define_table();
     }
     //write random seeds to rndinfo_table:

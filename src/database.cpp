@@ -215,7 +215,9 @@ ProducerTable::ProducerTable(const std::string & name, const boost::shared_ptr<D
 }
 
 ProducerTable::column ProducerTable::add_column(const Producer & p, const std::string & name, const data_type & type){
-    return Table::add_column(name, type);
+    std::stringstream new_name;
+    new_name << p.get_name() << "__" << name;
+    return Table::add_column(new_name.str(), type);
 }
 
 void ProducerTable::add_row(const Run & run){

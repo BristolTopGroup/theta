@@ -128,9 +128,10 @@ public:
  *   <li>A \link ProducerInfoTable ProducerInfoTable \endlink called 'prodinfo', where the list of configured
  *        producers are stored.</li>
  *   <li>A \link RndInfoTable RndInfoTable \endlink called 'rndinfo', where the random number generator
-         seed used for this run is stored.</li>
+ *        seed used for this run is stored.</li>
  *   <li>A \link ParamTable ParamTable \endlink called 'params', where for each event (=pseudo experiment),
  *       the actually used parameter values used to generate the pseudo data from the pseusodata model are saved.</li>
+ *   <li>A \link ProducerTable ProducerTable \endlink called 'products' where the results from all the producers are stored.</li>
  *  </ul>
  *
  *  For more information about these tables, refer to the documentation of the of the corresponding Table classes.

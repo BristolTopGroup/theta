@@ -13,7 +13,7 @@
  * which does (for each fixed parameter value) the same as plain_run.
  *
  * The configuration is done via a setting like:
- * <pre>
+ * \code
  * {
  *   //common parameters for all run types:
  *   type = "scan_run";
@@ -27,7 +27,7 @@
  *   scan-parameter-values = [0.0, 1.0];
  *   scan-parameter-fixed = true;
  * }
- * </pre>
+ * \endcode
  *
  * For the parameters common to all run types, refer to the documentation of theta::RunT.
  *

@@ -175,12 +175,11 @@ private:
 
 /** \brief A Table object to be used by the producers to save their result
  *
- * Each instance of the Producer class (from which all Producers derive by definition) holds an
- * instance of a ProducerTable in order to store the results of this producer.
+ * Each instance of the Producer class (from which all Producers derive by definition) writes it results
+ * to a ProducerTable.
  *
  * Producers define their table by calling add_column repeatedly in theta::Producer::define_table.
- *
- * During theta::Producer::produce, they can call set_column to set the value to write for this event.
+ * The actual column name written to the SQL table is &lt;producer name&gt;__&lt;column name&gt;.
  *
  * The actual write is done via a call to add_row by theta::Run; the producer does not have to
  * (and should not) call this method.

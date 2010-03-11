@@ -51,12 +51,12 @@ sqlite3* sqlite3_open(const string & fname){
     return db;
 }
 
-void do_main(const string & fname, TDirectory * cd, const string & tablename){
+void do_main(const string & fname, TDirectory * cd, const string & producer_name){
     cd->cd();
     TH1F* histo = new TH1F("h", "h", 100, 22.0616, 36.2339); //owned by cd
     sqlite3 * db = sqlite3_open(fname);
     stringstream ss;
-    ss << "SELECT nll_sb - nll_b FROM '" << tablename << "';";
+    ss << "SELECT " << producer_name << "__nll_sb - " << producer_name << "__nll_b FROM 'products';";
     sqlite3_stmt* st = sqlite3_prepare(db, ss.str().c_str());
     int res;
     int n;
@@ -73,7 +73,7 @@ void do_main(const string & fname, TDirectory * cd, const string & tablename){
 
 int main(int argc, char** argv){
     if(argc!=3){
-        cerr << "Usage: " << argv[0] << " <.db file>  <tablename>" << endl;
+        cerr << "Usage: " << argv[0] << " <.db file>  <producer name>" << endl;
         return 1;
     }
     try{

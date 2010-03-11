@@ -307,7 +307,7 @@ ParamTable::ParamTable(const std::string & name_, const boost::shared_ptr<Databa
 
 void ParamTable::append(const Run & run, const ParValues & values) {
     set_column(c_runid, run.get_runid());
-    set_column(c_eventid, run.get_runid());
+    set_column(c_eventid, run.get_eventid());
     int icol = 0;
     for (ParIds::const_iterator it = par_ids.begin(); it != par_ids.end(); ++it, ++icol) {
         set_column(columns[icol], values.get(*it));

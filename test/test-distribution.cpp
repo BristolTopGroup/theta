@@ -5,6 +5,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+using namespace std;
 using namespace theta;
 using namespace theta::plugin;
 using namespace libconfig;
@@ -12,8 +13,15 @@ using namespace libconfig;
 BOOST_AUTO_TEST_SUITE(distribution_tests)
 
 BOOST_AUTO_TEST_CASE(distribution_lognormal){
-    
+    BOOST_TEST_CHECKPOINT("loading core plugin");
+    try{
     PluginLoader::load("lib/core-plugins.so");
+    }
+    catch(Exception & ex){
+      cout << ex.message << endl;
+      throw;
+    }
+    BOOST_TEST_CHECKPOINT("loaded core plugin");
     
     double sigma = .5;
     double mu = 2.0;
@@ -31,7 +39,10 @@ BOOST_AUTO_TEST_CASE(distribution_lognormal){
     ParId var0 = vm->createParId("var0");
     theta::SettingUsageRecorder rec;
     Configuration cfg(vm, SettingWrapper(s, s, rec));
+    
+    BOOST_TEST_CHECKPOINT("building lognormal");
     std::auto_ptr<Distribution> d = PluginManager<Distribution>::build(cfg);
+    
     //must return +infinity for argument < 0:
     ParValues values;
     values.set(var0, -1.0);

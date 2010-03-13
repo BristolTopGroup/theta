@@ -29,7 +29,7 @@ private:
 public:
     /** \brief Create an empty Histogram with \c bins bins with range (\c xmin, \c xmax )
      */
-    explicit Histogram(size_t bins=0, double xmin=0, double xmax=0);
+    explicit Histogram(size_t bins=0, double xmin=0, double xmax=1);
 
     /// Copy constructor. Copies the contents of \c rhs into this.
     Histogram(const Histogram& rhs);
@@ -44,6 +44,8 @@ public:
      *
      * If \c nbins!=0, also change the number of bins and range to the parameters given. Otherwise,
      * the binning and range remain unchanged and bin contents is just reset to zero.
+     *
+     * If nbins &gt; 0 is specified, you also <em>must</em> supply valid values for \c xmin and \c xmax.
      */
     void reset(size_t nbins=0, double xmin=0, double xmax=0);
 

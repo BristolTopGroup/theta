@@ -3,6 +3,7 @@
 #include "interface/phys.hpp"
 #include "interface/utils.hpp"
 #include "interface/random.hpp"
+#include "interface/exception.hpp"
 
 
 #include <boost/test/unit_test.hpp>
@@ -55,6 +56,24 @@ BOOST_AUTO_TEST_CASE(ctest){
    Histogram h_empty;
    h_empty = m;
    check_histos_equal(h_empty, m);
+   
+   bool exception = false;
+   try{
+      Histogram m2(100, 1, 0);
+   }
+   catch(InvalidArgumentException & ex){
+      exception = true;
+   }
+   BOOST_CHECK(exception);
+   
+   exception = false;
+   try{
+      Histogram m2(100, -1, -1);
+   }
+   catch(InvalidArgumentException & ex){
+      exception = true;
+   }
+   BOOST_CHECK(exception);
 }
 
 
@@ -151,6 +170,65 @@ BOOST_AUTO_TEST_CASE(test_multiply){
     check_histos_equal(m0, m0factor_expected);
     m1*=m0_before;
     check_histos_equal(m1, m0m1);
+    bool exception = false;
+    //check error behaviour:
+    try{
+       Histogram m2(101, 0, 1);
+       m0 *= m2;
+    }
+    catch(InvalidArgumentException & ex){
+       exception = true;
+    }
+    BOOST_REQUIRE(exception);
+}
+
+BOOST_AUTO_TEST_CASE(test_reset){
+   Random rnd(new RandomSourceTaus());
+   
+   Histogram m(100, rnd.uniform(), rnd.uniform() + 2.0);
+   for(size_t i=0; i<=101; i++){
+       m.set(i, 0.1*i);
+   }
+   Histogram m0=m;
+   check_histos_equal(m0, m);
+   
+   //should not change nbins, xmin, xmax:   
+   m.reset();
+   BOOST_CHECK(m.get_xmin()==m0.get_xmin());
+   BOOST_CHECK(m.get_xmax()==m0.get_xmax());
+   BOOST_CHECK(m.get_nbins()==m0.get_nbins());
+   BOOST_CHECK(m.get_sum_of_bincontents()==0.0);
+   for(size_t i=0; i<=101; i++){
+       BOOST_REQUIRE(m.get(i)==0.0);
+   }
+   
+   bool exception = false;
+   try{
+      m.reset(101);
+   }
+   catch(InvalidArgumentException & ex){
+      exception = true;
+   }
+   BOOST_CHECK(exception);
+}
+
+BOOST_AUTO_TEST_CASE(test_random){
+   Random rnd(new RandomSourceTaus());
+   Histogram m(1, 0, 1);
+   m.set(1, 10000);
+   Histogram m2;
+   m.fill_with_pseudodata(m2, rnd);
+   BOOST_REQUIRE(m2.get_nbins()==m.get_nbins());
+   BOOST_REQUIRE(m2.get_xmin() == m.get_xmin());
+   BOOST_REQUIRE(m2.get_xmax() == m.get_xmax());
+   //check 5sigma:
+   BOOST_REQUIRE(fabs(m2.get(1) - 10000) < 500);
+   
+   m.fill_with_pseudodata(m2, rnd, 1000000);
+   BOOST_REQUIRE(fabs(m2.get(1) - 1000000) < 5000);
+   
+   m.fill_with_pseudodata(m2, rnd, 1000000, false);
+   BOOST_REQUIRE(fabs(m2.get(1) - 1000000) < 0.01);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

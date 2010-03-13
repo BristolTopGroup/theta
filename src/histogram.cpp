@@ -12,6 +12,7 @@ using namespace theta;
 
 Histogram::Histogram(size_t b, double x_min, double x_max) :
 sum_of_bincontents(0.0), nbins(b), xmin(x_min), xmax(x_max) {
+    if(xmin >= xmax) throw InvalidArgumentException("Histogram: xmin >= xmax not allowed");
     histodata = new double[nbins + 2];
     memset(histodata, 0, sizeof (double) *(nbins + 2));
 }
@@ -43,6 +44,7 @@ void Histogram::reset(size_t b, double x_min, double x_max) {
         nbins = b;
         xmin = x_min;
         xmax = x_max;
+        if(xmin >= xmax) throw InvalidArgumentException("Histogram: xmin >= xmax not allowed");
         delete[] histodata;
         histodata = new double[nbins + 2];
     }

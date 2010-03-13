@@ -2,22 +2,7 @@
 
 #TODO: complete ...
 
-fail()
-{
-   echo "FAILED: $*";
-   exit 1;
-}
-
-pass()
-{
-    echo "PASSED $*";
-}
-
-exec_theta()
-{
-    ../bin/theta -q $*
-    [ "$?" -gt 0 ] && fail "theta returned error"
-}
+. ../lib.sh
 
 #for Theta in 5.0 10000.0; do
 for Theta in 10000.0; do

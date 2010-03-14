@@ -370,10 +370,32 @@ Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, const ParValues & fi
             const pair<double, double> & range = vm->get_range(*it);
             const double def = vm->get_default(*it);
             startvalues[k] = def;
-            width = 0.2*def;
-            if(width==0.0){
-                width = 0.05*(range.second - range.first); //might be 0.0, which is Ok.
-                if(std::isinf(width)) width = 1.0;
+            
+            //get the start step size according to following rules (i.e., take the first which is true):
+            // 1. if the parameter is fixed, use 0
+            // 2. take the average of 5% of the interval width and 20% of its default value,
+            //    if both these widths are neither 0 nor infinite
+            // 3. take the value from 2. which is neither 0 nor infinite
+            // 4. use 1.0
+            double width0 = fabs(0.2*def);
+            double width1 = 0.05*(range.second - range.first);
+            bool width0_ok = width0 > 0 && !std::isinf(width0);
+            bool width1_ok = width1 > 0 && !std::isinf(width1);
+            if(width1==0.0){
+                width = 0.0;
+                ++n_fixed_parameters;
+            }
+            else if(width0_ok && width1_ok){
+                width = 0.5 * (width0 + width1);
+            }
+            else if(width0_ok){
+                width = width0;
+            }
+            else if(width1_ok){
+                width= width1;
+            }
+            else{
+                width = 1.0;
             }
         }
         cov(k, k) = width*width;

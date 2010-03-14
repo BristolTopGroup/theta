@@ -4,38 +4,181 @@
 #include <boost/test/unit_test.hpp>
 
 using namespace theta;
+using namespace std;
 
 BOOST_AUTO_TEST_SUITE(variables_tests)
 
-
-BOOST_AUTO_TEST_CASE(parids){
+struct varidtest{
     VarIdManager vm;
-    ParId var0 = vm.createParId("var0");
-    BOOST_REQUIRE(vm.parNameExists("var0"));
-    BOOST_REQUIRE(vm.getName(var0)=="var0");
-    BOOST_REQUIRE(vm.getParId("var0")==var0);
+    const double def;
+    const double min;
+    const double max;
+    const ParId par0;
+    varidtest(double def_, double min_, double max_): def(def_), min(min_), max(max_), par0(vm.createParId("par0", def, min, max)){
+    }
+};
+
+
+BOOST_AUTO_TEST_CASE(basic){
+    varidtest v(0.2, -0.3, 0.8);
+    BOOST_CHECK(v.vm.parNameExists("par0"));
+    BOOST_CHECK(v.vm.getName(v.par0)=="par0");
+    BOOST_CHECK(v.vm.getParId("par0")==v.par0);
+    BOOST_CHECK(v.vm.get_range(v.par0).first == v.min);
+    BOOST_CHECK(v.vm.get_range(v.par0).second == v.max);
+    BOOST_CHECK(v.vm.get_default(v.par0) == v.def);
+}
+
+BOOST_AUTO_TEST_CASE(reset){
+    varidtest v(0.2, -0.3, 0.8);
+    const double min = -0.5;
+    const double max = 1.2;
+    const double def = 1.1;
+    v.vm.set_range_default(v.par0, min, max, def);
+    
+    BOOST_CHECK(v.vm.get_range(v.par0).first == min);
+    BOOST_CHECK(v.vm.get_range(v.par0).second == max);
+    BOOST_CHECK(v.vm.get_default(v.par0) == def);
+}
+
+BOOST_AUTO_TEST_CASE(getParIds){
+    varidtest v(0.2, -0.3, 0.8);
+    ParIds ids;
+    ids.insert(v.par0);
+    BOOST_CHECK(ids==v.vm.getAllParIds());
+    
+    ParId par1 = v.vm.createParId("par1", 0, -1, 1);
+    BOOST_REQUIRE(par1!=v.par0);
+    BOOST_CHECK(not (ids==v.vm.getAllParIds()));
+    
+    ids.insert(par1);
+    BOOST_CHECK(ids==v.vm.getAllParIds());
+}
+
+BOOST_AUTO_TEST_CASE(par_exceptions){
+    varidtest v(0.2, -0.3, 0.8);
+    
+    //request variables not there:
     bool ex = false;
     try{
-        vm.getParId("var1");
+        v.vm.getParId("var1");
     }
     catch(NotFoundException &){
         ex = true;
     }
     BOOST_REQUIRE(ex);
+    
+    //create parameter already there
     ex = false;
     try{
-        vm.createParId("var0", 1.0);
+        v.vm.createParId("par0", 1.0);
     }
     catch(InvalidArgumentException &){
         ex = true;
     }
     BOOST_REQUIRE(ex);
-    ParId var1 = vm.createParId("var1");
-    BOOST_REQUIRE(var0!=var1);
+    
+    ParId par1 = v.vm.createParId("par1", 0, -1, 1);
+    BOOST_REQUIRE(v.par0!=par1);
+    ParIds all_ids;
+    all_ids.insert(par1);
+    all_ids.insert(v.par0);
+    BOOST_REQUIRE(all_ids == v.vm.getAllParIds());
+    
+    //test out of range:
+    ex = false;
+    try{
+        v.vm.createParId("par2", 0, 10, 10.1);
+    }
+    catch(InvalidArgumentException &){
+        ex = true;
+    }
+    BOOST_CHECK(ex);
+    //nothing should have changed:
+    BOOST_REQUIRE(all_ids == v.vm.getAllParIds());
+    
+    //reset range
+    ex = false;
+    try{
+        //use a default which is in the old but not the new range
+        v.vm.set_range_default(par1, -2, -1, 0);
+    }
+    catch(InvalidArgumentException &){
+        ex = true;
+    }
+    BOOST_CHECK(ex);
+    BOOST_REQUIRE(all_ids == v.vm.getAllParIds());
+    
+    //invalid range:
+    ex = false;
+    try{
+        v.vm.createParId("par3", 0, 1, -1);
+    }
+    catch(InvalidArgumentException &){
+        ex = true;
+    }
+    BOOST_CHECK(ex);
+    BOOST_REQUIRE(all_ids == v.vm.getAllParIds());
+    
+    //request invalid parid:
+    ParId pid;
+    ex = false;
+    try{
+        v.vm.getName(pid);
+    }
+    catch(NotFoundException &){
+        ex = true;
+    }
+    BOOST_CHECK(ex);
+    BOOST_REQUIRE(all_ids == v.vm.getAllParIds());
+}
+
+BOOST_AUTO_TEST_CASE(basic_obs){
+    VarIdManager vm;
+    BOOST_REQUIRE(not vm.obsNameExists("obs0"));
+    ObsId obs0 = vm.createObsId("obs0", 100, -0.2, 0.8);
+    BOOST_CHECK(vm.getObsId("obs0")==obs0);
+    BOOST_CHECK(vm.get_nbins(obs0)==100);
+    BOOST_CHECK(vm.get_range(obs0).first==-0.2);
+    BOOST_CHECK(vm.get_range(obs0).second==0.8);
+}
+
+BOOST_AUTO_TEST_CASE(all_obs){
+    VarIdManager vm;
+    ObsIds ids;
+    BOOST_REQUIRE(vm.getAllObsIds()==ids);
+    ObsId obs0 = vm.createObsId("obs0", 0.2, -0.8, 1.2);
+    BOOST_REQUIRE(not (vm.getAllObsIds()==ids));
+    ids.insert(obs0);
+    BOOST_REQUIRE(vm.getAllObsIds()==ids);
+}
+
+BOOST_AUTO_TEST_CASE(exceptions_obs){
+    VarIdManager vm;
+    ObsIds ids;
+    bool ex = false;
+    try{
+        vm.createObsId("obs0", 0, -1, 1);
+    }
+    catch(InvalidArgumentException &){
+        ex = true;
+    }
+    BOOST_CHECK(ex);
+    BOOST_REQUIRE(vm.getAllObsIds()==ids);
+    
+    ex = false;
+    try{
+        vm.createObsId("obs0", 100, 1, -1);
+    }
+    catch(InvalidArgumentException &){
+        ex = true;
+    }
+    BOOST_CHECK(ex);
+    BOOST_REQUIRE(vm.getAllObsIds()==ids);
 }
 
 
-BOOST_AUTO_TEST_CASE(parvalues){
+BOOST_AUTO_TEST_CASE(parvalues_basic){
     ParValues vv;
     VarIdManager vm;
     ParId v0 = vm.createParId("v0");
@@ -54,4 +197,41 @@ BOOST_AUTO_TEST_CASE(parvalues){
     BOOST_REQUIRE(ex);
 }
 
+//as ParValues uses an internally growing vector, test with many parameters ...
+BOOST_AUTO_TEST_CASE(parvalues_many){
+    ParValues vv;
+    VarIdManager vm;
+    vector<ParId> parameters;
+    ParValues values;
+    for(size_t i=0; i<100; ++i){
+        stringstream name;
+        name << "parameter" << i;
+        parameters.push_back(vm.createParId(name.str(), 0, -1, 1));
+        values.set(parameters.back(), 0.1*i + i*i);
+    }
+    for(size_t i=0; i<100; ++i){
+        BOOST_CHECK(values.get(parameters[i]) == 0.1*i + i*i);
+    }
+    
+    ParValues values_sparse;
+    values_sparse.set(parameters[90], 99.0);
+    for(size_t i=0; i<100; ++i){
+        if(i==90){
+            BOOST_CHECK(values_sparse.get(parameters[i])==99.0);
+        }
+        else{
+            BOOST_CHECK(not values_sparse.contains(parameters[i]));
+        }
+    }
+    
+    values.set(values_sparse);
+    for(size_t i=0; i<100; ++i){
+        if(i!=90)
+            BOOST_CHECK(values.get(parameters[i]) == 0.1*i + i*i);
+        else
+            BOOST_CHECK(values.get(parameters[i]) == values_sparse.get(parameters[i]));
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
+

@@ -38,38 +38,42 @@ void deltanll_intervals::define_table(){
  */
 template<typename T>
 double secant(double x_low, double x_high, double x_accuracy, double f_x_low, double f_x_high, const T & function){
-    if(f_x_low * f_x_high >= 0) throw InvalidArgumentException("secant: function values have the same sign!");
-    double old_interval_length = x_high - x_low;
     assert(x_low <= x_high);
-    double df = (f_x_high - f_x_low);
-    if(utils::close_to(f_x_low, 0, df)){
-        return x_low;
-    }
-    double x_intersect = x_low - (x_high - x_low) / df * f_x_low;
-    assert(x_intersect > x_low);
-    assert(x_intersect < x_high);
-    if(x_high - x_low < x_accuracy){
+    if(f_x_low * f_x_high >= 0) throw InvalidArgumentException("secant: function values have the same sign!");
+    
+    const double old_interval_length = x_high - x_low;
+    
+    //calculate intersection point for secant method:
+    double x_intersect = x_low - (x_high - x_low) / (f_x_high - f_x_low) * f_x_low;
+    assert(x_intersect >= x_low);
+    assert(x_intersect <= x_high);
+    if(old_interval_length < x_accuracy){
         return x_intersect;
     }
     double f_x_intersect = function(x_intersect);
-    //printf("    [%.5f, %.5f] --> [%.5f, %.5f];   new point %.5f --> %.5f", x_low, x_high, f_x_low, f_x_high, x_intersect, f_x_intersect);
-    bool lower = f_x_low * f_x_intersect < 0;
+    double f_mult = f_x_low * f_x_intersect;
     //fall back to bisection if the new interval would not be much smaller:
-    double new_interval_length = lower ? x_intersect - x_low : x_high - x_intersect;
+    double new_interval_length = f_mult < 0 ? x_intersect - x_low : x_high - x_intersect;
     if(new_interval_length > 0.5 * old_interval_length){
         x_intersect = 0.5*(x_low + x_high);
         f_x_intersect = function(x_intersect);
-        lower = f_x_low * f_x_intersect < 0;
-        //printf("; bisecting: %.5f --> %.5f\n", x_intersect, f_x_intersect);
+        f_mult = f_x_low * f_x_intersect;
     }
-    else{
-        //printf("\n");
-    }
-    if(lower){
+    if(f_mult < 0){
         return secant(x_low, x_intersect, x_accuracy, f_x_low, f_x_intersect, function);
     }
-    else{
+    else if(f_mult > 0.0){
         return secant(x_intersect, x_high, x_accuracy, f_x_intersect, f_x_high, function);
+    }
+    //it can actually happen that we have 0.0. In this case, return the x value for
+    // the smallest absolute function value (and prevent testing against absolue 0.0).
+    else{
+        f_x_intersect = fabs(f_x_intersect);
+        f_x_low = fabs(f_x_low);
+        f_x_high = fabs(f_x_high);
+        if(f_x_low < f_x_high && f_x_low < f_x_intersect) return x_low;
+        if(f_x_high < f_x_intersect) return x_high;
+        return x_intersect;
     }
 }
 
@@ -89,25 +93,26 @@ void deltanll_intervals::produce(Run & run, const Data & data, const Model & mod
         //upper value: look for a parameter value with a sign flip:
         double x_low = value_at_minimum;
         double f_x_low = -deltanll_levels[i];
-        double step = minres.errors_plus.get(pid);
-        if(step <= 0.0) step = 1.0;
+        double initial_step = minres.errors_plus.get(pid);
+        if(initial_step <= 1e-6 * fabs(x_low)) initial_step = 1e-6 * fabs(x_low);
+        if(initial_step < 1e-6) initial_step = 1e-6;
+        double step = initial_step;
         const double x_acurracy = step / 100;
         double x_high, f_x_high;
         int k;
-        //printf("scanning high; low =  [%.5f] --> %.5f\n", x_low, f_x_low);
-        for(k=1; k<=20; ++k){
+        const int k_max = 20;
+        for(k=1; k<=k_max; ++k){
             x_high = value_at_minimum + step;
             step *= 2;
             if(x_high > range.second){
                 x_high = range.second;
             }
             f_x_high = nll_r(x_high);
-          //  printf("     hp [%.5f] --> %.5f\n", x_high, f_x_high);
             if(f_x_high > 0){
                 table->set_column(upper_columns[i], secant(x_low, x_high, x_acurracy, f_x_low, f_x_high, nll_r));
                 break;
             }
-            else if(x_high == range.second){
+            else if(f_x_high==0.0 || x_high == range.second){
                 table->set_column(upper_columns[i], x_high);
                 break;
             }
@@ -116,16 +121,16 @@ void deltanll_intervals::produce(Run & run, const Data & data, const Model & mod
                 f_x_low = f_x_high;
             }
         }
-        if(k==11){
+        if(k > k_max){
             throw Exception("could not find upper value for interval");
         }
         
         //lower value: same story, just other way round:
         x_high = value_at_minimum;
         f_x_high = -deltanll_levels[i];
-        step = minres.errors_minus.get(pid);
+        step = initial_step;
         if(step <= 0.0) step = 1.0;
-        for(k=1; k<=20; ++k){
+        for(k=1; k <= k_max; ++k){
             x_low = value_at_minimum - step;
             step *= 2;
             if(x_low < range.first){
@@ -136,7 +141,7 @@ void deltanll_intervals::produce(Run & run, const Data & data, const Model & mod
                 table->set_column(lower_columns[i], secant(x_low, x_high, x_acurracy, f_x_low, f_x_high, nll_r));
                 break;
             }
-            else if(x_low == range.first){
+            else if(f_x_low==0.0 || x_low == range.first){
                 table->set_column(lower_columns[i], x_low);
                 break;
             }
@@ -145,7 +150,7 @@ void deltanll_intervals::produce(Run & run, const Data & data, const Model & mod
                 f_x_high = f_x_low;
             }
         }
-        if(k==11){
+        if(k > k_max){
             throw Exception("could not find lower value for interval");
         }
     }
@@ -170,7 +175,7 @@ deltanll_intervals::deltanll_intervals(const theta::plugin::Configuration & cfg)
     for(size_t i=0; i<clevels.size(); ++i){
         if(clevels[i] < 0.0) throw InvalidArgumentException("deltanll_intervals: clevel < 0 not allowed.");
         if(clevels[i] >= 1.0) throw InvalidArgumentException("deltanll_intervals: clevel >= 1.0 not allowed.");
-        deltanll_levels[i] = utils::phi_inverse(1-(1-clevels[i])/2);
+        deltanll_levels[i] = utils::phi_inverse((1+clevels[i])/2);
         deltanll_levels[i] *= deltanll_levels[i]*0.5;
     }
 }

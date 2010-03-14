@@ -285,11 +285,16 @@ NLLikelihood::NLLikelihood(const boost::shared_ptr<VarIdManager> & vm_, const Mo
 }
 
 double NLLikelihood::operator()(const ParValues & values) const{
-    //check ranges:
+    //check ranges and return infinity if violated.
+    //
+    //Unfortunately, this is not as straight-forward as it sounds
+    // as some minimizers need numerical derivatives at the end of ranges and do
+    // so without respecting these ranges (MINUIT). Therefore, allow some 
+    // border-violating evaluations.
     for(ParIds::const_iterator p_it = par_ids.begin(); p_it != par_ids.end(); ++p_it){
         const pair<double, double> & range = vm->get_range(*p_it);
         double value = values.get(*p_it);
-        if(value < range.first || value > range.second)
+        if(value < (1 - 1e-4) * range.first || value > (1 + 1e-4) * range.second)
             return numeric_limits<double>::infinity();
     }
     double result = 0.0;
@@ -308,8 +313,12 @@ double NLLikelihood::operator()(const ParValues & values) const{
         const double * __restrict pred_data = model_prediction.getData();
         const double * __restrict data_data = data_hist.getData();
         for(size_t i=1; i<=nbins; i++){
+            //if both, the prediction and the data are zero, that does not constribute.
+            // However, if the prediction is zero and we have non-zero data, we MUST return infinity (!) ...
              if(pred_data[i]>0.0)
                  result -= data_data[i] * theta::utils::log(pred_data[i]);
+             else if(data_data[i] > 0.0)
+                 return numeric_limits<double>::infinity();
         }
         result += model_prediction.get_sum_of_bincontents();
     }

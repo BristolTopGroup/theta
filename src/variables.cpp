@@ -17,9 +17,9 @@ ParId VarIdManager::createParId(const std::string & name, double def, double min
             ss << "VarIdManager::createParId: parameter '"<< name <<"' defined twice";
             throw InvalidArgumentException(ss.str());
     }
-    if (min >= max) {
+    if (min > max) {
         stringstream ss;
-        ss << "Parameter " << name << " has min >= max, i.e., empty range";
+        ss << "Parameter " << name << " has min > max, i.e., empty range";
         throw InvalidArgumentException(ss.str());
     }
     if (def < min || def > max) {

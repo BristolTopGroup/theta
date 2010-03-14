@@ -10,6 +10,10 @@ parameters = {
         // to be prevented by using a non-zero value here:
         range = (1E-12, "inf"); 
    };
+   mu = {
+       default = __MU__;
+       range = [__MU__, __MU__];
+   };
 };
 
 observables = {
@@ -32,6 +36,10 @@ counting = {
    o = {
       signal = {
           coefficients = ("Theta");
+          histogram = "@flat-unit-histo";
+      };
+      background = {
+          coefficients = ("mu");
           histogram = "@flat-unit-histo";
       };
    };

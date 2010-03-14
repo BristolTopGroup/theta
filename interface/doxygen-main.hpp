@@ -671,16 +671,16 @@
   * \c merge will refuse to merge result databases which use the same random number generator seed.
   *
   * A typical invocation is :
-  * <pre>
+  * \verbatim
   * merge --outfile=merged.db result1.db result2.db result3.db
-  * </pre>
+  * \endverbatim
   * which merges the files result{1,2,3}.db into the output file merged.db. If the output file exists,
   * it will be overwritten.
   *
   * Another possibility is to merge all files matching \c *.db within one directory via
-  * <pre>
+  * \verbatim
   * merge --outfile=merged.db --in-dir=results
-  * </pre>
+  * \endverbatim
   *
   * The only other supported option is \c -v or \c --verbose which increases the verbosity of merge.
   */
@@ -759,7 +759,7 @@
  * from the %theta directory.
  *
  * In the following sections, only the statistical tests will be discussed. The source code of these
- * tests can be found in the \c test-stat directory.
+ * tests can be found in the \c test/test-stat directory.
  *
  * \section testing_counting-nobkg Counting experiment without background
  *
@@ -777,7 +777,7 @@
  *
  * \subsection testing_counting-nobkg_mle Maximum likelihood method
  *
- * <em>Test script:</em> <tt>test-stat/counting-nobkg-mle.sh</tt><br>
+ * <em>Test script:</em> <tt>test/test-stat/counting-nobkg-mle.py</tt><br>
  * <em>Relevant plugin classes:</em> \link mle mle \endlink, \link root_minuit root_minuit \endlink
  *
  * 500 pseudo experiments are performed by throwing a Poisson random number around \f$ \Theta \f$ which is passed
@@ -788,9 +788,9 @@
  * \f$ \hat\sigma_{\Theta} \f$ from the minimizer is checked: \f$ \hat\sigma_{\Theta}^2 = \hat\Theta \f$ should hold with
  * a maximum relative error of \f$ 10^{-4} \f$.
  *
- * \subsection testing_counting-nobkg_mcmc_quantiles Marginal posterior quantiles with Markov-Chain Monte-Carlo 
+ * \subsection testing_counting-nobkg_mcmc_quantiles Bayesian Intervals with Markov-Chain Monte-Carlo 
  *
- * <em>Test script:</em> <tt>test-stat/counting-nobkg-mcmc_quant.sh</tt><br>
+ * <em>Test script:</em> <tt>test/test-stat/counting-nobkg-mcmc_quant.py</tt><br>
  * <em>Relevant plugin classes:</em> \link mcmc_quantiles mcmc_quantiles \endlink
  *
  * With a flat prior on the signal mean \f$ \Theta \f$, the posterior in
@@ -823,39 +823,156 @@
  * low and sometimes too high, and not prefer
  * one side. However, no automatic diagnostics is run, as these numbers are small.
  *
- * \subsection testing_counting-nobkg_deltanll Confidence intervals based on asymptotic properties of the likelihood ratio
+ * \subsection testing_counting-nobkg_deltanll "Delta-log-likelihood" confidence intervals
  *
- * <em>Test script:</em> <tt>test-stat/counting-nobkg-deltanll_intervals.sh</tt><br>
- * <em>Relevant plugin classes:</em> \ref deltanll_intervals, \ref root_minuit
+ * <em>Test script:</em> <tt>test/test-stat/counting-nobkg-deltanll_intervals.py</tt><br>
+ * <em>Relevant plugin classes:</em> \link deltanll_intervals deltanll_intervals \endlink, \link root_minuit root_minuit \endlink
  *
  * Given the number of observed events, \f$ n \f$, the logarithm of the likelihood ratio between
  * a free value \f$ \Theta \f$ and the value which maximizes the likelihood function (i.e., \f$ \Theta = n \f$) is
  * \f[
  *    \log LR(\Theta | n) = n \log\frac n \Theta - n + \Theta.
  * \f]
+ * The minimum is at \f$ \Theta = n \f$ where this logarithm becomes 0.
  *
  * For a given confidence level \f$ c \f$, the interval construction finds the two values of \f$ \Theta \f$,
- * \f$ l_c \f$ and \f$ u_c \f$ with \f$ l_c \le u_c \f$ for which the likelihood ratio equals 
+ * \f$ l_c \f$ and \f$ u_c \f$ with \f$ l_c \le u_c \f$ for which the difference of the log-likelihood to its minimum,
+ * \f$ \Delta NLL \f$ corresponds (via the asymptotiv property of the likelihood ratio acording to Wilks' Theorem)
+ * to the requested confidence level \f$ c \f$ via the equation
+ * \f[
+ *   \Delta NLL(c) = \left( \mathrm{erf}^{-1}(c) \right)^2
+ * \f]
+ * where \f$ \mathrm{erf} \f$ is the error function.
+ *
+ * For fixed \f$ n \f$ and \f$ c \f$, the values for \f$ \Theta \f$ which yields this difference in negative-log-likelihood is found
+ * <ol>
+ *  <li>by solving the equation \f$ \log LR(\Theta | n) = \Delta NLL(c)\f$ directly (which has to be done numerically), and</li>
+ *  <li>by the generic \link deltanll_intervals deltanll_intervals \endlink method implemented in %theta.</li>
+ * </ol>
+ *
+ * Technically, point 1. is accomplished by an independent python function which expects \f$ n \f$ and \f$ c \f$ as
+ * input and applies the bisection method to find the lower and upper value of \$ \Theta \f$ for which the equation of 1. holds.
  *
  * The requested confidence levels tested correspond to one-sigma and two-sigma interals and the maximum likelihood value, i.e.,
  * confidence levels 0.6827, 0.9545 and 0. The outcome if the method are estimates for the lower and upper values of
- * the intervals for \f$ |Theta \f$. Below, they will be called
- * \f$ l_{1\sigma}, u_{1\sigma}, l_{2\sigma}, u_{2\sigma}, l_{0} \f$.
+ * the intervals for \f$ |Theta \f$. Below, they will be called \f$ l_{1\sigma}, u_{1\sigma}, l_{2\sigma}, u_{2\sigma}, l_{0} \f$.
  *
- * In the asymptotic case, it is also checked that the one-sigma and two-sigma intervals are where expected, i.e.,
+ * In both cases, the maximum tolerated deviation in the lower and upper interval borders is \f$ 10^{-4}\Theta \f$.
+ *
+ * In the asymptotic case, it is also checked that the "one-sigma" and "two-sigma" intervals are where expected in this regime, i.e.,
  * \f{eqnarray*}
  *   (l_{1\sigma} - l_0)^2 &= l_0 \\
  *   (u_{1\sigma} - l_0)^2 &= l_0 \\
  *   (l_{2\sigma} - l_0)^2 &= 4\cdot l_0 \\
  *   (u_{2\sigma} - l_0)^2 &= 4\cdot l_0 \\
  * \f}
- * with a maximum relative difference of \f$ 10^{-4} \f$, where "relative difference" means dividing the difference of the
- * left and right hand side of these equations by the right hand side.
+ * with a maximum relative difference of \f$ 2\cdot 10^{-2} \f$, where "relative difference" means dividing the difference of the
+ * left and right hand side of these equations by the right hand side (note: the tolerance is chosen relatively large to avoid
+ * reporting false positives. This test is mainly to ensure that there is no common bug in the python function for point 1.
+ * and the \link deltanll_intervals deltanll_intervals \endlink plugin when calculating \f$ \Delta NLL(c) \f$).
  *
  * \section testing_counting-fixedbkg Counting experiment with fixed background mean
  *
  * As second test case, consider a counting experiment with poisson signal with true mean \f$ \Theta \ge 0 \f$ and
- * background mean \f$ \mu \ge 0 \f$ which is assumed to be known.
+ * background mean \f$ \mu \ge 0 \f$ which is assumed to be known. This example is mainly useful to test the correct
+ * treatment of a fixed parameter and the error estimates on these parameters.
+ *
+ * The tests are very similar to the previous section. As there, the values 5.0 and 10000.0 are tested for \f$ \Theta \f$.
+ * The values for \f$ \mu \f$ used are 3.0 and 2000.0. For each test case, all four possible combinations of these
+ * parameter values are tested.
+ *
+ * \subsection testing_counting-fixedbkg_mle Maximum likelihood method
+ *
+ * <em>Test script:</em> <tt>test/test-stat/counting-fixedbkg-mle.py</tt><br>
+ * <em>Relevant plugin classes:</em> \link mle mle \endlink, \link root_minuit root_minuit \endlink
+ *
+ * 500 pseudo experiments are performed by throwing a Poisson random number around \f$ \Theta + \mu \f$ which is passed
+ * as number of observed events \f$ n \f$ to the mle implementation.
+ *
+ * The maximum likelihood method should estimate \f$ \hat\Theta = n - \mu \f$ for \f$ n > \mu \f$ and \f$ \hat\Theta = 0 \f$ otherwise.
+ * The maximum tolerated numerical deviation from this result is set to \f$ 10^{-4} \cdot (\Theta + \mu) \f$.
+ *
+ * In the asymptotic case (\f$ \Theta = 10000 \f$), the error estimate for the minimizer, \f$ \hat{\sigma}_{\Theta} \f$ is checked
+ * to fulfill \f$ \hat{\sigma}_\Theta^2 = \Theta + \mu \f$ with a maximum relative error of \f$ 10^{-4} \f$.
+ *
+ * \subsection testing_counting-fixedbkg_mcmc_quantiles Bayesian Intervals with Markov-Chain Monte-Carlo
+ *
+ * <em>Test script:</em> <tt>test/test-stat/counting-fixedbkg-mcmc_quant.py</tt><br>
+ * <em>Relevant plugin classes:</em> \link mcmc_quantiles mcmc_quantiles \endlink
+ *
+ * With a flat prior on the signal mean \f$ \Theta \f$ and fixed \f$ \mu \f$, the posterior in case of \f$ n \f$ observed events,
+ * \f$ \pi(\Theta | n)\f$, is
+ * \f[
+ *   \pi(\Theta | n) = \frac{1}{\Gamma(n+1, \mu)} (\Theta + \mu)^n e^{- \Theta - \mu}
+ * \f]
+ * where \f$ \Gamma \f$ is the "upper" incomplete Gamma function.
+ *
+ * Given an estimate for the q-quantile, \f$ \hat{\Theta}_q \f$, the true value of \f$ q \f$ is given by
+ * \f[
+ *  q = \int_0^{\hat{\Theta}_q} d\Theta\,\pi(\Theta | n) = 1 - \frac{\Gamma(n+1, \hat{\Theta}_q + \mu )}{\Gamma(n+1, \mu)}.
+ * \f]
+ *
+ * The tested quantiles correspond to the median, the one-sigma central interval and a 95% upper limit: 0.5, 0.16, 0.84, 0.95.
+ * The Markov chain length is 10,000.
+ *
+ * The test calculates the error on \f$ q \f$ for 50 pseudo experiments for each of
+ * the 4 quantiles. If the deviation is larger than 0.015 (absolute), then the pseudo-experiment
+ * is marked as "estimate too low" or "estimate too high"
+ * depending whether the requested value of \f$ q \f$ was lower or high than the estimated value. (A pseudo-experiment
+ * can have both marks as there are 4 quantiles which are tested.)
+ *
+ * If there are more than 15 pseudo experiments in either of the categories,
+ * the test is considered failed, otherwise, it is considered passed.
+ * As additional diagnostics, the numbers of pseudo experiments marked "too low"
+ * and "too high" are printed.
+ *
+ * * \subsection testing_counting-fixedbkg_deltanll "Delta-log-likelihood" confidence intervals
+ *
+ * <em>Test script:</em> <tt>test/test-stat/counting-fixedbkg-deltanll_intervals.py</tt><br>
+ * <em>Relevant plugin classes:</em> \link deltanll_intervals deltanll_intervals \endlink, \link root_minuit root_minuit \endlink
+ *
+ * As in case of no background, the likelihood ratio of the likelihood function at \f$ \Theta \f$ and at its minimum is calculated.
+ * Now, there are two cases to treat seperately:
+ * <ol>
+ *  <li> \f$ n >= \mu \f$. In this case, the maximum likelihood estimate for \f$ \Theta \f$ is given by \f$ \hat{\Theta} = n - \mu \f$ </li>
+ *  <li> \f$ n < \mu \f$. In this case, the maximum likelihood estimate for \f$ \Theta \f$ is given by \f$ \hat{\Theta} = 0 \f$ </li>
+ * </ol>
+ *
+ * In the first case, the logarithm of the likelihood ratio is given by
+ * \f[
+ *    \log LR(\Theta | n) = n \log\frac{n}{\Theta + \mu} - n + \Theta + \mu.
+ * \f]
+ * The minimum is at \f$ \Theta = n - \mu \f$ where this logarithm becomes 0.
+ *
+ * In the second case, the logarithm of the likelihood ratio is given by
+ * \f[
+ *  \log LR(\Theta | n) = n \log\frac{\mu}{\Theta + \mu} + \Theta
+ * \f]
+ *
+ *
+ * For a given confidence level \f$ c \f$, the interval construction finds the two values of \f$ \Theta \f$,
+ * \f$ l_c \f$ and \f$ u_c \f$ with \f$ l_c \le u_c \f$ for which the difference of the log-likelihood to its minimum,
+ * \f$ \Delta NLL \f$ corresponds (via the asymptotiv property of the likelihood ratio acording to Wilks' Theorem)
+ * to the requested confidence level \f$ c \f$ via the equation
+ * \f[
+ *   \Delta NLL(c) = \left( \mathrm{erf}^{-1}(c) \right)^2
+ * \f]
+ * where \f$ \mathrm{erf} \f$ is the error function.
+ *
+ * For fixed \f$ n \f$ and \f$ c \f$, the values for \f$ \Theta \f$ which yields this difference in negative-log-likelihood is found
+ * <ol>
+ *  <li>by solving the equation \f$ \log LR(\Theta | n) = \Delta NLL(c)\f$ directly (which has to be done numerically), and</li>
+ *  <li>by the generic \link deltanll_intervals deltanll_intervals \endlink method implemented in %theta.</li>
+ * </ol>
+ *
+ * Technically, point 1. is accomplished by an independent python function which expects \f$ n \f$ and \f$ c \f$ as
+ * input and applies the bisection method to find the lower and upper value of \$ \Theta \f$ for which the equation of 1. holds.
+ *
+ * The requested confidence levels tested correspond to one-sigma and two-sigma interals and the maximum likelihood value, i.e.,
+ * confidence levels 0.6827, 0.9545 and 0. The outcome if the method are estimates for the lower and upper values of
+ * the intervals for \f$ |Theta \f$. Below, they will be called \f$ l_{1\sigma}, u_{1\sigma}, l_{2\sigma}, u_{2\sigma}, l_{0} \f$.
+ *
+ * In both cases, the maximum tolerated deviation in the lower and upper interval borders is \f$ 10^{-4}\Theta \f$.
  *
  * \section testing_counting-constraintbkg Counting experiment with background sideband fit
  *

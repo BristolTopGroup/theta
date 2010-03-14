@@ -21,5 +21,5 @@ add_subdirectory(libconfig)
 add_subdirectory(bin)
 add_subdirectory(root)
 add_subdirectory(test)
-add_subdirectory(test/test-stat)
+#add_subdirectory(test/test-stat)
 

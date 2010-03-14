@@ -56,7 +56,7 @@ double Minimizer::get_initial_stepsize(const theta::ParId & pid) const {
     if (it != initial_stepsizes.end()) return it->second;
     double def = fabs(vm->get_default(pid));
     if (def != 0) return 0.2 * def;
-    std::pair<double, double> range = vm->get_range(pid);
+    const std::pair<double, double> & range = vm->get_range(pid);
     double interval_size = fabs(range.second - range.first); //fabs should not be necessary here, but who knows ...
     if (std::isinf(interval_size)) return 1.0;
     return 0.05 * interval_size;

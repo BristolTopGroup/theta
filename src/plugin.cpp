@@ -74,7 +74,10 @@ void PluginLoader::load(const std::string & soname) {
     try {
         handle = dlopen(soname.c_str(), RTLD_NOW);
     } catch (Exception & ex) {
-        std::cerr << "Exception while loading plugin file '" << soname << "': " << ex.message << std::endl;
+        std::stringstream ss;
+        ss << ex.message << " (in PluginLoader::load while loading plugin file '" << soname << "')";
+        ex.message = ss.str();
+        throw;
     }
     if (handle == 0) {
         std::stringstream s;

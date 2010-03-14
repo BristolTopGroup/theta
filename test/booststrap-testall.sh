@@ -24,3 +24,8 @@ for i in test/test-stat/*.sh; do
 done
 
 #TODO: copy back logfile
+#valgrind --leak-check=full --show-reachable=yes test/test >> $logfile
+
+lcov -c --directory build-coverage --output-file theta.info
+genhtml theta.info --no-function-coverage -o doc/coverage
+

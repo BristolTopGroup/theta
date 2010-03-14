@@ -851,13 +851,13 @@
  * </ol>
  *
  * Technically, point 1. is accomplished by an independent python function which expects \f$ n \f$ and \f$ c \f$ as
- * input and applies the bisection method to find the lower and upper value of \$ \Theta \f$ for which the equation of 1. holds.
+ * input and applies the bisection method to find the lower and upper value of \f$ \Theta \f$ for which the equation of 1. holds.
  *
  * The requested confidence levels tested correspond to one-sigma and two-sigma interals and the maximum likelihood value, i.e.,
  * confidence levels 0.6827, 0.9545 and 0. The outcome if the method are estimates for the lower and upper values of
  * the intervals for \f$ |Theta \f$. Below, they will be called \f$ l_{1\sigma}, u_{1\sigma}, l_{2\sigma}, u_{2\sigma}, l_{0} \f$.
  *
- * In both cases, the maximum tolerated deviation in the lower and upper interval borders is \f$ 10^{-4}\Theta \f$.
+ * In both cases, the maximum tolerated deviation in the lower and upper interval borders is \f$ 10^{-4}\Theta \f$ .
  *
  * In the asymptotic case, it is also checked that the "one-sigma" and "two-sigma" intervals are where expected in this regime, i.e.,
  * \f{eqnarray*}
@@ -866,10 +866,10 @@
  *   (l_{2\sigma} - l_0)^2 &= 4\cdot l_0 \\
  *   (u_{2\sigma} - l_0)^2 &= 4\cdot l_0 \\
  * \f}
- * with a maximum relative difference of \f$ 2\cdot 10^{-2} \f$, where "relative difference" means dividing the difference of the
+ * with a maximum relative difference of \f$ 2\cdot 10^{-2} \f$ , where "relative difference" means dividing the difference of the
  * left and right hand side of these equations by the right hand side (note: the tolerance is chosen relatively large to avoid
  * reporting false positives. This test is mainly to ensure that there is no common bug in the python function for point 1.
- * and the \link deltanll_intervals deltanll_intervals \endlink plugin when calculating \f$ \Delta NLL(c) \f$).
+ * and the \link deltanll_intervals deltanll_intervals \endlink plugin when calculating \f$ \Delta NLL(c) \f$ ).
  *
  * \section testing_counting-fixedbkg Counting experiment with fixed background mean
  *
@@ -926,7 +926,7 @@
  * As additional diagnostics, the numbers of pseudo experiments marked "too low"
  * and "too high" are printed.
  *
- * * \subsection testing_counting-fixedbkg_deltanll "Delta-log-likelihood" confidence intervals
+ * \subsection testing_counting-fixedbkg_deltanll "Delta-log-likelihood" confidence intervals
  *
  * <em>Test script:</em> <tt>test/test-stat/counting-fixedbkg-deltanll_intervals.py</tt><br>
  * <em>Relevant plugin classes:</em> \link deltanll_intervals deltanll_intervals \endlink, \link root_minuit root_minuit \endlink
@@ -966,7 +966,7 @@
  * </ol>
  *
  * Technically, point 1. is accomplished by an independent python function which expects \f$ n \f$ and \f$ c \f$ as
- * input and applies the bisection method to find the lower and upper value of \$ \Theta \f$ for which the equation of 1. holds.
+ * input and applies the bisection method to find the lower and upper value of \f$ \Theta \f$ for which the equation of 1. holds.
  *
  * The requested confidence levels tested correspond to one-sigma and two-sigma interals and the maximum likelihood value, i.e.,
  * confidence levels 0.6827, 0.9545 and 0. The outcome if the method are estimates for the lower and upper values of

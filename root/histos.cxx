@@ -77,7 +77,7 @@ void create_histo(const string & infile, const string & query, TDirectory * cd, 
 
 int main(int argc, char** argv){
     if(argc!=2){
-        cerr << "Usage: " << argv[0] << " <query file>" << endl;
+        cerr << "Usage: " << argv[0] << " <config file>" << endl;
         return 1;
     }
     try{

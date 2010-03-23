@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE(all_obs){
     VarIdManager vm;
     ObsIds ids;
     BOOST_REQUIRE(vm.getAllObsIds()==ids);
-    ObsId obs0 = vm.createObsId("obs0", 0.2, -0.8, 1.2);
+    ObsId obs0 = vm.createObsId("obs0", 100, -0.8, 1.2);
     BOOST_REQUIRE(not (vm.getAllObsIds()==ids));
     ids.insert(obs0);
     BOOST_REQUIRE(vm.getAllObsIds()==ids);
@@ -210,7 +210,7 @@ BOOST_AUTO_TEST_CASE(parvalues_many){
         values.set(parameters.back(), 0.1*i + i*i);
     }
     for(size_t i=0; i<100; ++i){
-        BOOST_CHECK(values.get(parameters[i]) == 0.1*i + i*i);
+        BOOST_REQUIRE_EQUAL(values.get(parameters[i]), 0.1*i + i*i);
     }
     
     ParValues values_sparse;
@@ -220,16 +220,18 @@ BOOST_AUTO_TEST_CASE(parvalues_many){
             BOOST_CHECK(values_sparse.get(parameters[i])==99.0);
         }
         else{
-            BOOST_CHECK(not values_sparse.contains(parameters[i]));
+            BOOST_REQUIRE(not values_sparse.contains(parameters[i]));
         }
     }
     
     values.set(values_sparse);
     for(size_t i=0; i<100; ++i){
-        if(i!=90)
-            BOOST_CHECK(values.get(parameters[i]) == 0.1*i + i*i);
-        else
+        if(i!=90){
+            BOOST_REQUIRE_EQUAL(values.get(parameters[i]), 0.1*i + i*i);
+        }
+        else{
             BOOST_CHECK(values.get(parameters[i]) == values_sparse.get(parameters[i]));
+        }
     }
 }
 

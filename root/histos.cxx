@@ -11,7 +11,10 @@
 
 #include <cmath>
 
+#include "libconfig/libconfig.h++"
+
 using namespace std;
+using namespace libconfig;
 
 //these two routines for easier sqlite3 are taken from database/merge.cpp:
 void sqlite3_exec(sqlite3 * db, const char * query){
@@ -34,7 +37,7 @@ sqlite3_stmt* sqlite3_prepare(sqlite3 * db, const char* sql){
             sqlite3_finalize(statement);
         }
         stringstream error_ss;
-        error_ss << "Could not compile SQL statement " << sql;
+        error_ss << "Could not compile SQL statement " << sql << "; sqlite said " << sqlite3_errmsg(db);
         throw error_ss.str();
     }
     return statement;
@@ -51,39 +54,58 @@ sqlite3* sqlite3_open(const string & fname){
     return db;
 }
 
-void do_main(const string & fname, TDirectory * cd, const string & producer_name){
+void create_histo(const string & infile, const string & query, TDirectory * cd, const string & name, int nbins, double xmin, double xmax){
     cd->cd();
-    TH1F* histo = new TH1F("h", "h", 100, 22.0616, 36.2339); //owned by cd
-    sqlite3 * db = sqlite3_open(fname);
-    stringstream ss;
-    ss << "SELECT " << producer_name << "__nll_sb - " << producer_name << "__nll_b FROM 'products';";
-    sqlite3_stmt* st = sqlite3_prepare(db, ss.str().c_str());
+    TH1F* histo = new TH1F(name.c_str(), name.c_str(), nbins, xmin, xmax);
+    histo->SetDirectory(cd);
+    sqlite3 * db = sqlite3_open(infile);
+    sqlite3_stmt* st = sqlite3_prepare(db, query.c_str());
     int res;
-    int n;
     while(SQLITE_ROW == (res=sqlite3_step(st))){
-        double lnq = sqlite3_column_double(st, 0);
-        histo->Fill(sqrt(2 * fabs(lnq)));
+        double result = sqlite3_column_double(st, 0);
+        histo->Fill(result);
     }
     if(res!=SQLITE_DONE){
-        ss.str("");
+        sqlite3_finalize(st);
+        stringstream ss;
         ss << "Error in do_main: stepping through results returned " << res;
         throw ss.str();
     }
+    sqlite3_finalize(st);//ignore error
+    sqlite3_close(db);//ignore error
 }
 
 int main(int argc, char** argv){
-    if(argc!=3){
-        cerr << "Usage: " << argv[0] << " <.db file>  <producer name>" << endl;
+    if(argc!=2){
+        cerr << "Usage: " << argv[0] << " <query file>" << endl;
         return 1;
     }
     try{
-        TFile file("theta_significance.root", "recreate");
-        do_main(argv[1], &file, argv[2]);
+        Config cfg;
+        cfg.readFile(argv[1]);
+        Setting & root = cfg.getRoot();
+        string outfile = root["outfile"];
+        TFile file(outfile.c_str(), "recreate");
+        int n = root.getLength();
+        for(int i=0; i<n; ++i){
+            if(root[i].getType() != Setting::TypeGroup) continue;
+            string histo_name = root[i].getName();
+            int nbins = root[i]["nbins"];
+            double xmin = root[i]["range"][0];
+            double xmax = root[i]["range"][1];
+            string query = root[i]["query"];
+            string infile = root[i]["file"];
+            create_histo(infile, query, &file, histo_name, nbins, xmin, xmax);
+        }
         file.Write();
         file.Close();
     }
+    catch(SettingException & ex){
+        cerr << "Error processing configuration file: " << ex.what() << " at path " << ex.getPath() << endl;
+        return 1;
+    }
     catch(std::string & ex){
-        cerr << "Exception while processing: " << endl << ex << endl;
+        cerr << "Error: " << endl << ex << endl;
         return 1;
     }
 }

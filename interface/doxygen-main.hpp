@@ -601,7 +601,8 @@
   *      to be as the call \c cfg.setting["parameter"] will throw an exception which will be caught in the %theta
   *        main program and reported to the user.</li>
   *   <li>There is no explicit type casting of the configuration file setting. This is done implicitely via the overloaded
-  *     casting operators of \link theta::SettingWrapper SettingWrapper \endlink (this concept is actually stolen form libconfig). In case the 
+  *     casting operators of \link theta::SettingWrapper SettingWrapper \endlink (this concept is actually
+  *     stolen form libconfig). In case the 
   *     required type does not matched the one in the configuration file, an exception will be thrown, which will be caught
   *     in %theta.</li>
   *   <li>There is no code to handle the case that the user has mis-spelled the parameter name in the configuration.
@@ -620,7 +621,6 @@
   *   if(val <= 0.0) throw MathException("one_over_sqrt: negative argument");
   *   return 1.0 / sqrt(val);
   * \endcode
-  * Unless you know better, always do this kind of error handling, i.e., throw the appropriate type of exception.
   *
   * The last line registers the new class at the plugin system with a macro. You have to do this exactly
   * once for every plugin you ant to use (never put this line into a header, only do that in C++ source files.
@@ -629,7 +629,12 @@
   * You have to compile this file as part of a shared object file which is loaded through the \c plugins
   * setting group.
   *
-  * \todo Provide a directory which is corectly configured to compile all cpp-files as plugin.
+  * One piece is still missing: as the documented in theta::Function::par_ids, this variable
+  * should contain all the parameters this function depends on (this is used for optimizations
+  * and to define which parameters a model depends on).
+  *
+  * The completed example (including the split of .hpp and .cpp) is implemented in
+  * plugins/one_over_sqrt.hpp and plugins/one_over_sqrt.cpp.
   */
  
  

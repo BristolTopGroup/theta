@@ -22,7 +22,8 @@ using namespace theta;
 using namespace theta::utils;
 using namespace theta::plugin;
 
-MultFunction::MultFunction(const ParIds & vids): Function(vids){
+MultFunction::MultFunction(const ParIds & vids){
+    par_ids=vids;
 }
 
 double MultFunction::operator()(const ParValues & v) const{
@@ -239,29 +240,36 @@ std::auto_ptr<Model> ModelFactory::buildModel(const Configuration & ctx) {
         for (size_t i = 0; i < obs_setting.size(); i++) {
             Configuration context(ctx, obs_setting[i]["histogram"]);
             auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::build(context);
-            //the coefficients:
-            size_t n_coeff = obs_setting[i]["coefficients"].size();
-            if (n_coeff == 0) {
-                stringstream ss;
-                ss << "observable " << obs_name << ", component " << obs_setting[i].getName() << ", defined at path "
-                        << obs_setting[i]["coefficients"].getPath() << " has wrong length (use a list!)";
-                throw ConfigurationException(ss.str());
-            }
-            ParIds coeff_factors;
-            try {
-                for (size_t j = 0; j < n_coeff; j++) {
-                    coeff_factors.insert(ctx.vm->getParId(obs_setting[i]["coefficients"][j]));
+            //the coefficient function:
+            if(obs_setting[i].exists("coefficients")){
+                size_t n_coeff = obs_setting[i]["coefficients"].size();
+                if (n_coeff == 0) {
+                    stringstream ss;
+                    ss << "observable " << obs_name << ", component " << obs_setting[i].getName() << ", defined at path "
+                            << obs_setting[i]["coefficients"].getPath() << " has wrong length (use a list!)";
+                    throw ConfigurationException(ss.str());
                 }
-            } catch (NotFoundException & e) {
-                stringstream ss;
-                ss << "while parsing coefficients for observable " << obs_name << ", component " << obs_setting[i].getName() << ", defined at path "
+                ParIds coeff_factors;
+                try {
+                    for (size_t j = 0; j < n_coeff; j++) {
+                        coeff_factors.insert(ctx.vm->getParId(obs_setting[i]["coefficients"][j]));
+                    }
+                } catch (NotFoundException & e) {
+                    stringstream ss;
+                    ss << "while parsing coefficients for observable " <<
+                        obs_name << ", component " << obs_setting[i].getName() << ", defined at path "
                         << obs_setting[i]["coefficients"].getPath() << ": NotFoundException occured: " << e.message;
-                throw ConfigurationException(ss.str());
+                    throw ConfigurationException(ss.str());
+                }
+                coeffs.push_back(new MultFunction(coeff_factors));
             }
+            else{
+                Configuration cfg(ctx, obs_setting[i]["coefficient-function"]);
+                auto_ptr<Function> coeff_function = PluginManager<Function>::build(cfg);
+                coeffs.push_back(coeff_function);
+                assert(coeff_function.get()==0);
+            }   
             histos.push_back(hf);
-            //hf should have lost pointer ownership:
-            assert(hf.get() == 0);
-            coeffs.push_back(new MultFunction(coeff_factors));
             names.push_back(obs_setting[i].getName());
         }
         result->set_prediction(*obsit, coeffs, histos, names);
@@ -280,8 +288,9 @@ std::auto_ptr<Model> ModelFactory::buildModel(const Configuration & ctx) {
 
 
 /* NLLIKELIHOOD */
-NLLikelihood::NLLikelihood(const boost::shared_ptr<VarIdManager> & vm_, const Model & m, const Data & dat, const ObsIds & obs, const ParIds & pars): Function(pars), vm(vm_), model(m),
+NLLikelihood::NLLikelihood(const boost::shared_ptr<VarIdManager> & vm_, const Model & m, const Data & dat, const ObsIds & obs, const ParIds & pars): vm(vm_), model(m),
         data(dat), obs_ids(obs), values(*vm){
+            Function::par_ids = pars;
 }
 
 double NLLikelihood::operator()(const ParValues & values) const{

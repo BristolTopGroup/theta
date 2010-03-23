@@ -71,7 +71,7 @@ namespace theta{
             //@{
             /** \brief Convert the current setting to the given type
              *
-             * If the setting has not the correct ty[pe, a SettingTypeException will be thrown.
+             * If the setting has not the correct type, a SettingTypeException will be thrown.
              */
             operator bool() const{
                 rec.markAsUsed(setting);

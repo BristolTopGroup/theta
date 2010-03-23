@@ -71,10 +71,11 @@ namespace theta {
         /// Declare destructor virtual as polymorphic access to derived classes will happen.
         virtual ~Function(){}
     protected:
-        /// The parameters this function depends on
+        /** \brief The parameters this function depends on
+         *
+         * Has to be set correctly by derived classes
+         */
         ParIds par_ids;
-        /// Constructor dpecifying the parameters this function depends on
-        Function(const ParIds & pids): par_ids(pids){}
     };
     
     /** \brief A function which multiplies all its parameters
@@ -282,16 +283,50 @@ namespace theta {
     
     /** \brief Factory class to build Models from a configuration settings group
      *
-     * See the \ref model_def "Model definition" in the introction for a discussion of the configuration syntax.
+     * See the \ref model_def "Model definition" in the introduction for a more complete discussion of the
+     * model specification.
+     *
+     * A simple example of a complete model specification would be
+     *\code
+     *
+     * mymodel = {
+     * o = { //asuming o was declared an observable
+     *    signal = { //component names can be chosen freely
+     *        coefficients = ("Theta"); // assuming Theta was declared as parameter
+     *        histogram = "@flat-unit-histo";
+     *    };
+     *    background = {
+     *        coefficients = ("mu"); // assuming mu was declared as parameter
+     *        histogram = "@flat-unit-histo";
+     *    };
+     * };
+     * };
+     *
+     * //see fixed_poly documentation for details
+     * flat-unit-histo = {
+     *    type = "fixed_poly"; 
+     *    observable = "o";
+     *    normalize_to = 1.0;
+     *    coefficients = [1.0];
+     * };
+     *\endcode
      *
      * The configuration group defining a model contains:
      * <ul>
-     *   <li>Excatly one settings group per observable to be modeled by this Model. Each observable setting group is named after the observable
-     *      contains one or more components in form of setting groups (whose name can be chosen freely). Each component
-     *      contains the setting "coeficient" and "histogram". </li> 
+     *   <li>Excatly one settings group per observable to be modeled by this Model. It has to have the same name
+     *      as the observable to be modeled and contains the observable specification.</li>
      *    <li>
-     *   <li>Zero or one "constraints" setting groups which defines  (as setting groups) zero or more \link Distribution Distributions\endlink used as model priors</li>
+     *   <li>Zero or one "constraints" setting groups which defines (as setting groups) zero or
+     *      more \link Distribution Distributions \endlink used as model priors</li>
      * </ul>
+     *
+     * Each setting group representing an observable specification contains one or more component specifications.
+     * The component names may be chosen freely ("signal" and "background" in the above example).
+     * Each component specification is in turn a setting group which contains
+     * a histogram specification in a "histogram" setting and a list of parameter names in the "coefficients" list.
+     *
+     * Instead of the "coefficients" setting, a setting group "coefficient-function" can be specified which is
+     * used to construct a Function object via the plugin system.
      */
     class ModelFactory{
     public:

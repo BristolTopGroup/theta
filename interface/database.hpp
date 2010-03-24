@@ -82,13 +82,14 @@ private:
 /** \brief Abstract base class for all tables stored in a Database.
  *
  * Writing information to the output database is done via subclasses of Table.
- * Producers always write their result in an instance of ProducerTableInfo, namely
- * Producer::table.
+ * Producers always write their result in an instance of ProducerTable.
  *
  * A derived class uses this class by:
  * <ol>
- *   <li>calling add_column one or more times at initialization and saving the result in some data member of the derived class</li>
- *   <li>To write out a row, call the set_column methods on all columns defined and add_row</li>
+ *   <li>calling add_column one or more times at initialization and saving the result
+ *       in some data member of the derived class</li>
+ *   <li>To write out a row, call the set_column methods on all defined columns,
+ *       followed by a call to add_row</li>
  * </ol>
  */
 class Table: private boost::noncopyable {
@@ -173,18 +174,21 @@ private:
     void create_table();
 };
 
-/** \brief A Table object to be used by the producers to save their result
+/** \brief A Table class to store per-event information
  *
- * Each instance of the Producer class (from which all Producers derive by definition) writes it results
- * to a ProducerTable.
+ * Per \link run Run \endlink, there is exactly one EventTable. The main usages are
+ * <ul>
+ *   <li>by Producer to save the result</li>
+ *   </li>by DataSource to save some per-event information about data production</li>
+ * </ul>
  *
- * Producers define their table by calling add_column repeatedly in theta::Producer::define_table.
- * The actual column name written to the SQL table is &lt;producer name&gt;__&lt;column name&gt;.
+ * Clients define their columns by calling add_column repeatedly at initilization time.
+ * The actual column name written to the SQL table is &lt;plugin name&gt;__&lt;column name&gt;.
  *
- * The actual write is done via a call to add_row by theta::Run; the producer does not have to
- * (and should not) call this method.
+ * The actual write is done by the \link Run \endlink instance; the PluginType should
+ * not call this method.
  */
-class ProducerTable: private Table{
+class EventTable: private Table{
     public:
         //@{
         /** \brief Make some protected definitions from Table public
@@ -199,16 +203,17 @@ class ProducerTable: private Table{
         
         /** \brief Add a column to this table
          *
-         * Similar to Table::add_column, but expects the producer which this table belongs
-         * to as first argument.
+         * Similar to Table::add_column, but expects an instance of PluginType.
+         * The column name will be
+         *\code
+         * p.get_name() + "__" + name
+         *\endcode
          */
-        column add_column(const theta::Producer & p, const std::string & name, const data_type & type);
+        column add_column(const theta::plugin::PluginType & p, const std::string & name, const data_type & type);
         
         /** \brief Construct a new producer table with a given name
-         *
-         * This constructor will set up the "runid" and "eventid" columns which every ProducerTable has.
          */
-        ProducerTable(const std::string & name, const boost::shared_ptr<Database> & db);
+        EventTable(const std::string & name, const boost::shared_ptr<Database> & db);
         
         /** \brief Add a row to the table, given the current run
          *

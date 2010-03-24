@@ -4,7 +4,7 @@
 #include "interface/variables.hpp"
 #include "interface/matrix.hpp"
 #include "interface/phys.hpp"
-//#include "interface/plugin_so_interface.hpp"
+#include "interface/plugin_so_interface.hpp"
 
 #include <map>
 
@@ -65,7 +65,7 @@ namespace theta{
      *
      * The possible settings are documented at derived classes.
      */
-    class Minimizer{
+    class Minimizer: public theta::plugin::PluginType{
     public:
         
         /// Define us as the base_type for derived classes; required for the plugin system
@@ -162,8 +162,8 @@ namespace theta{
          */
         double get_initial_stepsize(const theta::ParId & pid) const;
         
-        /// Construct Miimizer setting vm to vm_
-        Minimizer(const boost::shared_ptr<theta::VarIdManager> & vm_): vm(vm_){}
+        /// Construct Minimizer from a Configuration instance, setting the VarIdManager vm
+        Minimizer(const theta::plugin::Configuration & cfg): PluginType(cfg), vm(cfg.vm){}
 
     private:
         std::map<theta::ParId, std::pair<double, double> > overridden_ranges;

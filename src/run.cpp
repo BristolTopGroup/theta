@@ -28,9 +28,12 @@ void Run::set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
 
 void Run::run(){
     //record all producers in prodinfo_table and setup the tables of the producers:
-    producer_table.reset(new ProducerTable("products", db));
+    event_table.reset(new EventTable("events", db));
+    data_source->set_table(event_table);
+    data_source->define_table();
     for(size_t i=0; i<producers.size(); i++){
-        prodinfo_table.append(static_cast<int>(i), producers[i].get_name(), producers[i].get_type(), producers[i].get_information());
+        prodinfo_table.append(static_cast<int>(i), producers[i].get_name(), producers[i].get_type(),
+                              producers[i].get_information());
         producers[i].set_table(producer_table);
         producers[i].define_table();
     }
@@ -39,8 +42,34 @@ void Run::run(){
     //log the start of the run:
     eventid = 0;
     logtable->append(*this, LogTable::info, "run start");
-    //call the run implementation of the subclass:
-    run_impl();
+    
+    //main event loop:
+    for (eventid = 1; eventid <= n_event; eventid++) {
+        if(stop_execution)break;
+        try{
+            data_source->get(data);
+        }
+        catch(const DataSource::StopIteration &){
+            break;
+        }
+        log_event_start();
+        //ParValues values = m_pseudodata.sampleValues(rnd);
+        //data = m_pseudodata.samplePseudoData(rnd, values);
+        //params_table->append(*this, values);
+        for (size_t j = 0; j < producers.size(); j++) {
+            try {
+                producers[j].produce(*this, data, m_producers);
+            } catch (Exception & ex) {
+                std::stringstream ss;
+                ss << "Producer '" << producers[j].get_name() << "' failed: " << ex.message;
+                logtable->append(*this, LogTable::error, ss.str());
+            }
+        }
+        event_table->add_row(*this);
+        log_event_end();
+        if(progress_listener) progress_listener->progress(eventid, n_event);
+    }
+    
     eventid = 0; // to indicate in the log table that this is an "event-wide" entry
     logtable->append(*this, LogTable::info, "run end");
     if(log_report){

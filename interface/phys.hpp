@@ -17,9 +17,9 @@ namespace theta {
      *
      * This is the base class for function plugins.
      */
-    class Function{
+    class Function: public theta::plugin::PluginType{
     public:
-        /// Define us as the base_type for derived classes; required for the plugin system
+        /// Define this as the base_type for derived classes; required for the plugin system
         typedef Function base_type;
         
         /** \brief Evaluate the function at the given parameter values.
@@ -76,6 +76,9 @@ namespace theta {
          * Has to be set correctly by derived classes
          */
         ParIds par_ids;
+        
+        /// Proxy to PluginType constructor expecting a Configuration instance
+        Function(const plugin::Configuration & cfg): PluginType(cfg){}
     };
     
     /** \brief A function which multiplies all its parameters
@@ -89,13 +92,11 @@ namespace theta {
          */
         MultFunction(const ParIds & v_ids);        
 
-        //@{
         /** \brief Definitions of the pure virtual methods of Function
          *
          * See documentation of Function for their meaning.
          */
         virtual double operator()(const ParValues & v) const;
-        //@}
     };
     
     
@@ -134,6 +135,104 @@ namespace theta {
 
     private:
         std::map<ObsId, Histogram> data;
+    };
+    
+    /** \brief A data-providing class, can be used as base class in the plugin system
+     *
+     * DataSource classes are used as part of a run, which, for each pseuso
+     * experiment, calls the DataSource::fill function to get the pseudo data.
+     */
+    class DataSource: public theta::plugin::PluginType, theta::plugin::EventTableWriter{
+    public:
+        
+        /// Define this as the base_type for derived classes; required for the plugin system
+        typedef DataSource base_type;
+        
+        /** \brief Exception class to be thrown by fill
+         */
+        class DataUnavailable{};
+        
+        /** \brief Returns the observables this DataSource provides data for
+         *
+         * This stays the same over the lifetime of the instance.
+         *
+         * The return value is the same as \c obs_ids in
+         *\code
+         * Data data;
+         * this->fill(data);
+         * ParIds obs_ids = values.getObservables();
+         *\endcode 
+         */
+        virtual ObsIds getObservables() const = 0;
+        
+        /** \brief Fill the provided Data instance with data
+         *
+         * This method is called exactly once per event. It sets
+         * the histograms of the provided observables and lets everything else unaffected.
+         *
+         * It can throw a DataUnavailable exception if no more data is available and the
+         * run should end.
+         */
+        virtual void fill(Data & dat) = 0;
+        
+        /// Declare destructor virtual as polymorphic access to derived classes will happen.
+        virtual ~DataSource(){}
+        
+    protected:
+        DataSource(const theta::plugin::Configuration & cfg): theta::plugin::PluginType(cfg){}
+    };
+    
+    /** \brief A parameter-providing class; can be used as base class in the plugin system
+     *
+     * A typical use is of this class is
+     * <ul>
+     *  <li>As part of a DataSource, to provide some alternative parameter values to be
+     *     used for pseudo-data creation</li>
+     *  <li>As part of a producer to fix some parameters.</li>
+     * </ul>
+     *
+     * While it could be useful for some applications,
+     * this class does not on itself write to an EventTable, as in many use cases,
+     * the same ParameterSource setting is used multiple times with the same name within
+     * the same run.
+     */
+    class ParameterSource: public theta::plugin::PluginType{
+    public:
+        /// Define this as the base_type for derived classes; required for the plugin system
+        typedef ParameterSource base_type;
+        
+        /** \brief Exception class to be thrown by fill
+         */
+        class ParametersUnavailable{};
+        
+        /** \brief Return the parameters this source provides
+         *
+         * This stays the same over the lifetime of the instance.
+         *
+         * The return value is the same as \c par_ids in
+         *\code
+         * ParValues values;
+         * this->fill(values);
+         * ParIds par_ids = values.getParameters();
+         *\endcode
+         */
+        virtual ParIds getParameters() const = 0;
+        
+        /** \brief Fill the provided values instance
+         *
+         * Sets the configured parameters and leaves everything else unaffected.
+         *
+         * Can throw a ParametersUnavailable exception, if no (more) parameter
+         * values are available.
+         */
+        virtual void fill(ParValues & values) = 0;
+        
+        /// Declare destructor virtual, as there will be polymorphic access
+        virtual ~ParameterSource(){}
+        
+    protected:
+        /// Proxy to the constructor of PluginType
+        ParameterSource(const theta::plugin::Configuration & cfg): theta::plugin::PluginType(cfg){}
     };
     
     /** \brief Provides a mapping from parameters to distributions for one or more observables
@@ -372,8 +471,16 @@ namespace theta {
         /** \brief The model which provides the prediction used for calculating the likelihood.
          * 
          * The returned reference is only valid as long as this object exists.
-        */
+         */
         const Model & getModel() const{return model;}
+        
+        /** \brief Set the additional terms for the likelihood
+         *
+         * The result of the function evaluation will add these function values.
+         *
+         * This can be used as additional constraints / priors for the likelihood function.
+         */
+        void set_additional_terms(const boost::ptr_vector<Function> * terms);
 
     private:
         boost::shared_ptr<VarIdManager> vm;
@@ -381,6 +488,8 @@ namespace theta {
         const Data & data;
 
         const ObsIds obs_ids;
+        
+        const boost::ptr_vector<Function> * additional_terms;
 
         //values used internally if called with the double* functions.
         mutable ParValues values;
@@ -388,7 +497,8 @@ namespace theta {
         mutable std::map<ObsId, Histogram> predictions;
         mutable std::map<ObsId, Histogram> predictions_d;
         
-        NLLikelihood(const boost::shared_ptr<VarIdManager> & vm, const Model & m, const Data & data, const ObsIds & obs, const ParIds & pars);
+        NLLikelihood(const boost::shared_ptr<VarIdManager> & vm, const Model & m, const Data & data,
+                     const ObsIds & obs, const ParIds & pars);
     };
     
 }

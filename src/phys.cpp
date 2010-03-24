@@ -288,8 +288,9 @@ std::auto_ptr<Model> ModelFactory::buildModel(const Configuration & ctx) {
 
 
 /* NLLIKELIHOOD */
-NLLikelihood::NLLikelihood(const boost::shared_ptr<VarIdManager> & vm_, const Model & m, const Data & dat, const ObsIds & obs, const ParIds & pars): vm(vm_), model(m),
-        data(dat), obs_ids(obs), values(*vm){
+NLLikelihood::NLLikelihood(const boost::shared_ptr<VarIdManager> & vm_, const Model & m, const Data & dat,
+                           const ObsIds & obs, const ParIds & pars): vm(vm_), model(m),
+        data(dat), obs_ids(obs), additional_terms(0), values(*vm){
             Function::par_ids = pars;
 }
 
@@ -341,6 +342,13 @@ double NLLikelihood::operator()(const ParValues & values) const{
     if(isnan(result)){
         throw MathException("NLLikelihood::operator() would return nan (2)");
     }
+    //the additional likelihood terms, if set:
+    if(additional_terms){
+        for(size_t i=0; i < additional_terms->size(); i++){
+            result += ((*additional_terms)[i])(values);
+        }
+    }
+    
     return result;
 }
 

@@ -12,7 +12,7 @@ using namespace theta::plugin;
 
 class test_ex_during_build: public Function{
 public:
-  test_ex_during_build(const Configuration & cfg):Function(ParIds()) {
+  test_ex_during_build(const Configuration & cfg){
        throw Exception("exception message 23");
   }
   virtual double operator()(const ParValues & v) const{       return 0.0;  }

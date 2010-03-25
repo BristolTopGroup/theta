@@ -14,7 +14,7 @@ using namespace theta::plugin;
 
 class test_exception: public Function{
 public:
-    test_exception(const Configuration & cfg): Function(ParIds()){}
+    test_exception(const Configuration & cfg){}
     virtual double operator()(const ParValues & v) const{
        throw Exception("test-exception message 42");
     }

@@ -17,7 +17,8 @@ static bool root_plugin = false;
 
 class ImpossibleFunction: public Function{
 public:
-    ImpossibleFunction(const ParIds & pids):Function(pids){
+    ImpossibleFunction(const ParIds & pids){
+        par_ids = pids;
     }
 
     virtual double operator()(const ParValues & v) const{

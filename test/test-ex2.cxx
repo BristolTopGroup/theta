@@ -13,7 +13,7 @@ using namespace theta::plugin;
 
 class proxy_function: public Function{
 public:
-    proxy_function(const Configuration & cfg): Function(ParIds()){
+    proxy_function(const Configuration & cfg){
          Configuration ctx2(cfg,cfg.setting["block"]);
          f = PluginManager<Function>::build(ctx2);
          par_ids = f->getParameters();

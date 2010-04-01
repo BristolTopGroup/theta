@@ -34,10 +34,11 @@ void Run::run(){
     for(size_t i=0; i<producers.size(); i++){
         prodinfo_table.append(static_cast<int>(i), producers[i].get_name(), producers[i].get_type(),
                               producers[i].get_information());
-        producers[i].set_table(producer_table);
+        producers[i].set_table(event_table);
         producers[i].define_table();
     }
     //write random seeds to rndinfo_table:
+    //TODO: ...
     rndinfo_table.append(*this, seed);
     //log the start of the run:
     eventid = 0;
@@ -47,9 +48,9 @@ void Run::run(){
     for (eventid = 1; eventid <= n_event; eventid++) {
         if(stop_execution)break;
         try{
-            data_source->get(data);
+            data_source->fill(data);
         }
-        catch(const DataSource::StopIteration &){
+        catch(DataSource::DataUnavailable &){
             break;
         }
         log_event_start();
@@ -58,7 +59,7 @@ void Run::run(){
         //params_table->append(*this, values);
         for (size_t j = 0; j < producers.size(); j++) {
             try {
-                producers[j].produce(*this, data, m_producers);
+                producers[j].produce(*this, data, *m_producers);
             } catch (Exception & ex) {
                 std::stringstream ss;
                 ss << "Producer '" << producers[j].get_name() << "' failed: " << ex.message;
@@ -90,8 +91,7 @@ void Run::addProducer(std::auto_ptr<Producer> & p){
     producers.push_back(p);
 }
 
-Run::Run(const plugin::Configuration & cfg): seed(-1), rnd(new RandomSourceTaus()),
-      vm(cfg.vm), m_pseudodata(cfg.vm), m_producers(cfg.vm), db(new Database(cfg.setting["result-file"])),
+Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()), vm(cfg.vm), db(new Database(cfg.setting["result-file"])),
       logtable(new LogTable("log", db)), log_report(true), prodinfo_table("prodinfo", db), rndinfo_table("rndinfo", db),
       runid(1), eventid(0), n_event(cfg.setting["n-events"]){
       SettingWrapper s = cfg.setting;
@@ -101,20 +101,10 @@ Run::Run(const plugin::Configuration & cfg): seed(-1), rnd(new RandomSourceTaus(
       if(i_seed==-1) i_seed = time(0);
       seed = i_seed;
       rnd.set_seed(seed);
-      if (s.exists("model")) {
-          std::auto_ptr<Model> model = ModelFactory::buildModel(plugin::Configuration(cfg, s["model"]));
-          m_pseudodata = *model;
-          m_producers = *model;
-      }
-      if (s.exists("model-pseudodata")) {
-          m_pseudodata = *ModelFactory::buildModel(plugin::Configuration(cfg, s["model-pseudodata"]));
-          s["model-producers"];//will throw if not found
-       }
-       if (s.exists("model-producers")) {
-          m_producers = *ModelFactory::buildModel(plugin::Configuration(cfg, s["model-producers"]));
-          s["model-pseudodata"];//will throw if not found
-       }
-      params_table.reset(new ParamTable("params", db, *vm, m_pseudodata.getParameters()));
+      m_producers = ModelFactory::buildModel(plugin::Configuration(cfg, s["model"]));
+      data_source = plugin::PluginManager<DataSource>::build(plugin::Configuration(cfg, s["data-source"]));
+      
+      //params_table.reset(new ParamTable("params", db, *vm, m_pseudodata.getParameters()));
       LogTable::e_severity level = LogTable::warning;
       if(s.exists("log-level")){
          std::string loglevel = s["log-level"];

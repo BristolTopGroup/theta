@@ -1,7 +1,7 @@
 #ifndef PLUGIN_MLE_HPP
 #define PLUGIN_MLE_HPP
 
-#include "interface/plugin_so_interface.hpp"
+//#include "interface/plugin_so_interface.hpp"
 #include "interface/variables.hpp"
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
@@ -11,14 +11,14 @@
 /** \brief A maximum likelihood estimator.
  *
  * It is configuared via a setting group like
- *<pre>
+ *\code
  * {
  *   type = "mle";
  *   parameters = ("signal", "background");
  *   minimizer = "myminuit";
  * }
  * myminuit = {}; // minimizer definition
- *</pre>
+ *\endcode
  *
  * This producer will find the parameter values which minimize the negative-log-likelihood. It will write out these
  * parameter values. The error estimates provided by the \link theta::Minimizer minimizer \endlink are also written to the
@@ -49,9 +49,9 @@ private:
     boost::shared_ptr<theta::VarIdManager> vm;
     std::vector<theta::ParId> save_ids;
     //the two columns with parameter and error:
-    std::vector<theta::ProducerTable::column> parameter_columns;
-    std::vector<theta::ProducerTable::column> error_columns;
-    theta::ProducerTable::column c_nll;
+    std::vector<theta::EventTable::column> parameter_columns;
+    std::vector<theta::EventTable::column> error_columns;
+    theta::EventTable::column c_nll;
 };
 
 #endif

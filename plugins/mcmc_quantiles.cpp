@@ -15,7 +15,7 @@ void mcmc_quantiles::define_table(){
     for(size_t i=0; i<quantiles.size(); ++i){
         stringstream ss;
         ss << "quant" << setw(5) << setfill('0') << static_cast<int>(quantiles[i] * 10000 + 0.5);
-        columns.push_back(table->add_column(*this, ss.str(), ProducerTable::typeDouble));
+        columns.push_back(table->add_column(*this, ss.str(), EventTable::typeDouble));
     }
 }
 

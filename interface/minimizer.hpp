@@ -4,7 +4,6 @@
 #include "interface/variables.hpp"
 #include "interface/matrix.hpp"
 #include "interface/phys.hpp"
-#include "interface/plugin_so_interface.hpp"
 
 #include <map>
 
@@ -74,66 +73,17 @@ namespace theta{
         /// declare destructor virtual as we expect polymorphic access to derived classes
         virtual ~Minimizer(){}
 
-        /** Attempts to minimize the function.
+        /** \brief Attempt to minimize the function.
+         *
+         * The function f is attempted to be minimized, with information about the parameters
+         * in the Distribution d which must contain at least the parameters of f.
          *
          * If a serious error occurs during minimization and the minimization fails,
          * a MinimizationException is thrown. The reasons for such a failure are manifold
-         * and also depend on the particular minimization algorithm.
+         * and also depend on the particular minimization algorithm and should be documented
+         * in derived classes.
          */
-        virtual MinimizationResult minimize(const theta::Function & f) = 0;
-
-        //@{
-        /** \brief Override the allowed range or start value for a particular parameter.
-         *
-         * Setting limits of parameter \c p ensures that the
-         * function is never evaluated at points for which parameter \c p is outside
-         * the provided range.
-         *
-         * By setting the exact same \c lower_limit and \c upper_limit, you can fix the parameter.
-         *
-         * It is invalid to call the function with upper_limit &lt; lower_limit. In
-         * this case, an InvalidArgumentException will be thrown.
-         *
-         * Usually, the allowed range and startvalue is defined through parameter definition
-         * (i.e., within \c VarIdManager). Calling this function will override
-         * this default behaviour and apply other limits and/or start values.
-         *
-         * Note that ranges are usually enforced by applying a non-linear parameter transformations
-         * to the parameters. This can make the minimization problem more difficult than it was without
-         * the limit. Therefore, you should always avoid ranges at all or choose
-         * the as large as possible.
-         */
-        void override_range(const theta::ParId & pid, double lower_limit, double upper_limit);
-        void override_default(const theta::ParId & pid, double def);
-        //@}
-
-        /** \brief Resets a range override via \c override range.
-         *
-         * After a call of \c override_range or \c override_default, you can call this function to
-         * use the default range and value again next time.
-         * 
-         * It is valid to call this function with ParId values \c pid
-         * even if there was no previous call of \c override_range before.
-         * So if you want to make sure that there are no range overrides
-         * at all, you can call this function for all \c pid values the
-         * function to be minimized depends on.
-         */
-        void reset_override(const theta::ParId & pid);
-
-        /** \brief Set an initial stepsize for parameter \c pid.
-         *
-         * The supplied stepsize has to be stricly larger than zero. Otherwise,
-         * an InvalidArgumentException will be thrown.
-         */
-        void set_initial_stepsize(const theta::ParId & pid, double stepsize);
-
-        /** \brief Forget about the previously set stepsize via \c set_initial_stepsize.
-         *
-         * See also the comments of \c reset_range_override; they apply here correspondigly.
-         */
-        void reset_initial_stepsize(const theta::ParId & pid){
-            initial_stepsizes.erase(pid);
-        }
+        virtual MinimizationResult minimize(const theta::Function & f, const theta::Distribution & d) = 0;
 
     protected:
         /// Pointer to the relevant VarIdManager instance. Used to control parameter limits
@@ -142,46 +92,9 @@ namespace theta{
         /// The configured tolerance. Meaning depends on the derived class
         double tolerance;
 
-        //@{
-        /** \brief Get the currently valid range and start value of parameter \c pid.
-         *
-         * Returns the range set through \c override_range or (if there was no
-         * call for this \c pid) the range from the VarIdManager \c vm.
-         */
-        const std::pair<double, double> & get_range(const theta::ParId & pid) const;
-        double get_default(const theta::ParId & pid) const;
-        //@}
-
-        /** \brief Get the currently valid initial setsize of parameter \c pid.
-         *
-         * Analogue of \c get_range for stepsizes.
-         *
-         * If no initial stepsize was set, returns 20% of the absolute default value of
-         * the parameter, if the latter is > 0.0. Otherwise, a 5% of the parameter range
-         * will be returned. If the range has infinite length, 1.0 will be used.
-         */
-        double get_initial_stepsize(const theta::ParId & pid) const;
-        
         /// Construct Minimizer from a Configuration instance, setting the VarIdManager vm
         Minimizer(const theta::plugin::Configuration & cfg): PluginType(cfg), vm(cfg.vm){}
-
-    private:
-        std::map<theta::ParId, std::pair<double, double> > overridden_ranges;
-        std::map<theta::ParId, double> overridden_defaults;
-        std::map<theta::ParId, double> initial_stepsizes;
     };
-
-
-    /*namespace MinimizerUtils{
-        / ** \brief Evaluate the configuration common to all minimizers, i.e.,
-         * \c override-ranges and \c initial-step-sizes and passes them to \c m by calling
-         * the appropriate methods.
-         *
-         * This function is usually called only from a derived class of MinimizerFactory.
-         * /
-        void apply_settings(Minimizer & m, const theta::plugin::Configuration & ctx);
-    }*/
-
 }
 
 #endif

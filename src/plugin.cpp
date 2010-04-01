@@ -8,6 +8,11 @@
 
 using namespace theta::plugin;
 
+
+PluginType::PluginType(const Configuration & c): name(c.setting.getName()), type(c.setting["type"]){
+}
+
+
 void PluginLoader::execute(const Configuration & cfg) {
     bool verbose = false;
     if (cfg.setting.exists("verbose")) {
@@ -40,12 +45,12 @@ void PluginLoader::print_plugins() {
     }
     std::cout << std::endl;
 
-    std::cout << "  Runs: ";
+/*    std::cout << "  Runs: ";
     typenames = PluginManager<Run>::get_registered_types();
     for (size_t i = 0; i < typenames.size(); ++i) {
         std::cout << typenames[i] << " ";
     }
-    std::cout << std::endl;
+    std::cout << std::endl;*/
 
     std::cout << "  Minimizers: ";
     typenames = PluginManager<Minimizer>::get_registered_types();

@@ -1,5 +1,6 @@
 #include "interface/variables.hpp"
 #include "interface/variables-utils.hpp"
+#include "interface/plugin.hpp"
 #include "interface/exception.hpp"
 #include "interface/cfg-utils.hpp"
 
@@ -11,13 +12,13 @@ using namespace theta::utils;
 using namespace std;
 using namespace libconfig;
 
-ParId VarIdManager::createParId(const std::string & name, double def, double min, double max) {
+ParId VarIdManager::createParId(const std::string & name) {
     if (parNameExists(name)) {
             stringstream ss;
             ss << "VarIdManager::createParId: parameter '"<< name <<"' defined twice";
             throw InvalidArgumentException(ss.str());
     }
-    if (min > max) {
+    /*if (min > max) {
         stringstream ss;
         ss << "Parameter " << name << " has min > max, i.e., empty range";
         throw InvalidArgumentException(ss.str());
@@ -26,13 +27,13 @@ ParId VarIdManager::createParId(const std::string & name, double def, double min
         stringstream ss;
         ss << "Parameter '" << name << "' has default value outside of its range";
         throw InvalidArgumentException(ss.str());
-    }    
+    }*/
     ParId result(next_pid_id);
     next_pid_id++;
     pid_to_name[result] = name;
     name_to_pid[name] = result;
-    pid_to_range[result] = make_pair(min, max);
-    pid_to_default[result] = def;
+    //pid_to_range[result] = make_pair(min, max);
+    //pid_to_default[result] = def;
     return result;
 }
 
@@ -106,7 +107,7 @@ ObsId VarIdManager::getObsId(const std::string & name) const {
     return it->second;
 }
 
-void VarIdManager::set_range_default(const ParId & id, double low, double high, double def){
+/*void VarIdManager::set_range_default(const ParId & id, double low, double high, double def){
     std::map<ParId, double>::iterator it = pid_to_default.find(id);
     std::map<ParId, pair<double, double> >::iterator itt = pid_to_range.find(id);
     if (it == pid_to_default.end() || itt == pid_to_range.end()) {
@@ -142,7 +143,7 @@ ParValues VarIdManager::get_defaults() const{
         result.set(it->first, it->second);
     }
     return result;
-}
+}*/
 
 size_t VarIdManager::get_nbins(const ObsId & id) const{
     std::map<ObsId, size_t>::const_iterator it = oid_to_nbins.find(id);
@@ -170,9 +171,9 @@ ObsIds VarIdManager::getAllObsIds() const{
 }
 
 ParIds VarIdManager::getAllParIds() const{
-    std::map<ParId, pair<double, double> >::const_iterator it = pid_to_range.begin();
+    std::map<ParId, string>::const_iterator it = pid_to_name.begin();
     ParIds result;
-    for(; it!= pid_to_range.end(); ++it){
+    for(; it!= pid_to_name.end(); ++it){
        result.insert(it->first);
     }
     return result;
@@ -212,11 +213,7 @@ void theta::VarIdManagerUtils::apply_settings(theta::plugin::Configuration & ctx
     }
     for (size_t i = 0; i < npar; i++) {
         string par_name = s["parameters"][i].getName();
-        double def = s["parameters"][i]["default"];
-        double min = s["parameters"][i]["range"][0].get_double_or_inf();
-        double max = s["parameters"][i]["range"][1].get_double_or_inf();
-
-        ctx.vm->createParId(par_name, def, min, max);
+        ctx.vm->createParId(par_name);
     }
 }
 

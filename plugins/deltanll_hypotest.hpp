@@ -3,7 +3,7 @@
 
 #include "interface/decls.hpp"
 
-#include "interface/plugin_so_interface.hpp"
+//#include "interface/plugin.hpp"
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
 
@@ -68,7 +68,7 @@ private:
     theta::ParValues b_only;
     std::auto_ptr<theta::Minimizer> minimizer;
     theta::ParIds par_ids_constraints;
-    theta::ProducerTable::column c_nll_b, c_nll_sb;
+    theta::EventTable::column c_nll_b, c_nll_sb;
 };
 
 #endif

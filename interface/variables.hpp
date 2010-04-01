@@ -136,6 +136,30 @@ namespace theta {
             return vars.find(id) != vars.end();
         }
 
+        /** \brief Test whether all given ids are contained
+         */
+        bool contains_all(const VarIds<id_type> & rhs) const{
+            const_iterator rhs_it = rhs.vars.begin();
+            const_iterator it = vars.begin();
+            const const_iterator rhs_end = rhs.vars.end();
+            const const_iterator end = vars.end();
+
+            //rhs_it points to the next element to test
+            while(rhs_it!=rhs_end && it!=end){
+                if(*rhs_it == *it){
+                    ++rhs_it;
+                    ++it;
+                }
+                else if(not (*rhs_it < *it)){
+                    ++it;
+                }
+                else{
+                    return false;
+                }
+            }
+            return rhs_it == rhs_end;
+        }
+
         /** \brief Test equality with other VarIds object.
          *
          * Two VarIds are the same if and only if the set of contained VarId s is the same.
@@ -181,7 +205,8 @@ namespace theta {
          * If the name is already used for another parameter / observable, an InvalidArgumentException is thrown.
          * If the given range is empty or the default value is outside the range, or zero bins, an InvalidArgumentException will be thrown.
          */
-        ParId createParId(const std::string & name, double def = 0.0, double xmin=-std::numeric_limits<double>::infinity(), double xmax=std::numeric_limits<double>::infinity());
+        //ParId createParId(const std::string & name, double def = 0.0, double xmin=-std::numeric_limits<double>::infinity(), double xmax=std::numeric_limits<double>::infinity());
+        ParId createParId(const std::string & name);
         ObsId createObsId(const std::string & name, size_t nbins, double xmin, double xmax);
         //@}
         
@@ -211,7 +236,7 @@ namespace theta {
          * Throws an NotFoundException if the parameter does not exist an an InvalidArgumentException
          * if def is not conatined in the interval [low, high].
          */
-        void set_range_default(const ParId & pid, double low, double high, double def);
+        //void set_range_default(const ParId & pid, double low, double high, double def);
         
         //@{
         /** \brief Return the name of the given ParId or ObsId.
@@ -225,13 +250,13 @@ namespace theta {
         //@{
         /** \brief Return default value and range for a parameter identified by the  ParId id.
          */
-        double get_default(const ParId & id) const;
-        const std::pair<double, double> & get_range(const ParId & id) const;
+        //double get_default(const ParId & id) const;
+        //const std::pair<double, double> & get_range(const ParId & id) const;
         //@}
         
         /** \brief Return all default values.
          */
-        ParValues get_defaults() const;
+        //ParValues get_defaults() const;
         
         //@{
         /** \brief Return the number of bins and range for an observable identified by the ObsId id.
@@ -267,8 +292,8 @@ namespace theta {
         //ParIds:
         std::map<ParId, std::string> pid_to_name;
         std::map<std::string, ParId> name_to_pid;
-        std::map<ParId, double> pid_to_default;
-        std::map<ParId, std::pair<double, double> > pid_to_range;
+        //std::map<ParId, double> pid_to_default;
+        //std::map<ParId, std::pair<double, double> > pid_to_range;
         int next_pid_id;
         //ObsIds:
         std::map<ObsId, std::string> oid_to_name;

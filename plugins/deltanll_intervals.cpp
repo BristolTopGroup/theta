@@ -12,14 +12,14 @@ using namespace std;
 using namespace libconfig;
 
 void deltanll_intervals::define_table(){
-    c_maxl = table->add_column(*this, "maxl", ProducerTable::typeDouble);
+    c_maxl = table->add_column(*this, "maxl", EventTable::typeDouble);
     for(size_t i=0; i<clevels.size(); ++i){
         stringstream ss;
         ss << "lower" << setw(5) << setfill('0') << static_cast<int>(clevels[i] * 10000 + 0.5);
-        lower_columns.push_back(table->add_column(*this, ss.str(), ProducerTable::typeDouble));
+        lower_columns.push_back(table->add_column(*this, ss.str(), EventTable::typeDouble));
         ss.str("");
         ss << "upper" << setw(5) << setfill('0') << static_cast<int>(clevels[i] * 10000 + 0.5);
-        upper_columns.push_back(table->add_column(*this, ss.str(), ProducerTable::typeDouble));
+        upper_columns.push_back(table->add_column(*this, ss.str(), EventTable::typeDouble));
     }
 }
 

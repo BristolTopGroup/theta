@@ -8,7 +8,6 @@
 #include "interface/random.hpp"
 #include "interface/producer.hpp"
 #include "interface/database.hpp"
-#include "interface/plugin_so_interface.hpp"
 #include "interface/cfg-utils.hpp"
 #include "interface/plugin.hpp"
 
@@ -75,7 +74,7 @@ public:
  * simplest subclass.
  *
  * The configuration is done via a setting like:
- * <pre>
+ * \code
  * {
  *   type = "..."; //depends on which subclass you want
  *   result-file = "result/abc.db";
@@ -92,7 +91,7 @@ public:
  *
  * hypotest = {...}; //some producer definition
  * hypotest2 = {...}; //some other producer definition
- * </pre>
+ * \endcode
  *
  * \c type must always be "plain" to create an instance of \c PlainRun.
  *
@@ -166,9 +165,9 @@ public:
         return db;
     }*/
     
-    /*Random & get_random(){
+    Random & get_random(){
         return rnd;
-    }*/
+    }
     
     int get_runid() const{
         return runid;
@@ -214,10 +213,12 @@ private:
     }
 
     //random number generator seed and generator:
-    /*unsigned int seed;
-    Random rnd;*/
+    unsigned int seed;
+    Random rnd;
     
     boost::shared_ptr<VarIdManager> vm;
+    
+    std::auto_ptr<Model> m_producers;
 
     //(pseudo-) data:
     Data data;
@@ -230,7 +231,7 @@ private:
 
     //the tables only used by run (and only by run):
     theta::ProducerInfoTable prodinfo_table;
-    theta::RunTable run_table;
+    theta::RndInfoTable rndinfo_table;
 
     //the producers to be run on the pseudo data:
     boost::ptr_vector<Producer> producers;

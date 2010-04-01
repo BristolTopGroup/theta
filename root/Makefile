@@ -17,6 +17,9 @@ all: ../lib/root.so histos
 
 histos: histos.o
 	@$(LINK_EXE) -o $@ $<
+	
+db2root: db2root.o
+	@$(LINK_EXE) -o $@ $<
 
 ../lib/root.so: $(objects)
 	@$(LINK_SO) -o $@ $+

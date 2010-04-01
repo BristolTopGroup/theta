@@ -1,7 +1,6 @@
 #ifndef THETA_ROOT_MINUIT_HPP
 #define THETA_ROOT_MINUIT_HPP
 
-#include "interface/plugin_so_interface.hpp"
 #include "interface/exception.hpp"
 #include "Minuit2/Minuit2Minimizer.h"
 #include "Math/IFunction.h"

@@ -11,8 +11,8 @@ using namespace std;
 using namespace libconfig;
 
 void deltanll_hypotest::define_table(){
-    c_nll_b = table->add_column(*this, "nll_b", ProducerTable::typeDouble);
-    c_nll_sb = table->add_column(*this, "nll_sb", ProducerTable::typeDouble);
+    c_nll_b = table->add_column(*this, "nll_b", EventTable::typeDouble);
+    c_nll_sb = table->add_column(*this, "nll_sb", EventTable::typeDouble);
 }
 
 void deltanll_hypotest::produce(Run & run, const Data & data, const Model & model) {

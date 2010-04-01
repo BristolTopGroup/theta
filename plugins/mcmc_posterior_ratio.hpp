@@ -3,7 +3,6 @@
 
 #include "interface/decls.hpp"
 
-#include "interface/plugin_so_interface.hpp"
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
 #include "interface/matrix.hpp"
@@ -80,7 +79,7 @@ private:
     theta::Matrix sqrt_cov_b;
     std::vector<double> startvalues_b;
     
-    theta::ProducerTable::column c_nl_posterior_sb, c_nl_posterior_b;
+    theta::EventTable::column c_nl_posterior_sb, c_nl_posterior_b;
 };
 
 #endif

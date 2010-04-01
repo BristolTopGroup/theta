@@ -186,7 +186,7 @@ MinimizationResult root_minuit::minimize(const theta::Function & f){
     return result;
 }
 
-root_minuit::root_minuit(const Configuration & cfg): Minimizer(cfg.vm), tolerance(NAN){
+root_minuit::root_minuit(const Configuration & cfg): Minimizer(cfg), tolerance(NAN){
        min.reset(new ROOT::Minuit2::Minuit2Minimizer(type));
        int printlevel = 0;
        if(cfg.setting.exists("printlevel")){

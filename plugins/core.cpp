@@ -67,9 +67,14 @@ fixed_gauss::fixed_gauss(const Configuration & ctx){
 }
 
 log_normal::log_normal(const Configuration & cfg){
+    support_.first = 0.0;
+    support_.second = std::numeric_limits<double>::infinity();
     SettingWrapper s = cfg.setting;
     mu = s["mu"];
     sigma = s["sigma"];
+    if(sigma <= 0.0){
+        throw ConfigurationException("log_normal: sigma <= 0.0 is not allowed");
+    }
     string par_name = s["parameter"];
     par_ids.insert(cfg.vm->getParId(par_name));
 }
@@ -93,26 +98,25 @@ double log_normal::evalNL_withDerivatives(const ParValues & values, ParValues & 
     return 0.5 * tmp * tmp + log(x);
 }
 
-void log_normal::sample(ParValues & result, Random & rnd, const VarIdManager & vm) const {
+void log_normal::sample(ParValues & result, Random & rnd) const {
     const ParId & pid = *par_ids.begin();
-    const pair<double, double> & range = vm.get_range(pid);
-    if(range.first == range.second){
-       result.set(pid, range.first);
-       return;
-    }
-    double value;
-    int i=0;
-    do{
-        value = exp(rnd.gauss(sigma) + mu);
-        i++;
-        //allow many iteratios here ...
-        if(i==1000000) throw Exception("LogNormalDistribution::sample: too many iterations necessary to respect bounds!");
-    }while(value < range.first || value > range.second);
+    double value = exp(rnd.gauss(sigma) + mu);
     result.set(pid, value);
 }
 
+const std::pair<double,double> & log_normal::support(const theta::ParId & p) const{
+    return support_;
+}
 
-void gauss::sample(ParValues & result, Random & rnd, const VarIdManager & vm) const{
+double log_normal::width(const theta::ParId &) const{
+    return sqrt((exp(sigma * sigma) - 1)*exp(2*mu + sigma*sigma));
+}
+
+void log_normal::mpv(theta::ParValues & result) const{
+    result.set(*(par_ids.begin()), exp(mu - sigma*sigma));
+}
+
+void gauss::sample(ParValues & result, Random & rnd) const{
     const size_t n = v_par_ids.size();
     //TODO: requires allocation every time. That could be moved as mutable to the class
     // to save this allocations.
@@ -133,8 +137,8 @@ void gauss::sample(ParValues & result, Random & rnd, const VarIdManager & vm) co
             }
         }
         size_t i=0;
-        for(vector<ParId>::const_iterator v=v_par_ids.begin(); v!=v_par_ids.end(); v++){
-            const pair<double, double> & range = vm.get_range(*v);
+        for(vector<ParId>::const_iterator v=v_par_ids.begin(); v!=v_par_ids.end(); ++v, ++i){
+            const pair<double, double> & range = ranges[i];
             double value;
             if(range.first == range.second){
                 value = range.first;
@@ -147,10 +151,9 @@ void gauss::sample(ParValues & result, Random & rnd, const VarIdManager & vm) co
                 break;
             }
             result.set(*v, value);
-            i++;
         }
         rep++;
-        if(rep==1000000) throw Exception("gauss::sample: too many iterations necessary to respect bounds!");
+        if(rep==100000) throw Exception("gauss::sample: too many iterations necessary to respect bounds!");
     }while(repeat);
 }
 
@@ -203,10 +206,13 @@ gauss::gauss(const Configuration & cfg){
       if(cfg.setting.exists("parameter")){
             mu.resize(1);
             cov.reset(1,1);
+            ranges.resize(1);
             v_par_ids.push_back(cfg.vm->getParId(cfg.setting["parameter"]));
             mu[0] = cfg.setting["mean"];
             double width = cfg.setting["width"];
             cov(0,0) = width*width;
+            ranges[0].first = cfg.setting["range"][0];
+            ranges[0].second = cfg.setting["range"][1];
         }
         else{ //multi-dimensional case:
            size_t n = cfg.setting["parameters"].size();
@@ -215,20 +221,22 @@ gauss::gauss(const Configuration & cfg){
                ss << "While building gauss distribution defined at path " << cfg.setting.getPath() << ": expected one or more 'parameters'.";
                throw ConfigurationException(ss.str());
            }
+           if(cfg.setting["ranges"].size()!=n || cfg.setting["mu"].size()!=n || cfg.setting["covariance"].size()!=n){
+               throw ConfigurationException("gauss: length of ranges, mu, covariance mismatch!");
+           }
            mu.resize(n);
            cov.reset(n,n);
+           ranges.resize(n);
            for(size_t i=0; i<n; i++){
                v_par_ids.push_back(cfg.vm->getParId(cfg.setting["parameters"][i]));
                mu[i] = cfg.setting["mean"][i];
+               ranges[i].first = cfg.setting["ranges"][i][0];
+               ranges[i].second = cfg.setting["ranges"][i][1];
                for(size_t j=0; j<n; j++){
                    cov(i,j) = cfg.setting["covariance"][i][j];
                }
            }
       }
-      
-    const size_t n = v_par_ids.size();
-    if (n != mu.size() || n != cov.getRows() || n != cov.getCols())
-        throw InvalidArgumentException("GaussDistribution constructor: dimension of parameters do not match.");
     for(vector<ParId>::const_iterator p_it=v_par_ids.begin(); p_it!=v_par_ids.end(); p_it++){
         par_ids.insert(*p_it);
     }
@@ -238,7 +246,116 @@ gauss::gauss(const Configuration & cfg){
     inverse_cov.invert_cholesky();
 }
 
+double gauss::width(const ParId & p)const{
+    size_t i=0;
+    for(vector<ParId>::const_iterator v=v_par_ids.begin(); v!=v_par_ids.end(); ++v, ++i){
+        if(*v == p)break;
+    }
+    const pair<double, double> & range = ranges[i];
+    double min_result = range.second - range.first;
+    if(min_result = 0.0) return 0.0;
+
+    // in the sampling procedure, sqrt_cov * vector is returned. Now, the
+    // width of the marginal distribution of component i of the result vector is given by
+    //   max_v   (sqrt_cov * v)[i]
+    // where the maximum is taken over all vectors of unit length, v.
+    // This maximum is the same as:
+    double result = 0;
+    for(size_t j=0; j<=i; j++){
+        result = std::max(result, fabs(sqrt_cov(i,j)));
+    }
+    return result;
+}
+
+const std::pair<double, double> & gauss::support(const ParId & p)const{
+    size_t i=0;
+    for(vector<ParId>::const_iterator v=v_par_ids.begin(); v!=v_par_ids.end(); ++v, ++i){
+        if(*v == p)return ranges[i];
+    }
+    throw InvalidArgumentException("gauss::support(): invalid parameter");
+}
+
+void gauss::mode(theta::ParValues & result) const{
+    size_t i=0;
+    for(vector<ParId>::const_iterator v=v_par_ids.begin(); v!=v_par_ids.end(); ++v, ++i){
+        result.set(*v, mu[i]);
+    }
+}
+
+
+mult::mult(const Configuration & cfg): Function(cfg){
+    size_t n = cfg.setting["parameters"].size();
+    if(n==0){
+        throw ConfigurationException("mult: 'parameters' empty (or not a list)!");
+    }
+    SettingWrapper s = cfg.setting["parameters"];
+    for(size_t i=0; i<n; ++i){
+        string parname = s[i];
+        par_ids.insert(cfg.vm->getParId(parname));
+    }
+}
+
+double mult::operator()(const ParValues & v) const{
+    double result = 1.0;
+    for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); it++){
+        result *= v.get(*it);
+    }
+    return result;
+}
+
+product_distribution::product_distribution(const Configuration & cfg){
+
+}
+
+void product_distribution::sample(ParValues & result, Random & rnd) const{
+    const boost::ptr_vector<Distribution>::const_iterator end=distributions.end();
+    for(boost::ptr_vector<Distribution>::const_iterator it=distributions.begin(); it!=end; ++it){
+        it->sample(result, rnd);
+    }
+}
+
+void product_distribution::mpv(ParValue & result) const{
+    const boost::ptr_vector<Distribution>::const_iterator end=distributions.end();
+    for(boost::ptr_vector<Distribution>::const_iterator it=distributions.begin(); it!=end; ++it){
+        it->mpv(result);
+    }
+}
+
+double product_distribution::evalNL(const ParValues & values) const{
+    double result = 0.0;
+    const boost::ptr_vector<Distribution>::const_iterator end=distributions.end();
+    for(boost::ptr_vector<Distribution>::const_iterator it=distributions.begin(); it!=end; ++it){
+        result += it->evalNL(values);
+    }
+    return result;
+}
+
+double product_distribution::evalNL_withDerivatives(const ParValues & values, ParValues & derivatives) const {
+    double result = 0.0;
+    const boost::ptr_vector<Distribution>::const_iterator end = distributions.end();
+    for (boost::ptr_vector<Distribution>::const_iterator it = distributions.begin(); it != end; ++it) {
+        result += it->evalNL_withDerivatives(values, derivatives);
+    }
+    return result;
+}
+
+
+const std::pair<double, double> & product_distribution::support(const ParId & p) const{
+    map<ParId, size_t>::const_iterator it = parid_to_index.find(p);
+    if(it==parid_to_index.end()) throw IllegalArgumentException("product_distribution::support: invalid ParId");
+    return distributions[it->second].support(p);
+}
+
+double product_distribution::width(const ParId & p) const{
+    map<ParId, size_t>::const_iterator it = parid_to_index.find(p);
+    if(it==parid_to_index.end()) throw IllegalArgumentException("product_distribution::width: invalid ParId");
+    return distributions[it->second].width(p);
+}
+
+
 REGISTER_PLUGIN(gauss)
 REGISTER_PLUGIN(log_normal)
 REGISTER_PLUGIN(fixed_poly)
 REGISTER_PLUGIN(fixed_gauss)
+REGISTER_PLUGIN(mult)
+REGISTER_PLUGIN(product_distribution)

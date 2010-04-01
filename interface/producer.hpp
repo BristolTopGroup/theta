@@ -1,14 +1,14 @@
 #ifndef PRODUCER_HPP
 #define PRODUCER_HPP
 
-#include "libconfig/libconfig.h++"
-
 #include "interface/decls.hpp"
-#include "interface/plugin_so_interface.hpp"
+#include "interface/plugin.hpp"
 
 #include <vector>
 #include <string>
 #include <sstream>
+
+#include <boost/ptr_container/ptr_vector.hpp>
 
 namespace theta {
 
@@ -18,7 +18,7 @@ namespace theta {
  * a Model. Every Producer belongs to a Run, which calls its produce method (typically
  * often on some pseudo data).
  */
-class Producer: public theta::plugin::PluginType, theta::plugin::EventTableWriter{
+class Producer: public theta::plugin::PluginType, public theta::plugin::EventTableWriter{
 public:
     /// Define us as the base_type for derived classes; required for the plugin system
     typedef Producer base_type;
@@ -60,20 +60,14 @@ public:
 protected:
     /** \brief Construct from a Configuration instance
      *
-     * Uses the settings "fix-parameters" and "additional-likelihood-terms"
+     * Uses the settings "fix-parameters" and "add-nllikelihood-functions"
      * to fill these objects.
      */
     Producer(const plugin::Configuration & cfg);
     
     /** \brief Get the likelihood for the provided Data and Model, including any additional terms
      */
-    NLLikelihood get_likelihood(const Data & data, const Model & model){
-        NLLikelihood nll = model.getNLLikelihood(data);
-        if(additional_likelihood_terms.size()>0){
-            nll.set_additional_terms(&additional_likelihood_terms);
-        }
-        return nll;
-    }
+    NLLikelihood get_nllikelihood(const Data & data, const Model & model);
     
     std::auto_ptr<theta::ParameterSource> fix_parameters;
     boost::ptr_vector<theta::Function> additional_likelihood_terms;

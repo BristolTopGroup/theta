@@ -1,17 +1,26 @@
 #include "interface/phys.hpp"
 #include "interface/histogram.hpp"
 #include "interface/random.hpp"
+#include "interface/plugin.hpp"
 #include "interface/histogram-function.hpp"
+
+#include "test/utils.hpp"
+
+#include "libconfig/libconfig.h++"
 
 #include <boost/test/unit_test.hpp>
 
 using namespace theta;
+using namespace theta::plugin;
 using namespace std;
 
 
 BOOST_AUTO_TEST_SUITE(model_tests)
 
 BOOST_AUTO_TEST_CASE(model0){
+    BOOST_CHECKPOINT("model0 entry");
+    load_core_plugins();
+    
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
     ParIds pars;
     ObsIds obs;
@@ -24,12 +33,17 @@ BOOST_AUTO_TEST_CASE(model0){
     obs.insert(obs0);
     Model m(vm);
     boost::ptr_vector<Function> coeffs;
-    ParIds v_beta1;
-    v_beta1.insert(beta1);
-    ParIds v_beta2;
-    v_beta2.insert(beta2);
-    coeffs.push_back(new MultFunction(v_beta1));
-    coeffs.push_back(new MultFunction(v_beta2));
+    
+    ConfigCreator cc("c1 = {type = \"mult\"; parameters=(\"beta1\");}; c2 = {type = \"mult\"; parameters=(\"beta2\");};", vm);
+    const theta::plugin::Configuration & cfg = cc.get();
+    const SettingWrapper & setting = cfg.setting;
+    
+    BOOST_CHECKPOINT("before coeff building");
+    
+    coeffs.push_back(PluginManager<Function>::build(Configuration(cfg, setting["c1"])));
+    coeffs.push_back(PluginManager<Function>::build(Configuration(cfg, setting["c2"])));
+    
+    BOOST_CHECKPOINT("before histo building");
     boost::ptr_vector<HistogramFunction> histos;
     Histogram signal(nbins, -1, 1);
     Histogram background(nbins, -1, 1);
@@ -42,9 +56,12 @@ BOOST_AUTO_TEST_CASE(model0){
     background*=10;
     histos.push_back(new ConstantHistogramFunction(signal));
     histos.push_back(new ConstantHistogramFunction(background));
+    
     vector<string> names;
     names.push_back("signal");
     names.push_back("background");
+    
+    BOOST_CHECKPOINT("before setting prediction");
     //TODO check error behavior, e.g. likelihood without any histos set!
     m.set_prediction(obs0, coeffs, histos, names);
     ParValues values;
@@ -112,12 +129,21 @@ BOOST_AUTO_TEST_CASE(modelgrad){
     obs.insert(obs0);
     Model m(vm);
     boost::ptr_vector<Function> coeffs;
-    ParIds v_beta1;
+    
+    ConfigCreator cc("b1 = {type = \"mult\"; parameters=(\"beta1\");}; b2 = {type = \"mult\"; parameters=(\"beta2\");};", vm);
+    /*ParIds v_beta1;
     v_beta1.insert(beta1);
     ParIds v_beta2;
     v_beta2.insert(beta2);
     coeffs.push_back(new MultFunction(v_beta1));
-    coeffs.push_back(new MultFunction(v_beta2));
+    coeffs.push_back(new MultFunction(v_beta2));*/
+    
+    const Configuration & config = cc.get();
+    const SettingWrapper & setting = config.setting;
+    
+    coeffs.push_back(PluginManager<Function>::build(Configuration(config, setting["b1"])));
+    coeffs.push_back(PluginManager<Function>::build(Configuration(config, setting["b2"])));
+    
     boost::ptr_vector<HistogramFunction> histos;
 
     Histogram signal(nbins, -1, 1);

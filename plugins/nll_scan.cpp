@@ -12,8 +12,8 @@ using namespace std;
 using namespace libconfig;
 
 void nll_scan::define_table(){
-    c_nll = table->add_column(*this, "nll", ProducerTable::typeBlob);
-    c_maxl = table->add_column(*this, "maxl", ProducerTable::typeDouble);
+    c_nll = table->add_column(*this, "nll", EventTable::typeBlob);
+    c_maxl = table->add_column(*this, "maxl", EventTable::typeDouble);
 }
 
 void nll_scan::produce(Run & run, const Data & data, const Model & model) {

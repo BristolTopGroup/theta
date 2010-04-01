@@ -118,8 +118,8 @@ void mcmc_posterior_ratio::produce(Run & run, const Data & data, const Model & m
 
 
 void mcmc_posterior_ratio::define_table(){
-    c_nl_posterior_sb = table->add_column(*this, "nl_posterior_sb", ProducerTable::typeDouble);
-    c_nl_posterior_b =  table->add_column(*this, "nl_posterior_b",  ProducerTable::typeDouble);
+    c_nl_posterior_sb = table->add_column(*this, "nl_posterior_sb", EventTable::typeDouble);
+    c_nl_posterior_b =  table->add_column(*this, "nl_posterior_b",  EventTable::typeDouble);
 }
 
 mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), init(false), init_failed(false){

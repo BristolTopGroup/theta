@@ -1,4 +1,3 @@
-#include "interface/plugin_so_interface.hpp"
 #include "interface/run.hpp"
 #include "interface/cfg-utils.hpp"
 #include "interface/plugin.hpp"
@@ -142,7 +141,7 @@ int main(int argc, char** argv) {
         //fill VarIdManager:
         VarIdManagerUtils::apply_settings(config);
         //build run:
-        run = PluginManager<Run>::build(Configuration(config, root[run_name]));
+        run.reset(new Run(Configuration(config, root[run_name])));
         if(not quiet){
             boost::shared_ptr<ProgressListener> l(new MyProgressListener());
             run->set_progress_listener(l);

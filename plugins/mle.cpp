@@ -12,10 +12,10 @@ using namespace libconfig;
 using namespace theta::plugin;
 
 void mle::define_table(){
-    c_nll = table->add_column(*this, "nll", ProducerTable::typeDouble);
+    c_nll = table->add_column(*this, "nll", EventTable::typeDouble);
     for(size_t i=0; i<save_ids.size(); ++i){
-        parameter_columns.push_back(table->add_column(*this, vm->getName(save_ids[i]), ProducerTable::typeDouble));
-        error_columns.push_back(table->add_column(*this, vm->getName(save_ids[i]) + "_error", ProducerTable::typeDouble));
+        parameter_columns.push_back(table->add_column(*this, vm->getName(save_ids[i]), EventTable::typeDouble));
+        error_columns.push_back(table->add_column(*this, vm->getName(save_ids[i]) + "_error", EventTable::typeDouble));
     }
 }
 

@@ -1,7 +1,7 @@
 #ifndef PLUGIN_DELTANLL_INTERVALS_HPP
 #define PLUGIN_DELTANLL_INTERVALS_HPP
 
-#include "interface/plugin_so_interface.hpp"
+#include "interface/plugin.hpp"
 
 #include "interface/variables.hpp"
 #include "interface/database.hpp"
@@ -92,9 +92,9 @@ private:
     std::auto_ptr<theta::Minimizer> minimizer;
 
     //table columns:
-    std::vector<theta::ProducerTable::column> lower_columns;
-    std::vector<theta::ProducerTable::column> upper_columns;
-    theta::ProducerTable::column c_maxl;
+    std::vector<theta::EventTable::column> lower_columns;
+    std::vector<theta::EventTable::column> upper_columns;
+    theta::EventTable::column c_maxl;
 };
 
 #endif

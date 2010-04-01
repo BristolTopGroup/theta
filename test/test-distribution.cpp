@@ -1,7 +1,7 @@
 #include "interface/distribution.hpp"
 #include "interface/random.hpp"
-#include "interface/plugin_so_interface.hpp"
 #include "interface/plugin.hpp"
+#include "test/utils.hpp"
 
 #include <boost/test/unit_test.hpp>
 
@@ -13,19 +13,17 @@ using namespace libconfig;
 BOOST_AUTO_TEST_SUITE(distribution_tests)
 
 BOOST_AUTO_TEST_CASE(distribution_lognormal){
-    BOOST_TEST_CHECKPOINT("loading core plugin");
-    try{
-    PluginLoader::load("lib/core-plugins.so");
-    }
-    catch(Exception & ex){
-      cout << ex.message << endl;
-      throw;
-    }
-    BOOST_TEST_CHECKPOINT("loaded core plugin");
+    load_core_plugins();
     
     double sigma = .5;
     double mu = 2.0;
-    Config c;
+    boost::shared_ptr<VarIdManager> vm(new VarIdManager);
+    
+    stringstream ss_config;
+    ss_config << "mu = 2.0; sigma = 0.5; parameter = \"var0\"; type=\"log_normal\";";
+    ConfigCreator cc(ss_config.str(), vm);
+    
+    /*Config c;
     Setting & s = c.getRoot();
     s.add("mu", Setting::TypeFloat);
     s["mu"] = mu;
@@ -34,14 +32,16 @@ BOOST_AUTO_TEST_CASE(distribution_lognormal){
     s.add("parameter", Setting::TypeString);
     s["parameter"] = "var0";
     s.add("type", Setting::TypeString);
-    s["type"] = "log_normal";
-    boost::shared_ptr<VarIdManager> vm(new VarIdManager);
+    s["type"] = "log_normal";*/
+    
+    
+    
     ParId var0 = vm->createParId("var0");
-    theta::SettingUsageRecorder rec;
-    Configuration cfg(vm, SettingWrapper(s, s, rec));
+    /*theta::SettingUsageRecorder rec;
+    Configuration cfg(vm, SettingWrapper(s, s, rec));*/
     
     BOOST_TEST_CHECKPOINT("building lognormal");
-    std::auto_ptr<Distribution> d = PluginManager<Distribution>::build(cfg);
+    std::auto_ptr<Distribution> d = PluginManager<Distribution>::build(cc.get());
     
     //must return +infinity for argument < 0:
     ParValues values;
@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(distribution_lognormal){
     }
     Random rnd(new RandomSourceTaus());
     ParValues v_sampled(*vm);
-    d->sample(v_sampled, rnd, *vm);
+    d->sample(v_sampled, rnd);
     BOOST_REQUIRE(v_sampled.contains(var0));
     //BOOST_REQUIRE(v_sampled.getAllParIds().size() == 1);
     //it is difficult to check that the sampling works correctly.

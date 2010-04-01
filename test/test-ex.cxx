@@ -2,7 +2,6 @@
 // to test inter-compilatio unit exception catching with shared objects.
 
 #include "interface/phys.hpp"
-#include "interface/plugin_so_interface.hpp"
 #include "interface/plugin.hpp"
 #include "interface/phys.hpp"
 
@@ -14,7 +13,7 @@ using namespace theta::plugin;
 
 class test_exception: public Function{
 public:
-    test_exception(const Configuration & cfg): Function(ParIds()){}
+    test_exception(const Configuration & cfg){}
     virtual double operator()(const ParValues & v) const{
        throw Exception("test-exception message 42");
     }

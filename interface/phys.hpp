@@ -52,7 +52,7 @@ namespace theta {
             size_t i=0;
             ParValues pv;
             for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it, ++i){
-                assert(!isnan(x[i]));
+                assert(!std::isnan(x[i]));
                 pv.set(*it, x[i]);
             }
             return operator()(pv);
@@ -149,11 +149,11 @@ namespace theta {
          * This stays the same over the lifetime of the instance.
          *
          * The return value is the same as \c obs_ids in
-         *\code
+         * \code
          * Data data;
          * this->fill(data);
          * ParIds obs_ids = values.getObservables();
-         *\endcode 
+         * \endcode 
          */
         virtual ObsIds getObservables() const = 0;
         
@@ -188,13 +188,13 @@ namespace theta {
      * the same ParameterSource setting is used multiple times with the same name within
      * the same run.
      */
-    class ParameterSource: public theta::plugin::PluginType{
+    /*class ParameterSource: public theta::plugin::PluginType{
     public:
         /// Define this as the base_type for derived classes; required for the plugin system
         typedef ParameterSource base_type;
         
         /** \brief Exception class to be thrown by fill
-         */
+         * /
         class ParametersUnavailable{};
         
         /** \brief Return the parameters this source provides
@@ -207,7 +207,7 @@ namespace theta {
          * this->fill(values);
          * ParIds par_ids = values.getParameters();
          *\endcode
-         */
+         * /
         virtual ParIds getParameters() const = 0;
         
         /** \brief Fill the provided values instance
@@ -216,7 +216,7 @@ namespace theta {
          *
          * Can throw a ParametersUnavailable exception, if no (more) parameter
          * values are available.
-         */
+         * /
         virtual void fill(ParValues & values) = 0;
         
         /// Declare destructor virtual, as there will be polymorphic access
@@ -225,7 +225,7 @@ namespace theta {
     protected:
         /// Proxy to the constructor of PluginType
         ParameterSource(const theta::plugin::Configuration & cfg): theta::plugin::PluginType(cfg){}
-    };
+    };*/
     
     /** \brief Provides a mapping from parameters to distributions for one or more observables
      *
@@ -480,7 +480,23 @@ namespace theta {
          *
          * This can be used as additional constraints / priors for the likelihood function.
          */
-        //void set_additional_terms(const boost::ptr_vector<Function> * terms);
+        void set_additional_terms(const boost::ptr_vector<Function> * terms);
+        
+        /** \brief Set an alternate prior distribution for the parameters
+         *
+         * The ownership of the memory pointed to by d remains at the caller.
+         *
+         * In the calculation of the likelihood function, the prior distributions
+         * for the parameters are added. By default, the prior distributions from
+         * the model are used. However, it is possible to specify an alternative Distribution
+         * by calling this method which will be used instead.
+         *
+         * Calling this function with d=0 means to use the Distribution from the model.
+         *
+         * \c d must be defined exactly for the model parameters. Otherwise, an InvalidArgumentException
+         * will be thrown.
+         */
+        void set_override_distribution(const Distribution * d);
 
     private:
         const Model & model;
@@ -488,7 +504,8 @@ namespace theta {
 
         const ObsIds obs_ids;
         
-        //const boost::ptr_vector<Function> * additional_terms;
+        const boost::ptr_vector<Function> * additional_terms;
+        const Distribution * override_distribution;
 
         std::map<ParId, std::pair<double, double> > ranges;
 

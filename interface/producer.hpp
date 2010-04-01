@@ -28,7 +28,7 @@ public:
      */
     virtual ~Producer(){}
     
-    /** \brief Run a statistical algorithm on the data and model and write out the results.
+    /** \brief Run a statistical algorithm on the data and model and write out the results
      *
      * The method \c produce is called for each pseudo experiment. It should execute
      * the method and write the result to the results database (which is
@@ -42,26 +42,11 @@ public:
      * In case of an error, the method should through an Exception.
      */
     virtual void produce(Run & run, const Data & data, const Model & model) = 0;
-    
-    /** \brief Additional information to add to the info field of a ProducerInfoTable
-     *
-     * The value returned by this method will be written to the \link ProducerInfoTable
-     * ProducerInfoTable \endlink of the current \link Run Run \endlink.
-     *
-     * Subclasses can override this and define their own semantics for it. Typically, it contains
-     * some information about a setting.
-     *
-     * The default implementation is to return the empty string.
-     */
-    virtual std::string get_information() const {
-        return "";
-    }
-    
+        
 protected:
     /** \brief Construct from a Configuration instance
      *
-     * Uses the settings "fix-parameters" and "add-nllikelihood-functions"
-     * to fill these objects.
+     * Parses the settings "add-nllikelihood-functions" and "override-parameter-distribution".
      */
     Producer(const plugin::Configuration & cfg);
     
@@ -69,8 +54,52 @@ protected:
      */
     NLLikelihood get_nllikelihood(const Data & data, const Model & model);
     
-    std::auto_ptr<theta::ParameterSource> fix_parameters;
+    std::auto_ptr<Distribution> override_parameter_distribution;
     boost::ptr_vector<theta::Function> additional_likelihood_terms;
+};
+
+/** \brief Base class for all statistical methods respecting the strong likelihood principle
+ *
+ * In contrast to Producer, derived classes have only access to the likelihood function.
+ */
+class ProducerLikelihoodPrinciple: public Producer{
+    public:
+        
+        /// Implements the produce routine from Producer to call the likelihood version of produce
+        virtual void produce(Run & run, const Data & data, const Model & model);
+        
+        /** \brief Run a statistical algorithm on the data and model and write out the results
+         *
+         * Equivalent to Producer::produce, but has only access to the likelihood function.
+         * Derived classes must implement this.
+         */
+        virtual void produce(Run & run, const NLLikelihood & nll) = 0;
+        
+    protected:
+        
+        ProducerLikelihoodPrinciple(const plugin::Configuration & cfg);
+        
+        /** \brief Get the likelihood for the provided Model, assuming average data from the model
+         *
+         * While producers respecting the likelihood principle have only access to
+         * the likelihood function in their produce routine, they can make use of an
+         * "average" likelihood in order to calibrate step sizes, etc.
+         */
+        NLLikelihood get_asimov_likelihood(const Model & model);
+        
+    private:
+        //in order to save the model and likelihood references for the asmiov data,
+        // use a struct holding these references:
+        struct t_ref_datamodel{
+            const Data & data;
+            const Model & model;
+            t_ref_datamodel(const Data & data_, const Model & model_): data(data_), model(model_){
+            }
+        };
+        
+        //required by get_asimov_data:
+        std::auto_ptr<t_ref_datamodel> ref_datamodel;
+        std::auto_ptr<Data> asimov_data;
 };
 
 }

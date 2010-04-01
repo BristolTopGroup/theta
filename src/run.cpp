@@ -2,6 +2,7 @@
 #include "interface/histogram.hpp"
 
 #include <signal.h>
+#include <boost/date_time/local_time/local_time.hpp>
 
 using namespace theta;
 using namespace std;
@@ -98,7 +99,13 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()), vm(cfg
       if(s.exists("run-id")) runid = s["run-id"];
       int i_seed = -1;
       if(s.exists("seed")) i_seed = s["seed"];
-      if(i_seed==-1) i_seed = time(0);
+      if(i_seed==-1){
+          using namespace boost::posix_time;
+          using namespace boost::gregorian;
+          ptime t(microsec_clock::universal_time());
+          time_duration td = t - ptime(date(1970, 1, 1));
+          i_seed = td.total_microseconds();
+      }
       seed = i_seed;
       rnd.set_seed(seed);
       m_producers = ModelFactory::buildModel(plugin::Configuration(cfg, s["model"]));

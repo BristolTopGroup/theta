@@ -42,6 +42,20 @@ namespace theta {
             std::string get_type() const{
                 return type;
             }
+            
+            /** \brief Additional information to add to the info field of a ProducerInfoTable
+             *
+             * The value returned by this method will be written to the \link ProducerInfoTable
+             * ProducerInfoTable \endlink of the current \link Run Run \endlink.
+             *
+             * Subclasses can override this and define their own semantics for it. Typically, it contains
+             * some information about a setting.
+             *
+             * The default implementation is to return the empty string.
+             */
+            virtual std::string get_information() const {
+                return "";
+            }
              
         protected:
             /** \brief Construct, filling name and type from the supplied Configuration

@@ -235,16 +235,18 @@ std::auto_ptr<Model> ModelFactory::buildModel(const Configuration & ctx) {
 
 /* NLLIKELIHOOD */
 NLLikelihood::NLLikelihood(const Model & m, const Data & dat, const ObsIds & obs): model(m),
-        data(dat), obs_ids(obs){
+        data(dat), obs_ids(obs), additional_terms(0), override_distribution(0){
     Function::par_ids = model.parameters;
     for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
         ranges[*it] = model.parameter_distribution->support(*it);
     }
 }
 
-/*void NLLikelihood::set_additional_terms(const boost::ptr_vector<Function> * terms){
+void NLLikelihood::set_additional_terms(const boost::ptr_vector<Function> * terms){
     additional_terms = terms;
-}*/
+}
+
+
 
 double NLLikelihood::operator()(const ParValues & values) const{
     //check ranges and return infinity if violated.

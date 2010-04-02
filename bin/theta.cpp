@@ -57,14 +57,14 @@ private:
 
 int main(int argc, char** argv) {
     po::options_description desc("Supported options");
-    desc.add_options()("help", "show help message")
-    ("quiet,q", "quiet mode (supress progress message)")
+    desc.add_options()("help,h", "show help message")
+    ("quiet,q", "quiet mode (suppress progress message)")
     ("nowarn", "do not warn about unused configuration file statements");
 
     po::options_description hidden("Hidden options");
 
     hidden.add_options()
-    ("cfg-file", po::value<string>(), "config file")
+    ("cfg-file", po::value<string>(), "configuration file")
     ("run-name", po::value<string>(), "run name");
 
     po::positional_options_description p;

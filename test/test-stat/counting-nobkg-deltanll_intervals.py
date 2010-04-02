@@ -3,7 +3,7 @@
 
 execfile("../lib.py")
 
-import scipy.special, scipy.optimize, math
+import scipy.special, scipy.optimize, math, os
 
 #return the interval of a counting experiment according to the delta-nll method
 def interval_delta_nll(n, confidence):
@@ -18,7 +18,6 @@ def interval_delta_nll(n, confidence):
     interval_high = scipy.optimize.bisect(nll, n, interval_high)
     return interval_low, interval_high
     
-
 confidence=(0.6827, 0.9545)
 for Theta in (5.0, 10000.0):
     execute_checked("sed \"s/__THETA__/%s/g\" counting-nobkg.cfg.tpl > counting-nobkg.cfg" % Theta)

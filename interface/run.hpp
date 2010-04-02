@@ -161,9 +161,6 @@ public:
      * These methods are meant to be used by the producers which are passed
      * a reference to the current run each time.
      */
-    /*boost::shared_ptr<theta::Database> get_database(){
-        return db;
-    }*/
     
     Random & get_random(){
         return rnd;
@@ -179,9 +176,7 @@ public:
     //@}
     
     /** \brief Construct a Run using the supplied configuration
-     *
      */
-    // protected, as Run is purley virtual.
     Run(const plugin::Configuration & cfg);
     
 private:

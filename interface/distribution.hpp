@@ -3,8 +3,6 @@
 
 #include "interface/decls.hpp"
 #include "interface/variables.hpp"
-//#include "interface/matrix.hpp"
-//#include "interface/plugin_so_interface.hpp"
 
 namespace theta{
 

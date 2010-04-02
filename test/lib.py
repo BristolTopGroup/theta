@@ -19,7 +19,10 @@ def execute_checked(command):
     if i>0: fail("executing %s returned error" % command)
 
 def exec_theta(s):
-    execute_checked("../../bin/theta -q %s" % s)
+    prefix = ""
+    if os.getenv("THETA_MEMCHECK") is not None: prefix="valgrind --leak-check=full"
+    if os.getenv("THETA_PROFILE") is not None: prefix="valgrind --tool=callgrind"
+    execute_checked("%s ../../bin/theta -q %s" % (prefix, s))
 
 def sql(filename, query):
     conn = sqlite3.connect(filename)
@@ -29,3 +32,4 @@ def sql(filename, query):
     c.close()
     conn.close()
     return result
+

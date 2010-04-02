@@ -123,9 +123,9 @@ private:
  * 
  * Further, for every parameter, the fixed value is given.  
  * 
- * The evalNL and evalNLwithDerivatives could be implemented by returning 0 or
- * some infinities. However, these methods being called is a certain sign for a bug
- * in the calling code. Therefore, these routines will throw an IllegalStateException. 
+ * The evalNL and evalNLwithDerivatives will always return 0. Evaluating them with parameters
+ * other than the specified ones is a bug from the caller side. However, no diagnostic is
+ * performed for efficiency reasons.
  */
 class delta_distribution: public theta::Distribution{
 public:
@@ -179,14 +179,15 @@ private:
  * <ul>
  *   <li>a \c range setting which specifies, as a list of two doubles, the range of the variable.
  *     The special strings "inf" and "-inf" are allowed here.</li>
+ *   <li>An optional \c fix-sample-value setting which will be used by the sample routine. In case of finite
+ *     intervals, the default is to sample from a flat distribution on this interval. For infinite intervals,
+ *     an exception will be thrown upon call of Distributiuon::sample</li>     
  *   <li>an optional \c width setting which will be used as starting step size for various algorithms
  *       (including markov chains and minimization). It should be set to a value of the same order of
  *       magnitude as the expected error of the likelihood function in this parameter. For finite intervals,
- *       the default used is 10% of the interval length. For infinite intervals, an exception will be thrown
+ *       the default used is 10% of the interval length. For infinite intervals with a non-zero
+ *       \c fix-parameter-value setting, 10% of the absolute value is used. Otherwise, an exception will be thrown
  *       upon the call of flat_distribution::width().</li>
- *   <li>An optional \c fix-sample-value setting which will be used by the sample routine. In case of finite
- *     intervals, the default is to sample from a flat distribution on this interval. For infinite intervals,
- *     the default is to throw an exception on call of Distributiuon::sample</li>
  * </ul>
  */
 class flat_distribution: public theta::Distribution{
@@ -288,7 +289,7 @@ class gauss: public theta::Distribution{
 class mult: public theta::Function{
 public:
     /** \brief Construct a MultFunction from a Configuration instance
-        */
+     */
     mult(const theta::plugin::Configuration & cfg);
 
     /** \brief Definitions of the pure virtual methods of Function
@@ -296,6 +297,9 @@ public:
      * See documentation of Function for their meaning.
      */
     virtual double operator()(const theta::ParValues & v) const;
+    
+private:
+    std::vector<theta::ParId> v_pids;
 };
 
 /** \brief A Distribution product of other distributions

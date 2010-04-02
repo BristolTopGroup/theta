@@ -40,7 +40,20 @@ const Setting & SettingWrapper::resolve_link(const Setting & setting, const Sett
         std::string next_path;
         //hard-code maximum redirection level of 10:
         for(int i=0; i <= 10; ++i){
-            const libconfig::Setting & s = i==0 ? setting : root[next_path];
+            const libconfig::Setting * p_s = &setting;
+            
+            if(i>0){
+                p_s = &root;
+                do{
+                    size_t dotpos = next_path.find('.');
+                    if(dotpos==string::npos) dotpos = next_path.size();
+                    p_s = &((*p_s)[next_path.substr(0, dotpos)]);
+                    next_path.erase(0, dotpos+1);
+                }while(next_path.size());
+            }
+
+            const libconfig::Setting & s = *p_s;
+            
             if(s.getType() != libconfig::Setting::TypeString) return s;
             std::string link = s;
             if(link.size()==0 || link[0]!='@'){

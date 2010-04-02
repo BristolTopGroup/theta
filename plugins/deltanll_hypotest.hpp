@@ -71,6 +71,8 @@ private:
     std::auto_ptr<theta::Distribution> s_plus_b;
     std::auto_ptr<theta::Distribution> b_only;
     
+    bool init;
+    
     theta::ParValues s_plus_b_mode, b_only_mode;
     theta::ParValues s_plus_b_width, b_only_width;
     std::map<theta::ParId, std::pair<double, double> > s_plus_b_support, b_only_support;

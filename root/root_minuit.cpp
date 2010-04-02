@@ -57,24 +57,28 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
         double def = start.get(*it);
         double step = steps.get(*it);
         string name = vm->getName(*it);
+        //use not the ranges directly, but 0.999 and 1.001 times the upper and lower
+        // end, respectively in order to avoid that the numerical
+        // evaluation of the numerical derivative at the boundaries pass these
+        // boundaries ...
         if(isinf(range.first)){
             if(isinf(range.second)){
                 min->SetVariable(ivar, name, def, step);
             }
             else{
-                min->SetUpperLimitedVariable(ivar, name, def, step, range.second);
+                min->SetUpperLimitedVariable(ivar, name, def, step, 0.999 * range.second);
             }
         }
         else{
             if(isinf(range.second)){
-                min->SetLowerLimitedVariable(ivar, name, def, step, range.first);
+                min->SetLowerLimitedVariable(ivar, name, def, step, 1.001 * range.first);
             }
             else{ // both ends are finite
                 if(range.first==range.second || step == 0.0){
                     min->SetFixedVariable(ivar, name, range.first);
                 }
                 else{
-                    min->SetLimitedVariable(ivar, name, def, step, range.first, range.second);
+                    min->SetLimitedVariable(ivar, name, def, step, 1.001 * range.first, 0.999 * range.second);
                 }
             }
         }
@@ -96,31 +100,6 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
         success = min->Minimize();
         if(success) break;
     }
-    //4.a. get minos errors:
-    /*ParValues minos_errors_plus;
-    ParValues minos_errors_minus;
-    if(success){
-        for(ParIds::const_iterator it=minos_parids.begin(); it!=minos_parids.end(); ++it){
-            //find the parameter index of *it:
-            ParIds::const_iterator pos_in_par = parameters.begin();
-            ivar = 0;
-            while(pos_in_par != parameters.end() && *pos_in_par!=*it){
-                ++pos_in_par;
-                ++ivar;
-            }
-            //if parameter *it is not in the list of current parameters, skip:
-            if(pos_in_par == parameters.end()) continue;
-            
-            double minos_plus;
-            double minos_minus;
-            if(not min->GetMinosError(ivar, minos_minus, minos_plus)){
-                success = false;
-                break;
-            }
-            minos_errors_plus.set(*it, minos_plus);
-            minos_errors_minus.set(*it, minos_minus);
-        }
-    }*/
 
     //5. do error handling
     if(not success){
@@ -138,15 +117,6 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
             default:
                 s << " [unexpected status code]";
         }
-        /*switch(status_2){
-            case 1: s << " (MINOS needed to many calls for lower error)"; break;
-            case 2: s << " (MINOS needed to many calls for upper error)"; break;
-            case 3: s << " (MINOS found new minimum in search for lower error)"; break;
-            case 4: s << " (MINOS found new minimum in search for upper error)"; break;
-            case 5: s << " (Some other MINOS failure)"; break;
-            default:
-                s << " [unexpected status code]";
-        }*/
         throw MinimizationException(s.str());
     }
 
@@ -168,9 +138,6 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
             result.errors_minus.set(*it, -1);
         }
     }
-    //overwrite errors with minos errors:
-    /*result.errors_plus.set(minos_errors_plus);
-    result.errors_minus.set(minos_errors_minus);*/
     result.covariance.reset(parameters.size(), parameters.size());
     //I would use min->CovMatrixStatus here to check the validity of the covariance matrix,
     // if only it was documented ...
@@ -214,15 +181,8 @@ root_minuit::root_minuit(const Configuration & cfg): Minimizer(cfg), tolerance(N
        if(cfg.setting.exists("tolerance")){
            tol = cfg.setting["tolerance"];
        }
-       /*if(cfg.setting.exists("minos-errors-for")){
-           size_t n = cfg.setting["minos-errors-for"].size();
-           for(size_t i=0; i<n; ++i){
-               minos_parids.insert(cfg.vm->getParId(cfg.setting["minos-errors-for"][i]));
-           }
-       }*/
        set_printlevel(printlevel);
        set_tolerance(tol);
-       //MinimizerUtils::apply_settings(*this, cfg);
    }
 
 

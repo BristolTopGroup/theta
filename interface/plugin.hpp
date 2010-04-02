@@ -238,18 +238,28 @@ namespace theta {
 
         template<typename product_type>
         std::auto_ptr<product_type> PluginManager<product_type>::build(const Configuration & ctx){
-            std::string type = ctx.setting["type"];
+            std::string type = "<unspecified>";
             for (size_t i = 0; i < factories.size(); ++i) {
-                if (factories[i]->get_typename() == type) {
-                    try {
+                try {
+                    //as the access to setting["type"] might throw, also write it into the
+                    // try block ...
+                    type = std::string(ctx.setting["type"]);
+                    if (factories[i]->get_typename() == type) {
                         return factories[i]->build(ctx);
-                    } catch (Exception & ex) {
-                        std::stringstream ss;
-                        ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
-                           << "', type='" << type << "' error while building from plugin: " << ex.message;
-                        ex.message = ss.str();
-                        throw;
                     }
+                }catch (Exception & ex) {
+                    std::stringstream ss;
+                    ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
+                       << "', type='" << type << "' error while building from plugin: " << ex.message;
+                    ex.message = ss.str();
+                    throw;
+                }
+                catch(libconfig::SettingException & ex){
+                    std::stringstream ss;
+                    ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
+                        << "', type='" << type << "' error while building from plugin in path " << ex.getPath();
+                    //ex.message = ss.str();
+                    throw ConfigurationException(ss.str());
                 }
             }
             std::stringstream ss;

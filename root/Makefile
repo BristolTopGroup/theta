@@ -1,6 +1,6 @@
 include ../Makefile.rules
 
-ifeq ($(shell which root-config),)
+ifeq ($(shell which root-config || echo -n A),A)
 all:
 		@echo -e \\nNOTE: no root-config found. Not building root-dependent stuff.\\n
 
@@ -25,6 +25,6 @@ db2root: db2root.o
 	@$(LINK_SO) -o $@ $+
 
 clean-subdir:
-	@rm -f histos ../lib/root.so
+	@rm -f histos db2root ../lib/root.so
 
 endif

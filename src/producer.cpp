@@ -26,27 +26,3 @@ NLLikelihood Producer::get_nllikelihood(const Data & data, const Model & model){
     }
     return nll;
 }
-
-/*ProducerLikelihoodPrinciple::ProducerLikelihoodPrinciple(const plugin::Configuration & cfg): Producer(cfg){
-}
-
-void ProducerLikelihoodPrinciple::produce(Run & run, const Data & data, const Model & model){
-    if(ref_model.get()==0)ref_model.reset(new t_ref_model(model));
-    produce(run, get_nllikelihood(data, model));
-}
-
-NLLikelihood ProducerLikelihoodPrinciple::get_asimov_likelihood(){
-    const Model& model = (*ref_model).model;
-    //as the NLLikelihood object holds references to Data and Model, we must use
-    // data and model instances which are not local to this function ...
-    asimov_data.reset(new Data());
-    ObsIds observables = model.getObservables();
-    ParValues mode_values;
-    model.get_parameter_distribution().mode(mode_values);
-    for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
-        Histogram h;
-        model.get_prediction((*asimov_data)[*it], mode_values, *it);
-    }
-    return model.getNLLikelihood(*asimov_data);
-}*/
-

@@ -130,19 +130,22 @@ delta_distribution::delta_distribution(const theta::plugin::Configuration & cfg)
 }
 
 void delta_distribution::sample(theta::ParValues & result, theta::Random &) const{
-    result = values;
+    result.set(values);
 }
 
 void delta_distribution::mode(theta::ParValues & result) const{
-    result = values;
+    result.set(values);
 }
 
-double delta_distribution::evalNL(const theta::ParValues & values) const{
-    throw IllegalStateException("delta_distribution:evalNL called!");
+double delta_distribution::evalNL(const theta::ParValues & vals) const{
+    return 0.0;
 }
 
 double delta_distribution::evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const{
-    throw IllegalStateException("delta_distribution:evalNL_withDerivatives called!");
+    for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
+        derivatives.set(*it, 0.0);
+    }
+    return 0.0;
 }
 
 const std::pair<double, double> & delta_distribution::support(const theta::ParId& p) const{
@@ -178,6 +181,8 @@ flat_distribution::flat_distribution(const theta::plugin::Configuration & cfg){
         if(s.exists("fix-sample-value")){
             fix_sample_values.set(pid, s["fix-sample-value"]);
             modes.set(pid, fix_sample_values.get(pid));
+            if(not widths.contains(pid) && fix_sample_values.get(pid) > 0.0)
+                widths.set(pid, fix_sample_values.get(pid)*0.1);
         }
     }
 }
@@ -324,8 +329,8 @@ gauss::gauss(const Configuration & cfg){
             mu[0] = cfg.setting["mean"];
             double width = cfg.setting["width"];
             cov(0,0) = width*width;
-            ranges[0].first = cfg.setting["range"][0];
-            ranges[0].second = cfg.setting["range"][1];
+            ranges[0].first = cfg.setting["range"][0].get_double_or_inf();
+            ranges[0].second = cfg.setting["range"][1].get_double_or_inf();
         }
         else{ //multi-dimensional case:
            size_t n = cfg.setting["parameters"].size();
@@ -402,15 +407,18 @@ mult::mult(const Configuration & cfg): Function(cfg){
         throw ConfigurationException("mult: 'parameters' empty (or not a list)!");
     }
     SettingWrapper s = cfg.setting["parameters"];
+    v_pids.reserve(n);
     for(size_t i=0; i<n; ++i){
         string parname = s[i];
-        par_ids.insert(cfg.vm->getParId(parname));
+        ParId pid = cfg.vm->getParId(parname);
+        par_ids.insert(pid);
+        v_pids.push_back(pid);
     }
 }
 
 double mult::operator()(const ParValues & v) const{
     double result = 1.0;
-    for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); it++){
+    for(vector<ParId>::const_iterator it=v_pids.begin(); it!=v_pids.end(); ++it){
         result *= v.get(*it);
     }
     return result;
@@ -429,6 +437,11 @@ void product_distribution::add_distributions(const Configuration & cfg, const th
         }
         else{
             distributions.push_back(PluginManager<Distribution>::build(Configuration(cfg, dist_setting)));
+            ParIds new_pids = distributions.back().getParameters();
+            par_ids.insert(new_pids.begin(), new_pids.end());
+            for(ParIds::const_iterator it=new_pids.begin(); it!=new_pids.end(); ++it){
+                parid_to_index[*it] = distributions.size()-1;
+            }
         }
     }
 }

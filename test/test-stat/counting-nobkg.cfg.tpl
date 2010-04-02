@@ -37,7 +37,6 @@ counting = {
          // to be prevented by using a non-zero value here:
       	 range = (1E-12, "inf"); 
       	 fix-sample-value = __THETA__;
-      	 width = __THETA_WIDTH__;
       }; 
    };
 };

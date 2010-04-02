@@ -1,6 +1,6 @@
 
 #if available, use dependencies from CMSSW:
-ifneq ($(shell which scram),)
+ifneq ($(shell which scram || echo -n A),A)
 BOOST_INCLUDE := -I$(shell scram tool tag boost INCLUDE)
 BOOST_LIBLIST := $(shell scram tool tag boost LIB) $(shell scram tool tag boost_filesystem LIB) $(shell scram tool tag boost_program_options LIB) $(shell scram tool tag boost_regex LIB)
 BOOST_LIBS := -L$(shell scram tool tag boost LIBDIR) $(patsubst %,-l%,$(BOOST_LIBLIST))
@@ -22,7 +22,7 @@ endif
 BOOST_LIBS := -lboost_filesystem$(BS) -lboost_regex$(BS) -lboost_program_options$(BS) -lboost_thread$(BS)
 endif
 
-CC := g++
+#CC := g++
 
 #lazy evaluation to allow subdirectories to add their own includes and libs ...
 INCLUDES = -I.. $(BOOST_INCLUDE) $(SQLITE_INCLUDE)
@@ -30,19 +30,13 @@ EXTRA_COMPILE =
 EXTRA_LINK_EXE =
 EXTRA_LINK_SO =
 
-ifeq ($(COVERAGE),1)
-EXTRA_COMPILE = -O0 --coverage
-EXTRA_LINK_EXE = -O0 --coverage
-EXTRA_LINK_SO = -O0 --coverage
-endif
-
-COMPILE = echo compiling $<; $(CC) -c -Wall -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
-LINK_EXE = echo linking $@; $(CC) -rdynamic -L../lib -ldl -ltheta -lconfig $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
-LINK_EXE_NOLIBS = echo linking $@; $(CC) -rdynamic $(EXTRA_LINK_EXE)
-LINK_SO = echo linking $@; $(CC) -shared -rdynamic $(EXTRA_LINK_SO)
+COMPILE = echo compiling $<; $(CXX) -c -Wall -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
+LINK_EXE = echo linking $@; $(CXX) -rdynamic -L../lib -ldl -ltheta -lconfig $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
+LINK_EXE_NOLIBS = echo linking $@; $(CXX) -rdynamic $(EXTRA_LINK_EXE)
+LINK_SO = echo linking $@; $(CXX) -shared -rdynamic $(EXTRA_LINK_SO)
 
 %.o: %.cpp
-	$(COMPILE) -o $@ $<
+	@$(COMPILE) -o $@ $<
 
 %.o: %.cxx
 	@$(COMPILE) -o $@ $<

@@ -53,12 +53,12 @@ void Model::samplePseudoData(Data & result, Random & rnd, const ParValues & valu
 void Model::set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs_, boost::ptr_vector<HistogramFunction> & histos_, const std::vector<std::string> & component_names){
     observables.insert(obs_id);
     const size_t n = coeffs_.size();
-    if(n!=coeffs_.size() or n!=component_names.size()) throw InvalidArgumentException("Model::setPrediction: number of histograms, coefficients and component names do not match!");
+    if(n!=coeffs_.size() or n!=component_names.size()) throw InvalidArgumentException("Model::setPrediction: number of histograms, coefficients and component names do not match");
     if(histos[obs_id].size()>0)
-        throw InvalidArgumentException("Model::setPrediction: prediction already set for this observable!");
+        throw InvalidArgumentException("Model::setPrediction: prediction already set for this observable");
     histos[obs_id].transfer(histos[obs_id].end(), histos_.begin(), histos_.end(), histos_);
     if(coeffs[obs_id].size()>0)
-        throw InvalidArgumentException("Model::setPrediction: prediction already set for this observable (coeffs)!");
+        throw InvalidArgumentException("Model::setPrediction: prediction already set for this observable (coeffs)");
     coeffs[obs_id].transfer(coeffs[obs_id].end(), coeffs_.begin(), coeffs_.end(), coeffs_);
     names[obs_id] = component_names;
     for(boost::ptr_vector<Function>::const_iterator it=coeffs[obs_id].begin(); it!=coeffs[obs_id].end(); ++it){
@@ -178,11 +178,21 @@ std::auto_ptr<Model> ModelFactory::buildModel(const Configuration & ctx) {
         result->set_prediction(*obsit, coeffs, histos, names);
     }
     result->parameter_distribution = PluginManager<Distribution>::build(Configuration(ctx, s["parameter-distribution"]));
-    ParIds d_pars = result->parameter_distribution->getParameters();
-    ParIds m_pars = result->getParameters();
-    //check that d_pars is a subset of m_pars
-    if(not d_pars.contains_all(m_pars)){
-        throw ConfigurationException("parameter-distribution does not define all model parameters!");
+    if(not (result->parameter_distribution->getParameters() == result->getParameters())){
+        stringstream ss;
+        ss << "parameter-distribution does not define exactly the model parameters dist = ( ";
+        ParIds dist_pars = result->parameter_distribution->getParameters();
+        ParIds m_pars = result->getParameters();
+        for(ParIds::const_iterator p_it=dist_pars.begin(); p_it!=dist_pars.end(); ++p_it){
+            ss << ctx.vm->getName(*p_it) << " ";
+        }
+        ss << "); model = ( ";
+        for(ParIds::const_iterator p_it=m_pars.begin(); p_it!=m_pars.end(); ++p_it){
+            ss << ctx.vm->getName(*p_it) << " ";
+        }
+        ss << " )";
+        throw ConfigurationException(ss.str());
+        //throw ConfigurationException("parameter-distribution does not define exactly the model parameters");
     }
     return result;
 }
@@ -216,35 +226,30 @@ void NLLikelihood::set_override_distribution(const Distribution * d){
 
 
 double NLLikelihood::operator()(const ParValues & values) const{
-    //check ranges and return infinity if violated.
-    //
-    //Unfortunately, this is not as straight-forward as it sounds
-    // as some minimizers need numerical derivatives at the end of ranges and do
-    // so without respecting these ranges (MINUIT). Therefore, allow some 
-    // border-violating evaluations.
-    for(ParIds::const_iterator p_it = par_ids.begin(); p_it != par_ids.end(); ++p_it){
-        const map<ParId, pair<double, double> >::const_iterator range_it = ranges.find(*p_it);
-        if(range_it==ranges.end())continue;
-        double value = values.get(*p_it);
-        if(value < (1 - 1e-4) * range_it->second.first || value > (1 + 1e-4) * range_it->second.second)
-            return numeric_limits<double>::infinity();
-    }
     double result = 0.0;
-    //go through all observables:
+    //1. the model prior first, because if we are out of bounds, we should not evaluate
+    //   the likelihood of the templates ...
+    if(override_distribution){
+        result += override_distribution->evalNL(values);
+    }
+    else{
+        result += model.parameter_distribution->evalNL(values);
+    }    
+    //2. the template likelihood
     for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
         const ObsId & obs_id = *obsit;
-        Histogram model_prediction;
+        Histogram & model_prediction = predictions[obs_id];
         try{
-            model.get_prediction(model_prediction, values, obs_id);
+            model.get_prediction(predictions[obs_id], values, obs_id);
         }catch(Exception & ex){
-            ex.message += " (in NLLikelihood::operator() model.get_prediction())";
+            ex.message += " (in NLLikelihood::operator() calling model.get_prediction())";
             throw;
         }
         const Histogram & data_hist = data[obs_id];
-        const size_t nbins = model_prediction.get_nbins();
+        const size_t nbins = data_hist.get_nbins();
         const double * __restrict pred_data = model_prediction.getData();
         const double * __restrict data_data = data_hist.getData();
-        for(size_t i=1; i<=nbins; i++){
+        for(size_t i=1; i<=nbins; ++i){
             //if both, the prediction and the data are zero, that does not contribute.
             // However, if the prediction is zero and we have non-zero data, we MUST return infinity (!) ...
              if(pred_data[i]>0.0)
@@ -254,22 +259,13 @@ double NLLikelihood::operator()(const ParValues & values) const{
         }
         result += model_prediction.get_sum_of_bincontents();
     }
-    assert(not std::isnan(result));
-    //the model prior:
-    if(override_distribution){
-        result += override_distribution->evalNL(values);
-    }
-    else{
-        result += model.parameter_distribution->evalNL(values);
-    }
-    assert(not std::isnan(result));
-    //the additional likelihood terms, if set:
+    
+    //3. The additional likelihood terms, if set:
     if(additional_terms){
         for(size_t i=0; i < additional_terms->size(); i++){
             result += ((*additional_terms)[i])(values);
         }
     }
-    assert(not std::isnan(result));
     return result;
 }
 

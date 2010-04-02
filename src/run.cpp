@@ -49,7 +49,7 @@ void Run::run(){
     for (eventid = 1; eventid <= n_event; eventid++) {
         if(stop_execution)break;
         try{
-            data_source->fill(data);
+            data_source->fill(data, *this);
         }
         catch(DataSource::DataUnavailable &){
             break;

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 project(theta)
 set(CMAKE_VERBOSE_MAKEFILE, 1)
 
-option(coverage "build for coverage tests" ON)
+option(coverage "build for coverage tests" OFF)
 
 if(coverage)
 message(STATUS "building for coverage test")

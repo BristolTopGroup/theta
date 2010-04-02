@@ -115,7 +115,18 @@ namespace theta{
     protected:
         ParIds par_ids;
     };
-
+    
+    namespace DistributionUtils{
+        
+        /** \brief Fill mode, width and support from a Distribution instance
+         *
+         * This is a utility routine calling the Distribution::mode, Distribution::width
+         * and Distribution::support routines for all parameters of the Distribution and filling
+         * the result into the parameters \c mode, \c width and \c support
+         */
+        void fillModeWidthSupport(theta::ParValues & mode, theta::ParValues & width,
+                std::map<theta::ParId, std::pair<double, double> > & support, const theta::Distribution & d);
+    }
 
 }
 

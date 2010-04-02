@@ -15,59 +15,68 @@
  * the "background only" and "signal plus background" hypotheses.
  *
  * Configuration is done via a setting group like
- *<pre>
+ * \code
  * hypotest = {
  *   type = "deltanll_hypotest";
  *   minimizer = "@myminuit";
- *   background-only = {s = 0.0;}; //assuming "s" was defined as parameter earlier
- *   signal-plus-background = {};
+ *   background-only-distribution = "@bkg-only-dist";
+ *   signal-plus-background-distribution = "@default-dist";
  * };
  * 
  * myminuit = {...}; // minimizer definition
- *</pre>
+ * bkg-only-dist = {...}; //distribution definition
+ * default-dist = {...}; //distribution definition
+ * \endcode
  *
  * \c type is always "deltanll_hypotest" to select this producer.
  *
  * \c minimizer is the configuration path to a \link theta::Minimizer minimizer \endlink definition to be used
  *    for minimization of the negative-log-likelihood.
  *
- * \c background-only and \c signal-plus-background are setting groups which defines special parameter values which
- *   define the values to fix during the minimization, see below.
- *
- * Given data and a model, this producer will construct the negative-loglikelihood for the "signal-plus-background" parameters
- * fixed as specified in the configuration file and for the "background-only" parameters fixed and minimize the negative log-likelihood
- * with respect to all other parameters (while any constraints configured in the model apply, of course).
+ * \c background-only-distribution and \c signal-plus-background-distribution define the Distributions which should be used
+ *   in the two model variants. <b>Important:</b> the constraints will alter the likelihood function: instead
+ *   of the parameter distribution specified in the likelihood function, these distributions will be used. Therefore,
+ *   <em>all</em> model parameters have to be specified for these two cases.
+ *   
+ * Note that the setting "override-parameter-distribution" is not allowed for this producer.
  *
  * The result table will contain the columns "nll_sb" and "nll_b", which contain the found value of the negative log-likelihood
  * for the "signal-plus-background" and "background-only" hypotheses, respectively.
  *
- * For a typical application, the "signal-plus-background" setting does not impose any fixed values and is the
- * empty settings group ("{};"), whereas the "background-only" settings group sets the signal to zero. Only
- * this case is considered in the following. Note that \c nll_sb <= \c nll_b <b>always</b> holds in this case as the minimization
+ * For a typical application, the "signal-plus-background-distribution" setting is the same as in the model,
+ * whereas the "background-only-distribution" setting group includes a delta_distributions which fixes
+ * the signal to zero. Only this case is considered in the following.
+ * Note that \c nll_sb <= \c nll_b <b>always</b> holds in this case as the minimization
  * is done using a larger set of parameters in the first case and the minimum cannot become larger. Any failure of this
- * unequality can only come from the numerical minimization of the likelihood not finding the correct minimum.
+ * inequality can only come from roundoff errors in the minimization process or from the
+ * minimizer not finding the correct minimum.
  *
  * If the number of observed events is large, \code 2 * sqrt(nll_b - nll_sb) \endcode will be a good estimate of
- * the significance (in sigma) with which the "background only" null-hypothesis "background-only" can be rejected. Even if you are not
- * in the asymptotic regime where this is true, you can sill use this test by generating the distribution of
- * \code 2 * sqrt(nll_b - nll_sb) \endcode for pseudo data generated under the "background only" assumption to define
- * the critical region in your particular case.
+ * the significance (in sigma) with which the "background only" null-hypothesis "background-only" can be rejected.
+ * Even if the asymptotic property is not fulfilled, this quantity can still be used as test statistic for the
+ * hypothesis test which has the "background-only" case as null hypothesis.
  */
 class deltanll_hypotest: public theta::Producer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    deltanll_hypotest(const theta::plugin::Configuration & ctx);
+    deltanll_hypotest(const theta::plugin::Configuration & cfg);
     
     /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
-    virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
+    virtual void produce(theta::Run & run, const theta::Data &, const theta::Model&);
     
     /// Define the table columns "nll_sb" and "nll_b" in the result table
     virtual void define_table();
-private:
-    theta::ParValues s_plus_b;
-    theta::ParValues b_only;
+    
+private:    
+    std::auto_ptr<theta::Distribution> s_plus_b;
+    std::auto_ptr<theta::Distribution> b_only;
+    
+    theta::ParValues s_plus_b_mode, b_only_mode;
+    theta::ParValues s_plus_b_width, b_only_width;
+    std::map<theta::ParId, std::pair<double, double> > s_plus_b_support, b_only_support;
+    
     std::auto_ptr<theta::Minimizer> minimizer;
-    theta::ParIds par_ids_constraints;
+    
     theta::EventTable::column c_nll_b, c_nll_sb;
 };
 

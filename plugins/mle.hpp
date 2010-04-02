@@ -46,8 +46,14 @@ public:
     virtual void define_table();
 private:
     std::auto_ptr<theta::Minimizer> minimizer;
-    boost::shared_ptr<theta::VarIdManager> vm;
+    //boost::shared_ptr<theta::VarIdManager> vm;
     std::vector<theta::ParId> save_ids;
+    std::vector<std::string> parameter_names;
+    
+    bool start_step_ranges_init;
+    theta::ParValues start, step;
+    std::map<theta::ParId, std::pair<double, double> > ranges;
+    
     //the two columns with parameter and error:
     std::vector<theta::EventTable::column> parameter_columns;
     std::vector<theta::EventTable::column> error_columns;

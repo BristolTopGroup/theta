@@ -19,7 +19,7 @@ void pseudodata_writer::define_table(){
 
 void pseudodata_writer::produce(Run & run, const Data & data, const Model & model) {
     for(size_t i=0; i<observables.size(); ++i){
-        const Histogram & h = data.getData(observables[i]);
+        const Histogram & h = data[observables[i]];
         double n_event = h.get_sum_of_bincontents();
         table->set_column(n_events_columns[i], n_event);
         if(write_data){

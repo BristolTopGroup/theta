@@ -50,7 +50,8 @@ public:
      * If still an error is reported, a \ref theta::MinimizationException is thrown which contains the status
      * code returned by ROOT::Minuit2::Minuit2Minimizer::Status().
      */
-    virtual theta::MinimizationResult minimize(const theta::Function & f);
+    virtual theta::MinimizationResult minimize(const theta::Function & f, const theta::ParValues & start,
+            const theta::ParValues & step, const std::map<theta::ParId, std::pair<double, double> > & ranges);
 private:
     void set_printlevel(int p);
     
@@ -60,7 +61,6 @@ private:
     ROOT::Minuit2::EMinimizerType type;
     std::auto_ptr<ROOT::Minuit2::Minuit2Minimizer> min;
     double tolerance;
-    //theta::ParIds minos_parids;
 };
 
 #endif

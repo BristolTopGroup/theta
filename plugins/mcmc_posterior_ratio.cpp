@@ -4,6 +4,7 @@
 #include "interface/run.hpp"
 #include "interface/minimizer.hpp"
 #include "interface/histogram.hpp"
+#include "interface/distribution.hpp"
 
 #include <sstream>
 
@@ -54,47 +55,41 @@ class MCMCPosteriorRatioResult{
         size_t n_total;
 };
 
-void mcmc_posterior_ratio::produce(Run & run, const Data & data, const Model & model) {
+void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, const theta::Model & model) {
     if(!init){
         try{
-            if(init_failed){
-                throw Exception("init failed earlier, not attempting initialization again");
-            }
-            Histogram pred;
-            ParValues default_parameters = vm->get_defaults();
-            ObsIds observables = model.getObservables();
-        
             //1. for signal plus background
-            ParValues parameters = default_parameters;
-            parameters.set(s_plus_b);
+            ObsIds observables = model.getObservables();
+            
+            ParValues s_plus_b_values;
+            s_plus_b->mode(s_plus_b_values);
             Data d;
             for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
-                model.get_prediction(pred, parameters, *it);
-                d.addData(*it, pred);
+                model.get_prediction(d[*it], s_plus_b_values, *it);
             }
+            
             NLLikelihood nll_sb = model.getNLLikelihood(d);
-            sqrt_cov_sb = get_sqrt_cov(run.get_random(), nll_sb, s_plus_b, vm, startvalues_sb);
+            nll_sb.set_override_distribution(s_plus_b.get());
+            sqrt_cov_sb = get_sqrt_cov(run.get_random(), nll_sb, startvalues_sb);
         
             //2. for background only
-            parameters = default_parameters;
-            parameters.set(b_only);
-            Data d2;
+            ParValues b_only_values;
+            b_only->mode(b_only_values);
             for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
-                model.get_prediction(pred, parameters, *it);
-                d2.addData(*it, pred);
+                model.get_prediction(d[*it], b_only_values, *it);
             }
-            NLLikelihood nll_b = model.getNLLikelihood(d2);
-            sqrt_cov_b = get_sqrt_cov(run.get_random(), nll_b, b_only, vm, startvalues_b);
+            NLLikelihood nll_b = model.getNLLikelihood(d);
+            nll_b.set_override_distribution(b_only.get());
+            sqrt_cov_b = get_sqrt_cov(run.get_random(), nll_b, startvalues_b);
             
             init = true;
         }catch(Exception & ex){
-            init_failed = true;
-            ex.message = "initialization failed with: " + ex.message;
-            throw;
+            ex.message = "initialization failed: " + ex.message;
+            throw FatalException(ex);
         }
     }
     
-    NLLikelihood nll = model.getNLLikelihood(data);
+    NLLikelihood nll = get_nllikelihood(data, model);
     double nl_posterior_sb, nl_posterior_b;
     nl_posterior_sb = NAN;
     nl_posterior_b = NAN;
@@ -122,21 +117,12 @@ void mcmc_posterior_ratio::define_table(){
     c_nl_posterior_b =  table->add_column(*this, "nl_posterior_b",  EventTable::typeDouble);
 }
 
-mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), init(false), init_failed(false){
-    vm = cfg.vm;
+mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), init(false){
     SettingWrapper s = cfg.setting;
-    size_t sb_i = s["signal-plus-background"].size();
-    for (size_t i = 0; i < sb_i; i++) {
-        string par_name = s["signal-plus-background"][i].getName();
-        double par_value = s["signal-plus-background"][i];
-        s_plus_b.set(cfg.vm->getParId(par_name), par_value);
-    }
-    size_t b_i = s["background-only"].size();
-    for (size_t i = 0; i < b_i; i++) {
-        string par_name = s["background-only"][i].getName();
-        double par_value = s["background-only"][i];
-        b_only.set(cfg.vm->getParId(par_name), par_value);
-    }
+    
+    s_plus_b = theta::plugin::PluginManager<Distribution>::build(theta::plugin::Configuration(cfg, s["signal-plus-background-distribution"]));
+    b_only = theta::plugin::PluginManager<Distribution>::build(theta::plugin::Configuration(cfg, s["background-only-distribution"]));    
+    
     iterations = s["iterations"];
     if(s.exists("burn-in")){
         burn_in = s["burn-in"];

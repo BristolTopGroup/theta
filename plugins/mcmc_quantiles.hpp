@@ -14,7 +14,7 @@
  * The result can be used to give upper limits or to construct symmetric credible intervals.
  *
  * Configuration is done via a setting group like
- *<pre>
+ * \code
  * hypotest = {
  *   type = "mcmc_quantiles";
  *   parameter = "s";  //assuming "s" was defined as parameter earlier
@@ -23,7 +23,7 @@
  *   burn-in = 100; //optional. default is iterations / 10
  * };
  *
- *</pre>
+ * \endcode
  *
  * \c type is always "mcmc_posterior_ratio" to select this producer.
  *

@@ -82,7 +82,7 @@ public:
      */
     void define_table();
 private:
-    boost::shared_ptr<theta::VarIdManager> vm;
+    //boost::shared_ptr<theta::VarIdManager> vm;
     theta::ParId pid;
     std::vector<double> clevels;
     bool re_minimize;
@@ -90,6 +90,10 @@ private:
     //clevels:    
     std::vector<double> deltanll_levels;
     std::auto_ptr<theta::Minimizer> minimizer;
+    
+    bool start_step_ranges_init;
+    theta::ParValues start, step;
+    std::map<theta::ParId, std::pair<double, double> > ranges;
 
     //table columns:
     std::vector<theta::EventTable::column> lower_columns;

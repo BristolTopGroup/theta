@@ -10,21 +10,17 @@
 #svn --non-interactive --trust-server-cert co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
 #cd theta
 
+rm -rf build-coverage
+mkdir build-coverage
+cd build-coverage
+
+execute_checked cmake .. -Dcoverage:BOOL=ON
+
 logfile=log.txt
-
-cd ..
-
-test/coveragetest.sh > $logfile 2>&1
-
-for i in test/test-stat/*.sh; do
-   i=`basename $i`
-   echo "START `date +%s`;     `date -R`     $i" >> $logfile
-   (cd test/test-stat; ./$i) 2>&1 | awk "{print \"[$i]\", \$_}" >> $logfile
-   echo "END `date +%s`;     `date -R`     $i" >> $logfile
-done
+test/testall.sh > $logfile 2>&1
 
 #TODO: copy back logfile
-#valgrind --leak-check=full --show-reachable=yes test/test >> $logfile
+valgrind --leak-check=full --show-reachable=yes test/test >> $logfile
 
 lcov -c --directory build-coverage --output-file theta.info
 genhtml theta.info --no-function-coverage -o doc/coverage

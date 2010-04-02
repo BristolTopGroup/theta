@@ -46,61 +46,65 @@ public:
 protected:
     /** \brief Construct from a Configuration instance
      *
-     * Parses the settings "add-nllikelihood-functions" and "override-parameter-distribution".
+     * Parses the settings "add-nllikelihood-functions".
      */
     Producer(const plugin::Configuration & cfg);
     
-    /** \brief Get the likelihood for the provided Data and Model, including any additional terms
+    /** \brief Get the likelihood for the provided Data and Model, including any additional nllikelihood functions
+     * 
+     * Derived classes should always use this method and never construct the NLLIkelihood
+     * directly from a Model instance to ensure consistent treatment of the additional likelihood terms.
      */
     NLLikelihood get_nllikelihood(const Data & data, const Model & model);
-    
-    std::auto_ptr<Distribution> override_parameter_distribution;
-    boost::ptr_vector<theta::Function> additional_likelihood_terms;
+
+    boost::ptr_vector<theta::Function> additional_likelihood_functions;
 };
 
 /** \brief Base class for all statistical methods respecting the strong likelihood principle
  *
  * In contrast to Producer, derived classes have only access to the likelihood function.
  */
-class ProducerLikelihoodPrinciple: public Producer{
+/*class ProducerLikelihoodPrinciple: public Producer{
     public:
         
         /// Implements the produce routine from Producer to call the likelihood version of produce
         virtual void produce(Run & run, const Data & data, const Model & model);
         
-        /** \brief Run a statistical algorithm on the data and model and write out the results
+        / ** \brief Run a statistical algorithm on the data and model and write out the results
          *
          * Equivalent to Producer::produce, but has only access to the likelihood function.
          * Derived classes must implement this.
-         */
-        virtual void produce(Run & run, const NLLikelihood & nll) = 0;
+         * 
+         * nll is passed as non-const reference to allow setting alternative priors via
+         * NLLikelihood::set_override_distribution
+         * /
+        virtual void produce(Run & run, NLLikelihood & nll) = 0;
         
     protected:
         
         ProducerLikelihoodPrinciple(const plugin::Configuration & cfg);
         
-        /** \brief Get the likelihood for the provided Model, assuming average data from the model
+        / ** \brief Get the likelihood for the provided Model, assuming average data from the model
          *
          * While producers respecting the likelihood principle have only access to
          * the likelihood function in their produce routine, they can make use of an
          * "average" likelihood in order to calibrate step sizes, etc.
-         */
-        NLLikelihood get_asimov_likelihood(const Model & model);
+         * /
+        NLLikelihood get_asimov_likelihood();
         
     private:
-        //in order to save the model and likelihood references for the asmiov data,
-        // use a struct holding these references:
-        struct t_ref_datamodel{
-            const Data & data;
+        //in order to save the model reference for the asimov data,
+        // use a struct holding a reference to the model:
+        struct t_ref_model{
             const Model & model;
-            t_ref_datamodel(const Data & data_, const Model & model_): data(data_), model(model_){
+            t_ref_model(const Model & model_): model(model_){
             }
         };
         
         //required by get_asimov_data:
-        std::auto_ptr<t_ref_datamodel> ref_datamodel;
+        std::auto_ptr<t_ref_model> ref_model;
         std::auto_ptr<Data> asimov_data;
-};
+};*/
 
 }
 

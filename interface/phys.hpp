@@ -109,21 +109,23 @@ namespace theta {
          */
         ObsIds getObservables() const;
 
-        /** \brief Add the data for an observables
-         *
-         * The Histogram dat as observed data for variable obs_id to this container.
-         * The Histogram is copied.
-         *
-         * \param obs_id The observable the data was recorded for.
-         * \param dat The Histogram holding data information for that observable.
-         */
-        void addData(const ObsId & obs_id, const Histogram & dat);
 
-        /** \brief returns the Histogram for the specified observable previously set by addData.
+        /** \brief Access the histogram with an observable
          *
-         * If no Histogram was set for this obs_id, a NotFoundException is thrown.
+         * The const version is usually only used to read a previously set
+         * Histogram. If no Histogram is saved for the supplied observable id,
+         * a NotFoundException will be thrown from the const version.
          */
-        const Histogram & getData(const ObsId & obs_id) const;
+        //@{
+        Histogram & operator[](const ObsId & id){
+            return data[id];
+        }
+        const Histogram & operator[](const ObsId & id) const{
+            std::map<ObsId, Histogram>::const_iterator it = data.find(id);
+            if(it==data.end()) throw NotFoundException("Data::operator[]() const: no data found for given ObsId");
+            return it->second;
+        }
+        //@}
 
     private:
         std::map<ObsId, Histogram> data;
@@ -155,7 +157,9 @@ namespace theta {
          * ParIds obs_ids = values.getObservables();
          * \endcode 
          */
-        virtual ObsIds getObservables() const = 0;
+        ObsIds getObservables() const{
+            return obs_ids;
+        }
         
         /** \brief Fill the provided Data instance with data
          *
@@ -165,13 +169,15 @@ namespace theta {
          * It can throw a DataUnavailable exception if no more data is available and the
          * run should end.
          */
-        virtual void fill(Data & dat) = 0;
+        virtual void fill(Data & dat, Run & run) = 0;
         
         /// Declare destructor virtual as polymorphic access to derived classes will happen.
         virtual ~DataSource(){}
         
     protected:
+        /// proxy to PluginType constructor for derived classes
         DataSource(const theta::plugin::Configuration & cfg): theta::plugin::PluginType(cfg){}
+        ObsIds obs_ids;
     };
     
     /** \brief A parameter-providing class; can be used as base class in the plugin system
@@ -237,9 +243,6 @@ namespace theta {
         friend class NLLikelihood;
         friend class ModelFactory;
     public:
-       /** \brief Create a new Model with the VarIdManager \c vm.
-        */
-        Model(const boost::shared_ptr<VarIdManager> & vm);
         
         /** \brief Get all parameters the model prediction depends upon
          */
@@ -251,15 +254,9 @@ namespace theta {
         
         /** \brief Sample pseudo data for the prediction of this Model for model parameters values
          *
+         * The result will be filled in \c data.
          */
-        Data samplePseudoData(Random & rnd, const ParValues & values) const;
-        
-        /* \brief Sample values from the prior Distributions.
-         * 
-         * Parameters, for which no prior was specified are set to their default values. The returned
-         * \c ParValues object contains values for *all* parameters of this model.
-         */
-        //ParValues sampleValues(Random & rnd) const;
+        void samplePseudoData(Data & data, Random & rnd, const ParValues & values) const;
 
         /** \brief Creates a likelihood function object for this model, given the data.
          *
@@ -276,28 +273,6 @@ namespace theta {
          * this Model's lifetime and the lifetime of data, exceed the lifetime of the returns NLLikelihood object.
          */
         NLLikelihood getNLLikelihood(const Data & data) const;
-
-        /* Creates a NLLikelihood function object for this Model, given Data data, but includes only the specified
-         *  observables obs_ids and parameters pars. obs_ids and pars must be subset of this model's parameters
-         *  and observables, respectively. obs_ids must also be subset of the data's observables.
-         *  If one of those conditions is not met, an InvalidArgumentException is thrown.
-         *
-         * Make sure that both, this Model's lifetime as well as the lifetime of data, exceed the lifetime of the returned NLLikelihood
-         * object.
-         *
-        NLLikelihood getNLLikelihood(const Data & data, const ParIds & pars, const ObsIds & obs_ids) const;
-        */
-
-        /** \brief Specify the prediction of an observable
-         *
-         * Set the prediction of observable \c obs_id to a linear combination of \c histos with \c coeffs as coefficients.
-         *  \c coeffs , \c histos and \c component_names must be of same length and non-empty, otherwise, an 
-         *   \c InvalidArgumentException is thrown.
-         *
-         * The objects in \c histos and \c coeffs will be transferred, not copied, i.e. histos.empty() and coeffs.empty() will hold
-         * after this function returns.
-         */
-        void set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs, boost::ptr_vector<HistogramFunction> & histos, const std::vector<std::string> & component_names);
 
         /** \brief Returns the prediction for the observable \c obs_id using the variable values \c parameters into \c result.
         *
@@ -356,6 +331,9 @@ namespace theta {
 
         std::map<ObsId, std::vector<std::string> > names;
         std::auto_ptr<Distribution> parameter_distribution;
+        
+        void set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs, boost::ptr_vector<HistogramFunction> & histos, const std::vector<std::string> & component_names);
+        Model(const boost::shared_ptr<VarIdManager> & vm);
     };
     
     //delete_clone is required by the destructor of boost::ptr_vector.
@@ -497,6 +475,21 @@ namespace theta {
          * will be thrown.
          */
         void set_override_distribution(const Distribution * d);
+        
+        
+        /** \brief Returns the currently set parameter distribution used in the likelihood evaluation
+         * 
+         * This is either the distribution from the model, or, if set_override_distribution has been called,
+         * the Distribution instance given there.
+         * 
+         * The returned Distribution reference depends exactly on the model parameters (which is the
+         * same as getParameters()).
+         * 
+         */
+        const Distribution & get_parameter_distribution()const{
+            if(override_distribution) return *override_distribution;
+            else return model.get_parameter_distribution();
+        }
 
     private:
         const Model & model;

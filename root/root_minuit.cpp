@@ -38,7 +38,8 @@ void root_minuit::set_tolerance(double tol){
     tolerance = tol;
 }
 
-MinimizationResult root_minuit::minimize(const theta::Function & f){
+MinimizationResult root_minuit::minimize(const theta::Function & f, const theta::ParValues & start,
+        const theta::ParValues & steps, const std::map<theta::ParId, std::pair<double, double> > & ranges){
     //I would like to re-use min. However, it horribly fails after very few uses with
     // unsigned int ROOT::Minuit2::MnUserTransformation::IntOfExt(unsigned int) const: Assertion `!fParameters[ext].IsFixed()' failed.
     // when calling SetFixedVariable(...).
@@ -50,9 +51,11 @@ MinimizationResult root_minuit::minimize(const theta::Function & f){
     ParIds parameters = f.getParameters();
     int ivar=0;
     for(ParIds::const_iterator it=parameters.begin(); it!=parameters.end(); ++it, ++ivar){
-        pair<double, double> range = get_range(*it);
-        double def = get_default(*it);
-        double step = get_initial_stepsize(*it);
+        std::map<theta::ParId, std::pair<double, double> >::const_iterator r_it = ranges.find(*it);
+        if(r_it==ranges.end()) throw InvalidArgumentException("root_minuit::minimize: range not set for a parameter");
+        pair<double, double> range = r_it->second;
+        double def = start.get(*it);
+        double step = steps.get(*it);
         string name = vm->getName(*it);
         if(isinf(range.first)){
             if(isinf(range.second)){
@@ -67,7 +70,7 @@ MinimizationResult root_minuit::minimize(const theta::Function & f){
                 min->SetLowerLimitedVariable(ivar, name, def, step, range.first);
             }
             else{ // both ends are finite
-                if(range.first==range.second){
+                if(range.first==range.second || step == 0.0){
                     min->SetFixedVariable(ivar, name, range.first);
                 }
                 else{

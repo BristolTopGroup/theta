@@ -87,6 +87,26 @@ public:
     MinimizationException(const std::string & s): Exception(s){}
 };
 
+/** \brief Exception class to indicate serious error
+ * 
+ * An exception of this kind should usually not be caught: it indicates a serious error
+ * which prevents further execution.
+ * 
+ * It is used as a wrapper around theta::Exception. This way, any exception type can be made
+ * fatal.
+ * 
+ * In order to prevent catching FatalException in a catch(Exception &) statement, FatalException is not part
+ * of the usual exception hierarchy of theta.
+ */
+class FatalException{
+public:
+        
+    explicit FatalException(const Exception & ex_);
+    
+private:
+    const Exception & ex;
+};
+
 }
 
 #endif

@@ -29,16 +29,6 @@ ObsIds Data::getObservables() const{
     return result;
 }
 
-const Histogram & Data::getData(const ObsId & obs_id) const{
-    std::map<ObsId, Histogram>::const_iterator it = data.find(obs_id);
-    if(it==data.end()) throw NotFoundException("Data::getData(): invalid obs_id");
-    return it->second;
-}
-
-void Data::addData(const ObsId & obs_id, const Histogram & dat){
-    data[obs_id] = dat;
-}
-
 /* MODEL */
 Model::Model(const boost::shared_ptr<VarIdManager> & vm_):
                    vm(vm_){
@@ -52,28 +42,13 @@ ObsIds Model::getObservables() const{
     return observables;
 }
 
-Data Model::samplePseudoData(Random & rnd, const ParValues & values) const{
-   Data result;
+void Model::samplePseudoData(Data & result, Random & rnd, const ParValues & values) const{
    for (ObsIds::const_iterator it = observables.begin(); it != observables.end(); it++) {
-       Histogram pred, h;
+       Histogram pred;
        get_prediction_randomized(rnd, pred, values, *it);
-       pred.fill_with_pseudodata(h, rnd);
-      result.addData(*it, h);
+       pred.fill_with_pseudodata(result[*it], rnd);
    }
-   return result;
 }
-
-/*ParValues Model::sampleValues(Random & rnd) const{
-    ParValues result(*vm);
-    for(std::vector<boost::shared_ptr<Distribution> >::const_iterator d_it=priors.begin(); d_it!=priors.end(); d_it++){
-        (*d_it)->sample(result, rnd);
-    }
-    / *for(ParIds::const_iterator p_it = parameters.begin(); p_it!=parameters.end(); p_it++){
-        if(not result.contains(*p_it)) result.set(*p_it, vm->get_default(*p_it));
-    }* /
-    return result;
-}*/
-
 
 void Model::set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs_, boost::ptr_vector<HistogramFunction> & histos_, const std::vector<std::string> & component_names){
     observables.insert(obs_id);
@@ -170,26 +145,6 @@ Histogram Model::getPredictionComponent(const ParValues & parameters, const ObsI
     return result;
 }
 
-/*void Model::addPrior(auto_ptr<Distribution> & d){
-    ParIds par_ids = d->getParameters();
-    for(size_t i=0; i<priors.size(); ++i){
-        for(ParIds::const_iterator par=par_ids.begin(); par!=par_ids.end(); ++par){
-            if(priors[i]->getParameters().contains(*par)){
-                throw InvalidArgumentException("Model::addPrior: trying to define two priors for one parameter!");
-            }
-        }
-    }
-    priors.push_back(boost::shared_ptr<Distribution>(d.release()));
-}
-
-const Distribution & Model::getPrior(size_t i) const{
-    return *(priors[i]);
-}
-
-size_t Model::getNPriors() const{
-    return priors.size();
-}*/
-
 NLLikelihood Model::getNLLikelihood(const Data & data) const{
     if(not(data.getObservables()==observables)){
         throw InvalidArgumentException("Model::createNLLikelihood: observables of model and data mismatch!");
@@ -246,6 +201,18 @@ void NLLikelihood::set_additional_terms(const boost::ptr_vector<Function> * term
     additional_terms = terms;
 }
 
+void NLLikelihood::set_override_distribution(const Distribution * d){
+    override_distribution = d;
+    if(d){
+        for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
+            ranges[*it] = d->support(*it);
+        }
+    }else{
+        for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
+            ranges[*it] = model.parameter_distribution->support(*it);
+        }
+    }
+}
 
 
 double NLLikelihood::operator()(const ParValues & values) const{
@@ -273,7 +240,7 @@ double NLLikelihood::operator()(const ParValues & values) const{
             ex.message += " (in NLLikelihood::operator() model.get_prediction())";
             throw;
         }
-        const Histogram & data_hist = data.getData(obs_id);
+        const Histogram & data_hist = data[obs_id];
         const size_t nbins = model_prediction.get_nbins();
         const double * __restrict pred_data = model_prediction.getData();
         const double * __restrict data_data = data_hist.getData();
@@ -289,15 +256,20 @@ double NLLikelihood::operator()(const ParValues & values) const{
     }
     assert(not std::isnan(result));
     //the model prior:
-    result += model.parameter_distribution->evalNL(values);
+    if(override_distribution){
+        result += override_distribution->evalNL(values);
+    }
+    else{
+        result += model.parameter_distribution->evalNL(values);
+    }
     assert(not std::isnan(result));
     //the additional likelihood terms, if set:
-    /*if(additional_terms){
+    if(additional_terms){
         for(size_t i=0; i < additional_terms->size(); i++){
             result += ((*additional_terms)[i])(values);
         }
-    }*/
-    
+    }
+    assert(not std::isnan(result));
     return result;
 }
 

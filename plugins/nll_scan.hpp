@@ -60,12 +60,17 @@ public:
      */
     void define_table();
 private:
-    boost::shared_ptr<theta::VarIdManager> vm;
+    //boost::shared_ptr<theta::VarIdManager> vm;
     theta::ParId pid;
     double start, stop, step;
     unsigned int n_steps;
     bool re_minimize;
+    
+    //minimizer stuff:
     std::auto_ptr<theta::Minimizer> minimizer;
+    bool start_step_ranges_init;
+    theta::ParValues m_start, m_step;
+    std::map<theta::ParId, std::pair<double, double> > m_ranges;
     
     //save the result here:
     std::vector<double> result;

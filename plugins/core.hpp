@@ -6,6 +6,7 @@
 #include "interface/phys.hpp"
 #include "interface/distribution.hpp"
 #include "interface/matrix.hpp"
+#include "interface/database.hpp"
 
 /** \brief A polynomial distribution where coefficients do not depend on any parameters
  *
@@ -93,6 +94,7 @@ public:
      * See documentation of theta::Distribution.
      */
     virtual void sample(theta::ParValues & result, theta::Random & rnd) const;
+    virtual void mode(theta::ParValues & result) const;
     virtual double evalNL(const theta::ParValues & values) const;
     virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
     virtual const std::pair<double, double> & support(const theta::ParId&) const;
@@ -101,6 +103,115 @@ public:
 private:
     double mu, sigma;
     std::pair<double, double> support_;
+};
+
+/** \brief The delta distribution in one or more dimensions
+ *
+ * This distribution always returns the same values when sampled, which is equal to the mode.
+ * The width is zero, the support only contains the fixed value.
+ * 
+ * Configuration is done via a setting group like
+ * \code
+ * {
+ *   type = "delta_distribution";
+ *   s = 1.0; 
+ *   b = 2.0; //assuming "s" and "b" have been declared as parameters
+ * };
+ * \endcode
+ * 
+ * \c type must always be "delta_distribution" to create an instance of this class.
+ * 
+ * Further, for every parameter, the fixed value is given.  
+ * 
+ * The evalNL and evalNLwithDerivatives could be implemented by returning 0 or
+ * some infinities. However, these methods being called is a certain sign for a bug
+ * in the calling code. Therefore, these routines will throw an IllegalStateException. 
+ */
+class delta_distribution: public theta::Distribution{
+public:
+    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
+    delta_distribution(const theta::plugin::Configuration & cfg);
+    
+    //@{
+    /** \brief Implementation of the pure methods of theta::Distribution
+     *
+     * See documentation of theta::Distribution. Note that evalNL and evalNL_withDerivatives will
+     * always throw an IllegatStateException.
+     */
+    virtual void sample(theta::ParValues & result, theta::Random & rnd) const;
+    virtual void mode(theta::ParValues & result) const;
+    virtual double evalNL(const theta::ParValues & values) const;
+    virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
+    virtual const std::pair<double, double> & support(const theta::ParId&) const;
+    virtual double width(const theta::ParId &) const;
+    //@}
+private:
+    theta::ParValues values;
+    std::map<theta::ParId, std::pair<double, double> > supports;
+};
+
+/** \brief A flat Distribution
+ * 
+ * This distribution sets ranges for parameters and returns all parameters with the same
+ * probability on the given range.
+ * 
+ * Configuration is done via a setting group like
+ * \code
+ * {
+ *   type = "flat_distribution";
+ *   s = {
+ *      range = (0.0, "inf");
+ *      width = 1.0; //optional, but should be specified for infinite range
+ *      fix-sample-value = 7.0; //optional, but should be specified for infinite range
+ *   };
+ *   
+ *   b = {
+ *     range = (0.0, 5.0);
+ *     width = 2.0; //optional for finite range
+ *     fix-sample-value = 2.0; //optional for finite range
+ *   };
+ * };
+ * \endcode
+ * 
+ * \c type is always "flat_distribution" to select this type.
+ * 
+ * For every parameter this Distribution will be defined for, a setting group is given with
+ * <ul>
+ *   <li>a \c range setting which specifies, as a list of two doubles, the range of the variable.
+ *     The special strings "inf" and "-inf" are allowed here.</li>
+ *   <li>an optional \c width setting which will be used as starting step size for various algorithms
+ *       (including markov chains and minimization). It should be set to a value of the same order of
+ *       magnitude as the expected error of the likelihood function in this parameter. For finite intervals,
+ *       the default used is 10% of the interval length. For infinite intervals, an exception will be thrown
+ *       upon the call of flat_distribution::width().</li>
+ *   <li>An optional \c fix-sample-value setting which will be used by the sample routine. In case of finite
+ *     intervals, the default is to sample from a flat distribution on this interval. For infinite intervals,
+ *     the default is to throw an exception on call of Distributiuon::sample</li>
+ * </ul>
+ */
+class flat_distribution: public theta::Distribution{
+public:
+    flat_distribution(const theta::plugin::Configuration & cfg);
+    //@{
+    /** \brief Implementation of the pure methods of theta::Distribution
+     *
+     * See class documentation and documentation of theta::Distribution for details.
+     * Note that width, sample and mode might throw an exception for infinite intervals, as discussed
+     * in the class documentation.
+     */
+    virtual void sample(theta::ParValues & result, theta::Random & rnd) const;
+    virtual void mode(theta::ParValues & result) const;
+    virtual double evalNL(const theta::ParValues & values) const;
+    virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
+    virtual const std::pair<double, double> & support(const theta::ParId&) const;
+    virtual double width(const theta::ParId &) const;
+    //@}
+    
+private:
+    theta::ParValues fix_sample_values;
+    theta::ParValues modes;
+    theta::ParValues widths;
+    std::map<theta::ParId, std::pair<double, double> > ranges;
 };
 
 /** \brief A truncated normal distribution in one or more dimensions
@@ -205,15 +316,15 @@ public:
  *
  * It is not allowed that a parameter is provided by more than one distribution.
  */
-class product_distribution: public Distribution{
+class product_distribution: public theta::Distribution{
 public:
 
     /// Constructor from a Configuration for the plugin system
-    product_distribution(const theta::plutgin::Configuration & cfg);
+    product_distribution(const theta::plugin::Configuration & cfg);
 
     //@{
     /// See Distribution for details
-    virtual void sample(theta::ParValues & result, Random & rnd) const;
+    virtual void sample(theta::ParValues & result, theta::Random & rnd) const;
     virtual void mode(theta::ParValues & result) const;
     virtual double evalNL(const theta::ParValues & values) const;
     virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
@@ -222,9 +333,85 @@ public:
     //@}
 
 private:
-    boost::ptr_vector<Distribution> distributions;
-    std::map<ParId, size_t> parid_to_index;
+    void add_distributions(const theta::plugin::Configuration & cfg, const theta::SettingWrapper & s, int depth);
+    
+    boost::ptr_vector<theta::Distribution> distributions;
+    std::map<theta::ParId, size_t> parid_to_index;
 };
 
+/** \brief A data source using a model
+ *
+ * Configured via a setting group like
+ * \code
+ * {
+ *   type = "model_source";
+ *   model = "@some-model-path";
+ *   override-parameter-distribution = "@some-dist"; // optional
+ *   save-nll = "distribution-from-override"; //optional, default is ""
+ * };
+ * \endcode
+ *
+ * \c type must be "model_source" to select this DataSource type
+ *
+ * \c model specifies the model to use for data creation
+ *
+ * \c override-parameter-distribution is an optional setting overriding the default behavior for parameter values, see below. It
+ *     has to provide (at least) all the model parameters.
+ *
+ * \c save-nll is a string with allowed values "" (empty string), "distribution-from-override" and "distribution-from-model".
+ *     Ifnot the empty string (""), the negative-log-likelihood of the sampled pseudo data will be saved to the event
+ *     table for each call to fill() by constructing and evaluating the appropriate NLLikelihood.
+ *
+ * For each call of fill
+ * <ol>
+ *   <li>parameter values are sampled from the parameter distribution. If the setting \c override-parameter-distribution
+ *       is given, it will be used for this step. Otherwise, the parameter distribution specified in the model will be used.</li>
+ *   <li>the parameter values from the previous step are used in a call to call Model::samplePseudoData </li>
+ *   <li>if \c save-nll is not the empty string (""), the likelihood function is built for the Data sampled
+ *      in the previous step and evaluated at the parameters used sampled in step 1. As parameter distribution in the
+ *      NLLikelihood instance, either the distribution from the model (if save-nll = "distribution-from-model") or the
+ *      distribution specified in "override-parameter-distribution" (if save-nll = "distribution-from-override") is used.</li>
+ * </ol>
+ *
+ * If \c save-nll is "distribution-from-override", \c override-parameter-distribution must be set.
+ *
+ * It is guaranteed that the method Distribution::sample is called exactly once per call to model_source::fill.
+ * This can be used to specify a Distribution in the "override-parameter-distribution" setting which scans
+ * some parameters (and only dices some others).
+ * 
+ * model_source will create a column in the event table for each model parameter and save the values used to sample the pseudo
+ * data there. If save-nll is non-empty, a column "nll" will be created where the values will be saved.
+ */
+class model_source: public theta::DataSource{
+public:
+
+    /// Construct from a Configuration; required by the plugin system
+    model_source(const theta::plugin::Configuration & cfg);
+
+    /** \brief Fills the provided Data instance with data from the model
+     *
+     * Will only throw the DataUnavailable Exception if the parameter distribution instance
+     * (i.e., either the model's instance or the override-parameter-distribution instance) throws an Exception.
+     */
+    virtual void fill(theta::Data & dat, theta::Run & run);
+    
+    virtual void define_table();
+
+private:
+    enum e_save_nll{ nosave, distribution_from_model, distribution_from_override };
+
+    e_save_nll save_nll;
+    
+    theta::EventTable::column c_nll;
+    
+    theta::ParIds par_ids;
+    std::vector<std::string> parameter_names;
+    std::vector<theta::EventTable::column> parameter_columns;
+    
+    std::auto_ptr<theta::Model> model;
+    std::auto_ptr<theta::Distribution> override_parameter_distribution;
+
+};
 
 #endif
+

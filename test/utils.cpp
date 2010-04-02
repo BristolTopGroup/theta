@@ -3,10 +3,13 @@
 #include "interface/plugin.hpp"
 
 #include <string>
+#include <iostream>
 #include <boost/test/unit_test.hpp>
 
 using namespace theta;
 using namespace theta::plugin;
+
+using namespace std;
 
 
 ConfigCreator::ConfigCreator(const std::string & cfg_string, const boost::shared_ptr<theta::VarIdManager> & vm):
@@ -14,7 +17,12 @@ ConfigCreator::ConfigCreator(const std::string & cfg_string, const boost::shared
 }
 
 int ConfigCreator::setup_config(const std::string & cfg_string){
-    config.readString(cfg_string);
+    try{
+        config.readString(cfg_string);
+    }
+    catch(libconfig::ParseException & ex){
+        cerr << "ConfigCreator: parse Exception: " << ex.getError() << " on line " << ex.getLine() << endl;
+    }
     return 0;
 }
 

@@ -75,15 +75,19 @@ namespace theta{
 
         /** \brief Attempt to minimize the function.
          *
-         * The function f is attempted to be minimized, with information about the parameters
-         * in the Distribution d which must contain at least the parameters of f.
+         * The function f is attempted to be minimized, with specified start values, step sizes and
+         * ranges.
          *
          * If a serious error occurs during minimization and the minimization fails,
          * a MinimizationException is thrown. The reasons for such a failure are manifold
          * and also depend on the particular minimization algorithm and should be documented
          * in derived classes.
+         * 
+         * If either step is 0.0 or the range contains only one value, the parameter should be
+         * considered as fixed.
          */
-        virtual MinimizationResult minimize(const theta::Function & f, const theta::Distribution & d) = 0;
+        virtual MinimizationResult minimize(const theta::Function & f, const theta::ParValues & start,
+                const theta::ParValues & step, const std::map<theta::ParId, std::pair<double, double> > & ranges) = 0;
 
     protected:
         /// Pointer to the relevant VarIdManager instance. Used to control parameter limits

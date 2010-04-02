@@ -41,7 +41,6 @@ namespace theta{
     class Function;
     class Model;
     class DataSource;
-    class ParameterSource;
     class NLLikelihood;
     class ModelFactory;    
 }

@@ -11,6 +11,6 @@ ConfigurationException::ConfigurationException(const std::string & msg): Excepti
 NotFoundException::NotFoundException(const std::string & msg): Exception(msg){}
 MathException::MathException(const std::string & m): Exception(m){}
 
-FatalException::FatalException(const Exception & ex_):ex(ex_){
-    std::cerr << "Fatal error: " << ex.message << std::endl;
+FatalException::FatalException(const Exception & ex){
+    std::cerr << "Fatal error: " << ex.what() << std::endl;
 }

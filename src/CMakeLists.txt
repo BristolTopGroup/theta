@@ -1,10 +1,10 @@
-file(GLOB libtheta_sources *.cpp)
-add_library(libtheta SHARED ${libtheta_sources})
 
-if(crmlib_path)
-   add_library(crlibm STATIC IMPORTED)
-   set_property(TARGET crlibm PROPERTY IMPORTED_LOCATION ${crmlib_path})
-   target_link_libraries(libtheta crlibm)
+file(GLOB libtheta_sources *.cpp)
+
+if(crlibm)
+   add_library(libtheta SHARED ${libtheta_sources} ../crlibm/log.c)
+else()
+   add_library(libtheta SHARED ${libtheta_sources})
 endif()
 
 target_link_libraries(libtheta m dl config sqlite3 ${Boost_LIBRARIES})

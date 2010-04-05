@@ -8,7 +8,10 @@
 #include <iostream>
 
 #include <boost/math/special_functions/gamma.hpp>
-#include "/home/jochen/prefix/include/crlibm.h"
+
+#ifdef USE_CRLIBM
+#include "crlibm/crlibm.h"
+#endif
 
 namespace theta { namespace utils{
 
@@ -31,8 +34,11 @@ inline double lngamma(double x){
  * use this log function.
  */
 inline double log(double x){
-    //return ::log(x);
+#ifdef USE_CRLIBM
     return log_rn(x);
+#else
+    return ::log(x);
+#endif
 }
 
 /** \brief Equality check for floating point numbers using relative comparison

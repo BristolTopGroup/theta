@@ -29,7 +29,7 @@ void Run::set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
 
 void Run::run(){
     //record all producers in prodinfo_table and setup the tables of the producers:
-    event_table.reset(new EventTable("events", db));
+    event_table.reset(new EventTable("products", db));
     data_source->set_table(event_table);
     data_source->define_table();
     for(size_t i=0; i<producers.size(); i++){

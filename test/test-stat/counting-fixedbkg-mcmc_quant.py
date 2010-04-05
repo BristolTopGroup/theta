@@ -48,7 +48,7 @@ for mu in (2000.0, 3.0):
         execute_checked("sed -i \"s/__THETA_WIDTH__/%s/g\" counting-fixedbkg.cfg" % (Theta * 0.1))
         execute_checked("sed -i \"s/__MU__/%s/g\" counting-fixedbkg.cfg" % mu)
         exec_theta("counting-fixedbkg-mcmc_quant.cfg")
-        rows = sql("counting-fixedbkg-mcmc.db", "select writer__n_events_o, mcmc__quant05000, mcmc__quant01600, mcmc__quant08400, mcmc__quant09500 from events")
+        rows = sql("counting-fixedbkg-mcmc.db", "select writer__n_events_o, mcmc__quant05000, mcmc__quant01600, mcmc__quant08400, mcmc__quant09500 from products")
         events_low=0
         events_hi=0
         events_low_old=0

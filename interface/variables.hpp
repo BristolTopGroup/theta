@@ -376,6 +376,9 @@ namespace theta {
         ParIds getAllParIds() const;
 
     private:
+        //Make private an do not implement, because usually, one should not replace
+        // the values already set and should use "set(ParValues)" instead ...
+        const ParValues & operator=(const ParValues &);
         //values are stored using the VarId.id as index
         std::vector<double> values;
     };

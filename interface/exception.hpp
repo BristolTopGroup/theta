@@ -3,6 +3,8 @@
 
 #include <string>
 #include <sstream>
+#include <typeinfo>
+
 
 namespace theta {
 
@@ -20,15 +22,15 @@ public:
     virtual ~Exception() throw(){}
     
     /// override std::exception::what to print out the message
-    virtual const char* what()throw(){
+    virtual const char* what() const throw(){
          std::stringstream ss;
-         ss << std::exception::what() << ": " << message;
+         ss << typeid(*this).name() << ": " << message;
          whatstring = ss.str();
          return whatstring.c_str();
     }
 protected:
     /// buffer for the const char * returned by what()
-    std::string whatstring;
+    mutable std::string whatstring;
 };
 
 /** \brief Thrown in case of a request for a non-existing member in a conatiner-like structure is made. 
@@ -92,19 +94,17 @@ public:
  * An exception of this kind should usually not be caught: it indicates a serious error
  * which prevents further execution.
  * 
- * It is used as a wrapper around theta::Exception. This way, any exception type can be made
- * fatal.
- * 
  * In order to prevent catching FatalException in a catch(Exception &) statement, FatalException is not part
  * of the usual exception hierarchy of theta.
  */
 class FatalException{
 public:
-        
-    explicit FatalException(const Exception & ex_);
-    
-private:
-    const Exception & ex;
+       
+    /** \brief Construct from a "usual" Exception
+     * 
+     * The error message displayed will be taken from ex. 
+     */
+    explicit FatalException(const Exception & ex);
 };
 
 }

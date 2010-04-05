@@ -3,19 +3,25 @@ project(theta)
 set(CMAKE_VERBOSE_MAKEFILE, 1)
 
 option(coverage "build for coverage tests" OFF)
-option(crmlib_path "path of (static) crmlib" OFF)
+option(release "build release version" ON)
+option(crlibm "use the log function from crlibm" ON)
 
 if(coverage)
    message(STATUS "building for coverage test")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -O0")
 else()
-  message(STATUS "building release version (+debug symbols)")
-  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+  if(release)
+     set(CMAKE_BUILD_TYPE RelWithDebInfo)
+     message(STATUS "building release version")
+  else()
+     message(STATUS "building release version +debug")
+     set(CMAKE_BUILD_TYPE RelWithDebInfo)
+   endif()
 endif()
 
-if(crmlib_path)
-   message(STATUS "using crmlib ${crmlib_path}")
-   
+if(crlibm)
+   message(STATUS "using log from crlibm")
+   add_definitions(-DUSE_CRLIBM)
 endif()
 
 
@@ -38,5 +44,3 @@ add_subdirectory(libconfig)
 add_subdirectory(bin)
 add_subdirectory(root)
 add_subdirectory(test)
-#add_subdirectory(test/test-stat)
-

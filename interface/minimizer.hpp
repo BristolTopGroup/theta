@@ -57,6 +57,15 @@ namespace theta{
          * minimization does not provide errors.
          */
         Matrix covariance;
+        
+        /// Define explicitely as ParValues::operator= is private
+        void operator=(const MinimizationResult& rhs){
+            fval = rhs.fval;
+            values.set(rhs.values);
+            errors_plus.set(rhs.errors_plus);
+            errors_minus.set(rhs.errors_minus);
+            covariance = rhs.covariance;
+        }
     };
 
 

@@ -12,14 +12,14 @@ for mu in (2000.0, 3.0):
         # n > mu,  but  \hat\Theta != n - \mu   or
         # n <= mu, but \hat\Theta != 0
         #where != means that the difference is larger than the tolerance Theta * 10^{-4}
-        query = "select count(*) from events where (writer__n_events_o > %(mu)g and abs(%(mu)g + mle__Theta - writer__n_events_o) > %(tol)g) or "\
+        query = "select count(*) from products where (writer__n_events_o > %(mu)g and abs(%(mu)g + mle__Theta - writer__n_events_o) > %(tol)g) or "\
                    "(writer__n_events_o <= %(mu)g and abs(mle__Theta) > %(tol)g)" % {'mu': mu, 'tol': (mu + Theta)/10000} 
         rows = sql("counting-fixedbkg-mle.db", query)
         num_fail = rows[0][0]
         if num_fail > 0: fail("maximum likelihood estimate off too much in %d cases (SQL: %s)" % (num_fail, query))
         else: passed("Theta = %f; mu = %f" % (Theta, mu))
         if Theta > 5000:
-            rows = sql("counting-fixedbkg-mle.db", "select count(*) from events where abs(mle__Theta_error * mle__Theta_error - mle__Theta - %(mu)g) > %(tol)g" % {'mu': mu, 'tol': (mu + Theta)*1.0e-4})
+            rows = sql("counting-fixedbkg-mle.db", "select count(*) from products where abs(mle__Theta_error * mle__Theta_error - mle__Theta - %(mu)g) > %(tol)g" % {'mu': mu, 'tol': (mu + Theta)*1.0e-4})
             num_fail = rows[0][0]
             if num_fail > 0: fail("asymptotic error estimate in mle off too much in %d cases" % num_fail)
             else: passed("Theta = %f asymptotic error" % Theta)

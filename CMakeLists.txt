@@ -3,11 +3,21 @@ project(theta)
 set(CMAKE_VERBOSE_MAKEFILE, 1)
 
 option(coverage "build for coverage tests" OFF)
+option(crmlib_path "path of (static) crmlib" OFF)
 
 if(coverage)
    message(STATUS "building for coverage test")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -O0")
-endif(coverage)
+else()
+  message(STATUS "building release version (+debug symbols)")
+  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+endif()
+
+if(crmlib_path)
+   message(STATUS "using crmlib ${crmlib_path}")
+   
+endif()
+
 
 find_package(Boost COMPONENTS regex program_options filesystem)
 

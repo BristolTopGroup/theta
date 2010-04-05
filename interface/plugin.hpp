@@ -254,13 +254,13 @@ namespace theta {
                     ex.message = ss.str();
                     throw;
                 }
-                catch(libconfig::SettingException & ex){
+                /*catch(libconfig::SettingException & ex){
                     std::stringstream ss;
                     ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
                         << "', type='" << type << "' error while building from plugin in path " << ex.getPath();
                     //ex.message = ss.str();
                     throw ConfigurationException(ss.str());
-                }
+                }*/
             }
             std::stringstream ss;
             ss << "PluginManager::build<" << typeid(product_type).name() << ">, configuration path '" << ctx.setting.getPath()

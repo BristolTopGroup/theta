@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
             throw ConfigurationException(s.str());
         } catch (ParseException & p) {
             stringstream s;
-            s << "Error parsing the given configuration file: " << p.getError() << " in line " << p.getLine();
+            s << "Error parsing configuration file: " << p.getError() << " in line " << p.getLine();
             throw ConfigurationException(s.str());
         }
         SettingWrapper root(cfg.getRoot(), cfg.getRoot(), rec);
@@ -150,14 +150,14 @@ int main(int argc, char** argv) {
             run->set_progress_listener(l);
         }
         
-        ofstream test_out("test-out.cfg");
+        /*ofstream test_out("test-out.cfg");
         test_out << "parameters = " << root["parameters"].value_to_string() << ";" << endl;
         test_out << "observables = " << root["observables"].value_to_string() << ";" << endl;
         test_out << "main = " << run->get_setting() << ";" << endl;
         if(root.exists("plugins")){
             test_out << "plugins = " << root["plugins"].value_to_string() << ";" << endl;
         }
-        test_out.close();        
+        test_out.close();*/
         
     }
     catch (SettingNotFoundException & ex) {

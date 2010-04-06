@@ -92,7 +92,7 @@ void Run::addProducer(std::auto_ptr<Producer> & p){
     producers.push_back(p);
 }
 
-Run::Run(const plugin::Configuration & cfg): PluginType(cfg), rnd(new RandomSourceTaus()),
+Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
   vm(cfg.vm), db(new Database(cfg.setting["result-file"])),  logtable(new LogTable("log", db)),
   log_report(true), prodinfo_table("prodinfo", db), rndinfo_table("rndinfo", db),
       runid(1), eventid(0), n_event(cfg.setting["n-events"]){

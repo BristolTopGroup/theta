@@ -137,7 +137,7 @@ public:
  *
  *  For more information about these tables, refer to the documentation of the corresponding Table classes.
  */
-class Run {
+class Run: public theta::plugin::PluginType {
 public:
 
    /** \brief Register progress listener.

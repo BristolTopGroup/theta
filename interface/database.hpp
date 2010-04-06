@@ -124,8 +124,8 @@ protected:
     /// constructor setting the table name.
     Table(const std::string & name, const boost::shared_ptr<Database> & db);
 
-    /// default destructor declared virtual, as polymorphic access to derived classes might occur
-    virtual ~Table() {}
+    /// destructor; creates the table if empty
+    virtual ~Table();
     
     /** \brief Add a column to the table
      *

@@ -176,6 +176,12 @@ void Table::create_table(){
     table_created = true;
 }
 
+//create the table if it is empty to ensure that all tables have been created
+// even if there are no entries
+Table::~Table(){
+    if(not table_created) create_table();
+}
+
 
 void Table::set_column(const Table::column & c, double d){
     if(not table_created) create_table();

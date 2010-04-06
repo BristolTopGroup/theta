@@ -12,7 +12,7 @@
 /** \brief Minimizer using the MINUIT minimizer from root
  *
  * Configuration with a setting like:
- * <pre>
+ * \code
  * {
  *  type = "root_minuit";
  *
@@ -20,7 +20,7 @@
  *  method = "simplex"; //optional. Default is "migrad"
  *  tolerance = 0.001; //optional. Default as in ROOT::Minuit2
  * }
- * </pre>
+ * \endcode
  *
  * \c printlevel is the verbosity level of the minimizer. The default of 0 does not print anything.
  *  Increase this value in case you are debugging a problem and suspect that it has to do with the minimization.

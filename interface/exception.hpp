@@ -105,6 +105,9 @@ public:
      * The error message displayed will be taken from ex. 
      */
     explicit FatalException(const Exception & ex);
+    
+    /// Construct directly from an error message
+    explicit FatalException(const std::string & message);
 };
 
 }

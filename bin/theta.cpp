@@ -11,6 +11,8 @@
 
 #include <termios.h>
 
+#include <fstream>
+
 using namespace std;
 using namespace theta;
 using namespace theta::utils;
@@ -132,6 +134,7 @@ int main(int argc, char** argv) {
             throw ConfigurationException(s.str());
         }
         SettingWrapper root(cfg.getRoot(), cfg.getRoot(), rec);
+        
         Configuration config(vm, root);
         
         //load plugins:
@@ -146,6 +149,16 @@ int main(int argc, char** argv) {
             boost::shared_ptr<ProgressListener> l(new MyProgressListener());
             run->set_progress_listener(l);
         }
+        
+        ofstream test_out("test-out.cfg");
+        test_out << "parameters = " << root["parameters"].value_to_string() << ";" << endl;
+        test_out << "observables = " << root["observables"].value_to_string() << ";" << endl;
+        test_out << "main = " << run->get_setting() << ";" << endl;
+        if(root.exists("plugins")){
+            test_out << "plugins = " << root["plugins"].value_to_string() << ";" << endl;
+        }
+        test_out.close();        
+        
     }
     catch (SettingNotFoundException & ex) {
         cerr << "Error: the required configuration parameter at " << ex.getPath() << " was not found." << endl;

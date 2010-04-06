@@ -34,7 +34,7 @@ void Run::run(){
     data_source->define_table();
     for(size_t i=0; i<producers.size(); i++){
         prodinfo_table.append(static_cast<int>(i), producers[i].get_name(), producers[i].get_type(),
-                              producers[i].get_information());
+                              producers[i].get_setting());
         producers[i].set_table(event_table);
         producers[i].define_table();
     }
@@ -92,54 +92,53 @@ void Run::addProducer(std::auto_ptr<Producer> & p){
     producers.push_back(p);
 }
 
-Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()), vm(cfg.vm), db(new Database(cfg.setting["result-file"])),
-      logtable(new LogTable("log", db)), log_report(true), prodinfo_table("prodinfo", db), rndinfo_table("rndinfo", db),
+Run::Run(const plugin::Configuration & cfg): PluginType(cfg), rnd(new RandomSourceTaus()),
+  vm(cfg.vm), db(new Database(cfg.setting["result-file"])),  logtable(new LogTable("log", db)),
+  log_report(true), prodinfo_table("prodinfo", db), rndinfo_table("rndinfo", db),
       runid(1), eventid(0), n_event(cfg.setting["n-events"]){
-      SettingWrapper s = cfg.setting;
-      if(s.exists("run-id")) runid = s["run-id"];
-      int i_seed = -1;
-      if(s.exists("seed")) i_seed = s["seed"];
-      if(i_seed==-1){
-          using namespace boost::posix_time;
-          using namespace boost::gregorian;
-          ptime t(microsec_clock::universal_time());
-          time_duration td = t - ptime(date(1970, 1, 1));
-          i_seed = td.total_microseconds();
-      }
-      seed = i_seed;
-      rnd.set_seed(seed);
-      m_producers = ModelFactory::buildModel(plugin::Configuration(cfg, s["model"]));
-      data_source = plugin::PluginManager<DataSource>::build(plugin::Configuration(cfg, s["data-source"]));
-      
-      //params_table.reset(new ParamTable("params", db, *vm, m_pseudodata.getParameters()));
-      LogTable::e_severity level = LogTable::warning;
-      if(s.exists("log-level")){
-         std::string loglevel = s["log-level"];
-         if(loglevel=="error") level = LogTable::error;
-         else if(loglevel=="warning") level = LogTable::warning;
-         else if(loglevel=="info")level = LogTable::info;
-         else if(loglevel=="debug")level = LogTable::debug;
-         else{
-             std::stringstream ss;
-             ss << "log level given in " << s["log-level"].getPath() << " unknown (given '" << loglevel << "'; only allowed values are "
-                << "'error', 'warning', 'info' and 'debug')";
-            throw ConfigurationException(ss.str());
-         }
-      }
-      logtable->set_loglevel(level);
-      if(s.exists("log-report")){
-          log_report = s["log-report"];
-      }
-      eventid = 0;
-      //add the producers:
-      size_t n_p = s["producers"].size();
-      if (n_p == 0)
-         throw ConfigurationException("no producers in run specified!");
-      for (size_t i = 0; i < n_p; i++) {
-        SettingWrapper producer_setting = s["producers"][i];
-        std::auto_ptr<Producer> p = plugin::PluginManager<Producer>::build(plugin::Configuration(cfg, producer_setting));
-        addProducer(p);
-        //should transfer ownership:
-        assert(p.get()==0);
-      }
+    SettingWrapper s = cfg.setting;
+    if(s.exists("run-id")) runid = s["run-id"];
+    int i_seed = -1;
+    if(s.exists("seed")) i_seed = s["seed"];
+    if(i_seed==-1){
+        using namespace boost::posix_time;
+        using namespace boost::gregorian;
+        ptime t(microsec_clock::universal_time());
+        time_duration td = t - ptime(date(1970, 1, 1));
+        i_seed = td.total_microseconds();
     }
+    seed = i_seed;
+    rnd.set_seed(seed);
+    m_producers = ModelFactory::buildModel(plugin::Configuration(cfg, s["model"]));
+    data_source = plugin::PluginManager<DataSource>::build(plugin::Configuration(cfg, s["data-source"]));
+    LogTable::e_severity level = LogTable::warning;
+    if(s.exists("log-level")){
+        std::string loglevel = s["log-level"];
+        if(loglevel=="error") level = LogTable::error;
+        else if(loglevel=="warning") level = LogTable::warning;
+        else if(loglevel=="info")level = LogTable::info;
+        else if(loglevel=="debug")level = LogTable::debug;
+        else{
+            std::stringstream ss;
+            ss << "log level given in " << s["log-level"].getPath() << " unknown (given '" << loglevel << 
+                  "'; only allowed values are 'error', 'warning', 'info' and 'debug')";
+            throw ConfigurationException(ss.str());
+        }
+    }
+    logtable->set_loglevel(level);
+    if(s.exists("log-report")){
+        log_report = s["log-report"];
+    }
+    eventid = 0;
+    //add the producers:
+    size_t n_p = s["producers"].size();
+    if (n_p == 0)
+        throw ConfigurationException("no producers in run specified!");
+    for (size_t i = 0; i < n_p; i++) {
+    SettingWrapper producer_setting = s["producers"][i];
+    std::auto_ptr<Producer> p = plugin::PluginManager<Producer>::build(plugin::Configuration(cfg, producer_setting));
+    addProducer(p);
+    //should transfer ownership:
+    assert(p.get()==0);
+    }
+}

@@ -10,6 +10,15 @@ using namespace theta::plugin;
 
 
 PluginType::PluginType(const Configuration & c): name(c.setting.getName()), type(c.setting["type"]){
+    setting = c.setting.value_to_string();
+    if(c.setting.exists("name")){
+        name = static_cast<std::string>(c.setting["name"]);
+    }
+    else{
+        /*setting = "name = \"";
+        setting += name + "\";\n";*/
+        setting.insert(setting.size()-1, "name = \"" + name + "\";");
+    }
 }
 
 

@@ -29,8 +29,8 @@ namespace theta {
 
             /** \brief Returns the name of the instance, as given in the configuration file
              *
-             * The name of the configuration setting group used to construct this instance will be
-             * saved and returned here.
+             * If a "name" setting exists, it will be used as name. Otherwise,
+             * the name of the configuration setting group is used.
              */
             std::string get_name() const{
                 return name;
@@ -43,18 +43,13 @@ namespace theta {
                 return type;
             }
             
-            /** \brief Additional information to add to the info field of a ProducerInfoTable
+            /** \brief Return the setting group required to reconstruct this object
              *
-             * The value returned by this method will be written to the \link ProducerInfoTable
-             * ProducerInfoTable \endlink of the current \link Run Run \endlink.
-             *
-             * Subclasses can override this and define their own semantics for it. Typically, it contains
-             * some information about a setting.
-             *
-             * The default implementation is to return the empty string.
+             * The default implementation returns the setting group given in the constructor
+             * in c.setting where the "name" setting is always set to the name.
              */
-            virtual std::string get_information() const {
-                return "";
+            std::string get_setting() const{
+                return setting;
             }
              
         protected:
@@ -68,6 +63,13 @@ namespace theta {
              * a Configuration instance), this default constructor is provided for derived classes.
              */
             PluginType(){}
+            
+            /** \brief The setting returned by get_setting
+             *
+             * Should be set up in the constructor of derived classes which wish to change
+             * the default behaviour.
+             */
+            std::string setting;
 
         private:
             std::string name;
@@ -106,12 +108,12 @@ namespace theta {
         };
 
         /** \brief A container class which is used to construct conrete types managed by the plugin system
-        *
-        * An instance of this class is passed to the constructor of classes managed by the plugin system.
-        * It contains the required information for plugins to construct an instance of the plugin class,
-        * the most important being \c setting, which is the setting group from the configuration file
-        * for which this plugin class should be created.
-        */
+         *
+         * An instance of this class is passed to the constructor of classes managed by the plugin system.
+         * It contains the required information for plugins to construct an instance of the plugin class,
+         * the most important being \c setting, which is the setting group from the configuration file
+         * for which this plugin class should be created.
+         */
         class Configuration{
         public:
             /// Information about all currently known parameters and observables
@@ -120,18 +122,18 @@ namespace theta {
             /// The setting in the configuration file from which to build the instance
             SettingWrapper setting;
             
-        public:
             /** \brief Construct Configuration by specifying all data members
-            */
-            Configuration(const boost::shared_ptr<VarIdManager> & vm_, const SettingWrapper setting_): vm(vm_),
+             */
+            Configuration(const boost::shared_ptr<VarIdManager> & vm_, const SettingWrapper & setting_): vm(vm_),
                 setting(setting_){}
 
             /** \brief Copy elements from another Configuration, but replace Configuration::setting
-            *
-            * Copy all from \c cfg but \c cfg.setting which is replaced by \c setting_.
-            */
-            Configuration(const Configuration & cfg, const SettingWrapper setting_): vm(cfg.vm),
+             *
+             * Copy all from \c cfg but \c cfg.setting which is replaced by \c setting_.
+             */
+            Configuration(const Configuration & cfg, const SettingWrapper & setting_): vm(cfg.vm),
                 setting(setting_){}
+
         };        
         
         
@@ -254,13 +256,6 @@ namespace theta {
                     ex.message = ss.str();
                     throw;
                 }
-                /*catch(libconfig::SettingException & ex){
-                    std::stringstream ss;
-                    ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
-                        << "', type='" << type << "' error while building from plugin in path " << ex.getPath();
-                    //ex.message = ss.str();
-                    throw ConfigurationException(ss.str());
-                }*/
             }
             std::stringstream ss;
             ss << "PluginManager::build<" << typeid(product_type).name() << ">, configuration path '" << ctx.setting.getPath()

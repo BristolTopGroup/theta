@@ -10,7 +10,6 @@
 
 #include "interface/variables.hpp"
 #include "interface/database.hpp"
-#include "interface/plugin_so_interface.hpp"
 #include "interface/run.hpp"
 #include "interface/histogram.hpp"
 
@@ -177,6 +176,12 @@ void Table::create_table(){
     table_created = true;
 }
 
+//create the table if it is empty to ensure that all tables have been created
+// even if there are no entries
+Table::~Table(){
+    if(not table_created) create_table();
+}
+
 
 void Table::set_column(const Table::column & c, double d){
     if(not table_created) create_table();
@@ -209,18 +214,18 @@ void Table::add_row(){
 }
 
 /* ProducerTable */
-ProducerTable::ProducerTable(const std::string & name, const boost::shared_ptr<Database> & db): Table(name, db){
+EventTable::EventTable(const std::string & name, const boost::shared_ptr<Database> & db): Table(name, db){
     c_runid = Table::add_column("runid", typeInt);
     c_eventid = Table::add_column("eventid", typeInt);
 }
 
-ProducerTable::column ProducerTable::add_column(const Producer & p, const std::string & name, const data_type & type){
+EventTable::column EventTable::add_column(const plugin::PluginType & p, const std::string & name, const data_type & type){
     std::stringstream new_name;
     new_name << p.get_name() << "__" << name;
     return Table::add_column(new_name.str(), type);
 }
 
-void ProducerTable::add_row(const Run & run){
+void EventTable::add_row(const Run & run){
     set_column(c_runid, run.get_runid());
     set_column(c_eventid, run.get_eventid());
     Table::add_row();

@@ -8,7 +8,6 @@
 #include "interface/random.hpp"
 #include "interface/producer.hpp"
 #include "interface/database.hpp"
-#include "interface/plugin_so_interface.hpp"
 #include "interface/cfg-utils.hpp"
 #include "interface/plugin.hpp"
 
@@ -75,7 +74,7 @@ public:
  * simplest subclass.
  *
  * The configuration is done via a setting like:
- * <pre>
+ * \code
  * {
  *   type = "..."; //depends on which subclass you want
  *   result-file = "result/abc.db";
@@ -92,7 +91,7 @@ public:
  *
  * hypotest = {...}; //some producer definition
  * hypotest2 = {...}; //some other producer definition
- * </pre>
+ * \endcode
  *
  * \c type must always be "plain" to create an instance of \c PlainRun.
  *
@@ -110,36 +109,36 @@ public:
  * \c run-id is an optional setting and specifies which run-id to write to the result table. This setting
  *    might be removed in future versions of this plugin, as it is not really needed at this point.
  *
- * \c seed is the random number generator seed. It is mainly useful for debugging (i.e., reproducing a bug might require
- *    choosing a particular seed). The default setting -1 will generate a different seed each time and should be used as default.
+ * \c seed is the random number generator seed. It is mainly useful for debugging (i.e.,
+ *    reproducing a bug might require
+ *    choosing a particular seed). The default setting -1 will generate a
+ *    different seed each time and should be used as default.
  *
  * \c log-level controls the amount of logging information written to the log table: only log messages with a
- *      severity level equal to or exceeding the level given here are actually logged. Valid values are "error", "warning", "info"
- *      and "debug". Note that it is not possible to disable logging of error messages.
+ *      severity level equal to or exceeding the level given here are actually logged. Valid values
+ *      are "error", "warning", "info" and "debug". Note that it is not possible to disable logging of error messages.
  *
  * \c log-report is a boolean specifying whether or not to print a logging report to standard output at
  *       the end of the run. This report summarizes how many messages there have been from any non-suppressed
- *       level. This allows for a quick check by the user whether everything went Ok or whether there have been obvious errors.
+ *       level. This allows for a quick check by the user whether everything went Ok or whether there
+ *       have been obvious errors.
  *  
  *  Handling of result tables is done in the individual producers. Only run-wide tables
  *  are managed here, that is
  *  <ul>
- *   <li>A \link LogTable LogTable \endlink called 'log', where all log entries of the run are stored.</li>
+ *   <li>A \link LogTable LogTable \endlink called 'log', where all log entries are stored.</li>
  *   <li>A \link ProducerInfoTable ProducerInfoTable \endlink called 'prodinfo', where the list of configured
- *        producers are stored.</li>
- *   <li>A \link RndInfoTable RndInfoTable \endlink called 'rndinfo', where the random number generator
- *        seed used for this run is stored.</li>
- *   <li>A \link ParamTable ParamTable \endlink called 'params', where for each event (=pseudo experiment),
- *       the actually used parameter values used to generate the pseudo data from the pseusodata model are saved.</li>
- *   <li>A \link ProducerTable ProducerTable \endlink called 'products' where the results from all the producers are stored.</li>
+ *        producers is stored.</li>
+ *   <li>A \link RunTable RunTable \endlink called 'runs', where the per-run information is stored from
+ *      the producers or other sources.</li>
+ *   <li>A \link EventTable EventTable \endlink called 'events' where the per-event results from all
+ *     the producers are stored and other per-event information.</li>
  *  </ul>
  *
- *  For more information about these tables, refer to the documentation of the of the corresponding Table classes.
+ *  For more information about these tables, refer to the documentation of the corresponding Table classes.
  */
-class Run {
+class Run{
 public:
-    /// Define us as the base_type for derived classes; required for the plugin system
-    typedef Run base_type;
 
    /** \brief Register progress listener.
     *
@@ -156,18 +155,12 @@ public:
      */
     void run();
 
-    /// declare destructor virtual as polymorphic access to derived classes is likely
-    virtual ~Run() {}
-
     //@{
     /** \brief Get information about the current Run state
      *
      * These methods are meant to be used by the producers which are passed
      * a reference to the current run each time.
      */
-    boost::shared_ptr<theta::Database> get_database(){
-        return db;
-    }
     
     Random & get_random(){
         return rnd;
@@ -181,57 +174,35 @@ public:
         return eventid;
     }
     //@}
-
-protected:
     
     /** \brief Construct a Run using the supplied configuration
-     *
      */
-    // protected, as Run is purley virtual.
     Run(const plugin::Configuration & cfg);
     
+private:
+      
     /** \brief Add a producer to the list of producers to run.
-    *
-    * Add \c p to the internal list of producers. Memory ownership will be transferred,
-    * i.e., p.get() will be 0 after this function returns.
-    * 
-    * It is only valid to call this function after creation, before any calls to the *run methods.
-    * If violating this, the behavior is undefined.
-    */
+     *
+     * Add \c p to the internal list of producers. Memory ownership will be transferred,
+     * i.e., p.get() will be 0 after this function returns.
+     * 
+     * It is only valid to call this function after creation, before any calls to the *run methods.
+     * If violating this, the behavior is undefined.
+     */
     void addProducer(std::auto_ptr<Producer> & p);
-    
-    /** \brief Actual run implementation
-    *
-    * This is the method to implement in subclasses of run. It is the method to implement
-    * for derived classes which does all the work.
-    *
-    * This method should contain a loop over \c n_event, which, for each event, does the following:
-    * <ol>
-    *  <li>set \c eventid to the correct value</li>
-    *  <li>call \c log_event_start </li>
-    *  <li>Get/create the (pseudo-)data</li>
-    *  <li>call each of the producers[j].produce routines, followed by a call to producer_table[j].add_row(*this)</li>
-    *  <li>call \c log_event_end </li>
-    * </ol>
-    * Additionally, the method should check the \c stop_execution variable regularly and exit as soon as possible if
-    * it is set. It should also indicate progress to the \c progress_listener from time to time, if it is set.
-    *
-    * Look at \link plain_run plain_run \endlink for a complete example.
-    */
-    virtual void run_impl() = 0;
-    
+        
     /** \brief Make an informational log entry to indicate the start of a pseudo experiment.
-    * 
-    * Should be called by derived classes before pseudo data generation.
-    */
+     * 
+     * Should be called by derived classes before pseudo data generation.
+     */
     void log_event_start() {
         logtable->append(*this, LogTable::info, "start");
     }
     
     /** \brief Make an informational log entry to indicate the end of a pseudo experiment.
-    * 
-    * Should be called by derived classes after all producers have been run.
-    */
+     * 
+     * Should be called by derived classes after all producers have been run.
+     */
     void log_event_end() {
         logtable->append(*this, LogTable::info, "end");
     }
@@ -241,13 +212,12 @@ protected:
     Random rnd;
     
     boost::shared_ptr<VarIdManager> vm;
+    
+    std::auto_ptr<Model> m_producers;
 
-    //pseudo data:
+    //(pseudo-) data:
     Data data;
-
-    //can refer to the same Model:
-    Model m_pseudodata;
-    Model m_producers;
+    std::auto_ptr<DataSource> data_source;
 
     //database and logtable as shared_ptr, as they are used by the producers:
     boost::shared_ptr<Database> db;
@@ -257,13 +227,11 @@ protected:
     //the tables only used by run (and only by run):
     theta::ProducerInfoTable prodinfo_table;
     theta::RndInfoTable rndinfo_table;
-    std::auto_ptr<ParamTable> params_table;
 
     //the producers to be run on the pseudo data:
     boost::ptr_vector<Producer> producers;
-    boost::shared_ptr<ProducerTable> producer_table;
+    boost::shared_ptr<EventTable> event_table;
 
-    
     //the runid, eventid and the total number of events to produce:
     int runid;
     int eventid;

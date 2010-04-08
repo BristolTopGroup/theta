@@ -451,7 +451,8 @@
  *   </li>
  * <li>\link theta::Function Function\endlink: used as coefficients of the components of an observable
  *         specification in a model. Currently, no core plugins are available.</li>
- * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood, profile likelihood methods:
+ * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood,
+ *        profile likelihood methods:
  *     <ul>
  *       <li>root_minuit using MINUIT via ROOT</li>
  *       <li>(not yet implemented) lbfgs using liblbfgs</li>

@@ -4,6 +4,7 @@
 #include "interface/run.hpp"
 #include "interface/minimizer.hpp"
 #include "interface/histogram.hpp"
+#include "interface/distribution.hpp"
 
 #include <sstream>
 
@@ -12,14 +13,14 @@ using namespace std;
 using namespace libconfig;
 
 void deltanll_intervals::define_table(){
-    c_maxl = table->add_column(*this, "maxl", ProducerTable::typeDouble);
+    c_maxl = table->add_column(*this, "maxl", EventTable::typeDouble);
     for(size_t i=0; i<clevels.size(); ++i){
         stringstream ss;
         ss << "lower" << setw(5) << setfill('0') << static_cast<int>(clevels[i] * 10000 + 0.5);
-        lower_columns.push_back(table->add_column(*this, ss.str(), ProducerTable::typeDouble));
+        lower_columns.push_back(table->add_column(*this, ss.str(), EventTable::typeDouble));
         ss.str("");
         ss << "upper" << setw(5) << setfill('0') << static_cast<int>(clevels[i] * 10000 + 0.5);
-        upper_columns.push_back(table->add_column(*this, ss.str(), ProducerTable::typeDouble));
+        upper_columns.push_back(table->add_column(*this, ss.str(), EventTable::typeDouble));
     }
 }
 
@@ -78,16 +79,23 @@ double secant(double x_low, double x_high, double x_accuracy, double f_x_low, do
 }
 
 
-void deltanll_intervals::produce(Run & run, const Data & data, const Model & model) {
-    NLLikelihood nll = model.getNLLikelihood(data);
-    MinimizationResult minres = minimizer->minimize(nll);
+void deltanll_intervals::produce(theta::Run & run, const theta::Data & data, const theta::Model & model) {
+    NLLikelihood nll = get_nllikelihood(data, model);
+    if(not start_step_ranges_init){
+        const Distribution & d = nll.get_parameter_distribution();
+        DistributionUtils::fillModeWidthSupport(start, step, ranges, d);
+        start_step_ranges_init = true;
+    }
+    
+    MinimizationResult minres = minimizer->minimize(nll, start, step, ranges);
     
     const double value_at_minimum = minres.values.get(pid);
     table->set_column(c_maxl, value_at_minimum);
-    const pair<double, double> & range = vm->get_range(pid);
     
-    ReducedNLL nll_r(nll, pid, minres.values, re_minimize ? minimizer.get() : 0);
     
+    ReducedNLL nll_r(nll, pid, minres.values, re_minimize ? minimizer.get() : 0, start, step, ranges);
+    
+    const pair<double, double> & range = ranges[pid];
     for(size_t i=0; i < deltanll_levels.size(); ++i){
         nll_r.set_offset_nll(minres.fval + deltanll_levels[i]);
         //upper value: look for a parameter value with a sign flip:
@@ -156,7 +164,8 @@ void deltanll_intervals::produce(Run & run, const Data & data, const Model & mod
     }
 }
 
-deltanll_intervals::deltanll_intervals(const theta::plugin::Configuration & cfg): Producer(cfg), vm(cfg.vm), re_minimize(true){
+deltanll_intervals::deltanll_intervals(const theta::plugin::Configuration & cfg): Producer(cfg),
+        re_minimize(true), start_step_ranges_init(false){
     SettingWrapper s = cfg.setting;
     minimizer = theta::plugin::PluginManager<Minimizer>::build(theta::plugin::Configuration(cfg, s["minimizer"]));
     string par_name = s["parameter"];

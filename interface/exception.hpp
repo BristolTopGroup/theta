@@ -3,6 +3,8 @@
 
 #include <string>
 #include <sstream>
+#include <typeinfo>
+
 
 namespace theta {
 
@@ -20,15 +22,15 @@ public:
     virtual ~Exception() throw(){}
     
     /// override std::exception::what to print out the message
-    virtual const char* what()throw(){
+    virtual const char* what() const throw(){
          std::stringstream ss;
-         ss << std::exception::what() << ": " << message;
+         ss << typeid(*this).name() << ": " << message;
          whatstring = ss.str();
          return whatstring.c_str();
     }
 protected:
     /// buffer for the const char * returned by what()
-    std::string whatstring;
+    mutable std::string whatstring;
 };
 
 /** \brief Thrown in case of a request for a non-existing member in a conatiner-like structure is made. 
@@ -85,6 +87,27 @@ class MinimizationException: public Exception{
 public:
     /// Constructor taking a message intended for the user which will be written to Exception::message
     MinimizationException(const std::string & s): Exception(s){}
+};
+
+/** \brief Exception class to indicate serious error
+ * 
+ * An exception of this kind should usually not be caught: it indicates a serious error
+ * which prevents further execution.
+ * 
+ * In order to prevent catching FatalException in a catch(Exception &) statement, FatalException is not part
+ * of the usual exception hierarchy of theta.
+ */
+class FatalException{
+public:
+       
+    /** \brief Construct from a "usual" Exception
+     * 
+     * The error message displayed will be taken from ex. 
+     */
+    explicit FatalException(const Exception & ex);
+    
+    /// Construct directly from an error message
+    explicit FatalException(const std::string & message);
 };
 
 }

@@ -1,7 +1,6 @@
 #ifndef THETA_ROOT_MINUIT_HPP
 #define THETA_ROOT_MINUIT_HPP
 
-#include "interface/plugin_so_interface.hpp"
 #include "interface/exception.hpp"
 #include "Minuit2/Minuit2Minimizer.h"
 #include "Math/IFunction.h"
@@ -13,7 +12,7 @@
 /** \brief Minimizer using the MINUIT minimizer from root
  *
  * Configuration with a setting like:
- * <pre>
+ * \code
  * {
  *  type = "root_minuit";
  *
@@ -21,7 +20,7 @@
  *  method = "simplex"; //optional. Default is "migrad"
  *  tolerance = 0.001; //optional. Default as in ROOT::Minuit2
  * }
- * </pre>
+ * \endcode
  *
  * \c printlevel is the verbosity level of the minimizer. The default of 0 does not print anything.
  *  Increase this value in case you are debugging a problem and suspect that it has to do with the minimization.
@@ -51,7 +50,8 @@ public:
      * If still an error is reported, a \ref theta::MinimizationException is thrown which contains the status
      * code returned by ROOT::Minuit2::Minuit2Minimizer::Status().
      */
-    virtual theta::MinimizationResult minimize(const theta::Function & f);
+    virtual theta::MinimizationResult minimize(const theta::Function & f, const theta::ParValues & start,
+            const theta::ParValues & step, const std::map<theta::ParId, std::pair<double, double> > & ranges);
 private:
     void set_printlevel(int p);
     
@@ -61,7 +61,6 @@ private:
     ROOT::Minuit2::EMinimizerType type;
     std::auto_ptr<ROOT::Minuit2::Minuit2Minimizer> min;
     double tolerance;
-    //theta::ParIds minos_parids;
 };
 
 #endif

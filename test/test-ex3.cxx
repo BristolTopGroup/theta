@@ -1,7 +1,6 @@
 //test exceptions during Factory::build
 
 #include "interface/phys.hpp"
-#include "interface/plugin_so_interface.hpp"
 #include "interface/plugin.hpp"
 
 #include <string>

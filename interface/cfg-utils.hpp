@@ -138,6 +138,23 @@ namespace theta{
             }
             //@}
             
+            /** \brief Returns the string representation of the setting value, suitable for parsing
+             *
+             * This returns the setting value, i.e., the right hand side of a "=" statement
+             * in a setting. Thus, in
+             * \code
+             *   val1 = 1.0;
+             *   val2 = "string2";
+             *   val3 = ("a", "b", "c");
+             *   val4 = {s1 = 2; s3 = 4;};
+             * \endcode
+             * only the right hand side of the "=" sign will be contained in the string. This
+             * includes opening and closing braces ("(", ")", "{", "}") but excludes semicolons at the end
+             * of a setting.
+             *
+             * Will resolve all links and substitute the contents.
+             */
+            std::string value_to_string(int indent=0) const;
             
            /** \brief Return a double, but allow the special strings "inf", "-inf" for infinity
             *
@@ -156,10 +173,13 @@ namespace theta{
             
             /** \brief Returns the name of the current setting within its parent setting
              *
-             * same as libconfig::Setting::getName
+             * same as libconfig::Setting::getName. In case the setting has no name,
+             * the special string "&lt;noname&gt;" is returned.
              */
             std::string getName() const{
-                return setting.getName();
+                const char * cname = setting.getName();
+                if(cname) return cname;
+                else return "<noname>";
             }
             
             /** \brief Returns the configuration file path of the current setting

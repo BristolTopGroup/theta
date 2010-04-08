@@ -2,7 +2,6 @@
 #define MATRIX_H
 
 #include <vector>
-#include <boost/serialization/vector.hpp>
 
 namespace theta {
 

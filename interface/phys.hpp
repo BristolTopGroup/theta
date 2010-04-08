@@ -3,13 +3,21 @@
 
 #include "interface/decls.hpp"
 #include "interface/variables.hpp"
+#include "interface/plugin.hpp"
+
+//fun C++ fact of the week: without this header, there is a memory leak ... do you see it?
+#include "interface/distribution.hpp" 
+
+#include "interface/histogram-function.hpp"
 
 #include <vector>
 #include <string>
 #include <limits>
 #include <set>
 #include <map>
+
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/ptr_container/ptr_map.hpp>
 
 namespace theta {
     
@@ -17,9 +25,9 @@ namespace theta {
      *
      * This is the base class for function plugins.
      */
-    class Function{
+    class Function: public theta::plugin::PluginType{
     public:
-        /// Define us as the base_type for derived classes; required for the plugin system
+        /// Define this as the base_type for derived classes; required for the plugin system
         typedef Function base_type;
         
         /** \brief Evaluate the function at the given parameter values.
@@ -45,9 +53,8 @@ namespace theta {
          */
         double operator()(const double * x) const{
             size_t i=0;
-            ParValues pv;
             for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it, ++i){
-                assert(!isnan(x[i]));
+                assert(!std::isnan(x[i]));
                 pv.set(*it, x[i]);
             }
             return operator()(pv);
@@ -76,28 +83,19 @@ namespace theta {
          * Has to be set correctly by derived classes
          */
         ParIds par_ids;
-    };
-    
-    /** \brief A function which multiplies all its parameters
-     *
-     * For example, defining a Function to depend on ParId p0 and ParId p1,
-     * operator(values) will always return values.get(p0)*values.get(p1).
-     */
-    class MultFunction: public Function{
-    public:
-        /** \brief Construct a MultFunction from the given list of parameters
-         */
-        MultFunction(const ParIds & v_ids);        
-
-        //@{
-        /** \brief Definitions of the pure virtual methods of Function
+        
+        /// Proxy to PluginType constructor expecting a Configuration instance
+        Function(const plugin::Configuration & cfg): PluginType(cfg){}
+        
+        /** \brief Default constructor to allow Function construction without Configuration
          *
-         * See documentation of Function for their meaning.
+         * This is useful for NLLikelihood, as this object is not constructued via the plugin system.
          */
-        virtual double operator()(const ParValues & v) const;
-        //@}
-    };
-    
+        Function(){}
+        
+    private:
+        mutable ParValues pv; //saving this class-wide and not in operator()(const double*) save quiet some time ...
+    };    
     
     /** \brief Contains data for one or more observables
      *  
@@ -116,24 +114,74 @@ namespace theta {
          */
         ObsIds getObservables() const;
 
-        /** \brief Add the data for an observables
+        /** \brief Access the histogram with an observable
          *
-         * The Histogram dat as observed data for variable obs_id to this container.
-         * The Histogram is copied.
-         *
-         * \param obs_id The observable the data was recorded for.
-         * \param dat The Histogram holding data information for that observable.
+         * The const version is usually only used to read a previously set
+         * Histogram. If no Histogram is saved for the supplied observable id,
+         * a NotFoundException will be thrown from the const version.
          */
-        void addData(const ObsId & obs_id, const Histogram & dat);
-
-        /** \brief returns the Histogram for the specified observable previously set by addData.
-         *
-         * If no Histogram was set for this obs_id, a NotFoundException is thrown.
-         */
-        const Histogram & getData(const ObsId & obs_id) const;
+        //@{
+        Histogram & operator[](const ObsId & id){
+            return data[id];
+        }
+        const Histogram & operator[](const ObsId & id) const{
+            std::map<ObsId, Histogram>::const_iterator it = data.find(id);
+            if(it==data.end()) throw NotFoundException("Data::operator[]() const: no data found for given ObsId");
+            return it->second;
+        }
+        //@}
 
     private:
         std::map<ObsId, Histogram> data;
+    };
+    
+    /** \brief A data-providing class, can be used as base class in the plugin system
+     *
+     * DataSource classes are used as part of a run, which, for each pseuso
+     * experiment, calls the DataSource::fill function to get the pseudo data.
+     */
+    class DataSource: public theta::plugin::PluginType, public theta::plugin::EventTableWriter{
+    public:
+        
+        /// Define this as the base_type for derived classes; required for the plugin system
+        typedef DataSource base_type;
+        
+        /** \brief Exception class to be thrown by fill
+         */
+        class DataUnavailable{};
+        
+        /** \brief Returns the observables this DataSource provides data for
+         *
+         * This stays the same over the lifetime of the instance.
+         *
+         * The return value is the same as \c obs_ids in
+         * \code
+         * Data data;
+         * this->fill(data);
+         * ParIds obs_ids = values.getObservables();
+         * \endcode 
+         */
+        ObsIds getObservables() const{
+            return obs_ids;
+        }
+        
+        /** \brief Fill the provided Data instance with data
+         *
+         * This method is called exactly once per event. It sets
+         * the histograms of the provided observables and lets everything else unaffected.
+         *
+         * It can throw a DataUnavailable exception if no more data is available and the
+         * run should end.
+         */
+        virtual void fill(Data & dat, Run & run) = 0;
+        
+        /// Declare destructor virtual as polymorphic access to derived classes will happen.
+        virtual ~DataSource(){}
+        
+    protected:
+        /// proxy to PluginType constructor for derived classes
+        DataSource(const theta::plugin::Configuration & cfg): theta::plugin::PluginType(cfg){}
+        ObsIds obs_ids;
     };
     
     /** \brief Provides a mapping from parameters to distributions for one or more observables
@@ -146,9 +194,6 @@ namespace theta {
         friend class NLLikelihood;
         friend class ModelFactory;
     public:
-       /** \brief Create a new Model with the VarIdManager \c vm.
-        */
-        Model(const boost::shared_ptr<VarIdManager> & vm);
         
         /** \brief Get all parameters the model prediction depends upon
          */
@@ -160,15 +205,9 @@ namespace theta {
         
         /** \brief Sample pseudo data for the prediction of this Model for model parameters values
          *
+         * The result will be filled in \c data.
          */
-        Data samplePseudoData(Random & rnd, const ParValues & values) const;
-        
-        /** \brief Sample values from the prior Distributions.
-         * 
-         * Parameters, for which no prior was specified are set to their default values. The returned
-         * \c ParValues object contains values for *all* parameters of this model.
-         */
-        ParValues sampleValues(Random & rnd) const;
+        void samplePseudoData(Data & data, Random & rnd, const ParValues & values) const;
 
         /** \brief Creates a likelihood function object for this model, given the data.
          *
@@ -185,28 +224,6 @@ namespace theta {
          * this Model's lifetime and the lifetime of data, exceed the lifetime of the returns NLLikelihood object.
          */
         NLLikelihood getNLLikelihood(const Data & data) const;
-
-        /* Creates a NLLikelihood function object for this Model, given Data data, but includes only the specified
-         *  observables obs_ids and parameters pars. obs_ids and pars must be subset of this model's parameters
-         *  and observables, respectively. obs_ids must also be subset of the data's observables.
-         *  If one of those conditions is not met, an InvalidArgumentException is thrown.
-         *
-         * Make sure that both, this Model's lifetime as well as the lifetime of data, exceed the lifetime of the returned NLLikelihood
-         * object.
-         *
-        NLLikelihood getNLLikelihood(const Data & data, const ParIds & pars, const ObsIds & obs_ids) const;
-        */
-
-        /** \brief Specify the prediction of an observable
-         *
-         * Set the prediction of observable \c obs_id to a linear combination of \c histos with \c coeffs as coefficients.
-         *  \c coeffs , \c histos and \c component_names must be of same length and non-empty, otherwise, an 
-         *   \c InvalidArgumentException is thrown.
-         *
-         * The objects in \c histos and \c coeffs will be transferred, not copied, i.e. histos.empty() and coeffs.empty() will hold
-         * after this function returns.
-         */
-        void set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs, boost::ptr_vector<HistogramFunction> & histos, const std::vector<std::string> & component_names);
 
         /** \brief Returns the prediction for the observable \c obs_id using the variable values \c parameters into \c result.
         *
@@ -239,67 +256,75 @@ namespace theta {
         */
         size_t getPredictionNComponents(const ObsId & obs_id) const;
 
-        /** \brief Adds the given Distribution to the list of priors.
+        /** \brief Returns a reference to the parameter distribution
          * 
-         * This Model takes the ownership of the memory pointed to by \c d, and \code d.get()==0 \endcode holds after this function returns.
-         * 
-         * Throws an InvalidArgumentException if by adding this prior, a parameter would have two priors.
+         * The returned Distribution contains (at least) the parameters of this Model.
          *
-         * \param d The Distribution to add.
-         */
-        void addPrior(std::auto_ptr<Distribution> & d);
-
-        /** \brief Returns a reference to the prior Distribution previously added with addPrior.
-         * 
          * The returned reference is only valid as long as this Model's lifetime.
-         * 
-         * \param i the index of the distribution; 0 \<= \c i \< getNPriors().
          */
-        const Distribution & getPrior(size_t i) const;
-
-        /** \brief Retuns the number of priors added with addPrior.
-         */
-        size_t getNPriors() const;
+        const Distribution & get_parameter_distribution() const{
+            return *parameter_distribution;
+        }
 
     private:
         boost::shared_ptr<VarIdManager> vm;
         ParIds parameters;
         ObsIds observables;
-        //the shared_ptr is required as the Data part of a std::map<Key, Data> needs to be copy-constructible.
-        //However, for ptr_vector to be copy-contructible, we need new_clone function to
-        // implement cloning for HistogramFunctions and Functions. As this
-        // requires more implementation work by plugin writers, let's do it a bit more complicated
-        // here to save them the work ...
-        //shared_ptr should be save, as it has the usual copy semantics (unlike auto_ptr).
-        std::map<ObsId, boost::shared_ptr<boost::ptr_vector<HistogramFunction> > > histos;
-        std::map<ObsId, boost::shared_ptr<boost::ptr_vector<Function> > > coeffs;
-        //in order to save rewrite, typedef the coeefs and histos map types ...
-        typedef std::map<ObsId, boost::shared_ptr<boost::ptr_vector<Function> > > coeffs_type;
-        typedef std::map<ObsId, boost::shared_ptr<boost::ptr_vector<HistogramFunction> > > histos_type;
-        std::map<ObsId, std::vector<std::string> > names;
 
-        std::vector<boost::shared_ptr<Distribution> > priors;
+        //The problem of std::map<ObsId, ptr_vector<Function> > is that
+        // this requires ptr_vector to be copy-constructible which in turn
+        // requires Function to have a new_clone function ...
+        //in order to save rewrite, typedef the coeffs and histos map types ...
+        typedef boost::ptr_map<ObsId, boost::ptr_vector<Function> > coeffs_type;
+        typedef boost::ptr_map<ObsId, boost::ptr_vector<HistogramFunction> > histos_type;
+        histos_type histos;
+        coeffs_type coeffs;
+
+        std::map<ObsId, std::vector<std::string> > names;
+        std::auto_ptr<Distribution> parameter_distribution;
+        
+        void set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs, boost::ptr_vector<HistogramFunction> & histos, const std::vector<std::string> & component_names);
+        Model(const boost::shared_ptr<VarIdManager> & vm);
     };
     
+    //delete_clone is required by the destructor of boost::ptr_vector.
+    //The default implementations does not seem to work on pure abstract
+    // classes, which is a real shame.
+    namespace{
+        inline void delete_clone(const HistogramFunction * r){
+            delete r;
+        }
+
+        inline void delete_clone(const Function * r){
+            delete r;
+        }
+    }
+
+
     /** \brief Factory class to build Models from a configuration settings group
      *
      * See the \ref model_def "Model definition" in the introduction for a more complete discussion of the
      * model specification.
      *
      * A simple example of a complete model specification would be
-     *\code
      *
+     * \code
      * mymodel = {
-     * o = { //asuming o was declared an observable
-     *    signal = { //component names can be chosen freely
-     *        coefficients = ("Theta"); // assuming Theta was declared as parameter
-     *        histogram = "@flat-unit-histo";
+     *    o = { //asuming o was declared an observable
+     *       signal = { //component names can be chosen freely
+     *          coefficients = ("Theta"); // assuming Theta was declared as parameter
+     *          histogram = "@flat-unit-histo";
+     *       };
+     *       background = {
+     *          coefficients = ("mu"); // assuming mu was declared as parameter
+     *          histogram = "@flat-unit-histo";
+     *       };
      *    };
-     *    background = {
-     *        coefficients = ("mu"); // assuming mu was declared as parameter
-     *        histogram = "@flat-unit-histo";
+     *
+     *    parameter-distribution = {
+     *        type = "product_distribution";
+     *        distributions = ("@d1", "@d2");
      *    };
-     * };
      * };
      *
      * //see fixed_poly documentation for details
@@ -309,15 +334,18 @@ namespace theta {
      *    normalize_to = 1.0;
      *    coefficients = [1.0];
      * };
-     *\endcode
+     *
+     * d1 = {...}; // some distribution
+     * d2 = {...}; // some other distribution
+     * \endcode
      *
      * The configuration group defining a model contains:
      * <ul>
-     *   <li>Excatly one settings group per observable to be modeled by this Model. It has to have the same name
+     *   <li>Exactly one settings group per observable to be modeled by this Model. It has to have the same name
      *      as the observable to be modeled and contains the observable specification.</li>
      *    <li>
-     *   <li>Zero or one "constraints" setting groups which defines (as setting groups) zero or
-     *      more \link Distribution Distributions \endlink used as model priors</li>
+     *   <li>A "parameter-distribution" setting group which defines the overall parameter distribution of
+     *       (at least) all model parameters.</li>
      * </ul>
      *
      * Each setting group representing an observable specification contains one or more component specifications.
@@ -330,7 +358,7 @@ namespace theta {
      */
     class ModelFactory{
     public:
-        /** \brief Build a Model from the Setting \c s.
+        /** \brief Build a Model from a Configuration
          * 
          * The returned Model will use the VarIdManager given in \c ctx.vm
          * 
@@ -344,7 +372,7 @@ namespace theta {
      * An instance cannot be constructed directly; use Model::getNLLikelihood instead.
      *
      * The underflow and overflow bin of the Histograms in the Model are <b>not</b> included in the
-     * likelihood. This behaviour is expected by most users, e.g., if you specify a Histogram to have only one
+     * likelihood. This behavior is expected by most users, e.g., if you specify a Histogram to have only one
      * bin, the likelihood function should perfectly behave like a counting experiment. If you want to include these
      * bins, add them by hand, i.e. make a histogram which is larger by two bins and set the entries
      * of the first and last bin accordingly.
@@ -363,24 +391,55 @@ namespace theta {
          */
         double operator()(const ParValues & values) const;
         
-        /** \brief The set of observables that enter the likelihood calculation.
-         * 
-         * The returned reference is only valid as long as this object exists.
-        */
-        const ObsIds & getObservables() const{ return obs_ids;}
+        /** \brief Set the additional terms for the likelihood
+         *
+         * The result of the function evaluation will add these function values.
+         *
+         * This can be used as additional constraints / priors for the likelihood function.
+         */
+        void set_additional_terms(const boost::ptr_vector<Function> * terms);
         
-        /** \brief The model which provides the prediction used for calculating the likelihood.
+        /** \brief Set an alternate prior distribution for the parameters
+         *
+         * The ownership of the memory pointed to by d remains at the caller.
+         *
+         * In the calculation of the likelihood function, the prior distributions
+         * for the parameters are added. By default, the prior distributions from
+         * the model are used. However, it is possible to specify an alternative Distribution
+         * by calling this method which will be used instead.
+         *
+         * Calling this function with d=0 means to use the Distribution from the model.
+         *
+         * \c d must be defined exactly for the model parameters. Otherwise, an InvalidArgumentException
+         * will be thrown.
+         */
+        void set_override_distribution(const Distribution * d);
+        
+        
+        /** \brief Returns the currently set parameter distribution used in the likelihood evaluation
          * 
-         * The returned reference is only valid as long as this object exists.
-        */
-        const Model & getModel() const{return model;}
+         * This is either the distribution from the model, or, if set_override_distribution has been called,
+         * the Distribution instance given there.
+         * 
+         * The returned Distribution reference depends exactly on the model parameters (which is the
+         * same as getParameters()).
+         * 
+         */
+        const Distribution & get_parameter_distribution()const{
+            if(override_distribution) return *override_distribution;
+            else return model.get_parameter_distribution();
+        }
 
     private:
-        boost::shared_ptr<VarIdManager> vm;
         const Model & model;
         const Data & data;
 
         const ObsIds obs_ids;
+        
+        const boost::ptr_vector<Function> * additional_terms;
+        const Distribution * override_distribution;
+
+        std::map<ParId, std::pair<double, double> > ranges;
 
         //values used internally if called with the double* functions.
         mutable ParValues values;
@@ -388,9 +447,9 @@ namespace theta {
         mutable std::map<ObsId, Histogram> predictions;
         mutable std::map<ObsId, Histogram> predictions_d;
         
-        NLLikelihood(const boost::shared_ptr<VarIdManager> & vm, const Model & m, const Data & data, const ObsIds & obs, const ParIds & pars);
+        NLLikelihood(const Model & m, const Data & data, const ObsIds & obs);
     };
     
 }
 
-#endif	/* _PHYS_HPP */
+#endif

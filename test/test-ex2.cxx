@@ -2,7 +2,6 @@
 // defined in test-exception.cxx and calls the function there.
 
 #include "interface/phys.hpp"
-#include "interface/plugin_so_interface.hpp"
 #include "interface/plugin.hpp"
 
 #include <string>

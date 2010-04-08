@@ -9,7 +9,7 @@
  *
  * The configuration block is something like (mass is some observable previously defined.
  * s, delta1, delta2 are parameters):
- * <pre>
+ * \code
  * mass = {
  *   coefficients = ("s");
  *   histogram = {
@@ -22,7 +22,7 @@
  *      delta2-minus-histogram = { / * fixed-histogram-specification * / };
  *   };
  * };
- * </pre>
+ * \endcode
  * Here, <tt>fixed-histogram-specification</tt> is a Histogram Setting block that returns a Histogram
  * which does not depend on any parameters. That is, any Histogram of type="fixed_*" (if the naming convention
  * is obeyed).

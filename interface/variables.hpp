@@ -10,13 +10,11 @@
 
 #include "interface/exception.hpp"
 #include "interface/utils.hpp"
+#include "interface/decls.hpp"
 
 #include <boost/utility.hpp>
 
 namespace theta {
-
-    class VarIdManager;
-    
     
     /** \brief To refer to a certain parameter or observable,\c ParId and \c ObsId instances are used throughout %theta.
      *
@@ -34,6 +32,7 @@ namespace theta {
     class VarId{
     friend class VarIdManager;
     friend class ParValues;
+    friend std::ostream & theta::operator<<(std::ostream & out, const ParIds & pids);
     public:
         //@{
         /** \brief Implements the order and equality semantics.
@@ -49,7 +48,7 @@ namespace theta {
         }
         //@}
         
-        /** Creates in invalid VarId which will evaulate to false.
+        /** Creates in invalid VarId which evaluates to false
          */
         VarId(): id(-1){}
     private:
@@ -136,6 +135,30 @@ namespace theta {
             return vars.find(id) != vars.end();
         }
 
+        /** \brief Test whether all given ids are contained
+         */
+        bool contains_all(const VarIds<id_type> & rhs) const{
+            const_iterator rhs_it = rhs.vars.begin();
+            const_iterator it = vars.begin();
+            const const_iterator rhs_end = rhs.vars.end();
+            const const_iterator end = vars.end();
+
+            //rhs_it points to the next element to test
+            while(rhs_it!=rhs_end && it!=end){
+                if(*rhs_it == *it){
+                    ++rhs_it;
+                    ++it;
+                }
+                else if(not (*rhs_it < *it)){
+                    ++it;
+                }
+                else{
+                    return false;
+                }
+            }
+            return rhs_it == rhs_end;
+        }
+
         /** \brief Test equality with other VarIds object.
          *
          * Two VarIds are the same if and only if the set of contained VarId s is the same.
@@ -179,16 +202,16 @@ namespace theta {
         /** \brief Creates a new parameter or observable ids (ParId, ObsId) and associates it with the given name.
          *
          * If the name is already used for another parameter / observable, an InvalidArgumentException is thrown.
-         * If the given range is empty or the default value is outside the range, or zero bins, an InvalidArgumentException will be thrown.
+         * In case of nbins==0 or xmax < xmin, an InvalidArgumentException will be thrown.
          */
-        ParId createParId(const std::string & name, double def = 0.0, double xmin=-std::numeric_limits<double>::infinity(), double xmax=std::numeric_limits<double>::infinity());
+        ParId createParId(const std::string & name);
         ObsId createObsId(const std::string & name, size_t nbins, double xmin, double xmax);
         //@}
         
         //@{
-        /** \brief Returns wheher the given name is already used as parameter / observable name.
+        /** \brief Returns whether the given name is already used as parameter / observable name.
          *
-         * Note that parameters and obserables are different things in theta and it is possible
+         * Note that parameters and observables are different things in theta and it is possible
          * (although not recommended) to have the same name for a parameter and an observable.
          *
          * Names are case-sensitive.
@@ -198,22 +221,6 @@ namespace theta {
         //@}
         
         //@{
-        
-        /** \brief Set the range an default value of a parameter.
-         *
-         * This function only exists for parameters. Observables are fixed once created as this information
-         * it typically used for constructing Histograms.
-         *
-         * So every code alles get_range(const ParId &) or get_default must make sure that
-         * changes are respected, whereas code for observables can assume that once they
-         * get the information about bins and range, it will never change.
-         *
-         * Throws an NotFoundException if the parameter does not exist an an InvalidArgumentException
-         * if def is not conatined in the interval [low, high].
-         */
-        void set_range_default(const ParId & pid, double low, double high, double def);
-        
-        //@{
         /** \brief Return the name of the given ParId or ObsId.
          *
          * If the id is not known, a NotFoundException is thrown.
@@ -221,17 +228,6 @@ namespace theta {
         std::string getName(const ParId & id) const;
         std::string getName(const ObsId & id) const;
         //@}
-        
-        //@{
-        /** \brief Return default value and range for a parameter identified by the  ParId id.
-         */
-        double get_default(const ParId & id) const;
-        const std::pair<double, double> & get_range(const ParId & id) const;
-        //@}
-        
-        /** \brief Return all default values.
-         */
-        ParValues get_defaults() const;
         
         //@{
         /** \brief Return the number of bins and range for an observable identified by the ObsId id.
@@ -267,8 +263,6 @@ namespace theta {
         //ParIds:
         std::map<ParId, std::string> pid_to_name;
         std::map<std::string, ParId> name_to_pid;
-        std::map<ParId, double> pid_to_default;
-        std::map<ParId, std::pair<double, double> > pid_to_range;
         int next_pid_id;
         //ObsIds:
         std::map<ObsId, std::string> oid_to_name;
@@ -347,7 +341,7 @@ namespace theta {
         void addTo(const ParId & pid, double delta){
             const int id = pid.id;
             if(id >= (int)values.size() || isnan(values[id])){
-                throw NotFoundException("VarValues::addTo: given ParId not found.");
+                throw NotFoundException("ParValues::addTo: given ParId not found.");
             }
             values[id] += delta;
         }
@@ -364,7 +358,7 @@ namespace theta {
             const int id = pid.id;
             if(id >= (int)values.size() || isnan(result = values[id])){
                 std::stringstream ss;
-                ss << "VarValues::get: given VarId " << id << " not found";
+                ss << "ParValues::get: given VarId " << id << " not found";
                 throw NotFoundException(ss.str());
             }
             return result;
@@ -382,6 +376,9 @@ namespace theta {
         ParIds getAllParIds() const;
 
     private:
+        //Make private an do not implement, because usually, one should not replace
+        // the values already set and should use "set(ParValues)" instead ...
+        const ParValues & operator=(const ParValues &);
         //values are stored using the VarId.id as index
         std::vector<double> values;
     };

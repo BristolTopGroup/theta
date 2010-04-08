@@ -2,11 +2,11 @@
 #define PLUGIN_HPP
 
 #include "interface/decls.hpp"
-#include "interface/plugin_so_interface.hpp"
 #include "interface/exception.hpp"
 #include "interface/cfg-utils.hpp"
 
 #include <boost/utility.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include <sstream>
 #include <iostream>
@@ -17,6 +17,126 @@ namespace theta {
     /** \brief Namespace for all plugin-related classes.
      */
     namespace plugin {
+        
+        /** \brief The abstract base class for all plugin types
+         *
+         * It is common to all classes which can be implemented as plugin to have
+         * (through the configuration) a "name" and a "type". This common aspect is
+         * implemented with this class.
+         */
+        class PluginType{
+        public:
+
+            /** \brief Returns the name of the instance, as given in the configuration file
+             *
+             * If a "name" setting exists, it will be used as name. Otherwise,
+             * the name of the configuration setting group is used.
+             */
+            std::string get_name() const{
+                return name;
+            }
+            
+            /** \brief Returns the type, as set in the configuration file, for this instance
+             *
+             */
+            std::string get_type() const{
+                return type;
+            }
+            
+            /** \brief Return the setting group required to reconstruct this object
+             *
+             * The default implementation returns the setting group given in the constructor
+             * in c.setting where the "name" setting is always set to the name.
+             */
+            std::string get_setting() const{
+                return setting;
+            }
+             
+        protected:
+            /** \brief Construct, filling name and type from the supplied Configuration
+             */
+            PluginType(const Configuration & c);
+            
+            /** \brief Provide default constructor for derived classes
+             *
+             * In order to allow construction outside of the plugin system (i.e., without
+             * a Configuration instance), this default constructor is provided for derived classes.
+             */
+            PluginType(){}
+            
+            /** \brief The setting returned by get_setting
+             *
+             * Should be set up in the constructor of derived classes which wish to change
+             * the default behaviour.
+             */
+            std::string setting;
+
+        private:
+            std::string name;
+            std::string type;
+        };
+        
+        /** \brief Abstract base class for all PluginTypes writing to an EventTable
+         *
+         * PluginTypes making use of the EventTable class should derive from this class.
+         */
+        class EventTableWriter{
+            
+        public:
+        
+            /** \brief Set the table where the results should be written to
+            *
+            * This is called during the setup phase of a theta::Run. It is called just before
+            * define_table, which does the producer-specific table definition.
+            */
+            void set_table(const boost::shared_ptr<theta::EventTable> & table_){
+                table = table_;
+            }
+        
+            /** \brief Define the columns of the result table
+            *
+            * This method is implemented by derived classes. It should call table->add_column for
+            * each column it wants to fill in the produce method.
+            *
+            * Implementations may assume that the table pointer is valid upon invocation of this method.
+            */
+            virtual void define_table() = 0;
+        
+        protected:
+            /// The table instance to be used for writing    
+            boost::shared_ptr<EventTable> table;
+        };
+
+        /** \brief A container class which is used to construct conrete types managed by the plugin system
+         *
+         * An instance of this class is passed to the constructor of classes managed by the plugin system.
+         * It contains the required information for plugins to construct an instance of the plugin class,
+         * the most important being \c setting, which is the setting group from the configuration file
+         * for which this plugin class should be created.
+         */
+        class Configuration{
+        public:
+            /// Information about all currently known parameters and observables
+            boost::shared_ptr<VarIdManager> vm;
+            
+            /// The setting in the configuration file from which to build the instance
+            SettingWrapper setting;
+            
+            /** \brief Construct Configuration by specifying all data members
+             */
+            Configuration(const boost::shared_ptr<VarIdManager> & vm_, const SettingWrapper & setting_): vm(vm_),
+                setting(setting_){}
+
+            /** \brief Copy elements from another Configuration, but replace Configuration::setting
+             *
+             * Copy all from \c cfg but \c cfg.setting which is replaced by \c setting_.
+             */
+            Configuration(const Configuration & cfg, const SettingWrapper & setting_): vm(cfg.vm),
+                setting(setting_){}
+
+        };        
+        
+        
         template<typename> class PluginManager;
         /** \brief Class used internally for the PluginManager
          *
@@ -120,18 +240,21 @@ namespace theta {
 
         template<typename product_type>
         std::auto_ptr<product_type> PluginManager<product_type>::build(const Configuration & ctx){
-            std::string type = ctx.setting["type"];
+            std::string type = "<unspecified>";
             for (size_t i = 0; i < factories.size(); ++i) {
-                if (factories[i]->get_typename() == type) {
-                    try {
+                try {
+                    //as the access to setting["type"] might throw, also write it into the
+                    // try block ...
+                    type = std::string(ctx.setting["type"]);
+                    if (factories[i]->get_typename() == type) {
                         return factories[i]->build(ctx);
-                    } catch (Exception & ex) {
-                        std::stringstream ss;
-                        ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
-                           << "', type='" << type << "' error while building from plugin: " << ex.message;
-                        ex.message = ss.str();
-                        throw;
                     }
+                }catch (Exception & ex) {
+                    std::stringstream ss;
+                    ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
+                       << "', type='" << type << "' error while building from plugin: " << ex.message;
+                    ex.message = ss.str();
+                    throw;
                 }
             }
             std::stringstream ss;

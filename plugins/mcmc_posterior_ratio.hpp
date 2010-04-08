@@ -3,7 +3,6 @@
 
 #include "interface/decls.hpp"
 
-#include "interface/plugin_so_interface.hpp"
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
 #include "interface/matrix.hpp"
@@ -18,21 +17,20 @@
  * over free parameters instead of minimizing it.
  *
  * Configuration is done via a setting group like
- *<pre>
+ * \code
  * hypotest = {
  *   type = "mcmc_posterior_ratio";
- *   background-only = {s = 0.0;}; //assuming "s" was defined as parameter earlier
- *   signal-plus-background = {};
+ *   background-only-distribution = "@bkg-only-dist";
+ *   signal-plus-background-distribution = "@default-dist";
  *   iterations = 10000;
  *   burn-in = 100; //optional. default is iterations / 10
  * };
- *
- *</pre>
+ * \endcode
  *
  * \c type is always "mcmc_posterior_ratio" to select this producer.
  *
- * \c background-only and \c signal-plus-background are setting groups which defines special parameter values which
- *   define the values to fix during the MCMC integration.
+ * \c background-only-distribution and \c signal-plus-background-distribution deinfe the Distribution instances to use for the
+ *   two MCMC integrations.
  *
  * \c iterations is the number of MCMC iterations. Run time is proportional to this values; increasing this value will result in higher precision.
  *     The optimal value to use here is very much problem-dependent. To find out a reasonable value, it is advised to start with a value around 5000 and
@@ -43,6 +41,8 @@
  * \c burn_in is the number of MCMC iterations to do at the beginning and throw away. There is some controversy about whether it is needed at all
  *     and how large it should be. If unsure, just take the default value of iteratios / 10 and if someone asks why, vary it a bit (say, between iterations/100 and iterations)
  *     and show that the result does not depend on it anyway ...
+ *     
+ * Note that the setting "override-parameter-distribution" is not allowed for this producer.
  *
  * Given data and a model, this producer will construct the negative-loglikelihood for the "signal-plus-background" parameters
  * fixed as specified in the configuration file and for the "background-only" parameters fixed and integrate over all non-fixed parameters.
@@ -63,13 +63,9 @@ public:
 private:
     //whether sqrt_cov* and startvalues* have been initialized:
     bool init;
-    //if initialization failed, do not attempt to initialize again ...
-    bool init_failed;
     
-    // the fixed parameter values for both hypotheses:
-    theta::ParValues s_plus_b;
-    theta::ParValues b_only;
-    boost::shared_ptr<theta::VarIdManager> vm;
+    std::auto_ptr<theta::Distribution> s_plus_b;
+    std::auto_ptr<theta::Distribution> b_only;
     
     unsigned int iterations;
     unsigned int burn_in;
@@ -80,7 +76,7 @@ private:
     theta::Matrix sqrt_cov_b;
     std::vector<double> startvalues_b;
     
-    theta::ProducerTable::column c_nl_posterior_sb, c_nl_posterior_b;
+    theta::EventTable::column c_nl_posterior_sb, c_nl_posterior_b;
 };
 
 #endif

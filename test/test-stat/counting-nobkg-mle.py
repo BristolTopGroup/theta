@@ -5,6 +5,7 @@ execfile("../lib.py")
 
 for Theta in (5.0, 10000.0):
     execute_checked("sed \"s/__THETA__/%s/g\" counting-nobkg.cfg.tpl > counting-nobkg.cfg" % Theta)
+    execute_checked("sed -i \"s/__THETA_WIDTH__/%s/g\" counting-nobkg.cfg" % (Theta * 0.1))
     exec_theta("counting-nobkg-mle.cfg")
     rows = sql("counting-nobkg-mle.db", "SELECT COUNT(*) FROM products WHERE abs(mle__Theta - writer__n_events_o) > %g" % (Theta/10000) )
     num_fail = rows[0][0]

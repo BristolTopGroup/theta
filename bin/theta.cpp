@@ -1,4 +1,3 @@
-#include "interface/plugin_so_interface.hpp"
 #include "interface/run.hpp"
 #include "interface/cfg-utils.hpp"
 #include "interface/plugin.hpp"
@@ -11,6 +10,8 @@
 #include <boost/program_options.hpp>
 
 #include <termios.h>
+
+#include <fstream>
 
 using namespace std;
 using namespace theta;
@@ -58,14 +59,14 @@ private:
 
 int main(int argc, char** argv) {
     po::options_description desc("Supported options");
-    desc.add_options()("help", "show help message")
-    ("quiet,q", "quiet mode (supress progress message)")
+    desc.add_options()("help,h", "show help message")
+    ("quiet,q", "quiet mode (suppress progress message)")
     ("nowarn", "do not warn about unused configuration file statements");
 
     po::options_description hidden("Hidden options");
 
     hidden.add_options()
-    ("cfg-file", po::value<string>(), "config file")
+    ("cfg-file", po::value<string>(), "configuration file")
     ("run-name", po::value<string>(), "run name");
 
     po::positional_options_description p;
@@ -129,10 +130,11 @@ int main(int argc, char** argv) {
             throw ConfigurationException(s.str());
         } catch (ParseException & p) {
             stringstream s;
-            s << "Error parsing the given configuration file: " << p.getError() << " in line " << p.getLine();
+            s << "Error parsing configuration file: " << p.getError() << " in line " << p.getLine();
             throw ConfigurationException(s.str());
         }
         SettingWrapper root(cfg.getRoot(), cfg.getRoot(), rec);
+        
         Configuration config(vm, root);
         
         //load plugins:
@@ -142,11 +144,21 @@ int main(int argc, char** argv) {
         //fill VarIdManager:
         VarIdManagerUtils::apply_settings(config);
         //build run:
-        run = PluginManager<Run>::build(Configuration(config, root[run_name]));
+        run.reset(new Run(Configuration(config, root[run_name])));
         if(not quiet){
             boost::shared_ptr<ProgressListener> l(new MyProgressListener());
             run->set_progress_listener(l);
         }
+        
+        /*ofstream test_out("test-out.cfg");
+        test_out << "parameters = " << root["parameters"].value_to_string() << ";" << endl;
+        test_out << "observables = " << root["observables"].value_to_string() << ";" << endl;
+        test_out << "main = " << run->get_setting() << ";" << endl;
+        if(root.exists("plugins")){
+            test_out << "plugins = " << root["plugins"].value_to_string() << ";" << endl;
+        }
+        test_out.close();*/
+        
     }
     catch (SettingNotFoundException & ex) {
         cerr << "Error: the required configuration parameter at " << ex.getPath() << " was not found." << endl;

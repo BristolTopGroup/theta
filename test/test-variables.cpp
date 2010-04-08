@@ -10,44 +10,26 @@ BOOST_AUTO_TEST_SUITE(variables_tests)
 
 struct varidtest{
     VarIdManager vm;
-    const double def;
-    const double min;
-    const double max;
     const ParId par0;
-    varidtest(double def_, double min_, double max_): def(def_), min(min_), max(max_), par0(vm.createParId("par0", def, min, max)){
+    varidtest(): par0(vm.createParId("par0")){
     }
 };
 
 
 BOOST_AUTO_TEST_CASE(basic){
-    varidtest v(0.2, -0.3, 0.8);
+    varidtest v;
     BOOST_CHECK(v.vm.parNameExists("par0"));
     BOOST_CHECK(v.vm.getName(v.par0)=="par0");
     BOOST_CHECK(v.vm.getParId("par0")==v.par0);
-    BOOST_CHECK(v.vm.get_range(v.par0).first == v.min);
-    BOOST_CHECK(v.vm.get_range(v.par0).second == v.max);
-    BOOST_CHECK(v.vm.get_default(v.par0) == v.def);
-}
-
-BOOST_AUTO_TEST_CASE(reset){
-    varidtest v(0.2, -0.3, 0.8);
-    const double min = -0.5;
-    const double max = 1.2;
-    const double def = 1.1;
-    v.vm.set_range_default(v.par0, min, max, def);
-    
-    BOOST_CHECK(v.vm.get_range(v.par0).first == min);
-    BOOST_CHECK(v.vm.get_range(v.par0).second == max);
-    BOOST_CHECK(v.vm.get_default(v.par0) == def);
 }
 
 BOOST_AUTO_TEST_CASE(getParIds){
-    varidtest v(0.2, -0.3, 0.8);
+    varidtest v;
     ParIds ids;
     ids.insert(v.par0);
     BOOST_CHECK(ids==v.vm.getAllParIds());
     
-    ParId par1 = v.vm.createParId("par1", 0, -1, 1);
+    ParId par1 = v.vm.createParId("par1");
     BOOST_REQUIRE(par1!=v.par0);
     BOOST_CHECK(not (ids==v.vm.getAllParIds()));
     
@@ -56,7 +38,7 @@ BOOST_AUTO_TEST_CASE(getParIds){
 }
 
 BOOST_AUTO_TEST_CASE(par_exceptions){
-    varidtest v(0.2, -0.3, 0.8);
+    varidtest v;
     
     //request variables not there:
     bool ex = false;
@@ -71,53 +53,18 @@ BOOST_AUTO_TEST_CASE(par_exceptions){
     //create parameter already there
     ex = false;
     try{
-        v.vm.createParId("par0", 1.0);
+        v.vm.createParId("par0");
     }
     catch(InvalidArgumentException &){
         ex = true;
     }
     BOOST_REQUIRE(ex);
     
-    ParId par1 = v.vm.createParId("par1", 0, -1, 1);
+    ParId par1 = v.vm.createParId("par1");
     BOOST_REQUIRE(v.par0!=par1);
     ParIds all_ids;
     all_ids.insert(par1);
     all_ids.insert(v.par0);
-    BOOST_REQUIRE(all_ids == v.vm.getAllParIds());
-    
-    //test out of range:
-    ex = false;
-    try{
-        v.vm.createParId("par2", 0, 10, 10.1);
-    }
-    catch(InvalidArgumentException &){
-        ex = true;
-    }
-    BOOST_CHECK(ex);
-    //nothing should have changed:
-    BOOST_REQUIRE(all_ids == v.vm.getAllParIds());
-    
-    //reset range
-    ex = false;
-    try{
-        //use a default which is in the old but not the new range
-        v.vm.set_range_default(par1, -2, -1, 0);
-    }
-    catch(InvalidArgumentException &){
-        ex = true;
-    }
-    BOOST_CHECK(ex);
-    BOOST_REQUIRE(all_ids == v.vm.getAllParIds());
-    
-    //invalid range:
-    ex = false;
-    try{
-        v.vm.createParId("par3", 0, 1, -1);
-    }
-    catch(InvalidArgumentException &){
-        ex = true;
-    }
-    BOOST_CHECK(ex);
     BOOST_REQUIRE(all_ids == v.vm.getAllParIds());
     
     //request invalid parid:
@@ -206,7 +153,7 @@ BOOST_AUTO_TEST_CASE(parvalues_many){
     for(size_t i=0; i<100; ++i){
         stringstream name;
         name << "parameter" << i;
-        parameters.push_back(vm.createParId(name.str(), 0, -1, 1));
+        parameters.push_back(vm.createParId(name.str()));
         values.set(parameters.back(), 0.1*i + i*i);
     }
     for(size_t i=0; i<100; ++i){

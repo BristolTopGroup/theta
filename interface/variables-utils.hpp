@@ -1,7 +1,7 @@
 #ifndef VARIABLES_UTILS_HPP
 #define VARIABLES_UTILS_HPP
 
-#include "interface/plugin_so_interface.hpp"
+#include "interface/decls.hpp"
 
 namespace theta{
    namespace VarIdManagerUtils{
@@ -33,6 +33,8 @@ namespace theta{
        */
       void apply_settings(theta::plugin::Configuration & cfg);
    }
+
+   std::ostream & operator<<(std::ostream & out, const ParIds & pids);
 }
 
 #endif

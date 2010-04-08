@@ -9,6 +9,10 @@
 
 #include <boost/math/special_functions/gamma.hpp>
 
+#ifdef USE_CRLIBM
+#include "crlibm/crlibm.h"
+#endif
+
 namespace theta { namespace utils{
 
 double diff_timeval(timeval * x, timeval * y);
@@ -30,7 +34,11 @@ inline double lngamma(double x){
  * use this log function.
  */
 inline double log(double x){
+#ifdef USE_CRLIBM
+    return log_rn(x);
+#else
     return ::log(x);
+#endif
 }
 
 /** \brief Equality check for floating point numbers using relative comparison

@@ -7,7 +7,7 @@ all:
 clean:
 	@for d in $(DIRS); do make -C $$d clean; done
 	@make -C test clean
-	@make -C test-stat clean
+	@make -C test/test-stat clean
 
 test:
 	@make -C test

@@ -1,8 +1,6 @@
 #ifndef PLUGIN_DELTANLL_INTERVALS_HPP
 #define PLUGIN_DELTANLL_INTERVALS_HPP
 
-#include "interface/plugin_so_interface.hpp"
-
 #include "interface/variables.hpp"
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
@@ -13,18 +11,18 @@
  *
  *
  * Configuration is done with a settings block like:
- * <pre>
+ * \code
  * {
  *  type = "nll_scan";
  *  parameter = "p0";
- *  minimizer = "@myminuit";
+ *  minimizer = "@myminimizer";
  *  parameter-values = {start = 0.0; stop = 1.0; n-steps = 101;};
  *
  *  re-minimize = false; //Optional. Default is true
  * }
  *
- * myminuit = {...} //see the minimizer documentation.
- * </pre>
+ * myminimizer = {...}; //see the minimizer documentation.
+ * \endcode
  *
  * \c type has always to be "nll_scan" in order to use this producer
  *
@@ -62,18 +60,23 @@ public:
      */
     void define_table();
 private:
-    boost::shared_ptr<theta::VarIdManager> vm;
+    //boost::shared_ptr<theta::VarIdManager> vm;
     theta::ParId pid;
     double start, stop, step;
     unsigned int n_steps;
     bool re_minimize;
+    
+    //minimizer stuff:
     std::auto_ptr<theta::Minimizer> minimizer;
+    bool start_step_ranges_init;
+    theta::ParValues m_start, m_step;
+    std::map<theta::ParId, std::pair<double, double> > m_ranges;
     
     //save the result here:
     std::vector<double> result;
 
     //table columns:
-    theta::ProducerTable::column c_nll, c_maxl;
+    theta::EventTable::column c_nll, c_maxl;
 };
 
 #endif

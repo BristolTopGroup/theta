@@ -1,5 +1,6 @@
 #include "interface/variables.hpp"
 #include "interface/variables-utils.hpp"
+#include "interface/plugin.hpp"
 #include "interface/exception.hpp"
 #include "interface/cfg-utils.hpp"
 
@@ -11,28 +12,16 @@ using namespace theta::utils;
 using namespace std;
 using namespace libconfig;
 
-ParId VarIdManager::createParId(const std::string & name, double def, double min, double max) {
+ParId VarIdManager::createParId(const std::string & name) {
     if (parNameExists(name)) {
             stringstream ss;
             ss << "VarIdManager::createParId: parameter '"<< name <<"' defined twice";
             throw InvalidArgumentException(ss.str());
     }
-    if (min > max) {
-        stringstream ss;
-        ss << "Parameter " << name << " has min > max, i.e., empty range";
-        throw InvalidArgumentException(ss.str());
-    }
-    if (def < min || def > max) {
-        stringstream ss;
-        ss << "Parameter '" << name << "' has default value outside of its range";
-        throw InvalidArgumentException(ss.str());
-    }    
     ParId result(next_pid_id);
     next_pid_id++;
     pid_to_name[result] = name;
     name_to_pid[name] = result;
-    pid_to_range[result] = make_pair(min, max);
-    pid_to_default[result] = def;
     return result;
 }
 
@@ -106,44 +95,6 @@ ObsId VarIdManager::getObsId(const std::string & name) const {
     return it->second;
 }
 
-void VarIdManager::set_range_default(const ParId & id, double low, double high, double def){
-    std::map<ParId, double>::iterator it = pid_to_default.find(id);
-    std::map<ParId, pair<double, double> >::iterator itt = pid_to_range.find(id);
-    if (it == pid_to_default.end() || itt == pid_to_range.end()) {
-        throw NotFoundException("VarIdManager::set_range_default: did not find given ParId.");
-    }
-    if(def < low || def > high){
-       throw InvalidArgumentException("VarIdManager::set_range_default: default not included in range!");
-    }
-    it->second = def;
-    itt->second.first = low;
-    itt->second.second = high;
-}
-
-double VarIdManager::get_default(const ParId & id) const{
-    std::map<ParId, double>::const_iterator it = pid_to_default.find(id);
-    if (it == pid_to_default.end()) {
-        throw NotFoundException("VarIdManager::getDefault: did not find given ParId.");
-    }
-    return it->second;
-}
-
-const pair<double, double> & VarIdManager::get_range(const ParId & id) const{
-    std::map<ParId, pair<double, double> >::const_iterator it = pid_to_range.find(id);
-    if (it == pid_to_range.end()) {
-        throw NotFoundException("VarIdManager::getRange: did not find given variable id.");
-    }
-    return it->second;
-}
-
-ParValues VarIdManager::get_defaults() const{
-    ParValues result;
-    for(std::map<ParId, double>::const_iterator it = pid_to_default.begin(); it!= pid_to_default.end(); ++it){
-        result.set(it->first, it->second);
-    }
-    return result;
-}
-
 size_t VarIdManager::get_nbins(const ObsId & id) const{
     std::map<ObsId, size_t>::const_iterator it = oid_to_nbins.find(id);
     if (it == oid_to_nbins.end()) {
@@ -170,9 +121,9 @@ ObsIds VarIdManager::getAllObsIds() const{
 }
 
 ParIds VarIdManager::getAllParIds() const{
-    std::map<ParId, pair<double, double> >::const_iterator it = pid_to_range.begin();
+    std::map<ParId, string>::const_iterator it = pid_to_name.begin();
     ParIds result;
-    for(; it!= pid_to_range.end(); ++it){
+    for(; it!= pid_to_name.end(); ++it){
        result.insert(it->first);
     }
     return result;
@@ -211,12 +162,17 @@ void theta::VarIdManagerUtils::apply_settings(theta::plugin::Configuration & ctx
         throw ConfigurationException(ss.str());
     }
     for (size_t i = 0; i < npar; i++) {
-        string par_name = s["parameters"][i].getName();
-        double def = s["parameters"][i]["default"];
-        double min = s["parameters"][i]["range"][0].get_double_or_inf();
-        double max = s["parameters"][i]["range"][1].get_double_or_inf();
-
-        ctx.vm->createParId(par_name, def, min, max);
+        string par_name = s["parameters"][i];
+        ctx.vm->createParId(par_name);
     }
 }
 
+std::ostream & theta::operator<<(std::ostream & out, const ParIds & pids){
+   out << "ParIds {";
+   int i=0;
+   for(ParIds::const_iterator it=pids.begin(); it!=pids.end(); ++it, ++i){
+       if(i)out << ", ";
+       out << it->id;
+   }
+   out << "}";
+}

@@ -11,15 +11,15 @@ using namespace libconfig;
 
 void pseudodata_writer::define_table(){
     for(size_t i=0; i<observables.size(); ++i){
-        n_events_columns.push_back(table->add_column(*this, "n_events_" + vm->getName(observables[i]), ProducerTable::typeDouble));
+        n_events_columns.push_back(table->add_column(*this, "n_events_" + vm->getName(observables[i]), EventTable::typeDouble));
         if(write_data)
-            data_columns.push_back(table->add_column(*this, "data_" + vm->getName(observables[i]), ProducerTable::typeBlob));
+            data_columns.push_back(table->add_column(*this, "data_" + vm->getName(observables[i]), EventTable::typeBlob));
     }
 }
 
 void pseudodata_writer::produce(Run & run, const Data & data, const Model & model) {
     for(size_t i=0; i<observables.size(); ++i){
-        const Histogram & h = data.getData(observables[i]);
+        const Histogram & h = data[observables[i]];
         double n_event = h.get_sum_of_bincontents();
         table->set_column(n_events_columns[i], n_event);
         if(write_data){

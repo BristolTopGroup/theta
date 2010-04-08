@@ -14,11 +14,12 @@ namespace theta{
     class Minimizer;
     class Producer;
     class Distribution;
-    class SettingUsageRecorder;
     
-    class ProducerTable;
+    class EventTable;
+    
     namespace plugin{
           class Configuration;
+          class PluginType;
     }
     class Random;
     class Run;
@@ -37,7 +38,9 @@ namespace theta{
     
     //phys.hpp
     class Data;
+    class Function;
     class Model;
+    class DataSource;
     class NLLikelihood;
     class ModelFactory;    
 }

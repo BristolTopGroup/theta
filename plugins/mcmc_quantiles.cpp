@@ -2,8 +2,9 @@
 #include "plugins/mcmc.hpp"
 #include "interface/plugin.hpp"
 #include "interface/run.hpp"
-#include "interface/minimizer.hpp"
+//#include "interface/minimizer.hpp"
 #include "interface/histogram.hpp"
+#include "interface/distribution.hpp"
 
 #include <sstream>
 
@@ -15,7 +16,7 @@ void mcmc_quantiles::define_table(){
     for(size_t i=0; i<quantiles.size(); ++i){
         stringstream ss;
         ss << "quant" << setw(5) << setfill('0') << static_cast<int>(quantiles[i] * 10000 + 0.5);
-        columns.push_back(table->add_column(*this, ss.str(), ProducerTable::typeDouble));
+        columns.push_back(table->add_column(*this, ss.str(), EventTable::typeDouble));
     }
 }
 
@@ -61,21 +62,18 @@ class MCMCPosteriorQuantilesResult{
 void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) {
     if(!init){
         try{
-            if(init_failed){
-                throw Exception("init failed earlier, not attempting initialization again");
-            }
-            Histogram pred;
-            ParValues default_parameters = vm->get_defaults();
-            
+            //get the covariance for average data:
+            ParValues values;
+            model.get_parameter_distribution().mode(values);
             ObsIds observables = model.getObservables();
             Data d;
             for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
-                model.get_prediction(pred, default_parameters, *it);
-                d.addData(*it, pred);
+                model.get_prediction(d[*it], values, *it);
             }
-            NLLikelihood nll = model.getNLLikelihood(d);
-            sqrt_cov = get_sqrt_cov(run.get_random(), nll, ParValues(), vm, startvalues);
+            NLLikelihood nll = get_nllikelihood(d, model);
+            sqrt_cov = get_sqrt_cov(run.get_random(), nll, startvalues);
             
+            //find the number of the parameter of interest:
             ParIds nll_pars = nll.getParameters();
             ipar=0;
             for(ParIds::const_iterator it=nll_pars.begin(); it!=nll_pars.end(); ++it, ++ipar){
@@ -84,14 +82,18 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
             //now ipar has the correct value ...
             
             init = true;
-        }catch(Exception & ex){
-            init_failed = true;
-            ex.message = "initialization failed with: " + ex.message;
-            throw;
+        }
+        catch(NotFoundException & ex){
+            ex.message = "initialization failed: " + ex.message + " (did you specify widths for all unbound parameters?)";
+            throw FatalException(ex);
+        }
+        catch(Exception & ex){
+            ex.message = "initialization failed: " + ex.message;
+            throw FatalException(ex);
         }
     }
     
-    NLLikelihood nll = model.getNLLikelihood(data);
+    NLLikelihood nll = get_nllikelihood(data, model);
     MCMCPosteriorQuantilesResult result(nll.getnpar(), ipar, iterations);
     metropolisHastings(nll, result, run.get_random(), startvalues, sqrt_cov, iterations, burn_in);
     
@@ -100,7 +102,8 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
     }
 }
 
-mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Producer(cfg), init(false), init_failed(false){
+mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Producer(cfg),
+        init(false), init_failed(false){
     vm = cfg.vm;
     SettingWrapper s = cfg.setting;
     string parameter = s["parameter"];

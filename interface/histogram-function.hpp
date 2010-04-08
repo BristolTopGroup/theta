@@ -5,14 +5,7 @@
 #include "interface/variables.hpp"
 #include "interface/histogram.hpp"
 
-//#include "interface/random.hpp"
-
-/*#include <vector>
-#include <algorithm>
-#include <memory>*/
-
 namespace theta {
-    class VarValues;
 
     /** \brief A Histogram-valued function which depends on zero or more parameters.
      *

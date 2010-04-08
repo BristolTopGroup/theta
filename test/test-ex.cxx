@@ -2,7 +2,6 @@
 // to test inter-compilatio unit exception catching with shared objects.
 
 #include "interface/phys.hpp"
-#include "interface/plugin_so_interface.hpp"
 #include "interface/plugin.hpp"
 #include "interface/phys.hpp"
 

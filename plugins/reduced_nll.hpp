@@ -22,8 +22,11 @@ class ReducedNLL{
          *
          * Set the Minimizer \c min_ to zero if no minimization should be done.
          */
-        ReducedNLL(const theta::NLLikelihood & nll_, const theta::ParId & pid_, const theta::ParValues & pars_at_min_, theta::Minimizer * min_):
-           nll(nll_), pid(pid_), pars_at_min(pars_at_min_), min(min_){
+        ReducedNLL(const theta::NLLikelihood & nll_, const theta::ParId & pid_, const theta::ParValues & pars_at_min_,
+                theta::Minimizer * min_, const theta::ParValues & start_, const theta::ParValues & step_,
+                const std::map<theta::ParId, std::pair<double, double> > & ranges_):
+           nll(nll_), pid(pid_), pars_at_min(pars_at_min_), min(min_), start(start_), step(step_), ranges(ranges_){
+            step.set(pid, 0);
         }
         
         /** \brief Set the offset to subtract from the value of the likelihood function
@@ -43,22 +46,14 @@ class ReducedNLL{
          * Otherwise, the parameter values at the minimum are used, just the parameter of interest is set to x.
          */
         double operator()(double x) const{
-            if(min){
-                min->override_default(pid, x);
-                min->override_range(pid, x, x);
-                theta::MinimizationResult minres = min->minimize(nll);
+            if(min){                
+                start.set(pid, x);
+                ranges[pid].first = ranges[pid].second = x;
+                theta::MinimizationResult minres = min->minimize(nll, start, step, ranges);
                 return minres.fval - offset_nll;
             }
             pars_at_min.set(pid, x);
             return nll(pars_at_min) - offset_nll;
-        }
-        
-        /** \brief Destructor
-         *
-         * Releases parameter overrides set for the parameter of interest.
-         */
-        ~ReducedNLL(){
-            if(min) min->reset_override(pid);
         }
         
     private:
@@ -66,7 +61,12 @@ class ReducedNLL{
         theta::ParId pid;
         mutable theta::ParValues pars_at_min;
         double offset_nll;
+        
+        //minimization stuff:
         theta::Minimizer * min;
+        mutable theta::ParValues start;
+        theta::ParValues step;
+        mutable std::map<theta::ParId, std::pair<double, double> > ranges;
 };
 
 

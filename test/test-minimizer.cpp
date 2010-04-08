@@ -64,9 +64,15 @@ BOOST_AUTO_TEST_CASE(minuit){
     BOOST_REQUIRE(min.get());
     ImpossibleFunction f(pars);
     bool exception;
+    ParValues start, step;
+    std::map<ParId, pair<double, double> > ranges;
+    start.set(p0, 0.0).set(p1, 0.0);
+    step.set(p0, 1.0).set(p1, 1.0);
+    ranges[p0] = make_pair(-100.0, 100.0);
+    ranges[p1] = make_pair(-100.0, 100.0);
     try{
         BOOST_REQUIRE(true);//create checkpoint
-        min->minimize(f);
+        min->minimize(f, start, step, ranges);
     }
     catch(MinimizationException & ex){
         exception = true;

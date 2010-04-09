@@ -36,7 +36,7 @@ fixed_poly::fixed_poly(const Configuration & ctx){
         }
         h.set(i, value);
     }
-    double norm_to = s["normalize_to"];
+    double norm_to = HistogramFunctionUtils::read_normalize_to(ctx.setting);
     double norm;
     if ((norm = h.get_sum_of_bincontents()) == 0.0) {
         throw ConfigurationException("Histogram specification is zero (can't normalize)");
@@ -58,7 +58,7 @@ fixed_gauss::fixed_gauss(const Configuration & ctx){
         double d = (h.get_bincenter(i) - mean) / width;
         h.set(i, exp(-0.5 * d * d));
     }
-    double norm_to = s["normalize_to"];
+    double norm_to = HistogramFunctionUtils::read_normalize_to(ctx.setting);
     double norm;
     if ((norm = h.get_sum_of_bincontents()) == 0.0) {
         throw ConfigurationException("Histogram specification is zero (can't normalize)");

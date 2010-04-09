@@ -135,19 +135,27 @@
  *  <li>%theta is not suited for cases where you have more than one observable per event, i.e., if to do multi-dimensional
  *     fits. In principle, handling multidimensional fits can be implmented in %theta via user-supplied plugins. However, it is
  *     not foreseen to suport this natively.</li>
- *  <li>%theta only supports binned distributions. While binning can also be chosen very fine, it is not foreseen to support trule 
+ *  <li>%theta only supports binned distributions. While binning can
+ *     also be chosen very fine, it is not foreseen to support trule 
  *     continuos distributions.</li>
- *  <li>%theta is mainly useful if only one parameter is of interest (i.e., if only one parameter in the model is not a nuisance parameter).
+ *  <li>%theta is mainly useful if only one parameter is of interest (i.e., if only one parameter in
+ *      the model is not a nuisance parameter).
  *      For example, it is not implemented (or foreseen) to have confidence regions in a two-dimensional plane. This is not an
- *      architectural limitation of %theta but a limitation mainly of the current implementation of statistical methods. You are free
- *      to implement such a method as %theta plugin, using %theta as framework, though.</li>
+ *      architectural limitation of %theta but a limitation mainly of the current implementation of statistical
+ *      methods. You are free to implement such a method as %theta plugin, using %theta as framework, though.</li>
  * </ul>
  *
  * These restrictions are intentional: by doing only a small number of tasks, these can be done efficiently and correctness
  * is easier to achieve. Also, %theta is easier to document and to understand if not bloated by additional code.
  * See \ref design for more information about this point.
  *
- * \section boostedtop Z' search
+ * \section singletop Single Top Search
+ *
+ * 
+ *
+ */
+
+ /* \section boostedtop Z' search
  *
  * A complete analysis example which makes use of many features of %theta is currently in preparation.
  * However, to get an impression of what can be done, an example analysis searching for \f$ Z^\prime \rightarrow
@@ -223,12 +231,27 @@
  *
  * %theta is available as source-code distribution via subversion only. The latest version can be obtained by running
  * <pre>
- * svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
+ * svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/tags/april-2010 theta
  * </pre>
  * If you want to compile it within CMSSW (which provides the dependencies), make sure to check it
  * out in the \c src directory of a CMSSW directory.
  *
  * \section building Building theta
+ *
+ * \subsection with_cmake With cmake
+ *
+ * The recommended way to compile %theta is to use cross-platform make, <a href="http://www.cmake.org/">CMake</a>.
+ * After getting the dependencies (sqlite3, boost and root), issue
+ * <pre>
+ *  cd theta #or where ever it was checked out
+ *  mkdir build
+ *  cmake ..
+ *  make
+ * </pre>
+ *
+ * It is also possible to compile %theta using Makefiles. However, note that these are simple, hand-written Makefiles
+ * which do not include all dependencies correctly. Therefore, be sure to always issue
+ * \code make clean \endcode after an update.
  *
  * \subsection with_cmssw With CMSSW
  *
@@ -275,20 +298,20 @@
  * There are packages available for these on many distribution.
  *
  * Then, you can follow the instructions above, skipping the CMSSW part:
- *<pre>
+ * <pre>
  *  svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
  *  cd theta
  *  make
  *  source setenv.sh
  *  make run-test
  *  bin/theta examples/gaussoverflat.cfg
- *</pre>
+ * </pre>
  * If you install the dependencies in an unusual location (i.e., if headers and libraries
  * are not found automatically) you have to edit the SQLITE_INCLUDE, SQLITE_LIBS,
  * BOOST_INCLUDE, and BOOST_LIBS variables on top of \c Makefile.rules.
  */
 
- /**
+/**
  * \page intro Introduction
  *
  * This page discusses  a concrete example where you get an overview over how %theta works

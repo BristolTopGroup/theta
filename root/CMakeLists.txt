@@ -10,6 +10,17 @@ if(root_cflags)
    add_custom_command(TARGET root POST_BUILD COMMAND mv ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libroot.so ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/root.so)
    set_property(TARGET root APPEND PROPERTY LINK_FLAGS "${root_libs} -lMinuit2")
    set_property(TARGET root APPEND PROPERTY COMPILE_FLAGS "${root_cflags}")
+
+   add_executable(db2root db2root.cxx)
+   target_link_libraries(db2root libtheta)
+   set_property(TARGET db2root APPEND PROPERTY LINK_FLAGS "${root_libs} -lMinuit2")
+   set_property(TARGET db2root APPEND PROPERTY COMPILE_FLAGS "${root_cflags}")
+
+   add_executable(histos histos.cxx)
+   target_link_libraries(histos libtheta)
+   set_property(TARGET histos APPEND PROPERTY LINK_FLAGS "${root_libs} -lMinuit2")
+   set_property(TARGET histos APPEND PROPERTY COMPILE_FLAGS "${root_cflags}")
+
 else(root_cflags)
    message(STATUS "ROOT not found. Not building ROOT dependent stuff")
 endif(root_cflags)

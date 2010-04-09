@@ -204,6 +204,7 @@ namespace theta {
                 if(error.get(i)<0.0) throw InvalidArgumentException("ConstantHistogramFunctionError: error histogram contains negative entries");
             }
         }
+                
         /** \brief Default constructor to be used by derived classes
          */
         ConstantHistogramFunctionError(){}
@@ -213,6 +214,16 @@ namespace theta {
         Histogram err;
         mutable Histogram fluc; // the fluctuated Histogram returned by getFluctuatedHistogram
     };
+    
+    namespace HistogramFunctionUtils{
+    
+        /** \brief Read the normalize_to setting
+         *
+         * parese the normalize_to setting, which can either be a double, or an array/list of doubles which are
+         * then multiplied.
+         */
+        double read_normalize_to(const theta::SettingWrapper & s);
+    }
 
 }
 

@@ -276,14 +276,12 @@ ProducerInfoTable::ProducerInfoTable(const std::string & name, const boost::shar
     c_ind = add_column("ind", typeInt);
     c_name = add_column("name", typeString);
     c_type = add_column("type", typeString);
-    c_info = add_column("info", typeString);
 }
     
-void ProducerInfoTable::append(int index, const std::string & p_name, const std::string & p_type, const std::string & info){
+void ProducerInfoTable::append(int index, const std::string & p_name, const std::string & p_type){
     set_column(c_ind, index);
     set_column(c_name, p_name);
     set_column(c_type, p_type);
-    set_column(c_info, info);
     add_row();
 }
 

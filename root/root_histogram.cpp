@@ -38,7 +38,7 @@ using namespace std;
              h_error.set(i, histo->GetBinError(i) / content);
           }
       }
-      double norm = ctx.setting["normalize_to"];
+      double norm = HistogramFunctionUtils::read_normalize_to(ctx.setting);
       double integral = h.get_sum_of_bincontents();
       h *= norm/integral;
       set_histos(h, h_error);

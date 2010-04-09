@@ -42,7 +42,9 @@ namespace theta{
     class Model;
     class DataSource;
     class NLLikelihood;
-    class ModelFactory;    
+    class ModelFactory;
+    
+    class SettingWrapper;
 }
 
 #endif

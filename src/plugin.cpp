@@ -8,19 +8,35 @@
 
 using namespace theta::plugin;
 
-
-PluginType::PluginType(const Configuration & c): name(c.setting.getName()), type(c.setting["type"]){
-    setting = c.setting.value_to_string();
-    if(c.setting.exists("name")){
-        name = static_cast<std::string>(c.setting["name"]);
+namespace{
+bool nameOk(const std::string & name){
+    if(name=="") return false;
+    for(size_t i=0; i<name.size(); ++i){
+        char c = name[i];
+        if((c >= 'A') && (c <= 'Z')) continue;
+        if((c >= 'a') && (c <= 'z')) continue;
+        if((c >= '0') && (c <= '9')) continue;
+        if(c=='_') continue;
+        return false;
     }
-    else{
-        /*setting = "name = \"";
-        setting += name + "\";\n";*/
-        setting.insert(setting.size()-1, "name = \"" + name + "\";");
+    return true;
+}
+
+}
+
+EventTableWriter::EventTableWriter(const std::string & name){
+    if(not nameOk(name)){
+        std::cerr << "Warning: name '" << name << "' is not a valid name for building column names. "
+                 "Support for such names will be removed soon (set another name by chaning the right hand "
+                 "side of the setting or with the name=\"...\" setting)." << std::endl;
     }
 }
 
+PluginType::PluginType(const Configuration & c): name(c.setting.getName()), type(c.setting["type"]){
+    if(c.setting.exists("name")){
+        name = static_cast<std::string>(c.setting["name"]);
+    }
+}
 
 void PluginLoader::execute(const Configuration & cfg) {
     bool verbose = false;

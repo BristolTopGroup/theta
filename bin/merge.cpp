@@ -182,7 +182,7 @@ void merge(const string & file1, const string & file2){
                 ss << "INSERT INTO '" << tables[itable] << "' SELECT runid + " << offset;
                 //skip runid, which should be the first column in all tables
                 for(size_t ic=1; ic<column_names1.size(); ++ic){
-		  ss << ", " << column_names1[ic];
+                    ss << ", \"" << column_names1[ic] << "\"";
                 }
                 ss << " FROM o.'" << tables[itable] << "';";
 		sqlite3_exec(db, ss.str().c_str());

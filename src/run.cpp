@@ -33,8 +33,7 @@ void Run::run(){
     data_source->set_table(event_table);
     data_source->define_table();
     for(size_t i=0; i<producers.size(); i++){
-        prodinfo_table.append(static_cast<int>(i), producers[i].get_name(), producers[i].get_type(),
-                              producers[i].get_setting());
+        prodinfo_table.append(static_cast<int>(i), producers[i].get_name(), producers[i].get_type());
         producers[i].set_table(event_table);
         producers[i].define_table();
     }

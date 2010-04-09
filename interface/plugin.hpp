@@ -42,15 +42,6 @@ namespace theta {
             std::string get_type() const{
                 return type;
             }
-            
-            /** \brief Return the setting group required to reconstruct this object
-             *
-             * The default implementation returns the setting group given in the constructor
-             * in c.setting where the "name" setting is always set to the name.
-             */
-            std::string get_setting() const{
-                return setting;
-            }
              
         protected:
             /** \brief Construct, filling name and type from the supplied Configuration
@@ -63,17 +54,11 @@ namespace theta {
              * a Configuration instance), this default constructor is provided for derived classes.
              */
             PluginType(){}
-            
-            /** \brief The setting returned by get_setting
-             *
-             * Should be set up in the constructor of derived classes which wish to change
-             * the default behaviour.
-             */
-            std::string setting;
 
         private:
             std::string name;
             std::string type;
+            
         };
         
         /** \brief Abstract base class for all PluginTypes writing to an EventTable
@@ -103,6 +88,8 @@ namespace theta {
             virtual void define_table() = 0;
         
         protected:
+            EventTableWriter(const std::string & name);
+            
             /// The table instance to be used for writing    
             boost::shared_ptr<EventTable> table;
         };

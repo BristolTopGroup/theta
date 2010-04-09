@@ -180,7 +180,7 @@ namespace theta {
         
     protected:
         /// proxy to PluginType constructor for derived classes
-        DataSource(const theta::plugin::Configuration & cfg): theta::plugin::PluginType(cfg){}
+        DataSource(const theta::plugin::Configuration & cfg): theta::plugin::PluginType(cfg), theta::plugin::EventTableWriter(get_name()){}
         ObsIds obs_ids;
     };
     

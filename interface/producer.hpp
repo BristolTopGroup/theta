@@ -58,6 +58,9 @@ protected:
     NLLikelihood get_nllikelihood(const Data & data, const Model & model);
 
     boost::ptr_vector<theta::Function> additional_likelihood_functions;
+    
+private:
+    static bool nameOk(const std::string & name);
 };
 
 }

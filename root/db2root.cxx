@@ -125,11 +125,11 @@ int main(int argc, char ** argv){
         
         stringstream ttree_spec;
         stringstream sql_query;
-        sql_query << "SELECT ";
+        sql_query << "SELECT \"";
         
         for(map<string, type>::const_iterator cit=columns.begin(); cit!=columns.end(); ++cit){
             if(cit!=columns.begin()){
-                sql_query << ", ";
+                sql_query << "\", \"";
                 ttree_spec << ":";
             }
             sql_query << cit->first;
@@ -142,7 +142,7 @@ int main(int argc, char ** argv){
         
         tree->Branch((*it).c_str(), data, ttree_spec.str().c_str());
         
-        sql_query << " FROM " << *it << ";";
+        sql_query << "\" FROM " << *it << ";";
         sqlite3_stmt* st = sqlite3_prepare(db, sql_query.str().c_str());
         int res;
         while(SQLITE_ROW == (res=sqlite3_step(st))){

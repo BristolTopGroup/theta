@@ -231,7 +231,7 @@
  *
  * %theta is available as source-code distribution via subversion only. The latest version can be obtained by running
  * <pre>
- * svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/tags/april-2010 theta
+ * svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/april-2010 theta
  * </pre>
  * If you want to compile it within CMSSW (which provides the dependencies), make sure to check it
  * out in the \c src directory of a CMSSW directory.
@@ -243,7 +243,7 @@
  * The recommended way to compile %theta is to use cross-platform make, <a href="http://www.cmake.org/">CMake</a>.
  * After getting the dependencies (sqlite3, boost and root), issue
  * <pre>
- *  cd theta #or where ever it was checked out
+ *  cd %theta
  *  mkdir build
  *  cmake ..
  *  make
@@ -273,7 +273,7 @@
  *  scram project CMSSW CMSSW_3_5_0
  *  cd CMSSW_3_5_0/src
  *  cmsenv
- *  svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
+ *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/april-2010 theta
  *  cd theta
  *  make
  *  source setenv.sh
@@ -299,7 +299,7 @@
  *
  * Then, you can follow the instructions above, skipping the CMSSW part:
  * <pre>
- *  svn co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
+ *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/april-2010 theta
  *  cd theta
  *  make
  *  source setenv.sh

@@ -213,20 +213,17 @@ private:
     
     boost::shared_ptr<VarIdManager> vm;
     
-    std::auto_ptr<Model> m_producers;
+    std::auto_ptr<Model> model;
 
     //(pseudo-) data:
     Data data;
     std::auto_ptr<DataSource> data_source;
 
-    //database and logtable as shared_ptr, as they are used by the producers:
-    boost::shared_ptr<Database> db;
-    boost::shared_ptr<LogTable> logtable;
+    std::auto_ptr<Database> db;
+    std::auto_ptr<LogTable> logtable;
     bool log_report;
-
-    //the tables only used by run (and only by run):
-    theta::ProducerInfoTable prodinfo_table;
-    theta::RndInfoTable rndinfo_table;
+    std::auto_ptr<ProducerInfoTable> prodinfo_table;
+    std::auto_ptr<RndInfoTable> rndinfo_table;
 
     //the producers to be run on the pseudo data:
     boost::ptr_vector<Producer> producers;

@@ -79,7 +79,7 @@ private:
     
     std::auto_ptr<theta::Minimizer> minimizer;
     
-    theta::EventTable::column c_nll_b, c_nll_sb;
+    std::auto_ptr<theta::Column> c_nll_b, c_nll_sb;
 };
 
 #endif

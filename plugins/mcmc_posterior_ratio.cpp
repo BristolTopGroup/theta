@@ -107,14 +107,14 @@ void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, c
     if(std::isnan(nl_posterior_sb) || std::isnan(nl_posterior_b)){
         throw Exception("average posterior was NAN");
     }
-    table->set_column(c_nl_posterior_sb, nl_posterior_sb);
-    table->set_column(c_nl_posterior_b, nl_posterior_b);
+    table->set_column(*c_nl_posterior_sb, nl_posterior_sb);
+    table->set_column(*c_nl_posterior_b, nl_posterior_b);
 }
 
 
 void mcmc_posterior_ratio::define_table(){
-    c_nl_posterior_sb = table->add_column(*this, "nl_posterior_sb", EventTable::typeDouble);
-    c_nl_posterior_b =  table->add_column(*this, "nl_posterior_b",  EventTable::typeDouble);
+    c_nl_posterior_sb = table->add_column(get_name(), "nl_posterior_sb", Table::typeDouble);
+    c_nl_posterior_b =  table->add_column(get_name(), "nl_posterior_b",  Table::typeDouble);
 }
 
 mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), init(false){

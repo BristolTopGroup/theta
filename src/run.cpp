@@ -27,19 +27,26 @@ void Run::set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
     progress_listener = l;
 }
 
+namespace{
+    template<class T>
+    void noop_deleter(T*){}
+}
+
 void Run::run(){
-    //record all producers in prodinfo_table and setup the tables of the producers:
-    event_table.reset(new EventTable("products", db));
-    data_source->set_table(event_table);
+    //make a shared_ptr out of a auto_ptr. While this is not very nice, I personally
+    // like shared_ptr in interfaces much better than naked pointers as with naked pointers,
+    // it is never a-priori clear who has to take care of them ...
+    boost::shared_ptr<EventTable> event_table_shared(event_table.get(), noop_deleter<EventTable>);
+    
+    data_source->set_table(event_table_shared);
     data_source->define_table();
     for(size_t i=0; i<producers.size(); i++){
-        prodinfo_table.append(static_cast<int>(i), producers[i].get_name(), producers[i].get_type());
-        producers[i].set_table(event_table);
+        prodinfo_table->append(static_cast<int>(i), producers[i].get_name(), producers[i].get_type());
+        producers[i].set_table(event_table_shared);
         producers[i].define_table();
     }
     //write random seeds to rndinfo_table:
-    //TODO: ...
-    rndinfo_table.append(*this, seed);
+    rndinfo_table->append(*this, seed);
     //log the start of the run:
     eventid = 0;
     logtable->append(*this, LogTable::info, "run start");
@@ -54,12 +61,9 @@ void Run::run(){
             break;
         }
         log_event_start();
-        //ParValues values = m_pseudodata.sampleValues(rnd);
-        //data = m_pseudodata.samplePseudoData(rnd, values);
-        //params_table->append(*this, values);
         for (size_t j = 0; j < producers.size(); j++) {
             try {
-                producers[j].produce(*this, data, *m_producers);
+                producers[j].produce(*this, data, *model);
             } catch (Exception & ex) {
                 std::stringstream ss;
                 ss << "Producer '" << producers[j].get_name() << "' failed: " << ex.message;
@@ -92,10 +96,27 @@ void Run::addProducer(std::auto_ptr<Producer> & p){
 }
 
 Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
-  vm(cfg.vm), db(new Database(cfg.setting["result-file"])),  logtable(new LogTable("log", db)),
-  log_report(true), prodinfo_table("prodinfo", db), rndinfo_table("rndinfo", db),
+  vm(cfg.vm), /*db(new Database(cfg.setting["result-file"])),  logtable(new LogTable("log", db)),*/
+  log_report(true), /*, prodinfo_table("prodinfo", db), rndinfo_table("rndinfo", db),*/
       runid(1), eventid(0), n_event(cfg.setting["n-events"]){
     SettingWrapper s = cfg.setting;
+    
+    //1. setup database and tables:
+    db = plugin::PluginManager<Database>::build(plugin::Configuration(cfg, s["output_database"]));
+
+    std::auto_ptr<Table> prodinfo_table_underlying = db->create_table("prodinfo");
+    prodinfo_table.reset(new ProducerInfoTable(prodinfo_table_underlying));
+    
+    std::auto_ptr<Table> logtable_underlying = db->create_table("log");
+    logtable.reset(new LogTable(logtable_underlying));
+    
+    std::auto_ptr<Table> rndinfo_table_underlying = db->create_table("rndinfo");
+    rndinfo_table.reset(new RndInfoTable(rndinfo_table_underlying));
+    
+    std::auto_ptr<Table> event_table_underlying = db->create_table("products");
+    event_table.reset(new EventTable(event_table_underlying));
+    
+    //2. misc
     if(s.exists("run-id")) runid = s["run-id"];
     int i_seed = -1;
     if(s.exists("seed")) i_seed = s["seed"];
@@ -108,8 +129,13 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
     }
     seed = i_seed;
     rnd.set_seed(seed);
-    m_producers = ModelFactory::buildModel(plugin::Configuration(cfg, s["model"]));
-    data_source = plugin::PluginManager<DataSource>::build(plugin::Configuration(cfg, s["data-source"]));
+    model = ModelFactory::buildModel(plugin::Configuration(cfg, s["model"]));
+    if(s.exists("data_source"))
+        data_source = plugin::PluginManager<DataSource>::build(plugin::Configuration(cfg, s["data_source"]));
+    else
+        data_source = plugin::PluginManager<DataSource>::build(plugin::Configuration(cfg, s["data-source"]));
+    
+    //3. logging stuff
     LogTable::e_severity level = LogTable::warning;
     if(s.exists("log-level")){
         std::string loglevel = s["log-level"];
@@ -129,15 +155,16 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
         log_report = s["log-report"];
     }
     eventid = 0;
-    //add the producers:
+    
+    //4. add the producers:
     size_t n_p = s["producers"].size();
     if (n_p == 0)
         throw ConfigurationException("no producers in run specified!");
     for (size_t i = 0; i < n_p; i++) {
-    SettingWrapper producer_setting = s["producers"][i];
-    std::auto_ptr<Producer> p = plugin::PluginManager<Producer>::build(plugin::Configuration(cfg, producer_setting));
-    addProducer(p);
-    //should transfer ownership:
-    assert(p.get()==0);
+        SettingWrapper producer_setting = s["producers"][i];
+        std::auto_ptr<Producer> p = plugin::PluginManager<Producer>::build(plugin::Configuration(cfg, producer_setting));
+        addProducer(p);
+        //should transfer ownership:
+        assert(p.get()==0);
     }
 }

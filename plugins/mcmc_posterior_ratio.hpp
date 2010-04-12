@@ -76,7 +76,7 @@ private:
     theta::Matrix sqrt_cov_b;
     std::vector<double> startvalues_b;
     
-    theta::EventTable::column c_nl_posterior_sb, c_nl_posterior_b;
+    std::auto_ptr<theta::Column> c_nl_posterior_sb, c_nl_posterior_b;
 };
 
 #endif

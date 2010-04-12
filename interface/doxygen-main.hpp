@@ -472,7 +472,7 @@
  *         <li>root_histogram to read a histogram from a root file</li>
  *     </ul>
  *   </li>
- * <li>\link theta::Function Function\endlink: used as coefficients of the components of an observable
+ * <li>\link theta::Function Function \endlink: used as coefficients of the components of an observable or as prior
  *         specification in a model. Currently, no core plugins are available.</li>
  * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood,
  *        profile likelihood methods:
@@ -481,20 +481,13 @@
  *       <li>(not yet implemented) lbfgs using liblbfgs</li>
  *     </ul>
  * </li>
- * <li>\link theta::Run Run\endlink: the top-level object which invokes the pseudo data creation and producers:
- *    <ul>
- *       <li>plain_run throwing pseudo data and calling all producers</li>
- *       <li>scan_run scanning through a given model parameter. For each fixed parameter value, throw pseudo data and call the producers</li>
- *       <li>(not yet implemented:) data_run apply the list of statistical methods to data</li>
- *    </ul>
- * </li>
- * <li>\link theta::Distribution Distribution\endlink: used in model constraints or as priors in a statistical method:
+ * <li>\link theta::Distribution Distribution \endlink: used in model constraints and as priors in a statistical method:
  *    <ul>
  *       <li>gauss normal distribution in one or more dimensions, including arbitrary correlations</li>
  *       <li>log_normal log-normal distribution in one dimension</li>
  *     </ul>
  * </li>
- * <li>\link theta::Producer Producer\endlink: statistical method called by a Run object</li>
+ * <li>\link theta::Producer Producer \endlink: statistical method called by a Run object</li>
  *    <ul>
  *       <li>\link mle mle \endlink maximum likelihood estimator estimates parameter values and errors using a minimizer
  *             on the negative-log-likelihood function</li>

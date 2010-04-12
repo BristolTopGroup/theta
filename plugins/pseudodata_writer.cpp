@@ -11,9 +11,9 @@ using namespace libconfig;
 
 void pseudodata_writer::define_table(){
     for(size_t i=0; i<observables.size(); ++i){
-        n_events_columns.push_back(table->add_column(*this, "n_events_" + vm->getName(observables[i]), EventTable::typeDouble));
+        n_events_columns.push_back(table->add_column(get_name(), "n_events_" + vm->getName(observables[i]), Table::typeDouble));
         if(write_data)
-            data_columns.push_back(table->add_column(*this, "data_" + vm->getName(observables[i]), EventTable::typeBlob));
+            data_columns.push_back(table->add_column(get_name(), "data_" + vm->getName(observables[i]), Table::typeBlob));
     }
 }
 

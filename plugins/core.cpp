@@ -497,10 +497,10 @@ double product_distribution::width(const ParId & p) const{
 
 void model_source::define_table(){
     for(size_t i=0; i< parameter_names.size(); ++i){
-        parameter_columns.push_back(table->add_column(*this, parameter_names[i], EventTable::typeDouble));
+        parameter_columns.push_back(table->add_column(get_name(), parameter_names[i], Table::typeDouble));
     }
     if(save_nll!=nosave){
-        c_nll = table->add_column(*this, "nll", EventTable::typeDouble);
+        c_nll = table->add_column(get_name(), "nll", Table::typeDouble);
     }
 }
 
@@ -550,7 +550,7 @@ void model_source::fill(Data & dat, Run & run){
     if(save_nll==nosave) return;
     NLLikelihood nll = model->getNLLikelihood(dat);
     if(save_nll==distribution_from_override) nll.set_override_distribution(override_parameter_distribution.get());
-    table->set_column(c_nll, nll(values));
+    table->set_column(*c_nll, nll(values));
 }
 
 

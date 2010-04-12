@@ -76,7 +76,7 @@ private:
     std::vector<double> result;
 
     //table columns:
-    theta::EventTable::column c_nll, c_maxl;
+    std::auto_ptr<theta::Column> c_nll, c_maxl;
 };
 
 #endif

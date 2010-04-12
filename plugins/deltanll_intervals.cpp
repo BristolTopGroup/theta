@@ -13,14 +13,14 @@ using namespace std;
 using namespace libconfig;
 
 void deltanll_intervals::define_table(){
-    c_maxl = table->add_column(*this, "maxl", EventTable::typeDouble);
+    c_maxl = table->add_column(get_name(), "maxl", Table::typeDouble);
     for(size_t i=0; i<clevels.size(); ++i){
         stringstream ss;
         ss << "lower" << setw(5) << setfill('0') << static_cast<int>(clevels[i] * 10000 + 0.5);
-        lower_columns.push_back(table->add_column(*this, ss.str(), EventTable::typeDouble));
+        lower_columns.push_back(table->add_column(get_name(), ss.str(), Table::typeDouble));
         ss.str("");
         ss << "upper" << setw(5) << setfill('0') << static_cast<int>(clevels[i] * 10000 + 0.5);
-        upper_columns.push_back(table->add_column(*this, ss.str(), EventTable::typeDouble));
+        upper_columns.push_back(table->add_column(get_name(), ss.str(), Table::typeDouble));
     }
 }
 
@@ -90,7 +90,7 @@ void deltanll_intervals::produce(theta::Run & run, const theta::Data & data, con
     MinimizationResult minres = minimizer->minimize(nll, start, step, ranges);
     
     const double value_at_minimum = minres.values.get(pid);
-    table->set_column(c_maxl, value_at_minimum);
+    table->set_column(*c_maxl, value_at_minimum);
     
     
     ReducedNLL nll_r(nll, pid, minres.values, re_minimize ? minimizer.get() : 0, start, step, ranges);

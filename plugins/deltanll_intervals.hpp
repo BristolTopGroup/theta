@@ -96,9 +96,9 @@ private:
     std::map<theta::ParId, std::pair<double, double> > ranges;
 
     //table columns:
-    std::vector<theta::EventTable::column> lower_columns;
-    std::vector<theta::EventTable::column> upper_columns;
-    theta::EventTable::column c_maxl;
+    boost::ptr_vector<theta::Column> lower_columns;
+    boost::ptr_vector<theta::Column> upper_columns;
+    std::auto_ptr<theta::Column> c_maxl;
 };
 
 #endif

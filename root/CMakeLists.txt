@@ -12,12 +12,12 @@ if(root_cflags)
    set_property(TARGET root APPEND PROPERTY COMPILE_FLAGS "${root_cflags}")
 
    add_executable(db2root db2root.cxx)
-   target_link_libraries(db2root libtheta)
+   target_link_libraries(db2root libtheta sqlite3)
    set_property(TARGET db2root APPEND PROPERTY LINK_FLAGS "${root_libs} -lMinuit2")
    set_property(TARGET db2root APPEND PROPERTY COMPILE_FLAGS "${root_cflags}")
 
    add_executable(histos histos.cxx)
-   target_link_libraries(histos libtheta)
+   target_link_libraries(histos libtheta sqlite3)
    set_property(TARGET histos APPEND PROPERTY LINK_FLAGS "${root_libs} -lMinuit2")
    set_property(TARGET histos APPEND PROPERTY COMPILE_FLAGS "${root_cflags}")
 

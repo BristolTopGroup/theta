@@ -13,10 +13,10 @@ using namespace libconfig;
 using namespace theta::plugin;
 
 void mle::define_table(){
-    c_nll = table->add_column(*this, "nll", EventTable::typeDouble);
+    c_nll = table->add_column(get_name(), "nll", Table::typeDouble);
     for(size_t i=0; i<save_ids.size(); ++i){
-        parameter_columns.push_back(table->add_column(*this, parameter_names[i], EventTable::typeDouble));
-        error_columns.push_back(table->add_column(*this, parameter_names[i] + "_error", EventTable::typeDouble));
+        parameter_columns.push_back(table->add_column(get_name(), parameter_names[i], Table::typeDouble));
+        error_columns.push_back(table->add_column(get_name(), parameter_names[i] + "_error", Table::typeDouble));
     }
 }
 
@@ -28,7 +28,7 @@ void mle::produce(theta::Run & run, const theta::Data & data, const theta::Model
         start_step_ranges_init = true;
     }
     MinimizationResult minres = minimizer->minimize(nll, start, step, ranges);
-    table->set_column(c_nll, minres.fval);
+    table->set_column(*c_nll, minres.fval);
     for(size_t i=0; i<save_ids.size(); ++i){
         table->set_column(parameter_columns[i], minres.values.get(save_ids[i]));
         table->set_column(error_columns[i], 0.5 * (minres.errors_plus.get(save_ids[i]) + minres.errors_minus.get(save_ids[i])) );

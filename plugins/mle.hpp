@@ -55,9 +55,9 @@ private:
     std::map<theta::ParId, std::pair<double, double> > ranges;
     
     //the two columns with parameter and error:
-    std::vector<theta::EventTable::column> parameter_columns;
-    std::vector<theta::EventTable::column> error_columns;
-    theta::EventTable::column c_nll;
+    boost::ptr_vector<theta::Column> parameter_columns;
+    boost::ptr_vector<theta::Column> error_columns;
+    std::auto_ptr<theta::Column> c_nll;
 };
 
 #endif

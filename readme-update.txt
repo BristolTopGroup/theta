@@ -1,3 +1,23 @@
+This file summarizes changes relevant to users, i.e., changes in config file
+convention and output. It does not cover internal changes.
+
+
+from April 2010 to trunk:
+-------------------------
+* the run in the config file (main = {...}) now has "output_database" setting which specifies the
+  database to which write the results. To emulate the behaviour, replace the
+       result-file = "<filename>";
+  setting by:
+    output_database = {
+        type = "sqlite_database";
+        filename = "SigAndBkg.db";
+    };
+* instead of "data-source" in the run, one can now also use "data_source", with underscore, to avoid some problems
+  with hyphens in column names.
+
+
+from Feb 2010 to April 2010:
+----------------------------
 1. globally defined "parameters" setting is now only a list of names
 2. what used to be "ranges" and "default" in the "parameters" setting is now at the model or producer level:
   a parameter-distribution setting in the model MUST be defined ) which contains

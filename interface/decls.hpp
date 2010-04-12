@@ -15,6 +15,10 @@ namespace theta{
     class Producer;
     class Distribution;
     
+    //databse.hpp
+    class Database;
+    class Table;
+    class Column;
     class EventTable;
     
     namespace plugin{

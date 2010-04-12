@@ -13,8 +13,8 @@ using namespace std;
 using namespace libconfig;
 
 void deltanll_hypotest::define_table(){
-    c_nll_b = table->add_column(*this, "nll_b", EventTable::typeDouble);
-    c_nll_sb = table->add_column(*this, "nll_sb", EventTable::typeDouble);
+    c_nll_b = table->add_column(get_name(), "nll_b", Table::typeDouble);
+    c_nll_sb = table->add_column(get_name(), "nll_sb", Table::typeDouble);
 }
 
 void deltanll_hypotest::produce(theta::Run & run, const theta::Data & data, const theta::Model & model){
@@ -34,8 +34,8 @@ void deltanll_hypotest::produce(theta::Run & run, const theta::Data & data, cons
     minres = minimizer->minimize(nll, b_only_mode, b_only_width, b_only_support);
     double nll_b = minres.fval;
     
-    table->set_column(c_nll_sb, nll_sb);
-    table->set_column(c_nll_b, nll_b);
+    table->set_column(*c_nll_sb, nll_sb);
+    table->set_column(*c_nll_b, nll_b);
 }
 
 

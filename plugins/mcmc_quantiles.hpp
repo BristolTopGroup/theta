@@ -72,7 +72,7 @@ private:
     boost::shared_ptr<theta::VarIdManager> vm;
     
     //result columns: one per requested quantile:
-    std::vector<theta::EventTable::column> columns;
+    boost::ptr_vector<theta::Column> columns;
     
     //MCMC parameters:
     unsigned int iterations;

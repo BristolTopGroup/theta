@@ -50,8 +50,8 @@ public:
 private:
     boost::shared_ptr<theta::VarIdManager> vm;
     std::vector<theta::ObsId> observables;
-    std::vector<theta::EventTable::column> n_events_columns;
-    std::vector<theta::EventTable::column> data_columns;
+    boost::ptr_vector<theta::Column> n_events_columns;
+    boost::ptr_vector<theta::Column> data_columns;
     bool write_data;
 };
 

@@ -406,11 +406,11 @@ private:
 
     e_save_nll save_nll;
     
-    theta::EventTable::column c_nll;
+    std::auto_ptr<theta::Column> c_nll;
     
     theta::ParIds par_ids;
     std::vector<std::string> parameter_names;
-    std::vector<theta::EventTable::column> parameter_columns;
+    boost::ptr_vector<theta::Column> parameter_columns;
     
     std::auto_ptr<theta::Model> model;
     std::auto_ptr<theta::Distribution> override_parameter_distribution;

@@ -33,8 +33,6 @@ namespace theta{
        */
       void apply_settings(theta::plugin::Configuration & cfg);
    }
-
-   std::ostream & operator<<(std::ostream & out, const ParIds & pids);
 }
 
 #endif

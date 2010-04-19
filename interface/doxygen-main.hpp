@@ -1,11 +1,9 @@
 /* this file is not for inclusion in C++ code. It is only here
- * to provide a "mainpage" block for doxygen (and I didn't want to spoil some random
- * header with it ...). It also includes documentation of the "theta" namespace
- * which is distributed over many header files.
+ * to provide a "mainpage" block for doxygen and I didn't want to spoil some random
+ * header with it.
  */
 
 /** \mainpage
- *
  *
  *  \image html theta-medium.png
  *
@@ -16,6 +14,28 @@
  * in the sense that the expected data distribution is always expressed as a sum of templates (which, in general,
  * depend on the model parameters).
  *
+ * \section main_impatient For the impatient
+ *
+ * For getting started with %theta quickly, make sure to install sqlite3, boost, root and cmake on your machine
+ * and run
+ * \code
+ *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/april-2010 %theta
+ *  cd %theta
+ *  mkdir build
+ *  cd build
+ *  cmake ..
+ *  make
+ *  cd ..
+ *  bin/theta examples/gaussoverflat.cfg
+ *  root/histos examples/plot-gaussoverflat.cfg
+ *  root gaussoverflat.root
+ * \endcode
+ *
+ * For more information about how to compile %theta, see \subpage installation "Installation".
+ * For an introduction into usage, see \subpage intro "Introduction".
+ *
+ * \section main_intro First Introduction
+ *
  * %theta supports a physicist doing data analysis to answer commonly arising statistical questions
  * such as large-scale pseudo-experiments for coverage tests, luminosity scans, definition of the critical region
  * for a hypothesis test, etc.
@@ -23,8 +43,7 @@
  * The intention of %theta is to <em>support</em> the user in the sense that it provides the necessary tools
  * and documents to address many questions.
  * However, %theta does not intent to be an all-in-one device which suits every purpose. For example,
- * it is restricted to template-based modeling in the sense described above. Also, %theta does no sort of
- * plotting whatsoever.
+ * it is restricted to template-based modeling in the sense described above. Also, %theta does not do any plotting.
  *
  * The documentation is split into several pages. If you are new to %theta, read them in this order:
  * <ol>
@@ -148,7 +167,8 @@
  * These restrictions are intentional: by doing only a small number of tasks, these can be done efficiently and correctness
  * is easier to achieve. Also, %theta is easier to document and to understand if not bloated by additional code.
  * See \ref design for more information about this point.
- *
+ */
+ /*
  * \section singletop Single Top Search
  *
  * 
@@ -345,7 +365,7 @@
  * <li>Configuration of the run</li>
  * <li>Executing the %theta main program (optional: more than once)</li>
  * <li>(optional:) merging the output produced by different runs of %theta</li>
- * <li>analyzing the output</li>
+ * <li>analyzing the output by making plots</li>
  *</ol>
  * All but the last point are well supported by %theta and explained below in more detail.
  *
@@ -369,30 +389,42 @@
  * setting (an integer type). See the libconfig reference linked in the \ref ack section
  * for a detailed description of the configuration file syntax. Note that any right hand side
  * where a setting group is expected, it is also allowed to write a string of the form "@&lt;path&gt;"
- * where &lt;path&gt; is the path in the configuration file to use at this place instead.
+ * where &lt;path&gt; is the (dot-separated) path in the configuration file. In this case, the path is resolved and the value
+ * of this setting is used instead. This means, that the following two settings are equivalent:
+ * \code
+ * //1.
+ * double_value = 1.0;
+ * setting_group_1 = {
+ *   some_value = 1.0;
+ * };
+ *
+ * //2.
+ * double_value = "@setting_group_1.some_value";
+ * setting_group_1 = {
+ *   some_value = 1.0;
+ * };
+ * \endcode
+ *
+ * This is especially useful for large models which require a lot of definitions and would be very hard to understand without
+ * meaningful links.
  *
  * At the top of the configuration file, the parameters and observables you want to use are defined:
  * there is one observable "mass" with the range [500, 1500] and 200 bins. Note that %theta does
  * not care at all about units and that observables are <em>always</em> binned.
- * The parameters of this model are defined next: "s" is
- * the (poisson) mean number of signal events after your selection, "b" is the mean number of
- * background events. Their "default" values are used later for pseudo data generation. As we want to create test statistics for the
- * "background only" hypothesis, we set the signal parameter to zero. The range of these parameters
- * is mainly used as contraint for fits. You usually define it as large as physically makes sense. In this case,
- * the parameters can take any non-negative value.
+ * The parameters of this model are defined next: "s" is  the (poisson) mean number of signal events after your selection, "b" is the mean number of
+ * background events. Only parameter names are defined at this point. The values they take for pseudo data
+ * generation are defined later.
  *
  * Next, the model "gaussoverflat" is defined, where the expectation for the "mass" observable is specified. As discussed above,
  * it is a linear combination of s signal events which are gaussian and b background events which are flat. This linear combination
- * of different components is expressed as different setting groups where you specify \c coefficients and \c histogram for each component.
+ * of different components is expressed as different setting groups where you specify \c coefficient-function and \c histogram for each component.
  *
- * After the observable specification, there is a list of constraints. Constraints
- * specified in the model will be used
+ * After the observable specification, there is a special setting named "parameter-distribution". This defined
+ * the distribution of the model parameters and will be used
  * <ul>
  * <li>as additional term in the likelihood function (Bayesianically, these are priors)</li>
- * <li>If throwing pseudo experiments, they are used to choose the parameters' values for pseudo data creation (if no contraint is
- *      defined for a parameter, always its default value is used for pseudo data generation).
+ * <li>when throwing pseudo experiments as distribution for the model parameters</li>
  * </ul>
- * The "constraint" settings group  concludes the definition of the model.
  *
  * \subsection conf_stat Configuration of the statistical methods to apply
  *
@@ -402,11 +434,10 @@
  *
  * This settings group defines a statistical method (also called "producer", as it produces
  * data in the output %database) of type "deltanll_hypotest". This producer (which is documented \link deltanll_hypotest here \endlink)
- * expects two more settings: "signal-plus-background" and "background-only".
- * They are both setting groups which specify special parameter values to apply to
+ * expects two more settings: "signal-plus-background-distribution" and "background-only-distribution".
+ * They are both setting groups which specify special distributions (which replace the distribution in the model) to apply to
  * get these two model varaints from the original model. In this case, the "background-only" model is given
- * by the setting group "{s=0.0;}".For the "signal-plus-background", no constraints have to be applied,
- * therefore, an empty settings group is given: "{}".
+ * by the fixing the signal parameter s to zero.
  *
  * Whenever a producer modeule runs, it will be provided with a model and data. The \ref deltanll_hypotest producer will
  * <ol>
@@ -422,19 +453,24 @@
  * Having configured the model and a statistical method, we have to glue them together. In this case, we want to make
  * many pseudo experiments in order to determine the distribution of the likelihood-ration test-statistics.
  *
- * This is done by the "main" settings group. It defines a \ref plain_run which
+ * This is done by the "main" settings group. It defines a theta::run which
  * throws random pseudo data from a model and calls a list of producers. The results will be written
  * as SQL %database to a file with the path specified with "result-file".
  *
  * Pseudo data is thrown according to the configured model with following sequence:
  * <ol>
- *  <li>Determine a random value for each model parameter. This is done with a the constraint given
- *        in the model for that parameter, if it exists.
- *        Otherwise, the default value from the parameter definition is used.</li>
+ *  <li>Determine a random value for each model parameter. This is done with the parameter-distribution given
+ *        in the model.</li>
  *  <li>For each observable, use these parameters to evaluate the Histograms and coefficients.</li>
  *  <li>For each observable, add all components (i.e., coefficients and histograms)</li>
  *  <li>For each observable, draw a poisson-random sample from the obtained summed histogram</li>
  * </ol>
+ *
+ * After the pseudo data is determined from the data_source (in this case the model),
+ * all producers are run on the same pseudo data. As many pseudo experiments are repeated, %theta
+ * will save the result using the concept of runid and eventids: every execution of %theta corresponds to
+ * a run, every pseudo experiment within an execution of %theta is a separate event with a unique id within
+ * this run.
  *
  * \subsection running_theta Executing theta
  *
@@ -443,22 +479,56 @@
  * bin/theta examples/gaussoverflat.cfg
  * </pre>
  *
+ * This will produce a SQLite output file called gaussoverflat.db in the directory you called %theta.
+ * You can open the file with
+ * <pre>
+ *  sqlite3 gaussoverflat.db
+ * </pre>
+ *
+ * You will be presented a prompt in which you can enter SQL commands. To see which tables and columns are defined,
+ * enter
+ * <pre>
+ * .schema
+ * </pre>
+ *
+ * You will see that there are four tables:
+ * <ul>
+ *  <li>'log' which contains log messages of all errors and warnings during the run</li>
+ *  <li>'prodinfo' which contains a list of the producers which have run</li>
+ *  <li>'rndinfo' which contains the random number seed used for the run</li>
+ *  <li>'products'. This is the most important table which contains one line per pseudo experiment where the results of all producers is saved</li>
+ * </ul>
+ *
+ * While the first three tables always have the same structure, the columns of the fourth table is defined by the producers which run.
+ * In this case, the value of s and b as used in the data source are saved as well as the result of the deltanll_hypotest producer,
+ * i.e., \c hypotest__nll_b and \c hypotest__nll_sb. Note that the column names are always built from the name of the producer in the
+ * configuration file, followed by a producer-specific column name. This makes it possible to run the same producer more than once in one#
+ * run.
+ *
  * \subsection analyzing Analyzing the output
  *
  * The output of a run of %theta is saved as SQLite %database to the output file configured in the run
- * settings group. %theta does not (at least so far) provide any tools to analyze this output. However
- * it is not hard to write your own program which goes through the result tables and makes some plots; see
- * \c root/histos.cxx for a starting point.
+ * settings group. What to do with these parameters very much depends on the use case.
+ 
+ * %theta only supports very rudimentary root histogram production through SQL queries. For this example, execute
+ * <pre>
+ * bin/histos examples/plot-gaussoverflat.cfg
+ * </pre>
  *
- * In order to know which tables are in the file, have a look at the documentation of the theta::Run
- * object which is responsible to create some general-purpose tables. Furthermore, there is one table per producer
- * for which the table format is documented there.
+ * This will produce the file \c gaussoverflat.root which contains the histograms as specified in the plotting
+ * configuration file. Open this file with root; you will find the following histograms:
+ * <ul>
+ *  <li>\c log_likelihood_ratio contains the negative logarithm of the likelihood ratio. It is the difference of the \c hypotest__nll_b  and
+ *      \c hypotest__nll_sb columns of the \c products table.</li>
+ *  <li>\c diced_s, the value for \c s used to create pseudo data. In this case, it is always 200.</li>
+ *  <li>\c diced_b, the value for \c b used to create pseudo data. In this case, it is a normal distribution around 1000 with width 200.</li>
+ * </ul>
  *
  * \section plugins Available Plugins
  *
  * Everywhere in the configuration file where there is a "type=..." setting, the plugin system is used
  * to construct an object the corresponding type. The string given in the "type=..." setting is the C++ class
- * name used. The configuration is documented at the class documentation.
+ * name used. The configuration is documented in the respective class documentation.
  *
  * Core and root plugins, by type:
  * <ul>
@@ -473,7 +543,7 @@
  *     </ul>
  *   </li>
  * <li>\link theta::Function Function \endlink: used as coefficients of the components of an observable or as prior
- *         specification in a model. Currently, no core plugins are available.</li>
+ *         specification in a model. The only core plugin available is \link mult mult \endlink, which multiplies a list of parameters.</li>
  * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood,
  *        profile likelihood methods:
  *     <ul>
@@ -504,6 +574,11 @@
  *       <li>\link pseudodata_writer pseudodata_writer \endlink writes out the created pseudo data. Not really a
  *           statistical method, but technically implemented as a Producer as well</li>
  *    </ul>
+ *
+ * <li>\link theta::DataSource DataSource \endlink: provides the data/pseudo data on which to run the producers. Currently,
+ *   only pseudo data creation based on a model is supported via \link model_source model_source \endlink.</li>
+ * <li>\link theta::Database Database \endlink: saves the numbers produces by the producers somewhere. Currently, only
+ *   the \link sqlite_database sqlite_database \endlink which saves the data in a sqlite3 database file.</li>
  * </ul>
  */
  

@@ -3,6 +3,10 @@
 
 #include "interface/phys.hpp"
 
+/** \brief Function returning 1/p where p is some parameter
+ *
+ * This is the example class discussed on the page \subpage extend "Extending theta".
+ */
 class one_over_sqrt: public theta::Function{
 private:
     theta::ParId pid;

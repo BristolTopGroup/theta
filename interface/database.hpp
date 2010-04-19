@@ -131,14 +131,14 @@ public:
 
 /** \brief A Table to store per-event information
  *
- * Per \link run Run \endlink, there is exactly one EventTable. The main usages are
+ * Per \link theta::Run Run \endlink, there is exactly one EventTable. The main usages are
  * <ul>
  *   <li>by Producer to save the result</li>
  *   <li>by DataSource to save some per-event information about data production</li>
  * </ul>
  *
  * An EventTable will have an integer column named "runid" and an integer column named "eventid". Additionally,
- * any columns defined by the Producer or DataSource, with column names as described below.
+ * any columns defined by the Producer or DataSource, with column names as described in EvenTable::add_column.
  *
  * Clients use EventTable very similarly to a Table. Differences are (i) the
  * signature of the add_column method which takes an addtional name argument and (ii)
@@ -172,8 +172,8 @@ public:
         
         /** \brief Add a column to this table
          *
-         * Similar to Table::add_column, but expects an additional name of the caller (which is some
-         * instance of PluginType and should use PluginType::get_name()).
+         * Similar to Table::add_column, but expects an additional name of the caller. Classes which derive from
+         * PluginType should use the result of PluginType::get_name() as value for this argument.
          *
          * The actual column name used in the table will be
          * \code

@@ -68,51 +68,46 @@ public:
 
 /** \brief Represents a run, i.e., a chain of producer executions on pseudo data (or data).
  *
- *
- * Note that this is an abstract class, you cannot instantiate it directly but only subclasses of it.
- * If you are unsure, have a look at the documentation of \link plain_run plain_run\endlink which is the
- * simplest subclass.
- *
  * The configuration is done via a setting like:
  * \code
  * {
- *   type = "..."; //depends on which subclass you want
- *   result-file = "result/abc.db";
+ *   data_source = {...}; //some data source definition
+ *   output_database = {...}; // some database definition
+ *
  *   producers = ("@hypotest", "@hypotest2");
  *   n-events = 10000;
- *   model = "gaussoverflat";
+ *   model = "@gaussoverflat";
  *
  *   //optional:
  *   run-id = 2; //default is 1.
- *   seed = 15; //default is -1.
- *   log-level = "error";//default is "warning"
- *   log-report = false;//default is true
+ *   seed = 15;  //default is -1.
+ *   log-level = "error";  //default is "warning"
+ *   log-report = false;  //default is true
  * }
  *
  * hypotest = {...}; //some producer definition
  * hypotest2 = {...}; //some other producer definition
+ * gaussoverflat = {...}; // some model definition
  * \endcode
  *
- * \c type must always be "plain" to create an instance of \c PlainRun.
+ * \c data_source is a definition of a \link theta::DataSource DataSource \endlink implementation to use
+ *    as source of the data / pseudodata to run the producers on
  *
- * \c result-file gives the path to the result database file to create to save the result in
+ * \c output_database is a definition of a \link theta::Database Database \endlink implementation.
  *
  * \c producers is a list of links within the configuration file to setting groups which contain the
  *    definition of the producers to run.
  *
  * \c n-events is the number of pseudo experiments to run. This is ignored for some subclasses.
  *
- * \c model is the model used for pseudo data creation and which is passed to the producers.
- *    Note that you can provide two different models for these steps if you use the settings
- *    \c model-pseudodata and \c model-producers
+ * \c model is the model used for the producers: the producers will be given this for pseudo data creation.
  *
  * \c run-id is an optional setting and specifies which run-id to write to the result table. This setting
  *    might be removed in future versions of this plugin, as it is not really needed at this point.
  *
  * \c seed is the random number generator seed. It is mainly useful for debugging (i.e.,
- *    reproducing a bug might require
- *    choosing a particular seed). The default setting -1 will generate a
- *    different seed each time and should be used as default.
+ *    reproducing a bug might require choosing a particular seed). The default setting -1 will generate a
+ *    time-based seed and should be used as default.
  *
  * \c log-level controls the amount of logging information written to the log table: only log messages with a
  *      severity level equal to or exceeding the level given here are actually logged. Valid values
@@ -129,7 +124,7 @@ public:
  *   <li>A \link LogTable LogTable \endlink called 'log', where all log entries are stored.</li>
  *   <li>A \link ProducerInfoTable ProducerInfoTable \endlink called 'prodinfo', where the list of configured
  *        producers is stored.</li>
- *   <li>A \link RunTable RunTable \endlink called 'runs', where the per-run information is stored from
+ *   <li>A \link RndInfoTable RndInfoTable \endlink called 'runs', where the per-run information is stored from
  *      the producers or other sources.</li>
  *   <li>A \link EventTable EventTable \endlink called 'events' where the per-event results from all
  *     the producers are stored and other per-event information.</li>

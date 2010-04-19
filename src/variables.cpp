@@ -166,13 +166,3 @@ void theta::VarIdManagerUtils::apply_settings(theta::plugin::Configuration & ctx
         ctx.vm->createParId(par_name);
     }
 }
-
-std::ostream & theta::operator<<(std::ostream & out, const ParIds & pids){
-   out << "ParIds {";
-   int i=0;
-   for(ParIds::const_iterator it=pids.begin(); it!=pids.end(); ++it, ++i){
-       if(i)out << ", ";
-       out << it->id;
-   }
-   out << "}";
-}

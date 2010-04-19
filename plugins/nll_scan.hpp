@@ -39,8 +39,8 @@
  * For the definition of the reduced likelihood function, see \ref deltanll_intervals, including the meaning of the
  * \c re-minimize parameter.
  *
- * The negative logarithm of the reduced likelihood function at the given \c parameter-values is written to a blob
- * column called "nll".
+ * The negative logarithm of the reduced likelihood function at the given \c parameter-values is written as a 
+ * theta::Histogram column called "nll".
  *
  * The parameter value at the global minimum will be written to a column "maxl".
  */
@@ -72,8 +72,6 @@ private:
     theta::ParValues m_start, m_step;
     std::map<theta::ParId, std::pair<double, double> > m_ranges;
     
-    //save the result here:
-    std::vector<double> result;
 
     //table columns:
     std::auto_ptr<theta::Column> c_nll, c_maxl;

@@ -13,7 +13,7 @@ using namespace std;
 using namespace libconfig;
 
 void nll_scan::define_table(){
-    c_nll = table->add_column(get_name(), "nll", Table::typeBlob);
+    c_nll = table->add_column(get_name(), "nll", Table::typeHisto);
     c_maxl = table->add_column(get_name(), "maxl", Table::typeDouble);
 }
 
@@ -28,14 +28,17 @@ void nll_scan::produce(Run & run, const Data & data, const Model & model) {
     table->set_column(*c_maxl, minres.values.get(pid));
     ReducedNLL nll_r(nll, pid, minres.values, re_minimize ? minimizer.get() : 0, m_start, m_step, m_ranges);
     nll_r.set_offset_nll(minres.fval);
+    
+    theta::Histogram result(n_steps, start, start + n_steps * step);
     for(unsigned int i=0; i<n_steps; ++i){
         double x = start + i * step;
-        result[i] = nll_r(x);
+        result.set(i, nll_r(x));
     }
-    table->set_column(*c_nll, &result[0], result.size() * sizeof(double));
+    table->set_column(*c_nll, result);
 }
 
-nll_scan::nll_scan(const theta::plugin::Configuration & cfg): Producer(cfg), /*vm(cfg.vm),*/ re_minimize(true), start_step_ranges_init(false){
+nll_scan::nll_scan(const theta::plugin::Configuration & cfg): Producer(cfg),
+   re_minimize(true), start_step_ranges_init(false){
     SettingWrapper s = cfg.setting;
     minimizer = theta::plugin::PluginManager<Minimizer>::build(theta::plugin::Configuration(cfg, s["minimizer"]));
     string par_name = s["parameter"];
@@ -53,7 +56,6 @@ nll_scan::nll_scan(const theta::plugin::Configuration & cfg): Producer(cfg), /*v
         throw ConfigurationException("nll_scan: start < stop must hold");
     }
     step = (stop - start) / n_steps;
-    result.resize(n_steps);
 }
 
 REGISTER_PLUGIN(nll_scan)

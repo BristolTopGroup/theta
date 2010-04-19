@@ -79,7 +79,7 @@ public:
      *
      * These data types are the supported types for columns in a table.
      */
-    enum data_type { typeDouble, typeInt, typeString, typeBlob };
+    enum data_type { typeDouble, typeInt, typeString, typeHisto };
 
     /// destructor; creates the table if empty
     virtual ~Table();
@@ -108,7 +108,7 @@ public:
     virtual void set_column(const Column & c, double d) = 0;
     virtual void set_column(const Column & c, int i) = 0;
     virtual void set_column(const Column & c, const std::string & s) = 0;
-    virtual void set_column(const Column & c, const void * data, size_t nbytes) = 0;
+    virtual void set_column(const Column & c, const theta::Histogram & histo) = 0;
     //@}
     
     
@@ -164,8 +164,8 @@ public:
             table->set_column(c, s);
         }
         
-        virtual void set_column(const Column & c, const void * data, size_t nbytes){
-            table->set_column(c, data, nbytes);
+        virtual void set_column(const Column & c, const theta::Histogram & histo){
+            table->set_column(c, histo);
         }
         
         //@}

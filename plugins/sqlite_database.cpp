@@ -1,9 +1,11 @@
 #include "plugins/sqlite_database.hpp"
 #include "interface/plugin.hpp"
+#include "interface/histogram.hpp"
 
 #include <sstream>
 
 #include <boost/filesystem.hpp>
+#include <boost/scoped_array.hpp>
 
 using namespace std;
 using namespace theta;
@@ -120,7 +122,7 @@ std::auto_ptr<Column> sqlite_database::sqlite_table::add_column(const std::strin
         case typeDouble: column_definitions << "DOUBLE"; break;
         case typeInt: column_definitions << "INTEGER(4)"; break;
         case typeString: column_definitions << "TEXT"; break;
-        case typeBlob: column_definitions << "BLOB"; break;
+        case typeHisto: column_definitions << "BLOB"; break;
         default:
             throw InvalidArgumentException("Table::add_column: invalid type parameter given.");
     };
@@ -166,9 +168,17 @@ void sqlite_database::sqlite_table::set_column(const Column & c, const std::stri
     sqlite3_bind_text(insert_statement, static_cast<const sqlite_column&>(c).sqlite_column_index, s.c_str(), s.size(), SQLITE_TRANSIENT);
 }
 
-void sqlite_database::sqlite_table::set_column(const Column & c, const void * data, size_t nbytes){
+void sqlite_database::sqlite_table::set_column(const Column & c, const theta::Histogram & h){
     if(not table_created) create_table();
-    sqlite3_bind_blob(insert_statement, static_cast<const sqlite_column&>(c).sqlite_column_index, data, nbytes, SQLITE_TRANSIENT);
+    //including overflow and underflow, we have nbins+2 bins. Encoding the range with the first
+    // two, we have nbins+4 double to save.
+    boost::scoped_array<double> blob_data(new double[h.get_nbins()+4]);
+    blob_data[0] = h.get_xmin();
+    blob_data[1] = h.get_xmax();
+    std::copy(h.getData(), h.getData() + h.get_nbins()+2, &blob_data[2]);
+    size_t nbytes = sizeof(double) * (h.get_nbins() + 4);
+    sqlite3_bind_blob(insert_statement, static_cast<const sqlite_column&>(c).sqlite_column_index,
+                      &blob_data[0], nbytes, SQLITE_TRANSIENT);
 }
 
 void sqlite_database::sqlite_table::add_row(){

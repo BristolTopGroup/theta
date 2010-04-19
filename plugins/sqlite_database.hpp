@@ -24,6 +24,11 @@
  * \c filename is the filename of the sqlite3 output file. It is a path relative to the path where theta is invoked
  *
  * If the file already exists, it is overwritten silently.
+ *
+ * The types Table::typeDouble, Table::typeInt and Table::typeString are translated directly
+ * to their SQL counterparts \c DOUBLE, \c INT(4) and \c TEXT, respectively. For Table::typeHisto,
+ * an SQL BLOB is saved which contains the lower and upper border of the histogram and the raw histogram data,
+ * including underflow and overflow bin (see theta::Histogram::getData).
  */
 class sqlite_database: public theta::Database{
 public:
@@ -85,7 +90,7 @@ private:
         virtual void set_column(const theta::Column & c, double d);
         virtual void set_column(const theta::Column & c, int i);
         virtual void set_column(const theta::Column & c, const std::string & s);
-        virtual void set_column(const theta::Column & c, const void * data, size_t nbytes);
+        virtual void set_column(const theta::Column & c, const theta::Histogram & h);
         virtual void add_row();
 
     private:

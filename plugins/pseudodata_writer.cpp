@@ -13,7 +13,7 @@ void pseudodata_writer::define_table(){
     for(size_t i=0; i<observables.size(); ++i){
         n_events_columns.push_back(table->add_column(get_name(), "n_events_" + vm->getName(observables[i]), Table::typeDouble));
         if(write_data)
-            data_columns.push_back(table->add_column(get_name(), "data_" + vm->getName(observables[i]), Table::typeBlob));
+            data_columns.push_back(table->add_column(get_name(), "data_" + vm->getName(observables[i]), Table::typeHisto));
     }
 }
 
@@ -23,8 +23,7 @@ void pseudodata_writer::produce(Run & run, const Data & data, const Model & mode
         double n_event = h.get_sum_of_bincontents();
         table->set_column(n_events_columns[i], n_event);
         if(write_data){
-            const double * double_data = h.getData();
-            table->set_column(data_columns[i], double_data, sizeof(double) * (h.get_nbins() + 2));
+            table->set_column(data_columns[i], h);
         }
     }
 }

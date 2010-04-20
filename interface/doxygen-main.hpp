@@ -19,8 +19,8 @@
  * For getting started with %theta quickly, make sure to install sqlite3, boost, root and cmake on your machine
  * and run
  * \code
- *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/april-2010 %theta
- *  cd %theta
+ *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/april-2010 theta
+ *  cd theta
  *  mkdir build
  *  cd build
  *  cmake ..

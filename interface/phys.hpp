@@ -4,8 +4,6 @@
 #include "interface/decls.hpp"
 #include "interface/variables.hpp"
 #include "interface/plugin.hpp"
-
-//fun C++ fact of the week: without this header, there is a memory leak ... do you see it?
 #include "interface/distribution.hpp" 
 
 #include "interface/histogram-function.hpp"

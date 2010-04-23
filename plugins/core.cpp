@@ -525,7 +525,7 @@ model_source::model_source(const theta::plugin::Configuration & cfg): save_nll(n
                 throw ConfigurationException("model_source: save-nll set to \"distribution from override\", but no \"override-parameter-distribution\" specified!");
             }
         }
-        else if(s_save_nll == ""){
+        else if(s_save_nll != ""){
             throw ConfigurationException("model_source: invalid setting save-nll specified (allowed "
                      "values are \"\", \"distribution-from-model\" and \"distribution-from-override\")");
         }

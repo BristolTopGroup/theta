@@ -11,15 +11,15 @@ using namespace std;
  *
  * Configuration: anywhere, where a (constant) Histogram has to be defined,
  * use a setting like:
- * <pre>
+ * \code
  * {
  * type = "root_histogram";
  * filename = "path/to/file.root";
  * histoname = "histoname-in-file";
  * normalize_to = 1.0;
- * use_errors = true;
+ * use_errors = true; //optional; default is false
  * }
- * </pre>
+ * \endcode
  *
  * If \c use_errors is true, the errors in the Histogram will be used to
  * build a \c ConstantHistogramFunctionError instance which implements bin-by-bin

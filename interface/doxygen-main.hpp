@@ -1071,27 +1071,32 @@
  *
  * In both cases, the maximum tolerated deviation in the lower and upper interval borders is \f$ 10^{-4}\Theta \f$.
  *
+ *
+ * \section testing_onoff The "On/Off" and related problems
+ *
+ * The tests of the following tests use the "on/off" problem and the "gaussian mean" problem are
+ * discussed in detail in <a href="http://arxiv.org/abs/physics/0702156">arXiv:0702156</a>, called
+ * "Reference" in the following subsections.
+ *
  * \subsection testing_onoff_pl On/Off problem with profile likelihood
  *
  * <em>Test script:</em> <tt>test/test-stat/onoff_pl.py</tt><br>
  * <em>Relevant plugin classes:</em> \link deltanll_hypotest deltanll_hypotest \endlink
  *
- * For a thorough desciption of the on/off problem, see <a href="http://arxiv.org/abs/physics/0702156">arXiv:0702156</a>.
- * Relevant for this test is in particular Section 5, equation (20).
+ * Relevant for this test is in particular Section 5, equation (20) of the Reference.
  *
- * In this test, the Z values given there in Table 1 for the profile likelihood method (\f$ L_P \f$ ) are compared to the output
+ * In this test, the Z values given there in Table 1 of the Reference for the profile likelihood method are compared to the output
  * of the deltanll_hypotest producer. The rounded value of the Z value must be identical to the values given in the paper
  * to consider this test passed (if rounding to 2 decimal digits).
  *
- * \subsection testing_gaussmean_pl Gaussian-mean problem with profile likelihood
+ * \subsection testing_gaussmean_pl Gaussian mean problem with profile likelihood
  *
  * <em>Test script:</em> <tt>test/test-stat/gaussmean_pl.py</tt><br>
  * <em>Relevant plugin classes:</em> \link deltanll_hypotest deltanll_hypotest \endlink
  *
- * This again uses <a href="http://arxiv.org/abs/physics/0702156">arXiv:0702156</a>; in partcular equation
- * (21) from Section 5.
+ * See equation (21) from Section 5 of the Reference.
  *
- * Z values obtained from deltanll_hypotest are compared to the Z values in Table 1 of the reference. The test
+ * Z values obtained from deltanll_hypotest are compared to the Z values in Table 1 of the Reference. The test
  * is considered passed iff all rounded Z values agree (if rounding to 2 decimal digits).
  */
 

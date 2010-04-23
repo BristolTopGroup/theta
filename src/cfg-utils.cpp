@@ -133,5 +133,9 @@ const Setting & SettingWrapper::resolve_link(const Setting & setting, const Sett
 
 SettingWrapper::SettingWrapper(const libconfig::Setting & s, const libconfig::Setting & root,
                              SettingUsageRecorder & recorder):
-           rootsetting(root), rec(recorder), setting(resolve_link(s, rootsetting, rec)){
+           rootsetting(root), rec(recorder), setting(resolve_link(s, rootsetting, rec)) {
+    const char * name = s.getName();
+    if(name) setting_name = name;
+    else setting_name = "<noname>";
 }
+

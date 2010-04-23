@@ -61,7 +61,10 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
         // end, respectively in order to avoid that the numerical
         // evaluation of the numerical derivative at the boundaries pass these
         // boundaries ...
-        if(isinf(range.first)){
+        if(step == 0.0){
+            min->SetFixedVariable(ivar, name, def);
+        }
+        else if(isinf(range.first)){
             if(isinf(range.second)){
                 min->SetVariable(ivar, name, def, step);
             }
@@ -74,7 +77,7 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
                 min->SetLowerLimitedVariable(ivar, name, def, step, 1.001 * range.first);
             }
             else{ // both ends are finite
-                if(range.first==range.second || step == 0.0){
+                if(range.first==range.second){
                     min->SetFixedVariable(ivar, name, range.first);
                 }
                 else{

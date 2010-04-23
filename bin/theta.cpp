@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
             throw ConfigurationException(s.str());
         } catch (ParseException & p) {
             stringstream s;
-            s << "Error parsing configuration file: " << p.getError() << " in line " << p.getLine();
+            s << "Error parsing configuration file: " << p.getError() << " in line " << p.getLine() << ", file " << p.getFile();
             throw ConfigurationException(s.str());
         }
         SettingWrapper root(cfg.getRoot(), cfg.getRoot(), rec);

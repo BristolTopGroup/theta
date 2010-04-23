@@ -65,6 +65,9 @@ namespace theta{
         const libconfig::Setting & rootsetting;
         mutable SettingUsageRecorder & rec;
         const libconfig::Setting & setting;
+        //the original name of the seting. Does not need to be setting.getName(), if 
+        // setting was found by resolving a link
+        std::string setting_name;
         
         static const libconfig::Setting & resolve_link(const libconfig::Setting & setting, const libconfig::Setting & root, SettingUsageRecorder & rec);
     public:
@@ -177,9 +180,11 @@ namespace theta{
              * the special string "&lt;noname&gt;" is returned.
              */
             std::string getName() const{
-                const char * cname = setting.getName();
+                return setting_name;
+
+                /*const char * cname = setting.getName();
                 if(cname) return cname;
-                else return "<noname>";
+                else return "<noname>";*/
             }
             
             /** \brief Returns the configuration file path of the current setting

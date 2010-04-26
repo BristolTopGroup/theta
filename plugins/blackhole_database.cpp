@@ -35,5 +35,6 @@ void blackhole_database::blackhole_table::set_column(const Column & c, const std
 void blackhole_database::blackhole_table::set_column(const Column & c, const theta::Histogram & h){}
 
 void blackhole_database::blackhole_table::add_row(){}
+int blackhole_database::blackhole_table::add_row_autoinc(const Column & c){ return 1;}
 
 REGISTER_PLUGIN(blackhole_database)

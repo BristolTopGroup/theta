@@ -116,12 +116,12 @@ void ProducerInfoTable::append(int index, const std::string & p_name, const std:
 
 //RndInfoTable
 RndInfoTable::RndInfoTable(std::auto_ptr<Table> & table_): table(table_){
-    c_runid = table->add_column("runid", Table::typeInt);
+    c_runid = table->add_column("runid", Table::typeAutoIncrement);
     c_seed = table->add_column("seed", Table::typeInt);
 }
 
-void RndInfoTable::append(const Run & run, int seed){
-    table->set_column(*c_runid, run.get_runid());
+int RndInfoTable::append(int seed){
+    //table->set_column(*c_runid, run.get_runid());
     table->set_column(*c_seed, seed);
-    table->add_row();
+    return table->add_row_autoinc(*c_runid);
 }

@@ -1,46 +1,55 @@
-#ifndef PLUGIN_SQLITE_DATABASE_HPP
-#define PLUGIN_SQLITE_DATABASE_HPP
+#ifndef PLUGIN_POSTGRESQL_DATABASE_HPP
+#define PLUGIN_POSTGRESQL_DATABASE_HPP
 
 #include "interface/decls.hpp"
 #include "interface/database.hpp"
 
-#include <sqlite3.h>
+#include "libpq-fe.h"
 #include <memory>
 #include <string>
 
 
-/** \brief Database which stores all information in a single sqlite3 database file
+/** \brief Database storing all data in a postgresql database
  *
  * Configured via a setting group like
  * \code
- * {
- *   type = "sqlite_database";
- *   filename = "abc.db";
- * }
+ * my_db = {
+ *   type = "postgresql_database";
+ *   conninfo = "host=some.host port=10815 user=abc password=def dbname=theta-1";
+ *   table_prefix = "theta5"; //optional. Default is ""
+ *   mode = "append"; // optional. Default is "recreate"
+ * };
  * \endcode
  *
- * \c type must always be "sqlite_database" in order to select this plugin
+ * \c type must always be "postgresql_database" in order to select this plugin
  *
- * \c filename is the filename of the sqlite3 output file. It is a path relative to the path where theta is invoked
+ * \c conninfo is the connection information used to create the connection to the postgresql database.
+ *    See the <a href="http://www.postgresql.org/docs/8.4/static/libpq-connect.html">postgresql documentation
+ *    for PQconnectdb</a> for details.
  *
- * If the file already exists, it is overwritten silently.
+ * \c table_prefix is a string which is prepended to the table names in order to avoid name colissions.
+ *      This setting is optional; as default, no prefix is prepended.
+ *
+ * \c mode is either "append" or "recreate". In "recreate" mode, any pre-existing table of the same name 
+ *     will be dropped before the tables are created. In case of "append", data is appended to a pre-existing table.
+ *     Note that this can cause errors later if the table format of the pre-existing table is not compatible.
  *
  * The types Table::typeDouble, Table::typeInt and Table::typeString are translated directly
- * to their SQL counterparts \c DOUBLE, \c INT(4) and \c TEXT, respectively. For Table::typeHisto,
+ * to their SQL counterparts \c DOUBLE \c PRECISION, \c INT(4) and \c TEXT, respectively. For Table::typeHisto,
  * an SQL BLOB is saved which contains the lower and upper border of the histogram and the raw histogram data,
  * including underflow and overflow bin (see theta::Histogram::getData).
  */
-class sqlite_database: public theta::Database{
+class postgresql_database: public theta::Database{
 public:
     
     /** \brief Constructor for the plugin system
      *
      * See class documentation for a description of the parsed COnfiguration settings.
      */
-    sqlite_database(const theta::plugin::Configuration & cfg);
+    postgresql_database(const theta::plugin::Configuration & cfg);
     
     
-    virtual ~sqlite_database();
+    virtual ~postgresql_database();
     
     /** \brief See documentation of Database::create_table
      */
@@ -53,7 +62,7 @@ private:
     
     /** Prepare the sql statement \c query.
      */
-    sqlite3_stmt* prepare(const std::string & query);
+    void prepare(const std::string & query, int ncol, const std::string & statement_name);
     
     /** Start a Transaction. In case of an error, a DatabaseException is thrown.
      */
@@ -75,16 +84,18 @@ private:
     
     void close();
     
-    sqlite3* db;
+    PGconn * conn;
     bool transaction_active;
+    std::string table_prefix;
+    std::string mode;
     
     
     //declare privately(!) the sqlite_table class:
-    class sqlite_table: public theta::Table {
-    friend class sqlite_database;
+    class postgresql_table: public theta::Table {
+    friend class postgresql_database;
 
         // destructor; creates the table if empty
-        virtual ~sqlite_table();
+        virtual ~postgresql_table();
         
         std::auto_ptr<theta::Column> add_column(const std::string & name, const data_type & type);
         virtual void set_column(const theta::Column & c, double d);
@@ -96,24 +107,30 @@ private:
 
     private:
         
-        sqlite_table(const std::string & name_, sqlite_database * db_);
+        postgresql_table(const std::string & name_, postgresql_database * db_);
+        bool check_existing_table();
         
         std::string name;
         std::stringstream column_definitions; // use by the add_column method
+        std::vector<std::string> column_names;
+        std::vector<data_type> column_types;
         bool table_created;
         
         int next_column; // next free column to return by add_column
         
-        sqlite3_stmt * insert_statement; // associated memory is managed by sqlite_database object, which calls finalize on it ...
-        sqlite_database * db;
+        std::string insert_statement;
+        postgresql_database * db;
+        
+        std::vector<char *> column_content; // set by set_column
         
         void create_table();
         
-        class sqlite_column: public theta::Column{
+        class postgresql_column: public theta::Column{
         public:
-            int sqlite_column_index;
-            sqlite_column(int i):sqlite_column_index(i){}
-            virtual ~sqlite_column(){}
+            //starting at 1
+            int column_index;
+            postgresql_column(int i):column_index(i){}
+            virtual ~postgresql_column(){}
         };
     };
 };

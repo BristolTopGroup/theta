@@ -45,8 +45,7 @@ void Run::run(){
         producers[i].set_table(event_table_shared);
         producers[i].define_table();
     }
-    //write random seeds to rndinfo_table:
-    rndinfo_table->append(*this, seed);
+    
     //log the start of the run:
     eventid = 0;
     logtable->append(*this, LogTable::info, "run start");
@@ -61,16 +60,21 @@ void Run::run(){
             break;
         }
         log_event_start();
+        bool error = false;
         for (size_t j = 0; j < producers.size(); j++) {
             try {
                 producers[j].produce(*this, data, *model);
             } catch (Exception & ex) {
+                error = true;
                 std::stringstream ss;
-                ss << "Producer '" << producers[j].get_name() << "' failed: " << ex.message;
+                ss << "Producer '" << producers[j].get_name() << "' failed: " << ex.message << ".";
                 logtable->append(*this, LogTable::error, ss.str());
             }
         }
-        event_table->add_row(*this);
+        //only add a row if no error ocurred to prevent NULL values and similar things ...
+        if(!error){
+            event_table->add_row(*this);
+        }
         log_event_end();
         if(progress_listener) progress_listener->progress(eventid, n_event);
     }
@@ -116,8 +120,10 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
     std::auto_ptr<Table> event_table_underlying = db->create_table("products");
     event_table.reset(new EventTable(event_table_underlying));
     
+    //get the runid from the rndinfo table:
+    runid = rndinfo_table->append(seed);
+    
     //2. misc
-    if(s.exists("run-id")) runid = s["run-id"];
     int i_seed = -1;
     if(s.exists("seed")) i_seed = s["seed"];
     if(i_seed==-1){

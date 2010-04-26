@@ -70,7 +70,7 @@ public:
  *
  * The configuration is done via a setting like:
  * \code
- * {
+ * main = {
  *   data_source = {...}; //some data source definition
  *   output_database = {...}; // some database definition
  *
@@ -79,11 +79,10 @@ public:
  *   model = "@gaussoverflat";
  *
  *   //optional:
- *   run-id = 2; //default is 1.
  *   seed = 15;  //default is -1.
  *   log-level = "error";  //default is "warning"
  *   log-report = false;  //default is true
- * }
+ * };
  *
  * hypotest = {...}; //some producer definition
  * hypotest2 = {...}; //some other producer definition
@@ -101,9 +100,6 @@ public:
  * \c n-events is the number of pseudo experiments to run. This is ignored for some subclasses.
  *
  * \c model is the model used for the producers: the producers will be given this for pseudo data creation.
- *
- * \c run-id is an optional setting and specifies which run-id to write to the result table. This setting
- *    might be removed in future versions of this plugin, as it is not really needed at this point.
  *
  * \c seed is the random number generator seed. It is mainly useful for debugging (i.e.,
  *    reproducing a bug might require choosing a particular seed). The default setting -1 will generate a

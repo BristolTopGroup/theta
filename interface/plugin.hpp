@@ -199,6 +199,7 @@ namespace theta {
             typedef typename product_type::base_type base_type;
             typedef factory<base_type> factory_type;
             friend class factory<base_type>;
+            static int build_depth;
             
             /** \brief Register a new factory.
              *
@@ -210,7 +211,24 @@ namespace theta {
             static void register_factory(factory_type * new_factory);
             static std::vector<factory_type*> factories;
             PluginManager() {}
+            
+            //to increase the build_depth in an exception-safe manner, use the build_depth_sentinel,
+            // which automatically decreses depth count at destrution:
+            struct build_depth_sentinel{
+                int & i;
+                build_depth_sentinel(int & i_): i(i_){
+                    ++i;
+                }
+                
+                ~build_depth_sentinel(){
+                    --i;
+                }
+            };
         };
+        
+        // to prevent endless recursion within PluginManager::build, use a usegae counter:
+        template<typename product_type>
+        int PluginManager<product_type>::build_depth = 0;
         
         template<typename product_type>
         std::vector<typename PluginManager<product_type>::factory_type*> PluginManager<product_type>::factories;
@@ -227,6 +245,10 @@ namespace theta {
 
         template<typename product_type>
         std::auto_ptr<product_type> PluginManager<product_type>::build(const Configuration & ctx){
+            //build_depth_sentinel(build_depth);
+            if(build_depth > 10){
+                throw FatalException("PluginManager::build: detected too deep recursion");
+            }
             std::string type = "<unspecified>";
             for (size_t i = 0; i < factories.size(); ++i) {
                 try {
@@ -245,7 +267,7 @@ namespace theta {
                 }
             }
             std::stringstream ss;
-            ss << "PluginManager::build<" << typeid(product_type).name() << ">, configuration path '" << ctx.setting.getPath()
+            ss << "PluginManager::build at configuration path '" << ctx.setting.getPath()
                << "': no plugin found to create type='" << type << "'";
             throw ConfigurationException(ss.str());
         }

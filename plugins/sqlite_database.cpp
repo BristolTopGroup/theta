@@ -121,6 +121,7 @@ std::auto_ptr<Column> sqlite_database::sqlite_table::add_column(const std::strin
     switch(type){
         case typeDouble: column_definitions << "DOUBLE"; break;
         case typeInt: column_definitions << "INTEGER(4)"; break;
+        case typeAutoIncrement: column_definitions << "INTEGER(4)"; break;
         case typeString: column_definitions << "TEXT"; break;
         case typeHisto: column_definitions << "BLOB"; break;
         default:
@@ -184,12 +185,33 @@ void sqlite_database::sqlite_table::set_column(const Column & c, const theta::Hi
 void sqlite_database::sqlite_table::add_row(){
     if(not table_created) create_table();
     int res = sqlite3_step(insert_statement);
-    sqlite3_reset( insert_statement);
+    sqlite3_reset(insert_statement);
     //reset all to NULL
     sqlite3_clear_bindings(insert_statement);
     if (res != 101) {
         throw DatabaseException("Table::add_row: sql returned error"); //TODO: more error info
     }
+}
+
+int sqlite_database::sqlite_table::add_row_autoinc(const theta::Column & c){
+    if(not table_created) create_table();
+    add_row();
+    return 1;
+    //FIXME: this is buggy
+    
+    /*int index = static_cast<const postgresql_column&>(c).sqlite_column_index;
+    
+    ss << "INSERT INTO '" << name << "' SELECT";
+    for(int i=1; i<next_column; ++i){
+        if(i > 1){
+            ss << ", ";
+        }
+        if(i)
+        else ss << "?";
+    }
+    ss << ");";
+    insert_statement = db->prepare(ss.str());*/
+    
 }
 
 REGISTER_PLUGIN(sqlite_database)

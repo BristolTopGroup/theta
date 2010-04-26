@@ -68,9 +68,9 @@ protected:
  *
  * After the first call of set_column or add_row, to more calls to add_column are allowed.
  *
- * To meet tyhis specification, derived classes will defer the actual table creation in the underlying
+ * To meet this specification, derived classes will defer the actual table creation in the underlying
  * model until the first call of set_column or add_row. Note that even if no rows are added via add_row,
- * the table must still be created. This can be achieved by creating the table in the destructor.
+ * the table must still be created.
  */
 class Table: private boost::noncopyable {
 public:
@@ -78,8 +78,12 @@ public:
     /** \brief Data types of columns
      *
      * These data types are the supported types for columns in a table.
+     *
+     * typeAutoIncrement is an integer type which is set incremented automatically if
+     * calling \c add_row_autoinc. Note that each Table can specify only one
+     * auto increment value per insertion.
      */
-    enum data_type { typeDouble, typeInt, typeString, typeHisto };
+    enum data_type { typeDouble, typeInt, typeString, typeHisto, typeAutoIncrement };
 
     /// destructor; creates the table if empty
     virtual ~Table();
@@ -119,6 +123,21 @@ public:
      * will have a NULL-like value which depends on the particular implementation.
      */
     virtual void add_row() = 0;
+    
+    /** \brief Add a row to the table, using a new unique value for the given column
+     *
+     * The Column \c c must have been defined as typeAutoIncrement before,
+     * otherwise, the result is undefined.
+     *
+     * The value of the column \c c which was added is returned.
+     *
+     * It should be avoided to call this function often as it typically requires
+     * synchronization and is much slower than \c add_row.
+     *
+     * This functionality is currently used by theta::Run to get a unique runid for
+     * each run.
+     */
+    virtual int add_row_autoinc(const Column & c) = 0;
 };
 
 /** \brief Base class for columns managed by Tables
@@ -351,10 +370,11 @@ public:
 
     /** \brief append an entry to the RndInfoTable
      *
-     * \param run is the current Run. It is used to query the current runid
+     * Returns the runid.
+     *
      * \param seed is the seed to save in the table
      */
-    void append(const theta::Run & run, int seed);
+    int append(int seed);
 private:
     std::auto_ptr<Column> c_runid, c_seed;
     std::auto_ptr<Table> table;

@@ -48,6 +48,7 @@ private:
         virtual void set_column(const theta::Column & c, const std::string & s);
         virtual void set_column(const theta::Column & c, const theta::Histogram & h);
         virtual void add_row();
+        virtual int add_row_autoinc(const theta::Column & c);
     
         class blackhole_column: public theta::Column{
         public:

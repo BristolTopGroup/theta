@@ -126,7 +126,7 @@ std::auto_ptr<Column> postgresql_database::postgresql_table::add_column(const st
         case typeInt: column_definitions << "INTEGER"; break;
         case typeAutoIncrement: column_definitions << "SERIAL"; break;
         case typeString: column_definitions << "TEXT"; break;
-        case typeHisto: column_definitions << "BLOB"; break;
+        case typeHisto: column_definitions << "BYTEA"; break;
         default:
             throw InvalidArgumentException("Table::add_column: invalid type parameter given.");
     };
@@ -136,13 +136,38 @@ std::auto_ptr<Column> postgresql_database::postgresql_table::add_column(const st
     return result;
 }
 
+namespace{
+    int get_int(PGresult * res){
+        char * count = PQgetvalue(res, 0, 0);
+        if(count==0){
+            PQclear(res);
+            throw DatabaseException("get_int");
+        }
+        stringstream ss;
+        ss << count;
+        int result;
+        ss >> result;
+        return result;
+    }
+}
+
 //check whether table already existing matches the own table definition.
 // returns true if the table already exists and is compatble
 // If a table exists but is not compatible, an Exception is thrown
 // If the table does not exist, false is returned.
 bool postgresql_database::postgresql_table::check_existing_table(){
-    db->prepare("select * from \"" + name + "\";", 0, "");
-    PGresult * res = PQdescribePrepared(db->conn, "");
+    PGresult * res = PQexec(db->conn, ("select count(*) from pg_tables where tablename='" + name + "';").c_str());
+    if(PQntuples(res)!=1){
+        throw DatabaseException("check_existing_table: checking existence of table failed");
+    }
+    if(get_int(res)==0){
+        PQclear(res);
+        return false;
+    }
+    PQclear(res);
+    
+    db->prepare("select * from \"" + name + "\"", 0, "");
+    res = PQdescribePrepared(db->conn, "");
     if(PQresultStatus(res) == PGRES_COMMAND_OK){
         if(PQnfields(res)!=column_names.size()){
             PQclear(res);
@@ -155,10 +180,6 @@ bool postgresql_database::postgresql_table::check_existing_table(){
                 throw DatabaseException("check_existing_table: table exists, but is not compatible");
             }
         }
-    }else{
-        PQclear(res);
-        //table does not exist ...
-        return false;
     }
     PQclear(res);
     return true;
@@ -167,11 +188,7 @@ bool postgresql_database::postgresql_table::check_existing_table(){
 void postgresql_database::postgresql_table::create_table(){
     bool create = false;
     if(db->mode=="recreate"){
-        //delete table, if it already exists:
-        try{
-            db->exec("DROP TABLE \"" + name + "\"");
-        }
-        catch(DatabaseException &){} //ignore error
+        db->exec("DROP TABLE IF EXISTS \"" + name + "\";");
         create = true;
     }
     else{//append mode
@@ -179,13 +196,13 @@ void postgresql_database::postgresql_table::create_table(){
     }
     
     stringstream ss;
-    //TODO: potential race condition: in the meatime, someone else could have created
+    // NOTE: potential race condition: in the meantime, someone else could have created
     // the table we are about to create. Currently, "create table" will fail, so theta
     // will exit with an error. This is not strictly necessary as the created
     // table might have been compatible, but it is Ok as it should only happen very rarely ...
     if(create){
         string col_def = column_definitions.str();
-        ss << "CREATE TABLE \"" << name << "\" (" << col_def << ");";
+        ss << "CREATE TABLE \"" << name << "\" (" << col_def << ") WITH (fillfactor=100, toast.autovacuum_enabled=false);";
         db->exec(ss.str());
     }
     
@@ -234,7 +251,7 @@ void postgresql_database::postgresql_table::set_column(const Column & c, const s
 }
 
 void postgresql_database::postgresql_table::set_column(const Column & c, const theta::Histogram & h){
-    /*if(not table_created) create_table();
+    if(not table_created) create_table();
     //including overflow and underflow, we have nbins+2 bins. Encoding the range with the first
     // two, we have nbins+4 double to save.
     boost::scoped_array<double> blob_data(new double[h.get_nbins()+4]);
@@ -242,9 +259,18 @@ void postgresql_database::postgresql_table::set_column(const Column & c, const t
     blob_data[1] = h.get_xmax();
     std::copy(h.getData(), h.getData() + h.get_nbins()+2, &blob_data[2]);
     size_t nbytes = sizeof(double) * (h.get_nbins() + 4);
-    sqlite3_bind_blob(insert_statement, static_cast<const sqlite_column&>(c).sqlite_column_index,
-                      &blob_data[0], nbytes, SQLITE_TRANSIENT);*/
-    //TODO: ...
+
+    //psql-specific escape:
+    size_t to_length;
+    unsigned char * escaped_blob_data = PQescapeByteaConn(db->conn, reinterpret_cast<unsigned char*>(&blob_data[0]), nbytes, &to_length);
+
+    //copy to column buffer:
+    char * & content = column_content[static_cast<const postgresql_column&>(c).column_index - 1];
+    delete[] content;
+    content = new char[to_length + 1];
+    copy(escaped_blob_data, escaped_blob_data + to_length, content);
+    content[to_length] = '\0';
+    PQfreemem(escaped_blob_data);
 }
 
 void postgresql_database::postgresql_table::add_row(){
@@ -257,51 +283,22 @@ void postgresql_database::postgresql_table::add_row(){
     PQsendQueryPrepared(db->conn, insert_statement.c_str(), next_column-1, &(column_content[0]), 0, 0, 1);
 }
 
+
+
 int postgresql_database::postgresql_table::add_row_autoinc(const theta::Column & c){
     if(not table_created) create_table();
     while(PGresult * pres = PQgetResult(db->conn)){
         PQclear(pres);
     }
     int index = static_cast<const postgresql_column&>(c).column_index;
-    
     stringstream ss;
-    ss << "INSERT INTO \"" << name << "\" VALUES (";
-    for(int i=1; i<next_column; ++i){
-        if(i > 1){
-            ss << ", ";
-        }
-        if(i!=index){
-            ss << "$" << i;
-        }
-        else{
-            ss << "DEFAULT";
-        }
-    }
-    ss << ");";
-    db->prepare(ss.str(), next_column-1, "");
-    PGresult * res = PQexecParams(db->conn, "", next_column-1, 0, &(column_content[0]), 0, 0, 1);
-    if(PQresultStatus(res)!=PGRES_COMMAND_OK){
-        PQclear(res);
-        throw DatabaseException("postgresql_table::add_row_autoinc: error");
-    }
+    ss << "select nextval('" << name << "_" << column_names[index-1] << "_seq" << "');";
+    PGresult * res = PQexec(db->conn, ss.str().c_str());
+    int nextval = get_int(res);
     PQclear(res);
-    db->endTransaction();
-    db->beginTransaction();
-    
-    res = PQexec(db->conn, "SELECT lastval();");
-    if(PQresultStatus(res)!=PGRES_TUPLES_OK){
-        PQclear(res);
-        throw DatabaseException("postgresql_table::add_row_autoinc: error (2)");
-    }
-    ss.str();
-    ss << PQgetvalue(res, 0, 0);
-    PQclear(res);
-    
-    int result;
-    ss >> result;
-    
-    return result;
-    //TODO: review carefully!
+    set_column(c, nextval);
+    add_row();
+    return nextval;
 }
 
 REGISTER_PLUGIN(postgresql_database)

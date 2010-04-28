@@ -120,9 +120,6 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
     std::auto_ptr<Table> event_table_underlying = db->create_table("products");
     event_table.reset(new EventTable(event_table_underlying));
     
-    //get the runid from the rndinfo table:
-    runid = rndinfo_table->append(seed);
-    
     //2. misc
     int i_seed = -1;
     if(s.exists("seed")) i_seed = s["seed"];
@@ -135,6 +132,9 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
     }
     seed = i_seed;
     rnd.set_seed(seed);
+    //get the runid from the rndinfo table:
+    runid = rndinfo_table->append(seed);
+    
     model = ModelFactory::buildModel(plugin::Configuration(cfg, s["model"]));
     if(s.exists("data_source"))
         data_source = plugin::PluginManager<DataSource>::build(plugin::Configuration(cfg, s["data_source"]));

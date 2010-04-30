@@ -63,6 +63,7 @@ void Histogram::multiply_with_ratio_exponented(const Histogram & nominator, cons
    const double * __restrict n_data = nominator.histodata;
    const double * __restrict d_data = denominator.histodata;
    double s = 0.0;
+   #pragma omp parallel for default(shared), reduction(+: s)
    for(size_t i=0; i<=nbins+1; i++){
       if(d_data[i]>0.0)
          histodata[i] *= pow(n_data[i] / d_data[i], exponent);
@@ -74,8 +75,9 @@ void Histogram::multiply_with_ratio_exponented(const Histogram & nominator, cons
 void Histogram::add_with_coeff(double coeff, const Histogram & other){
     check_compatibility(other);
     const double * __restrict data = other.histodata;
+    #pragma omp for
     for(size_t i=0; i<=nbins+1; i++){
-        histodata[i] += coeff * data[i];
+         histodata[i] += coeff * data[i];
     }
     sum_of_bincontents += coeff * other.sum_of_bincontents;
 }
@@ -115,6 +117,7 @@ Histogram & Histogram::operator+=(const Histogram & h) {
     }
     check_compatibility(h);
     const double * __restrict hdata = h.histodata;
+    #pragma omp for
     for (size_t i = 0; i <= nbins + 1; i++) {
         histodata[i] += hdata[i];
     }
@@ -126,15 +129,19 @@ Histogram & Histogram::operator*=(const Histogram & h) {
     check_compatibility(h);
     const double * hdata = h.histodata;
     sum_of_bincontents = 0.0;
+    double sum = 0.0;
+    #pragma parallel omp for default(shared), reduction (+:sum)
     for (size_t i = 0; i <= nbins + 1; i++) {
         histodata[i] *= hdata[i];
-        sum_of_bincontents += histodata[i];
+        sum += histodata[i];
     }
+    sum_of_bincontents = sum;
     return *this;
 }
 
 
 Histogram & Histogram::operator*=(double a) {
+    #pragma omp for
     for (size_t i = 0; i <= nbins + 1; i++) {
         histodata[i] *= a;
     }

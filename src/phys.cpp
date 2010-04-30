@@ -249,14 +249,21 @@ double NLLikelihood::operator()(const ParValues & values) const{
         const size_t nbins = data_hist.get_nbins();
         const double * __restrict pred_data = model_prediction.getData();
         const double * __restrict data_data = data_hist.getData();
+        double nll = 0.0;
+        bool do_break = false;
+        #pragma omp parallel for default(shared), reduction(+: nll), firstprivate(do_break)
         for(size_t i=1; i<=nbins; ++i){
+            if(do_break) continue;
             //if both, the prediction and the data are zero, that does not contribute.
             // However, if the prediction is zero and we have non-zero data, we MUST return infinity (!) ...
-             if(pred_data[i]>0.0)
-                 result -= data_data[i] * theta::utils::log(pred_data[i]);
-             else if(data_data[i] > 0.0)
-                 return numeric_limits<double>::infinity();
+            if(pred_data[i]>0.0)
+                 nll -= data_data[i] * theta::utils::log(pred_data[i]);
+             else if(data_data[i] > 0.0){
+                 nll = numeric_limits<double>::infinity();
+                 do_break = true;
+             }
         }
+        result += nll;
         result += model_prediction.get_sum_of_bincontents();
     }
     

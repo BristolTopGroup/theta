@@ -35,28 +35,6 @@ ProductsTableWriter::ProductsTableWriter(const Configuration & cfg){
     }
 }
 
-//on gcc 4.4.1, commenting out this unused function will break things: some plugin types are not found any more (here: root_minuit, which
-// provides a Minimizer). I have *no* idea why this is so. Maybe because the print_registered_plugins is forcing an instantiation of
-// PluginManager<...>::factories in this object file?
-namespace{
-    void print_registered_types(){
-        std::vector<std::string> names = PluginManager<theta::HistogramFunction>::get_registered_types();
-        cout << "HistogramFunctions: ";
-        for(size_t i=0; i<names.size(); ++i){
-            cout << names[i] << " ";
-        }
-        cout << endl;
-        
-        names = PluginManager<theta::Minimizer>::get_registered_types();
-        cout << "Minimizers: ";
-        for(size_t i=0; i<names.size(); ++i){
-            cout << names[i] << " ";
-        }
-        cout << endl;
-    }
-    
-}
-
 void PluginLoader::execute(const Configuration & cfg) {
     SettingWrapper files = cfg.setting["plugin_files"];
     size_t n = files.size();
@@ -69,7 +47,10 @@ void PluginLoader::execute(const Configuration & cfg) {
 void PluginLoader::load(const std::string & soname) {
     void* handle = 0;
     try {
-        handle = dlopen(soname.c_str(), RTLD_NOW);
+        //we need global here because PluginManager<sometype> could not yet be defined.
+        // To make sure that different plugin files use the same PluginManager as registry,
+        // symbols should be made available through this directive.
+        handle = dlopen(soname.c_str(), RTLD_NOW | RTLD_GLOBAL);
     } catch (Exception & ex) {
         std::stringstream ss;
         ss << ex.message << " (in PluginLoader::load while loading plugin file '" << soname << "')";
@@ -83,6 +64,4 @@ void PluginLoader::load(const std::string & soname) {
         s << "PluginLoader::load: error loading plugin file '" << soname << "': " << error << std::endl;
         throw InvalidArgumentException(s.str());
     }
-    /*if(false)
-        print_registered_types();*/
 }

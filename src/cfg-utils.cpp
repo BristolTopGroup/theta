@@ -35,61 +35,6 @@ double SettingWrapper::get_double_or_inf() const {
     throw InvalidArgumentException(error.str());
 }
 
-std::string SettingWrapper::value_to_string(int indent) const{
-    /*char * buffer;
-    size_t size;
-    FILE * f = open_memstream(&buffer, &size);
-    setting.write(f);
-    fclose(f);
-    std::string result = buffer;
-    free(buffer);
-    return result;*/
-    libconfig::Setting::Type type = setting.getType();
-    stringstream ss, ss_i, ss_im1;
-    for(int j=0; j<=indent; ++j){
-       ss_i << "  ";
-       if(j>0) ss_im1 << "  ";
-    }
-    string s_i = ss_i.str();
-    string s_im1 = ss_im1.str();
-    switch(type){
-        case libconfig::Setting::TypeString:
-                ss << "\"" << static_cast<const char*>(setting) << "\""; break;
-        case libconfig::Setting::TypeInt:
-        case libconfig::Setting::TypeInt64:
-            ss << (int)setting; break;
-        case libconfig::Setting::TypeFloat:
-            ss << scientific << setprecision(18) << (double)setting; break;
-        case libconfig::Setting::TypeBoolean:
-            ss << static_cast<bool>(setting)?"true":"false"; break;
-        case libconfig::Setting::TypeArray:
-            ss << "[";
-            for(size_t i=0; i<size(); ++i){
-                ss << (i==0?"":", ") << ((*this)[i]).value_to_string(indent+1);
-            }
-            ss << "]";
-            break;
-        case libconfig::Setting::TypeList:
-            ss << "(";
-            for(size_t i=0; i<size(); ++i){
-                ss << (i==0?"":", ") << ((*this)[i]).value_to_string(indent+1);
-            }
-            ss << ")";
-            break;
-        case libconfig::Setting::TypeGroup:
-            ss << "{";
-            for(size_t i=0; i<size(); ++i){
-                ss << endl << s_i << setting[i].getName() << " = " << ((*this)[i]).value_to_string(indent+1) << ";";
-            }
-            ss << endl << s_im1 << "}";
-            break;
-        default:
-            cerr << "internal error: unknown type in SettingWrapper::value_to_string" << endl;
-            throw FatalException("SettingWrapper::value_to_string: unknown SettingType");
-    }
-    return ss.str();
-}
-
 const Setting & SettingWrapper::resolve_link(const Setting & setting, const Setting & root, SettingUsageRecorder & rec){
     try{
         std::string next_path;

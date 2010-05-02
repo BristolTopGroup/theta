@@ -57,6 +57,7 @@ mu_b-dist = {
 
 data_source = {
     type = "histo_source";
+    name = "data_source";
     signal-region = {
        type = "fixed_poly";
        observable = "signal-region";

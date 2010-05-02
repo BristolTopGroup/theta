@@ -13,6 +13,10 @@
 
 #include <fstream>
 
+#ifdef USE_OPENMP
+#include <omp.h>
+#endif
+
 using namespace std;
 using namespace theta;
 using namespace theta::utils;
@@ -137,10 +141,20 @@ int main(int argc, char** argv) {
         
         Configuration config(vm, root);
         
-        //load plugins:
-        if(root.exists("plugins")){
-            PluginLoader::execute(Configuration(config, root["plugins"]));
+        //process options:
+        Configuration cfg_options(config, config.setting["options"]);
+        PluginLoader::execute(cfg_options);
+        #ifdef USE_OPENMP
+        if(cfg_options.setting.exists("n_threads")){
+            int n = cfg_options.setting["n_threads"];
+            if(n >= 0){
+                if(n==0) n=1;
+                omp_set_num_threads(n);
+            }
+            //else, i.e., n<0: leave the default openmp behaviour
         }
+        #endif
+        
         //fill VarIdManager:
         VarIdManagerUtils::apply_settings(config);
         //build run:
@@ -149,22 +163,12 @@ int main(int argc, char** argv) {
             boost::shared_ptr<ProgressListener> l(new MyProgressListener());
             run->set_progress_listener(l);
         }
-        
-        /*ofstream test_out("test-out.cfg");
-        test_out << "parameters = " << root["parameters"].value_to_string() << ";" << endl;
-        test_out << "observables = " << root["observables"].value_to_string() << ";" << endl;
-        test_out << "main = " << run->get_setting() << ";" << endl;
-        if(root.exists("plugins")){
-            test_out << "plugins = " << root["plugins"].value_to_string() << ";" << endl;
-        }
-        test_out.close();*/
-        
     }
     catch (SettingNotFoundException & ex) {
-        cerr << "Error: the required configuration parameter at " << ex.getPath() << " was not found." << endl;
+        cerr << "Error: the required setting " << ex.getPath() << " was not found." << endl;
         return 1;
     } catch (SettingTypeException & ex) {
-        cerr << "Error: the configuration parameter at " << ex.getPath() << " has the wrong type." << endl;
+        cerr << "Error: the setting " << ex.getPath() << " has the wrong type." << endl;
         return 1;
     } catch (SettingException & ex) {
         cerr << "Error while processing the configuration at " << ex.getPath() << endl;
@@ -183,8 +187,6 @@ int main(int argc, char** argv) {
                 cout << "  " << (i+1) << ". " << unused[i] << endl;
             }
             cout << "Comment out these settings to get rid of this message." << endl;
-            cout << "(NOTE: this warning feature is still experimental. If false positives"
-                    " were reported, please write a trac ticket.)" << endl << endl;
         }
     }
 

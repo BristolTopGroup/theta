@@ -15,15 +15,15 @@ namespace theta{
     class Producer;
     class Distribution;
     
-    //databse.hpp
+    //database.hpp
     class Database;
     class Table;
     class Column;
-    class EventTable;
+    class ProductsTable;
     
     namespace plugin{
           class Configuration;
-          class PluginType;
+          class ProductsTableWriter;
     }
     class Random;
     class Run;
@@ -46,7 +46,6 @@ namespace theta{
     class Model;
     class DataSource;
     class NLLikelihood;
-    class ModelFactory;
     
     class SettingWrapper;
 }

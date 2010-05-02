@@ -4,6 +4,20 @@ convention and output. It does not cover internal changes.
 
 from April 2010 to trunk:
 -------------------------
+* instead of the
+  plugins = {
+      files = ("some-so-file", "some-other-so-file");
+  };
+  setting group, you noe have to use
+  options = {
+     plugin_files = ("some-so-file", "some-other-so-file");
+  };
+  The reason is that also other global options are supported now within this "options" setting group; although
+  the only one so far is the n_threads parameter.
+* you have to use a line
+   name = "...";
+  for each producer and for the data_source. This name will be used to construct a column name in
+  the products table of the output.
 * the run in the config file (main = {...}) now has "output_database" setting which specifies the
   database to which write the results. To emulate the behaviour, replace the
        result-file = "<filename>";

@@ -33,7 +33,6 @@ void root_minuit::set_printlevel(int p){
     min->SetPrintLevel(p);
 }
 
-//set to NAN to use default
 void root_minuit::set_tolerance(double tol){
     tolerance = tol;
 }
@@ -57,9 +56,8 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
         double def = start.get(*it);
         double step = steps.get(*it);
         string name = vm->getName(*it);
-        //use not the ranges directly, but 0.999 and 1.001 times the upper and lower
-        // end, respectively in order to avoid that the numerical
-        // evaluation of the numerical derivative at the boundaries pass these
+        //use not the ranges directly, but a somewhat more narrow range (one permille of the respective border)
+        // in order to avoid that the numerical evaluation of the numerical derivative at the boundaries pass these
         // boundaries ...
         if(step == 0.0){
             min->SetFixedVariable(ivar, name, def);
@@ -69,19 +67,19 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
                 min->SetVariable(ivar, name, def, step);
             }
             else{
-                min->SetUpperLimitedVariable(ivar, name, def, step, 0.999 * range.second);
+                min->SetUpperLimitedVariable(ivar, name, def, step, range.second - fabs(range.second) * 0.001);
             }
         }
         else{
             if(isinf(range.second)){
-                min->SetLowerLimitedVariable(ivar, name, def, step, 1.001 * range.first);
+                min->SetLowerLimitedVariable(ivar, name, def, step, range.first + fabs(range.first) * 0.001);
             }
             else{ // both ends are finite
                 if(range.first==range.second){
                     min->SetFixedVariable(ivar, name, range.first);
                 }
                 else{
-                    min->SetLimitedVariable(ivar, name, def, step, 1.001 * range.first, 0.999 * range.second);
+                    min->SetLimitedVariable(ivar, name, def, step, range.first + fabs(range.first) * 0.001, range.second - fabs(range.second) * 0.001);
                 }
             }
         }

@@ -13,8 +13,8 @@ using namespace std;
 using namespace libconfig;
 
 void nll_scan::define_table(){
-    c_nll = table->add_column(get_name(), "nll", Table::typeHisto);
-    c_maxl = table->add_column(get_name(), "maxl", Table::typeDouble);
+    c_nll = table->add_column(*this, "nll", Table::typeHisto);
+    c_maxl = table->add_column(*this, "maxl", Table::typeDouble);
 }
 
 void nll_scan::produce(Run & run, const Data & data, const Model & model) {

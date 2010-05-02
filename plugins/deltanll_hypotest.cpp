@@ -13,8 +13,8 @@ using namespace std;
 using namespace libconfig;
 
 void deltanll_hypotest::define_table(){
-    c_nll_b = table->add_column(get_name(), "nll_b", Table::typeDouble);
-    c_nll_sb = table->add_column(get_name(), "nll_sb", Table::typeDouble);
+    c_nll_b = table->add_column(*this, "nll_b", Table::typeDouble);
+    c_nll_sb = table->add_column(*this, "nll_sb", Table::typeDouble);
 }
 
 void deltanll_hypotest::produce(theta::Run & run, const theta::Data & data, const theta::Model & model){

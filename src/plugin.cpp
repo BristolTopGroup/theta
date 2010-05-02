@@ -7,6 +7,7 @@
 #include "interface/minimizer.hpp"
 
 using namespace theta::plugin;
+using namespace std;
 
 namespace{
 bool nameOk(const std::string & name){
@@ -24,79 +25,45 @@ bool nameOk(const std::string & name){
 
 }
 
-EventTableWriter::EventTableWriter(const std::string & name){
+ProductsTableWriter::~ProductsTableWriter(){}
+
+ProductsTableWriter::ProductsTableWriter(const Configuration & cfg){
+    type = static_cast<string>(cfg.setting["type"]);
+    name = static_cast<string>(cfg.setting["name"]);
     if(not nameOk(name)){
-        std::cerr << "Warning: name '" << name << "' is not a valid name for building column names. "
-                 "Support for such names will be removed soon (set another name by chaning the right hand "
-                 "side of the setting or with the name=\"...\" setting)." << std::endl;
+        throw InvalidArgumentException("name '" + name + "' is not a valid name for building column names. ");
     }
 }
 
-PluginType::PluginType(const Configuration & c): name(c.setting.getName()), type(c.setting["type"]){
-    if(c.setting.exists("name")){
-        name = static_cast<std::string>(c.setting["name"]);
+//on gcc 4.4.1, commenting out this unused function will break things: some plugin types are not found any more (here: root_minuit, which
+// provides a Minimizer). I have *no* idea why this is so. Maybe because the print_registered_plugins is forcing an instantiation of
+// PluginManager<...>::factories in this object file?
+namespace{
+    void print_registered_types(){
+        std::vector<std::string> names = PluginManager<theta::HistogramFunction>::get_registered_types();
+        cout << "HistogramFunctions: ";
+        for(size_t i=0; i<names.size(); ++i){
+            cout << names[i] << " ";
+        }
+        cout << endl;
+        
+        names = PluginManager<theta::Minimizer>::get_registered_types();
+        cout << "Minimizers: ";
+        for(size_t i=0; i<names.size(); ++i){
+            cout << names[i] << " ";
+        }
+        cout << endl;
     }
+    
 }
 
 void PluginLoader::execute(const Configuration & cfg) {
-    bool verbose = false;
-    if (cfg.setting.exists("verbose")) {
-        verbose = cfg.setting["verbose"];
-    }
-    size_t n = cfg.setting["files"].size();
-    SettingWrapper files = cfg.setting["files"];
+    SettingWrapper files = cfg.setting["plugin_files"];
+    size_t n = files.size();
     for (size_t i = 0; i < n; i++) {
         std::string filename = files[i];
         load(filename);
     }
-    if (verbose) {
-        std::cout << "Known plugins:" << std::endl;
-        print_plugins();
-    }
-}
-
-void PluginLoader::print_plugins() {
-    std::cout << "  HistogramFunctions: ";
-    std::vector<std::string> typenames = PluginManager<HistogramFunction>::get_registered_types();
-    for (size_t i = 0; i < typenames.size(); ++i) {
-        std::cout << typenames[i] << " ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "  Functions: ";
-    typenames = PluginManager<Function>::get_registered_types();
-    for (size_t i = 0; i < typenames.size(); ++i) {
-        std::cout << typenames[i] << " ";
-    }
-    std::cout << std::endl;
-
-/*    std::cout << "  Runs: ";
-    typenames = PluginManager<Run>::get_registered_types();
-    for (size_t i = 0; i < typenames.size(); ++i) {
-        std::cout << typenames[i] << " ";
-    }
-    std::cout << std::endl;*/
-
-    std::cout << "  Minimizers: ";
-    typenames = PluginManager<Minimizer>::get_registered_types();
-    for (size_t i = 0; i < typenames.size(); ++i) {
-        std::cout << typenames[i] << " ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "  Producers: ";
-    typenames = PluginManager<Producer>::get_registered_types();
-    for (size_t i = 0; i < typenames.size(); ++i) {
-        std::cout << typenames[i] << " ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "  Distributions: ";
-    typenames = PluginManager<Distribution>::get_registered_types();
-    for (size_t i = 0; i < typenames.size(); ++i) {
-        std::cout << typenames[i] << " ";
-    }
-    std::cout << std::endl;
 }
 
 void PluginLoader::load(const std::string & soname) {
@@ -116,4 +83,6 @@ void PluginLoader::load(const std::string & soname) {
         s << "PluginLoader::load: error loading plugin file '" << soname << "': " << error << std::endl;
         throw InvalidArgumentException(s.str());
     }
+    /*if(false)
+        print_registered_types();*/
 }

@@ -4,6 +4,8 @@
 #include "interface/variables.hpp"
 #include "interface/phys.hpp"
 
+#include "test/utils.hpp"
+
 #include <boost/test/unit_test.hpp>
 
 using namespace std;
@@ -27,33 +29,21 @@ BOOST_AUTO_TEST_CASE(etest){
 //more sophisticated: load external .so file vis the plugin system
 // and catch an exception created there ...
 BOOST_AUTO_TEST_CASE(etest_plugin) {
-    Config cfg;
-    Setting & s = cfg.getRoot();
-    s.add("files", Setting::TypeList);
-    s["files"].add(Setting::TypeString);
-    s["files"][0] = "test/test-ex.so";
-    SettingUsageRecorder rec;
-    boost::shared_ptr<VarIdManager> vm(new VarIdManager);
-    Configuration ctx(vm, SettingWrapper(s, s, rec));
+    boost::shared_ptr<VarIdManager> vm;
+    ConfigCreator cc("plugin_files = (\"test/test-ex.so\");", vm);
+    Configuration cfg = cc.get();
     try{
-        PluginLoader::execute(ctx);
+        PluginLoader::execute(cfg);
     }
     catch(Exception & ex){
         BOOST_REQUIRE_EQUAL(ex.message, "");
         BOOST_REQUIRE(false);
     }    
     //test-ex.so defines a Function named "test-exception":
-    s.add("type", Setting::TypeString);
-    s["type"] = "test_exception";
+    ConfigCreator cc2("type = \"test_exception\";", vm);
     BOOST_REQUIRE(true); // create checkpoint
     std::auto_ptr<Function> f;
-    try{
-         f = PluginManager<Function>::build(ctx);
-    }
-    catch(Exception & ex){
-        BOOST_REQUIRE_EQUAL(ex.message, "");
-        BOOST_REQUIRE(false);
-    }
+    f = PluginManager<Function>::build(cc2.get());
     ParValues values;
     bool exception = false;
     try{

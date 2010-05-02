@@ -35,14 +35,15 @@ namespace{
 void Run::run(){
     //make a shared_ptr out of a auto_ptr. While this is not very nice, I personally
     // like shared_ptr in interfaces much better than naked pointers as with naked pointers,
-    // it is never a-priori clear who has to take care of them ...
-    boost::shared_ptr<EventTable> event_table_shared(event_table.get(), noop_deleter<EventTable>);
+    // it is never a-priori clear who has to take care of them.
+    // For a shared_ptr, the responsibility is clear.
+    boost::shared_ptr<ProductsTable> products_table_shared(products_table.get(), noop_deleter<ProductsTable>);
     
-    data_source->set_table(event_table_shared);
+    data_source->set_table(products_table_shared);
     data_source->define_table();
     for(size_t i=0; i<producers.size(); i++){
-        prodinfo_table->append(static_cast<int>(i), producers[i].get_name(), producers[i].get_type());
-        producers[i].set_table(event_table_shared);
+        prodinfo_table->append(static_cast<int>(i), producers[i].getName(), producers[i].getType());
+        producers[i].set_table(products_table_shared);
         producers[i].define_table();
     }
     
@@ -67,13 +68,13 @@ void Run::run(){
             } catch (Exception & ex) {
                 error = true;
                 std::stringstream ss;
-                ss << "Producer '" << producers[j].get_name() << "' failed: " << ex.message << ".";
+                ss << "Producer '" << producers[j].getName() << "' failed: " << ex.message << ".";
                 logtable->append(*this, LogTable::error, ss.str());
             }
         }
         //only add a row if no error ocurred to prevent NULL values and similar things ...
         if(!error){
-            event_table->add_row(*this);
+            products_table->add_row(*this);
         }
         log_event_end();
         if(progress_listener) progress_listener->progress(eventid, n_event);
@@ -117,8 +118,8 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
     std::auto_ptr<Table> rndinfo_table_underlying = db->create_table("rndinfo");
     rndinfo_table.reset(new RndInfoTable(rndinfo_table_underlying));
     
-    std::auto_ptr<Table> event_table_underlying = db->create_table("products");
-    event_table.reset(new EventTable(event_table_underlying));
+    std::auto_ptr<Table> products_table_underlying = db->create_table("products");
+    products_table.reset(new ProductsTable(products_table_underlying));
     
     //2. misc
     int i_seed = -1;

@@ -122,7 +122,7 @@ public:
  *        producers is stored.</li>
  *   <li>A \link RndInfoTable RndInfoTable \endlink called 'runs', where the per-run information is stored from
  *      the producers or other sources.</li>
- *   <li>A \link EventTable EventTable \endlink called 'events' where the per-event results from all
+ *   <li>A \link ProductsTable ProductsTable \endlink called 'events' where the per-event results from all
  *     the producers are stored and other per-event information.</li>
  *  </ul>
  *
@@ -218,7 +218,7 @@ private:
 
     //the producers to be run on the pseudo data:
     boost::ptr_vector<Producer> producers;
-    boost::shared_ptr<EventTable> event_table;
+    boost::shared_ptr<ProductsTable> products_table;
 
     //the runid, eventid and the total number of events to produce:
     int runid;

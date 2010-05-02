@@ -13,7 +13,7 @@ using namespace libconfig;
 
 void mcmc_posterior_histo::define_table(){
     for(size_t i=0; i<parameters.size(); ++i){
-        columns.push_back(table->add_column(get_name(), "posterior_" + parameter_names[i], Table::typeHisto));
+        columns.push_back(table->add_column(*this, "posterior_" + parameter_names[i], Table::typeHisto));
     }
 }
 

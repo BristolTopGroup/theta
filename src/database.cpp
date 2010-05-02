@@ -43,18 +43,18 @@ Table::~Table(){}
 
 Column::~Column(){}
 
-/* EventTable */
-EventTable::EventTable(std::auto_ptr<Table> & table_): table(table_){
+/* ProductsTable */
+ProductsTable::ProductsTable(std::auto_ptr<Table> & table_): table(table_){
     c_runid = table->add_column("runid", Table::typeInt);
     c_eventid = table->add_column("eventid", Table::typeInt);
 }
 
-std::auto_ptr<Column> EventTable::add_column(const std::string & name, const std::string & column_name, const Table::data_type & type){
-    std::string new_name = name + "__" + column_name;
+std::auto_ptr<Column> ProductsTable::add_column(const theta::plugin::ProductsTableWriter & tw, const std::string & column_name, const Table::data_type & type){
+    std::string new_name = tw.getName() + "__" + column_name;
     return table->add_column(new_name, type);
 }
 
-void EventTable::add_row(const Run & run){
+void ProductsTable::add_row(const Run & run){
     table->set_column(*c_runid, run.get_runid());
     table->set_column(*c_eventid, run.get_eventid());
     table->add_row();

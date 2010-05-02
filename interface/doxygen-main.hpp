@@ -258,8 +258,6 @@
  *
  * \section building Building theta
  *
- * \subsection with_cmake With cmake
- *
  * The recommended way to compile %theta is to use cross-platform make, <a href="http://www.cmake.org/">CMake</a>.
  * After getting the dependencies (sqlite3, boost and root), issue
  * <pre>
@@ -273,6 +271,34 @@
  * which do not include all dependencies correctly. Therefore, be sure to always issue
  * \code make clean \endcode after an update.
  *
+ * \subsection Build options
+ *
+ * There are several build-time options. These options are switched on or off by passing the \c cmake command
+ * a define parameter. For example, to build with experimental postgresql support, you would issue
+ * <pre>
+ *   cmake .. -Dpsql:bool=ON
+ * </pre>
+ * You can pass more than one \c -D option to cmake at a time. The \c -D option always specifies the parameter name,
+ * the type of the parameter (always bool here) and the value (use \c ON and \c OFF for bools).
+ *
+ * Usually, you do not have to change the default settings.
+ *
+ * The following options are currently supported (roughly ordered by probability that you want to change these):
+ * <ul>
+ *   <li>\c psql (default: OFF) If enabled, will build experimental postgresql plugin (to be used as output_database setting at theta::Run)
+ *     which allows to write the output to a central postgresql server concurrently by many workers.</li>
+ *   <li>\c release (default: ON) If enabled, will optimize for a release built with high optimization and without debug information. If disabled,
+ *      debug information will be included, but optimizations are still enabled to some level.</li>
+ *   <li>\c openmp (default: ON) If enabled, will include <a href="http://openmp.org/">openmp</a> directives
+ *     to parallelize portions of the code which helps to speed up the likelihood function evaluation.</li>
+ *   <li>\c coverage (default: OFF) If enabled, switched off optimization and adds compiler options to for coverage tests
+ *     with gcov. If enabled, the \c release option is ignored.</li>
+ *   <li>\c crlibm (default: ON) If enabled, uses the logarithm function (included in %theta)
+ *         from the <a href="http://lipforge.ens-lyon.fr/www/crlibm/>crlibm project</a> which is often faster than the standard log function.</li>
+ * </ul>
+ */
+
+ /*
  * \subsection with_cmssw With CMSSW
  *
  * Go to the \c theta directory and run \c make. Before running the main executable \c bin/theta, execute
@@ -530,55 +556,19 @@
  * to construct an object the corresponding type. The string given in the "type=..." setting is the C++ class
  * name used. The configuration is documented in the respective class documentation.
  *
- * Core and root plugins, by type:
+ * To find out about the available plugins, look at the class hierarchy (link above in the main menu). The
+ * abstract base classes the plugins are derived from are:
  * <ul>
  * <li>\link theta::HistogramFunction HistogramFunction\endlink: used in the "histogram=..."-setting in the observables
- *      specification of a model:
- *     <ul>
- *         <li>fixed_gauss for defining a normal distribution with fixed (i.e., not parameter dependent) mean and standard deviation</li>
- *         <li>fixed_poly for a polynomial of arbitrary order with fixed (i.e., not parameter dependent) coefficients</li>
- *         <li>interpolating_histo to interpolate between one "nominal" and several "distorted" histograms for the
- *             generic treatment of systematic uncertainties</li>
- *         <li>root_histogram to read a histogram from a root file</li>
- *     </ul>
- *   </li>
+ *      specification of a model.</li>
  * <li>\link theta::Function Function \endlink: used as coefficients of the components of an observable or as prior
  *         specification in a model. The only core plugin available is \link mult mult \endlink, which multiplies a list of parameters.</li>
- * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood,
- *        profile likelihood methods:
- *     <ul>
- *       <li>root_minuit using MINUIT via ROOT</li>
- *       <li>(not yet implemented) lbfgs using liblbfgs</li>
- *     </ul>
- * </li>
- * <li>\link theta::Distribution Distribution \endlink: used in model constraints and as priors in a statistical method:
- *    <ul>
- *       <li>gauss normal distribution in one or more dimensions, including arbitrary correlations</li>
- *       <li>log_normal log-normal distribution in one dimension</li>
- *     </ul>
- * </li>
- * <li>\link theta::Producer Producer \endlink: statistical method called by a Run object</li>
- *    <ul>
- *       <li>\link mle mle \endlink maximum likelihood estimator estimates parameter values and errors using a minimizer
- *             on the negative-log-likelihood function</li>
- *       <li>\link deltanll_intervals deltanll_intervals \endlink interval creation based on the difference in the
- *             negative-log-likelihood function</li> 
- *       <li>\link deltanll_hypotest deltanll_hypotest \endlink creates likelihood-ratio test statistics to find
- *             the critical region for rejecting a "background only" null hypothesis</li>
-  *       <li>\link nll_scan nll_scan \endlink scan the likelihood function in one parameter and minimize with respect to all others</li>
- *       <li>\link mcmc_quantiles mcmc_quantiles \endlink Quantile estimator based on Markov-Chain Monte-Carlo to be
- *             used for interval estimation</li>
- *       <li>(not yet implemented:) mcmc_marginal Determine the marginal distribution (as Histogram) for a parameter</li>
- *       <li>\link mcmc_posterior_ratio mcmc_posterior_ratio \endlink analogue of deltanll_hypotest, but integrates over
- *           any free parameters instead of minimizing</li>
- *       <li>\link pseudodata_writer pseudodata_writer \endlink writes out the created pseudo data. Not really a
- *           statistical method, but technically implemented as a Producer as well</li>
- *    </ul>
- *
- * <li>\link theta::DataSource DataSource \endlink: provides the data/pseudo data on which to run the producers. Currently,
- *   only pseudo data creation based on a model is supported via \link model_source model_source \endlink.</li>
- * <li>\link theta::Database Database \endlink: saves the numbers produces by the producers somewhere. Currently, only
- *   the \link sqlite_database sqlite_database \endlink which saves the data in a sqlite3 database file.</li>
+ * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood, profile likelihood methods.</li>
+ * <li>\link theta::Distribution Distribution \endlink: used in model constraints and as priors in a statistical method.</li>
+ * <li>\link theta::Producer Producer \endlink: statistical method called by theta::Run which are provided Data and Model and write
+ *      results to the theta::ProductsTable.</li>
+ * <li>\link theta::DataSource DataSource \endlink: provides the data/pseudo data on which to run the producers.</li>
+ * <li>\link theta::Database Database \endlink: saves the products produced by the producers on disk.</li>
  * </ul>
  */
  
@@ -737,8 +727,14 @@
   * \section cmd_theta theta
   *
   * The %theta command expects one or two arguments: the configuration file and (optionally) the name of the run setting
-  * in this file. If the run name is not given, "main" is assumed as name for the run.
-  *
+  * in this file. If the run name is not given, "main" is assumed as name for the run. Additionally to this setting group,
+  * the special setting group "options" is parsed. This setting group contains:
+  * <ul>
+  *   <li>A (non-optional) setting \c plugin_files, which is a list of shared-object filenames to load as plugins. If relative paths are used, they
+  *      are searched from where theta is executed.</li>
+  *   <li>An optional integer \c n_threads which specifies the number of threads to use. This option only applies if openmp was enabled
+  *     at build time (which is the default). The default is to use the OpenMP default. This is achieved by either omitting this
+  *     option or setting it to a negative value. Setting it to 0 or 1 both do the same and disable the use of multi-threading.</li>
   * %theta parses the configuration file, constructs the \link theta::Run Run \endlink object from the specified setting group
   * and invoke its \link theta::Run::run run method \endlink.
   *
@@ -753,8 +749,20 @@
   * after the run has called all producers on the current pseudo data). This feature is useful for
   * interactive use if the whole run takes too long but you still want to be able to
   * analyze the output produced so far. It is also useful part of a batch job script
-  * which can send this signal just before the job reaches
-  * the maximum time by which it is killed by the batch system.
+  * which can send this signal just before the job reaches the maximum time by which it is killed by the batch system.
+  *
+  * 
+  *  \subsection cmd_theta_multi Multithreading in %theta
+  *
+  * %theta uses multi-threading if enabled at build-time (which is the default) and not explicitely disabled by the \c n_threads option.
+  *
+  * Multi-threading is done by splitting up the loops which run over all bins in a template to multiple threads when calculating
+  * the lieklihood function. This is quite save as it does not make any assumptions about how the plugins are programmed. In particular,
+  * it does not require the plugins to adhere to any special considerations.
+  *
+  * Note that as floating point operations are not strictly associative, results might differ by small amounts if enabling multi-threading.
+  * As these rounding effects might lead to a different number of pseudo random numbers being used, the results might diverge, even if the same
+  * random seed is used. It is therefore advised to set \c n_threads to 1 if debugging.
   *
   * \section cmd_merge merge
   *

@@ -141,24 +141,6 @@ namespace theta{
             }
             //@}
             
-            /** \brief Returns the string representation of the setting value, suitable for parsing
-             *
-             * This returns the setting value, i.e., the right hand side of a "=" statement
-             * in a setting. Thus, in
-             * \code
-             *   val1 = 1.0;
-             *   val2 = "string2";
-             *   val3 = ("a", "b", "c");
-             *   val4 = {s1 = 2; s3 = 4;};
-             * \endcode
-             * only the right hand side of the "=" sign will be contained in the string. This
-             * includes opening and closing braces ("(", ")", "{", "}") but excludes semicolons at the end
-             * of a setting.
-             *
-             * Will resolve all links and substitute the contents.
-             */
-            std::string value_to_string(int indent=0) const;
-            
            /** \brief Return a double, but allow the special strings "inf", "-inf" for infinity
             *
             * At some places in the configuration, it is allowed to use "inf" or "-inf" instead of a double.

@@ -17,55 +17,13 @@ namespace theta {
     /** \brief Namespace for all plugin-related classes.
      */
     namespace plugin {
-        
-        /** \brief The abstract base class for all plugin types
-         *
-         * It is common to all classes which can be implemented as plugin to have
-         * (through the configuration) a "name" and a "type". This common aspect is
-         * implemented with this class.
-         */
-        class PluginType{
-        public:
 
-            /** \brief Returns the name of the instance, as given in the configuration file
-             *
-             * If a "name" setting exists, it will be used as name. Otherwise,
-             * the name of the configuration setting group is used.
-             */
-            std::string get_name() const{
-                return name;
-            }
-            
-            /** \brief Returns the type, as set in the configuration file, for this instance
-             *
-             */
-            std::string get_type() const{
-                return type;
-            }
-             
-        protected:
-            /** \brief Construct, filling name and type from the supplied Configuration
-             */
-            PluginType(const Configuration & c);
-            
-            /** \brief Provide default constructor for derived classes
-             *
-             * In order to allow construction outside of the plugin system (i.e., without
-             * a Configuration instance), this default constructor is provided for derived classes.
-             */
-            PluginType(){}
-
-        private:
-            std::string name;
-            std::string type;
-            
-        };
-        
-        /** \brief Abstract base class for all PluginTypes writing to an EventTable
+        /** \brief Abstract class for all plugins writing to the "products" table
          *
-         * PluginTypes making use of the EventTable class should derive from this class.
+         * Any plugin which writes to the "products" table must derive from this base class.
+         * Currently, the DataSource and the Producer derive from this class.
          */
-        class EventTableWriter{
+        class ProductsTableWriter{
             
         public:
         
@@ -74,7 +32,7 @@ namespace theta {
             * This is called during the setup phase of a theta::Run. It is called just before
             * define_table, which does the producer-specific table definition.
             */
-            void set_table(const boost::shared_ptr<theta::EventTable> & table_){
+            void set_table(const boost::shared_ptr<theta::ProductsTable> & table_){
                 table = table_;
             }
         
@@ -86,12 +44,28 @@ namespace theta {
             * Implementations may assume that the table pointer is valid upon invocation of this method.
             */
             virtual void define_table() = 0;
+            
+            /// Declare Destrutor virtual as we will probably have polymorphic access to derived classes
+            virtual ~ProductsTableWriter();
+            
+            /// Returns the name of this instance, as set in the configuration file via name="...";
+            std::string getName() const{
+                return name;
+            }
+            
+            /// Returns the type of this instance, as given in the configuration file via type="...";
+            std::string getType() const{
+                return type;
+            }
         
         protected:
-            EventTableWriter(const std::string & name);
+            ProductsTableWriter(const Configuration & cfg);
             
             /// The table instance to be used for writing    
-            boost::shared_ptr<EventTable> table;
+            boost::shared_ptr<ProductsTable> table;
+            
+        private:
+                std::string type, name;
         };
 
         /** \brief A container class which is used to construct conrete types managed by the plugin system
@@ -210,7 +184,7 @@ namespace theta {
              */
             static void register_factory(factory_type * new_factory);
             static std::vector<factory_type*> factories;
-            PluginManager() {}
+            PluginManager(){}
             
             //to increase the build_depth in an exception-safe manner, use the build_depth_sentinel,
             // which automatically decreses depth count at destrution:
@@ -245,23 +219,20 @@ namespace theta {
 
         template<typename product_type>
         std::auto_ptr<product_type> PluginManager<product_type>::build(const Configuration & ctx){
-            //build_depth_sentinel(build_depth);
+            build_depth_sentinel b(build_depth);
             if(build_depth > 10){
                 throw FatalException("PluginManager::build: detected too deep recursion");
             }
-            std::string type = "<unspecified>";
+            std::string type = static_cast<std::string>(ctx.setting["type"]);
             for (size_t i = 0; i < factories.size(); ++i) {
                 try {
-                    //as the access to setting["type"] might throw, also write it into the
-                    // try block ...
-                    type = std::string(ctx.setting["type"]);
                     if (factories[i]->get_typename() == type) {
                         return factories[i]->build(ctx);
                     }
                 }catch (Exception & ex) {
                     std::stringstream ss;
                     ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
-                       << "', type='" << type << "' error while building from plugin: " << ex.message;
+                       << "', type='" << type << "': error while building plugin: " << ex.message;
                     ex.message = ss.str();
                     throw;
                 }
@@ -290,21 +261,14 @@ namespace theta {
         class PluginLoader {
         public:
 
-            /** \brief Run the loader according to the setting cfg.setting
+            /** \brief Run the loader according to the configuration file setting
              *
-             * cfg.sertting must contain the "filenames" setting, a list of strings with paths of .so files.
-             * Optionally, it may contain a boolean "verbose" which controls the verbosity level of
-             * the plugin loader.
+             * The shared-object files in the \c plugins_files setting are loaded. This
+             * setting must be a list of strings of the filenames of the .so files.
              */
             static void execute(const theta::plugin::Configuration & cfg);
 
-            /** \brief print a list of all currently available plugins to standard out, grouped by type
-             *
-             * This is mainly for debugging.
-             */
-            static void print_plugins();
-
-            /** \brief load a plugin file
+            /** \brief load a single plugin file
              *
              * The given shared object file will be loaded which will trigger the plugin registration of all plugins
              * defined via the REGISTER_PLUGIN macro automagically.

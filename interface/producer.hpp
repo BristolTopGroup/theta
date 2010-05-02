@@ -15,10 +15,10 @@ namespace theta {
 /** \brief The abstract base class for all statistical methods or other objects creating per-event data
  *
  * It is called "producer" as it produces results, given Data and
- * a Model. Every Producer belongs to a Run, which calls its produce method (typically
- * often on some pseudo data).
+ * a Model. Every Producer belongs to exactly one Run, which calls its produce method (typically
+ * repeatedly on some pseudo data).
  */
-class Producer: public theta::plugin::PluginType, public theta::plugin::EventTableWriter{
+class Producer: public theta::plugin::ProductsTableWriter{
 public:
     /// Define us as the base_type for derived classes; required for the plugin system
     typedef Producer base_type;
@@ -58,9 +58,6 @@ protected:
     NLLikelihood get_nllikelihood(const Data & data, const Model & model);
 
     boost::ptr_vector<theta::Function> additional_likelihood_functions;
-    
-private:
-    static bool nameOk(const std::string & name);
 };
 
 }

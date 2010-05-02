@@ -13,10 +13,10 @@ using namespace libconfig;
 using namespace theta::plugin;
 
 void mle::define_table(){
-    c_nll = table->add_column(get_name(), "nll", Table::typeDouble);
+    c_nll = table->add_column(*this, "nll", Table::typeDouble);
     for(size_t i=0; i<save_ids.size(); ++i){
-        parameter_columns.push_back(table->add_column(get_name(), parameter_names[i], Table::typeDouble));
-        error_columns.push_back(table->add_column(get_name(), parameter_names[i] + "_error", Table::typeDouble));
+        parameter_columns.push_back(table->add_column(*this, parameter_names[i], Table::typeDouble));
+        error_columns.push_back(table->add_column(*this, parameter_names[i] + "_error", Table::typeDouble));
     }
 }
 

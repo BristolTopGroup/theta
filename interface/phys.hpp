@@ -19,11 +19,11 @@
 
 namespace theta {
     
-    /** A real-valued function which depends on one or more parameters
+    /** \brief A real-valued function which depends on one or more parameters
      *
      * This is the base class for function plugins.
      */
-    class Function: public theta::plugin::PluginType{
+    class Function{
     public:
         /// Define this as the base_type for derived classes; required for the plugin system
         typedef Function base_type;
@@ -82,17 +82,8 @@ namespace theta {
          */
         ParIds par_ids;
         
-        /// Proxy to PluginType constructor expecting a Configuration instance
-        Function(const plugin::Configuration & cfg): PluginType(cfg){}
-        
-        /** \brief Default constructor to allow Function construction without Configuration
-         *
-         * This is useful for NLLikelihood, as this object is not constructued via the plugin system.
-         */
-        Function(){}
-        
     private:
-        mutable ParValues pv; //saving this class-wide and not in operator()(const double*) save quiet some time ...
+        mutable ParValues pv; //saving this class-wide and not in operator()(const double*) saves quiet some time ...
     };    
     
     /** \brief Contains data for one or more observables
@@ -138,7 +129,7 @@ namespace theta {
      * DataSource classes are used as part of a run, which, for each pseuso
      * experiment, calls the DataSource::fill function to get the pseudo data.
      */
-    class DataSource: public theta::plugin::PluginType, public theta::plugin::EventTableWriter{
+    class DataSource: public theta::plugin::ProductsTableWriter{
     public:
         
         /// Define this as the base_type for derived classes; required for the plugin system
@@ -177,8 +168,8 @@ namespace theta {
         virtual ~DataSource(){}
         
     protected:
-        /// proxy to PluginType constructor for derived classes
-        DataSource(const theta::plugin::Configuration & cfg): theta::plugin::PluginType(cfg), theta::plugin::EventTableWriter(get_name()){}
+        /// proxy to ProductsTableWriter constructor for derived classes
+        DataSource(const theta::plugin::Configuration & cfg): theta::plugin::ProductsTableWriter(cfg){}
         ObsIds obs_ids;
     };
     

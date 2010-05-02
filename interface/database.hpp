@@ -148,25 +148,25 @@ public:
 };
 
 
-/** \brief A Table to store per-event information
+/** \brief A Table to store products, i.e., per-event output
  *
- * Per \link theta::Run Run \endlink, there is exactly one EventTable. The main usages are
+ * Per \link theta::Run Run \endlink, there is exactly one ProductsTable. Products are produced by
  * <ul>
- *   <li>by Producer to save the result</li>
- *   <li>by DataSource to save some per-event information about data production</li>
+ *   <li>Producer instances to save the result of a statistical computation</li>
+ *   <li>DataSource to save some per-event information about data production</li>
  * </ul>
  *
- * An EventTable will have an integer column named "runid" and an integer column named "eventid". Additionally,
- * any columns defined by the Producer or DataSource, with column names as described in EvenTable::add_column.
+ * An ProductsTable will have an integer column named "runid" and an integer column named "eventid". Additionally,
+ * any columns defined by the Producer or DataSource, with column names as described in ProductsTable::add_column.
  *
- * Clients use EventTable very similarly to a Table. Differences are (i) the
- * signature of the add_column method which takes an addtional name argument and (ii)
+ * Clients use ProductsTable very similarly to a Table. Differences are (i) the
+ * signature of the add_column method which takes an additional \c name argument and (ii)
  * the add_row column, which takes a Run instance as argument here.
  *
  * The actual write is done by the \link Run \endlink instance; the Producer / DataSource must not
  * call add_row directly.
  */
-class EventTable: private boost::noncopyable{
+class ProductsTable: private boost::noncopyable{
 public:
         //@{
         /** \brief Forwards to Table::set_column
@@ -191,21 +191,21 @@ public:
         
         /** \brief Add a column to this table
          *
-         * Similar to Table::add_column, but expects an additional name of the caller. Classes which derive from
-         * PluginType should use the result of PluginType::get_name() as value for this argument.
+         * Similar to Table::add_column, but expects an additional name of the caller. The caller class
+         * must derive from ProducerTableWriter and pass themselves as first argument.
          *
          * The actual column name used in the table will be
          * \code
-         *   name + "__" + column_name
+         *   tw.getName() + "__" + column_name
          * \endcode
          */
-        std::auto_ptr<Column> add_column(const std::string & name, const std::string & column_name, const Table::data_type & type);
+        std::auto_ptr<Column> add_column(const theta::plugin::ProductsTableWriter & tw, const std::string & column_name, const Table::data_type & type);
         
         /** \brief Construct a new EventTable based on the given table
          *
          * Ownership of object held by table will be transferred.
          */
-        EventTable(std::auto_ptr<Table> & table);
+        ProductsTable(std::auto_ptr<Table> & table);
         
         /** \brief Add a row to the table, given the current run
          *

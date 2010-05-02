@@ -401,7 +401,7 @@ void gauss::mode(theta::ParValues & result) const{
 }
 
 
-mult::mult(const Configuration & cfg): Function(cfg){
+mult::mult(const Configuration & cfg){
     size_t n = cfg.setting["parameters"].size();
     if(n==0){
         throw ConfigurationException("mult: 'parameters' empty (or not a list)!");
@@ -497,10 +497,10 @@ double product_distribution::width(const ParId & p) const{
 
 void model_source::define_table(){
     for(size_t i=0; i< parameter_names.size(); ++i){
-        parameter_columns.push_back(table->add_column(get_name(), parameter_names[i], Table::typeDouble));
+        parameter_columns.push_back(table->add_column(*this, parameter_names[i], Table::typeDouble));
     }
     if(save_nll!=nosave){
-        c_nll = table->add_column(get_name(), "nll", Table::typeDouble);
+        c_nll = table->add_column(*this, "nll", Table::typeDouble);
     }
 }
 

@@ -2,6 +2,7 @@
 #include "interface/cfg-utils.hpp"
 #include "interface/phys.hpp"
 #include "interface/minimizer.hpp"
+#include "test/utils.hpp"
 
 #include <boost/test/unit_test.hpp> 
 
@@ -31,16 +32,10 @@ public:
 };
 
 BOOST_AUTO_TEST_CASE(minuit){
-    Config cfg;
-    BOOST_REQUIRE(true);//create checkpoint
-    Setting & s = cfg.getRoot();
-    s.add("files", Setting::TypeList);
-    s["files"].add(Setting::TypeString);
-    s["files"][0] = "lib/root.so";
-    SettingUsageRecorder rec;
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
+    ConfigCreator cc("plugin_files = (\"lib/root.so\");", vm);
     try{
-       PluginLoader::execute(Configuration(vm, SettingWrapper(s, s, rec)));
+       PluginLoader::execute(cc.get());
     }
     catch(Exception & ex){
       cout << "Note: root plugin could not be loaded, not executing root tests";
@@ -48,19 +43,15 @@ BOOST_AUTO_TEST_CASE(minuit){
     }
     root_plugin = true;
     
-    s.add("min", Setting::TypeGroup);
-    s["min"].add("type", Setting::TypeString);
-    s["min"]["type"] = "root_minuit";
-    
     ParId p0 = vm->createParId("p0");
     ParId p1 = vm->createParId("p1");
     ParIds pars;
     pars.insert(p0);
     pars.insert(p1);
     
-    Configuration ctx(vm, SettingWrapper(s["min"], s, rec));
+    ConfigCreator cc2("type = \"root_minuit\";", vm);
     BOOST_REQUIRE(true);//create checkpoint
-    std::auto_ptr<Minimizer> min = PluginManager<Minimizer>::build(ctx);
+    std::auto_ptr<Minimizer> min = PluginManager<Minimizer>::build(cc2.get());
     BOOST_REQUIRE(min.get());
     ImpossibleFunction f(pars);
     bool exception;

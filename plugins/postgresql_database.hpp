@@ -11,6 +11,11 @@
 
 /** \brief Database storing all data in a postgresql database
  *
+ * WARNING: This plugin has not been extensively tested. While it should work in general, the
+ * Table::typeHisto column type is known to be buggy.
+ *
+ * This plugin is only included if you explicitely enable postgresql within cmake.
+ *
  * Configured via a setting group like
  * \code
  * my_db = {

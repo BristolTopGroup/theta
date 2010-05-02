@@ -6,7 +6,7 @@
 using namespace theta;
 using namespace theta::plugin;
 
-Producer::Producer(const Configuration & cfg): PluginType(cfg), EventTableWriter(get_name()){
+Producer::Producer(const Configuration & cfg): ProductsTableWriter(cfg){
     if(cfg.setting.exists("add-nllikelihood-functions")){
         SettingWrapper s = cfg.setting["add-nllikelihood-functions"];
         size_t n = s.size();

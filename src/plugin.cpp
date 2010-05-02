@@ -47,10 +47,7 @@ void PluginLoader::execute(const Configuration & cfg) {
 void PluginLoader::load(const std::string & soname) {
     void* handle = 0;
     try {
-        //we need global here because PluginManager<sometype> could not yet be defined.
-        // To make sure that different plugin files use the same PluginManager as registry,
-        // symbols should be made available through this directive.
-        handle = dlopen(soname.c_str(), RTLD_NOW | RTLD_GLOBAL);
+        handle = dlopen(soname.c_str(), RTLD_NOW);
     } catch (Exception & ex) {
         std::stringstream ss;
         ss << ex.message << " (in PluginLoader::load while loading plugin file '" << soname << "')";

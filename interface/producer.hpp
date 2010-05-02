@@ -9,6 +9,7 @@
 #include <sstream>
 
 #include <boost/ptr_container/ptr_vector.hpp>
+#include "interface/plugin.hpp"
 
 namespace theta {
 
@@ -59,6 +60,8 @@ protected:
 
     boost::ptr_vector<theta::Function> additional_likelihood_functions;
 };
+
+REGISTER_PLUGIN_BASETYPE(Producer);
 
 }
 

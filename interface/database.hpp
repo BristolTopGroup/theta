@@ -11,6 +11,7 @@
 #include "interface/decls.hpp"
 #include "interface/variables.hpp"
 #include "interface/exception.hpp"
+#include "interface/plugin.hpp"
 
 namespace theta {
 
@@ -54,6 +55,8 @@ protected:
      */
     void check_name(const std::string & table_name);
 };
+
+REGISTER_PLUGIN_BASETYPE(Database);
 
 
 /** \brief Abstract base class for all tables stored in a Database

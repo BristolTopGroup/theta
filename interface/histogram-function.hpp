@@ -4,6 +4,7 @@
 #include "interface/decls.hpp"
 #include "interface/variables.hpp"
 #include "interface/histogram.hpp"
+#include "interface/plugin.hpp"
 
 namespace theta {
 
@@ -69,6 +70,8 @@ namespace theta {
         /// Declare the destructor virtual as there will be polymorphic access to derived classes
         virtual ~HistogramFunction(){}
     };
+    
+    REGISTER_PLUGIN_BASETYPE(HistogramFunction);
 
     /** \brief A simple HistogramFunction which always returns the same Histogram, independent of any parameters.
      *

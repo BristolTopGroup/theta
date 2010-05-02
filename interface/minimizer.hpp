@@ -108,6 +108,8 @@ namespace theta{
         /// Construct Minimizer from a Configuration instance, setting the VarIdManager vm
         Minimizer(const theta::plugin::Configuration & cfg): vm(cfg.vm){}
     };
+    
+    REGISTER_PLUGIN_BASETYPE(Minimizer);
 }
 
 #endif

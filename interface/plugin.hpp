@@ -140,6 +140,12 @@ namespace theta {
          }; CONCAT(factory,__LINE__) CONCAT(factory_instance,__LINE__);}
          
          #define REGISTER_PLUGIN(type) REGISTER_PLUGIN_NAME(type, type)
+         
+         //we need to make explicit template instantiations of the PluginManager registry.
+         // Otherwise, the central registry associated to the PluginManager does not work reliably,
+         // if theta core does not instantiate the PluginManager class itself but only other plugins do.
+         // This is true even if RTLD_GLOBAL is passed to dlopen.
+         #define REGISTER_PLUGIN_BASETYPE(type) template class theta::plugin::PluginManager<type>
 
         /** \brief Central registry class for plugins.
          *
@@ -156,7 +162,7 @@ namespace theta {
          * call any method of this class at the same time.
          */
         template<typename product_type>
-        class PluginManager : private boost::noncopyable {
+        class PluginManager: private boost::noncopyable {
         public:
 
             /** \brief Use the registered factories to build an instance from a configuration settings block.

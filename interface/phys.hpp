@@ -84,7 +84,9 @@ namespace theta {
         
     private:
         mutable ParValues pv; //saving this class-wide and not in operator()(const double*) saves quiet some time ...
-    };    
+    };
+    
+    REGISTER_PLUGIN_BASETYPE(Function);
     
     /** \brief Contains data for one or more observables
      *  
@@ -172,6 +174,8 @@ namespace theta {
         DataSource(const theta::plugin::Configuration & cfg): theta::plugin::ProductsTableWriter(cfg){}
         ObsIds obs_ids;
     };
+    
+    REGISTER_PLUGIN_BASETYPE(DataSource);
     
     /** \brief Provides a mapping from parameters to distributions for one or more observables
      *

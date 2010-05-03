@@ -347,7 +347,7 @@ private:
  *
  * Configured via a setting group like
  * \code
- * {
+ * source = {
  *   type = "model_source";
  *   model = "@some-model-path";
  *   override-parameter-distribution = "@some-dist"; // optional

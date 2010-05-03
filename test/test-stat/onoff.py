@@ -33,9 +33,9 @@ def test_expect(n_on, n_off, tau, expected_Z):
     # of the 100-fold difference should be .5 at most, assuming the figures have been
     # rounded correctly.
     if abs((observed_Z - expected_Z) * 100) > 0.5:
-        print "FAIL Z_Bi: got Z = %f, expected %f for n_on, n_off, tau = %f %f %f"  % (observed_Z, expected_Z, n_on, n_off, tau)
+        print "FAIL: Z_Bi: got Z = %f, expected %f for n_on, n_off, tau = %f %f %f"  % (observed_Z, expected_Z, n_on, n_off, tau)
     else:
-        print "PASS Z_Bi: got Z = %f; expected Z = %f" % (observed_Z, expected_Z)
+        print "PASS: Z_Bi: got Z = %f; expected Z = %f" % (observed_Z, expected_Z)
 
 #test the values from the above mentioned paper:
 test_expect(4, 5, 5.0, 1.66)

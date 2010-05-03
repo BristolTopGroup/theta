@@ -28,6 +28,6 @@ test/testall.sh > $logfile 2>&1
 #valgrind is not run because ROOT spoils it all ...
 #valgrind --leak-check=full --show-reachable=yes test/test >> $logfile
 
-#lcov -c --directory build-coverage --output-file theta.info
-#genhtml theta.info --no-function-coverage -o doc/coverage
+lcov -c --directory build-coverage --output-file theta.info
+genhtml theta.info --no-function-coverage -o doc/coverage
 

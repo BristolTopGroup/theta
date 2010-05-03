@@ -43,12 +43,12 @@ private:
         virtual ~blackhole_table();
         
         std::auto_ptr<theta::Column> add_column(const std::string & name, const data_type & type);
+        virtual void set_autoinc_column(const std::string & name);
         virtual void set_column(const theta::Column & c, double d);
         virtual void set_column(const theta::Column & c, int i);
         virtual void set_column(const theta::Column & c, const std::string & s);
         virtual void set_column(const theta::Column & c, const theta::Histogram & h);
-        virtual void add_row();
-        virtual int add_row_autoinc(const theta::Column & c);
+        virtual int add_row();
     
         class blackhole_column: public theta::Column{
         public:

@@ -81,12 +81,8 @@ public:
     /** \brief Data types of columns
      *
      * These data types are the supported types for columns in a table.
-     *
-     * typeAutoIncrement is an integer type which is set incremented automatically if
-     * calling \c add_row_autoinc. Note that each Table can specify only one
-     * auto increment value per insertion.
      */
-    enum data_type { typeDouble, typeInt, typeString, typeHisto, typeAutoIncrement };
+    enum data_type { typeDouble, typeInt, typeString, typeHisto };
 
     /// destructor; creates the table if empty
     virtual ~Table();
@@ -103,6 +99,15 @@ public:
      * to either set_column or add_row, an IllegalStateException will be thrown.
      */
     virtual std::auto_ptr<Column> add_column(const std::string & name, const data_type & type) = 0;
+    
+    /** \brief Set an autoincrement column to this table
+     *
+     * Can be called at most once per table, i.e., a table can have at most one
+     * autoinc column. If called more than once, an InvalidArgumentException is thrown.
+     *
+     * It is only valid to call this method if it is valid to call add_column.
+     */
+    virtual void set_autoinc_column(const std::string & name) = 0;
     
     //@{
     /** \brief Set column contents
@@ -124,23 +129,11 @@ public:
      * This uses the column values previously set with the set_column methods.
      * If set_column was not called for all columns in the table, the contents of these columns
      * will have a NULL-like value which depends on the particular implementation.
+     *
+     * If the table has an autoinc_column, i.e., if set_autoinc_column has been called,
+     * the added id is returned. Otherwise, the result will always be 0.
      */
-    virtual void add_row() = 0;
-    
-    /** \brief Add a row to the table, using a new unique value for the given column
-     *
-     * The Column \c c must have been defined as typeAutoIncrement before,
-     * otherwise, the result is undefined.
-     *
-     * The value of the column \c c which was added is returned.
-     *
-     * It should be avoided to call this function often as it typically requires
-     * synchronization and is much slower than \c add_row.
-     *
-     * This functionality is currently used by theta::Run to get a unique runid for
-     * each run.
-     */
-    virtual int add_row_autoinc(const Column & c) = 0;
+    virtual int add_row() = 0;
 };
 
 /** \brief Base class for columns managed by Tables

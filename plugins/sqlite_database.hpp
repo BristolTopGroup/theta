@@ -86,34 +86,41 @@ private:
         // destructor; creates the table if empty
         virtual ~sqlite_table();
         
-        std::auto_ptr<theta::Column> add_column(const std::string & name, const data_type & type);
+        virtual std::auto_ptr<theta::Column> add_column(const std::string & name, const data_type & type);
+        virtual void set_autoinc_column(const std::string & name);
+        
         virtual void set_column(const theta::Column & c, double d);
         virtual void set_column(const theta::Column & c, int i);
         virtual void set_column(const theta::Column & c, const std::string & s);
         virtual void set_column(const theta::Column & c, const theta::Histogram & h);
-        virtual void add_row();
-        virtual int add_row_autoinc(const theta::Column & c);
+        virtual int add_row();
 
     private:
         
         sqlite_table(const std::string & name_, sqlite_database * db_);
         
         std::string name;
+        bool have_autoinc;
         std::stringstream column_definitions; // use by the add_column method
+        std::stringstream ss_insert_statement;
         bool table_created;
         
-        int next_column; // next free column to return by add_column
+        int next_insert_index; // next free insert_index to use by add_column to construct an sqlite_column, starting at 1.
         
-        sqlite3_stmt * insert_statement; // associated memory is managed by sqlite_database object, which calls finalize on it ...
+        sqlite3_stmt * insert_statement; // this ressource is owned by sqlite_database.
         sqlite_database * db;
         
         void create_table();
         
         class sqlite_column: public theta::Column{
         public:
-            int sqlite_column_index;
-            sqlite_column(int i):sqlite_column_index(i){}
+            int insert_index;
+            sqlite_column(int i):insert_index(i){}
             virtual ~sqlite_column(){}
+        };
+        
+        class sqlite_autoinc_column: public theta::Column{
+            virtual ~sqlite_autoinc_column(){}
         };
     };
 };

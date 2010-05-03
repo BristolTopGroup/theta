@@ -26,6 +26,9 @@ std::auto_ptr<Column> blackhole_database::blackhole_table::add_column(const std:
     return std::auto_ptr<Column>(new blackhole_column());
 }
 
+void blackhole_database::blackhole_table::set_autoinc_column(const std::string &){
+}
+
 void blackhole_database::blackhole_table::set_column(const Column & c, double d){}
 
 void blackhole_database::blackhole_table::set_column(const Column & c, int i){}
@@ -34,7 +37,6 @@ void blackhole_database::blackhole_table::set_column(const Column & c, const std
 
 void blackhole_database::blackhole_table::set_column(const Column & c, const theta::Histogram & h){}
 
-void blackhole_database::blackhole_table::add_row(){}
-int blackhole_database::blackhole_table::add_row_autoinc(const Column & c){ return 1;}
+int blackhole_database::blackhole_table::add_row(){ return 0;}
 
 REGISTER_PLUGIN(blackhole_database)

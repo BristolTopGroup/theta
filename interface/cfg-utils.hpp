@@ -9,6 +9,8 @@
 #include <vector>
 #include <sstream>
 
+#include <boost/shared_ptr.hpp>
+
 
 namespace theta{
 
@@ -63,13 +65,13 @@ namespace theta{
      */
     class SettingWrapper{
         const libconfig::Setting & rootsetting;
-        mutable SettingUsageRecorder & rec;
+        boost::shared_ptr<SettingUsageRecorder> rec;
         const libconfig::Setting & setting;
         //the original name of the seting. Does not need to be setting.getName(), if 
         // setting was found by resolving a link
         std::string setting_name;
         
-        static const libconfig::Setting & resolve_link(const libconfig::Setting & setting, const libconfig::Setting & root, SettingUsageRecorder & rec);
+        static const libconfig::Setting & resolve_link(const libconfig::Setting & setting, const libconfig::Setting & root, const boost::shared_ptr<SettingUsageRecorder> & rec);
     public:
             //@{
             /** \brief Convert the current setting to the given type
@@ -77,27 +79,27 @@ namespace theta{
              * If the setting has not the correct type, a SettingTypeException will be thrown.
              */
             operator bool() const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return setting;
             }
             
             operator std::string() const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return setting;
             }
             
             operator int() const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return setting;
             }
             
             operator unsigned int() const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return setting;
             }            
             
             operator double() const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return setting;
             }
             //@}
@@ -108,7 +110,7 @@ namespace theta{
              * as libconfig::Setting::getLength()
              */
             size_t size() const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return setting.getLength();
             }
             
@@ -117,7 +119,7 @@ namespace theta{
              * same as libconfig::Setting::operator[](int)
              */
             SettingWrapper operator[](int i) const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return SettingWrapper(setting[i], rootsetting, rec);
             }
             
@@ -128,7 +130,7 @@ namespace theta{
              */
             //@{
             SettingWrapper operator[](const std::string & name) const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return SettingWrapper(setting[name], rootsetting, rec);
             }
             
@@ -163,10 +165,6 @@ namespace theta{
              */
             std::string getName() const{
                 return setting_name;
-
-                /*const char * cname = setting.getName();
-                if(cname) return cname;
-                else return "<noname>";*/
             }
             
             /** \brief Returns the configuration file path of the current setting
@@ -187,7 +185,7 @@ namespace theta{
              * \c s is the Setting which to be wrapped, i.e., the access and casting methods of SettingWrapper will
              *    forward these requests to \c s.
              */
-            SettingWrapper(const libconfig::Setting & s, const libconfig::Setting & root, SettingUsageRecorder & recorder);
+            SettingWrapper(const libconfig::Setting & s, const libconfig::Setting & root, const boost::shared_ptr<SettingUsageRecorder> & recorder);
     };
 }
 

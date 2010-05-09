@@ -5,7 +5,7 @@ set(CMAKE_VERBOSE_MAKEFILE, 1)
 option(coverage "build for coverage tests" OFF)
 option(release "build release version" ON)
 option(crlibm "use the log function from crlibm" ON)
-option(openmp "enable parallelization" ON)
+option(openmp "enable parallelization" OFF)
 option(psql "use postgresql" OFF)
 
 if(coverage)

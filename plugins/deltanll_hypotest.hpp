@@ -2,10 +2,9 @@
 #define PLUGIN_DELTANLL_HYPOTEST_HPP
 
 #include "interface/decls.hpp"
-
-//#include "interface/plugin.hpp"
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
+#include "interface/variables.hpp"
 
 #include <string>
 

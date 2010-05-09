@@ -22,8 +22,7 @@ private:
     libconfig::Config config;
     int dummy;
     
-    
-    theta::SettingUsageRecorder rec;
+    boost::shared_ptr<theta::SettingUsageRecorder> rec;
     theta::plugin::Configuration cfg;
 };
 

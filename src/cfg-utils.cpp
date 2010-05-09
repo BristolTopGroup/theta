@@ -1,7 +1,6 @@
 #include "interface/cfg-utils.hpp"
-#include "interface/histogram-function.hpp"
-
 #include <sstream>
+#include <limits>
 
 using namespace std;
 using namespace libconfig;
@@ -25,7 +24,7 @@ void SettingUsageRecorder::get_unused(std::vector<std::string> & unused, const l
 }
 
 double SettingWrapper::get_double_or_inf() const {
-    rec.markAsUsed(setting);
+    rec->markAsUsed(setting);
     if(setting.getType()==Setting::TypeFloat) return setting;
     string infstring = setting;
     if(infstring == "inf" || infstring == "+inf") return numeric_limits<double>::infinity();
@@ -35,7 +34,7 @@ double SettingWrapper::get_double_or_inf() const {
     throw InvalidArgumentException(error.str());
 }
 
-const Setting & SettingWrapper::resolve_link(const Setting & setting, const Setting & root, SettingUsageRecorder & rec){
+const Setting & SettingWrapper::resolve_link(const Setting & setting, const Setting & root, const boost::shared_ptr<SettingUsageRecorder> & rec){
     try{
         std::string next_path;
         //hard-code maximum redirection level of 10:
@@ -62,7 +61,7 @@ const Setting & SettingWrapper::resolve_link(const Setting & setting, const Sett
             link.erase(0, 1);
             next_path = link;
             //mark any intermediate link as used:
-            rec.markAsUsed(s);
+            rec->markAsUsed(s);
         }
     }
     catch(Exception & ex){
@@ -77,7 +76,7 @@ const Setting & SettingWrapper::resolve_link(const Setting & setting, const Sett
 }
 
 SettingWrapper::SettingWrapper(const libconfig::Setting & s, const libconfig::Setting & root,
-                             SettingUsageRecorder & recorder):
+                             const boost::shared_ptr<SettingUsageRecorder> & recorder):
            rootsetting(root), rec(recorder), setting(resolve_link(s, rootsetting, rec)) {
     const char * name = s.getName();
     if(name) setting_name = name;

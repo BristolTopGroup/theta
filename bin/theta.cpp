@@ -107,11 +107,10 @@ int main(int argc, char** argv) {
     bool nowarn = cmdline_vars.count("nowarn");
 
     Config cfg;
-    
+    boost::shared_ptr<SettingUsageRecorder> rec(new SettingUsageRecorder());
     std::auto_ptr<Run> run;
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
-    SettingUsageRecorder rec;
-
+    
     try {
         try {
             //as includes in config files shouled always be resolved relative to the config file's location:
@@ -137,8 +136,8 @@ int main(int argc, char** argv) {
             s << "Error parsing configuration file: " << p.getError() << " in line " << p.getLine() << ", file " << p.getFile();
             throw ConfigurationException(s.str());
         }
-        SettingWrapper root(cfg.getRoot(), cfg.getRoot(), rec);
         
+        SettingWrapper root(cfg.getRoot(), cfg.getRoot(), rec);
         Configuration config(vm, root);
         
         //process options:
@@ -180,7 +179,7 @@ int main(int argc, char** argv) {
     
     if(not nowarn){
         vector<string> unused;
-        rec.get_unused(unused, cfg.getRoot());
+        rec->get_unused(unused, cfg.getRoot());
         if (unused.size() > 0) {
             cout << "WARNING: following setting paths in the configuration file have not been used: " << endl;
             for (size_t i = 0; i < unused.size(); ++i) {

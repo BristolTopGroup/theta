@@ -32,7 +32,6 @@ namespace theta {
     class VarId{
     friend class VarIdManager;
     friend class ParValues;
-    friend std::ostream & theta::operator<<(std::ostream & out, const ParIds & pids);
     public:
         //@{
         /** \brief Implements the order and equality semantics.

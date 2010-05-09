@@ -29,7 +29,7 @@ postgresql_database::postgresql_database(const plugin::Configuration & cfg) :
     if(cfg.setting.exists("table_prefix")){
         table_prefix = static_cast<string>(cfg.setting["table_prefix"]);
         if(table_prefix!="")
-        check_name(table_prefix);
+            check_name(table_prefix);
     }
     std::string conninfo = cfg.setting["conninfo"];
     conn = PQconnectdb(conninfo.c_str());
@@ -117,31 +117,61 @@ postgresql_database::postgresql_table::postgresql_table(const string & name_, po
 }
 
 std::auto_ptr<Column> postgresql_database::postgresql_table::add_column(const std::string & name, const data_type & type){
-    if(table_created) throw IllegalStateException("Table::add_column called after table already created (via call to set_column / add_row).");
+    if(table_created) throw FatalException("postgresql_table::add_column called after table already created (via call to set_column / add_row).");
     column_names.push_back(name);
-    column_types.push_back(type);
-    column_definitions << (next_column > 1?", \"":"\"") << name << "\" ";
+    if(column_definitions.str().size() > 0)
+        column_definitions << ", ";
+    column_definitions << "\"" << name << "\" ";
     switch(type){
-        case typeDouble: column_definitions << "DOUBLE PRECISION"; break;
-        case typeInt: column_definitions << "INTEGER"; break;
-        case typeAutoIncrement: column_definitions << "SERIAL"; break;
-        case typeString: column_definitions << "TEXT"; break;
-        case typeHisto: column_definitions << "BYTEA"; break;
+        case typeDouble:
+             column_definitions << "DOUBLE PRECISION";
+             param_formats.push_back(0);
+             break;
+        case typeInt:
+            column_definitions << "INTEGER";
+            param_formats.push_back(0);
+            break;
+        case typeString:
+            column_definitions << "TEXT";
+            param_formats.push_back(0);
+            break;
+        case typeHisto: column_definitions << "BYTEA";
+            param_formats.push_back(1);
+            break;
         default:
             throw InvalidArgumentException("Table::add_column: invalid type parameter given.");
     };
+    if(ss_insert_statement.str().size() > 0)
+        ss_insert_statement << ", ";
+    ss_insert_statement << "\"" << name << "\"";
+    param_lengths.push_back(0);
+    
     std::auto_ptr<Column> result(new postgresql_column(next_column));
     column_content.resize(next_column);
     next_column++;
     return result;
 }
 
+void postgresql_database::postgresql_table::set_autoinc_column(const std::string & name){
+    if(table_created) throw FatalException("postgresql::set_autoinc_column called after table already created (via call to set_column / add_row).");
+    if(have_autoinc)
+         throw InvalidArgumentException("postgresl_database::add_column: tried to add more than one Column of type typeAutoIncrement");
+    have_autoinc = true;
+    autoinc_name = name;
+    if(column_definitions.str().size() > 0)
+        column_definitions << ", ";
+    column_definitions << "\"" << name << "\" ";
+    column_definitions << "SERIAL";
+    column_names.push_back(name);
+}
+
 namespace{
+    
     int get_int(PGresult * res){
         char * count = PQgetvalue(res, 0, 0);
         if(count==0){
             PQclear(res);
-            throw DatabaseException("get_int");
+            throw DatabaseException("get_int: result was null");
         }
         stringstream ss;
         ss << count;
@@ -149,6 +179,58 @@ namespace{
         ss >> result;
         return result;
     }
+    
+    bool get_bool(PGresult * res){
+        char * value = PQgetvalue(res, 0, 0);
+        if(value==0){
+            PQclear(res);
+            throw DatabaseException("get_bool: value was null");
+        }
+        if(string(value)=="t") return true;
+        return false;
+    }
+    
+    const int LOCK_TABLE_CREATION = 1;
+    
+    class psql_lock{
+        public:
+            psql_lock(PGconn * conn_, int lock_): conn(conn_), lock(lock_){
+                for(int i=0; i<10; ++i){
+                    stringstream ss;
+                    ss << "SELECT pg_try_advisory_lock(" << lock << ");";
+                    PGresult * res = PQexec(conn, ss.str().c_str());
+                    if(PQresultStatus(res)!=PGRES_TUPLES_OK){
+                        stringstream ss;
+                        ss << "psql_lock failed: " << PQresultErrorMessage(res);
+                        PQclear(res);
+                        throw DatabaseException(ss.str());
+                    }
+                    else{
+                        bool lock_obtained = get_bool(res);
+                        if(lock_obtained) return;
+                        else sleep(1);
+                    }
+                }
+                throw FatalException("psql_lock: could not aquire lock within timeout");
+            }
+            
+            ~psql_lock(){
+                stringstream ss;
+                ss << "SELECT pg_advisory_unlock(" << lock << ");";
+                PGresult * res = PQexec(conn, ss.str().c_str());
+                if(PQresultStatus(res)!=PGRES_TUPLES_OK){
+                    //this could be thrown while another exception is active which is usually
+                    // not desired at all. However, it is Ok in this case as this is an internal error.
+                    PQclear(res);
+                    throw FatalException("~psql_lock: unlock failed");
+                }
+                PQclear(res);
+            }
+        private:
+            PGconn * conn;
+            int lock;
+    };
+    
 }
 
 //check whether table already existing matches the own table definition.
@@ -186,6 +268,9 @@ bool postgresql_database::postgresql_table::check_existing_table(){
 }
 
 void postgresql_database::postgresql_table::create_table(){
+    // In order to avoid potential race conditions between looking if a given table
+    // exists and actually creating the table, an explicit advisory lock is obtained here.
+    psql_lock lock(db->conn, LOCK_TABLE_CREATION);
     bool create = false;
     if(db->mode=="recreate"){
         db->exec("DROP TABLE IF EXISTS \"" + name + "\";");
@@ -194,23 +279,16 @@ void postgresql_database::postgresql_table::create_table(){
     else{//append mode
         create = not check_existing_table();
     }
-    
     stringstream ss;
-    // NOTE: potential race condition: in the meantime, someone else could have created
-    // the table we are about to create. Currently, "create table" will fail, so theta
-    // will exit with an error. This is not strictly necessary as the created
-    // table might have been compatible, but it is Ok as it should only happen very rarely ...
     if(create){
         string col_def = column_definitions.str();
         ss << "CREATE TABLE \"" << name << "\" (" << col_def << ") WITH (fillfactor=100, toast.autovacuum_enabled=false);";
         db->exec(ss.str());
     }
-    
     db->endTransaction();
     db->beginTransaction();
-    
     ss.str("");
-    ss << "INSERT INTO \"" << name << "\" VALUES(";
+    ss << "INSERT INTO \"" << name << "\"("<< ss_insert_statement.str() << ") VALUES(";
     for(int i=1; i<next_column; ++i){
         if(i > 1) ss << ", $" << i;
         else ss << "$" << i;
@@ -260,45 +338,37 @@ void postgresql_database::postgresql_table::set_column(const Column & c, const t
     std::copy(h.getData(), h.getData() + h.get_nbins()+2, &blob_data[2]);
     size_t nbytes = sizeof(double) * (h.get_nbins() + 4);
 
-    //psql-specific escape:
-    size_t to_length;
-    unsigned char * escaped_blob_data = PQescapeByteaConn(db->conn, reinterpret_cast<unsigned char*>(&blob_data[0]), nbytes, &to_length);
-
     //copy to column buffer:
-    char * & content = column_content[static_cast<const postgresql_column&>(c).column_index - 1];
-    delete[] content;
-    content = new char[to_length + 1];
-    copy(escaped_blob_data, escaped_blob_data + to_length, content);
-    content[to_length] = '\0';
-    PQfreemem(escaped_blob_data);
+    int index = static_cast<const postgresql_column&>(c).column_index - 1;
+    char * & content = column_content[index];
+    if(param_lengths[index]!=nbytes){
+        param_lengths[index] = nbytes;
+        delete[] content;
+        content = new char[nbytes];
+    }
+    const char * blob_data_bytes = reinterpret_cast<const char*>(&blob_data[0]);
+    copy(blob_data_bytes, blob_data_bytes + nbytes, content);
 }
 
-void postgresql_database::postgresql_table::add_row(){
+int postgresql_database::postgresql_table::add_row(){
     if(not table_created) create_table();
-    //make sure previous statement has executed completely:
+    //make sure previous statement is executed completely:
     while(PGresult * pres = PQgetResult(db->conn)){
         PQclear(pres);
     }
-    //send next insertion asynchronously ...
-    PQsendQueryPrepared(db->conn, insert_statement.c_str(), next_column-1, &(column_content[0]), 0, 0, 1);
-}
-
-
-
-int postgresql_database::postgresql_table::add_row_autoinc(const theta::Column & c){
-    if(not table_created) create_table();
-    while(PGresult * pres = PQgetResult(db->conn)){
-        PQclear(pres);
+    PQsendQueryPrepared(db->conn, insert_statement.c_str(), next_column-1, &(column_content[0]), &param_lengths[0], &param_formats[0], 1);
+    int result = 0;
+    if(have_autoinc){
+        while(PGresult * pres = PQgetResult(db->conn)){
+            PQclear(pres);
+        }
+        stringstream ss;
+        ss << "select currval('" << name << "_" << autoinc_name << "_seq');";
+        PGresult * res = PQexec(db->conn, ss.str().c_str());
+        result = get_int(res);
+        PQclear(res);
     }
-    int index = static_cast<const postgresql_column&>(c).column_index;
-    stringstream ss;
-    ss << "select nextval('" << name << "_" << column_names[index-1] << "_seq" << "');";
-    PGresult * res = PQexec(db->conn, ss.str().c_str());
-    int nextval = get_int(res);
-    PQclear(res);
-    set_column(c, nextval);
-    add_row();
-    return nextval;
+    return result;
 }
 
 REGISTER_PLUGIN(postgresql_database)

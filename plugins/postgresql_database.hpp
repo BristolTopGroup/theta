@@ -12,7 +12,7 @@
 /** \brief Database storing all data in a postgresql database
  *
  * WARNING: This plugin has not been extensively tested. While it should work in general, the
- * Table::typeHisto column type is known to be buggy.
+ * Table::typeHisto column type has not been tested extensively.
  *
  * This plugin is only included if you explicitely enable postgresql within cmake.
  *
@@ -37,7 +37,7 @@
  *
  * \c mode is either "append" or "recreate". In "recreate" mode, any pre-existing table of the same name 
  *     will be dropped before the tables are created. In case of "append", data is appended to a pre-existing table.
- *     Note that this can cause errors later if the table format of the pre-existing table is not compatible.
+ *     Note that this can cause errors if the table format of the pre-existing table is not compatible to the one to be created.
  *
  * The types Table::typeDouble, Table::typeInt and Table::typeString are translated directly
  * to their SQL counterparts \c DOUBLE \c PRECISION, \c INT(4) and \c TEXT, respectively. For Table::typeHisto,
@@ -107,8 +107,8 @@ private:
         virtual void set_column(const theta::Column & c, int i);
         virtual void set_column(const theta::Column & c, const std::string & s);
         virtual void set_column(const theta::Column & c, const theta::Histogram & h);
-        virtual void add_row();
-        virtual int add_row_autoinc(const theta::Column & c);
+        virtual void set_autoinc_column(const std::string & name);
+        virtual int add_row();
 
     private:
         
@@ -116,9 +116,13 @@ private:
         bool check_existing_table();
         
         std::string name;
+        bool have_autoinc;
+        std::string autoinc_name;
         std::stringstream column_definitions; // use by the add_column method
+        std::stringstream ss_insert_statement;
+        
+        //for comparison with already existing tables:
         std::vector<std::string> column_names;
-        std::vector<data_type> column_types;
         bool table_created;
         
         int next_column; // next free column to return by add_column
@@ -127,6 +131,8 @@ private:
         postgresql_database * db;
         
         std::vector<char *> column_content; // set by set_column
+        std::vector<int> param_lengths;
+        std::vector<int> param_formats;
         
         void create_table();
         

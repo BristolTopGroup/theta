@@ -116,7 +116,7 @@ sqlite_database::sqlite_table::sqlite_table(const string & name_, sqlite_databas
 }
 
 std::auto_ptr<Column> sqlite_database::sqlite_table::add_column(const std::string & name, const data_type & type){
-    if(table_created) throw IllegalStateException("Table::add_column called after table already created (via call to set_column / add_row).");
+    if(table_created) throw FatalException("sqlite_table::add_column called after table already created (via call to set_column / add_row).");
     if(column_definitions.str().size() > 0)
         column_definitions << ", ";
     column_definitions << "'" << name << "' ";
@@ -138,12 +138,12 @@ std::auto_ptr<Column> sqlite_database::sqlite_table::add_column(const std::strin
 
 
 void sqlite_database::sqlite_table::set_autoinc_column(const std::string & name){
-    if(table_created) throw IllegalStateException("Table::add_column called after table already created (via call to set_column / add_row).");
-    if(column_definitions.str().size() > 0)
-        column_definitions << ", ";
-    column_definitions << "'" << name << "' ";    
+    if(table_created) throw FatalException("sqlite_table::add_column called after table already created (via call to set_column / add_row).");
     if(have_autoinc)
          throw InvalidArgumentException("sqlite_database::add_column: tried to add more than one Column of type typeAutoIncrement");
+    if(column_definitions.str().size() > 0)
+        column_definitions << ", ";
+    column_definitions << "'" << name << "' ";
     have_autoinc = true;
     column_definitions << "INTEGER PRIMARY KEY AUTOINCREMENT";
 }

@@ -2,7 +2,7 @@
 #define PLUGIN_MCMC_QUANTILES_HPP
 
 #include "interface/decls.hpp"
-
+#include "interface/variables.hpp"
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
 #include "interface/matrix.hpp"

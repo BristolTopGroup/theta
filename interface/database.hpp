@@ -9,7 +9,6 @@
 #include <boost/utility.hpp>
 
 #include "interface/decls.hpp"
-#include "interface/variables.hpp"
 #include "interface/exception.hpp"
 #include "interface/plugin.hpp"
 

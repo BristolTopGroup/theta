@@ -7,11 +7,9 @@
 
 #include <boost/date_time/local_time/local_time.hpp>
 
-#include "interface/variables.hpp"
 #include "interface/database.hpp"
 #include "interface/run.hpp"
 #include "interface/histogram.hpp"
-
 
 using namespace std;
 using namespace theta;

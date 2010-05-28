@@ -112,7 +112,7 @@ std::auto_ptr<Table> sqlite_database::create_table(const string & table_name){
 
 
 sqlite_database::sqlite_table::sqlite_table(const string & name_, sqlite_database * db_) :
-    name(name_), have_autoinc(false), table_created(false), insert_statement(0), next_insert_index(1), db(db_) {
+    name(name_), have_autoinc(false), table_created(false), next_insert_index(1), insert_statement(0), db(db_) {
 }
 
 std::auto_ptr<Column> sqlite_database::sqlite_table::add_column(const std::string & name, const data_type & type){

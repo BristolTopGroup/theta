@@ -371,7 +371,7 @@ double gauss::width(const ParId & p)const{
     }
     const pair<double, double> & range = ranges[i];
     double min_result = range.second - range.first;
-    if(min_result = 0.0) return 0.0;
+    if(min_result == 0.0) return 0.0;
 
     // in the sampling procedure, sqrt_cov * vector is returned. Now, the
     // width of the marginal distribution of component i of the result vector is given by
@@ -504,7 +504,7 @@ void model_source::define_table(){
     }
 }
 
-model_source::model_source(const theta::plugin::Configuration & cfg): save_nll(nosave), DataSource(cfg){
+model_source::model_source(const theta::plugin::Configuration & cfg): DataSource(cfg), save_nll(nosave){
     model = ModelFactory::buildModel(Configuration(cfg, cfg.setting["model"]));
     obs_ids = model->getObservables();
     par_ids = model->getParameters();

@@ -59,7 +59,7 @@ void ProductsTable::add_row(const Run & run){
 }
 
 /* LogTable */
-LogTable::LogTable(std::auto_ptr<Table> & table_): table(table_), level(info){
+LogTable::LogTable(std::auto_ptr<Table> & table_): level(info), table(table_){
    for(int i=0; i<4; ++i){
        n_messages[i]=0;
    }

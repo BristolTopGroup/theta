@@ -4,3 +4,6 @@ target_link_libraries(theta libtheta ${Boost_LIBRARIES})
 add_executable(merge merge.cpp)
 target_link_libraries(merge sqlite3 libtheta ${Boost_LIBRARIES})
 
+add_executable(unc unc.cpp)
+target_link_libraries(unc libtheta ${Boost_LIBRARIES})
+

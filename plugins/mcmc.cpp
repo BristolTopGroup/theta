@@ -75,7 +75,7 @@ Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> 
     //a first estimate of the matrix: use the step width determination of the
     // minimizer:
     ParIds par_ids = nll.getParameters();
-    assert(par_ids.size() == n); //should hold by construction of NLLikelihood::getnpar(), but who knows ...
+    assert(par_ids.size() == n); //should hold by construction of NLLikelihood::getnpar()
     size_t k=0;
     int n_fixed_parameters = 0;
     const Distribution & dist = nll.get_parameter_distribution();
@@ -89,7 +89,15 @@ Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> 
         }
         cov(k, k) = width*width;
     }
-    get_cholesky(cov, sqrt_cov, static_cast<int>(n) - n_fixed_parameters);
+    assert(k==n);
+    try{
+        get_cholesky(cov, sqrt_cov, static_cast<int>(n) - n_fixed_parameters);
+    }catch(Exception & ex){
+        stringstream ss;
+        ss << "get_sqrt_cov: had " << n << " - " << n_fixed_parameters << " parameters. error from gqt_sqrt_dov: " << ex.message;
+        ex.message = ss.str();
+        throw;
+    }
     
     vector<double> jump_rates;
     jump_rates.reserve(max_passes);

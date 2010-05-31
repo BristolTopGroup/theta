@@ -5,7 +5,6 @@ set(CMAKE_VERBOSE_MAKEFILE, 1)
 option(coverage "build for coverage tests" OFF)
 option(release "build release version" ON)
 option(crlibm "use the log function from crlibm" ON)
-option(openmp "enable parallelization" OFF)
 option(psql "use postgresql" OFF)
 
 if(coverage)
@@ -25,13 +24,6 @@ if(crlibm)
    message(STATUS "using log from crlibm")
    add_definitions(-DUSE_CRLIBM)
 endif()
-
-if(openmp)
-   message(STATUS "enabling parallelization")
-   add_definitions(-DUSE_OPENMP)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -pthread")
-endif()
-
 
 find_package(Boost COMPONENTS regex program_options filesystem)
 

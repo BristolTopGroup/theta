@@ -13,10 +13,6 @@
 
 #include <fstream>
 
-#ifdef USE_OPENMP
-#include <omp.h>
-#endif
-
 using namespace std;
 using namespace theta;
 using namespace theta::utils;
@@ -143,16 +139,6 @@ int main(int argc, char** argv) {
         //process options:
         Configuration cfg_options(config, config.setting["options"]);
         PluginLoader::execute(cfg_options);
-        #ifdef USE_OPENMP
-        if(cfg_options.setting.exists("n_threads")){
-            int n = cfg_options.setting["n_threads"];
-            if(n >= 0){
-                if(n==0) n=1;
-                omp_set_num_threads(n);
-            }
-            //else, i.e., n<0: leave the default openmp behaviour
-        }
-        #endif
         
         //fill VarIdManager:
         VarIdManagerUtils::apply_settings(config);

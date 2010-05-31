@@ -182,7 +182,11 @@ int main(int argc, char** argv) {
     try {
         run->run();
     } catch (Exception & ex) {
-        cerr << "An error ocurred during Run::run: " << ex.what() << endl;
+        cerr << "An error ocurred in Run::run: " << ex.what() << endl;
+        return 1;
+    }
+    catch(FatalException & ex){
+        cerr << "A fatal error ocurred in Run::run: " << ex.message << endl;
         return 1;
     }
     if(theta::stop_execution){

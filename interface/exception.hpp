@@ -99,6 +99,7 @@ public:
  */
 class FatalException{
 public:
+    std::string message;
        
     /** \brief Construct from a "usual" Exception
      * 

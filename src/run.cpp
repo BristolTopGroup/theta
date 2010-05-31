@@ -71,6 +71,12 @@ void Run::run(){
                 ss << "Producer '" << producers[j].getName() << "' failed: " << ex.message << ".";
                 logtable->append(*this, LogTable::error, ss.str());
             }
+            catch(FatalException & f){
+                stringstream ss;
+                ss << "Producer '" << producers[j].getName() << "': " << f.message;
+                f.message = ss.str();
+                throw;
+            }
         }
         //only add a row if no error ocurred to prevent NULL values and similar things ...
         if(!error){

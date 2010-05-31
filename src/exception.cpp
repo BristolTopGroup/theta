@@ -12,9 +12,8 @@ NotFoundException::NotFoundException(const std::string & msg): Exception(msg){}
 MathException::MathException(const std::string & m): Exception(m){}
 
 FatalException::FatalException(const Exception & ex){
-    std::cerr << "Fatal error: " << ex.what() << std::endl;
+    message = ex.what();
 }
 
-FatalException::FatalException(const std::string & message){
-    std::cerr << "Fatal error: " << message << std::endl;
+FatalException::FatalException(const std::string & message_): message(message_){
 }

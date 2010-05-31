@@ -65,7 +65,8 @@ void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
 }
 
 
-Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> & startvalues){
+Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> & startvalues,
+                    const boost::shared_ptr<VarIdManager> & vm){
     const size_t n = nll.getnpar();
     const size_t max_passes = 20;
     const size_t iterations = 8000;
@@ -81,11 +82,14 @@ Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> 
     const Distribution & dist = nll.get_parameter_distribution();
     ParValues pv_start;
     dist.mode(pv_start);
+    ParIds fixed_pars;
     for(ParIds::const_iterator it = par_ids.begin(); it!=par_ids.end(); ++it, ++k){
         double width = dist.width(*it) * 2.38 / sqrt(n);
         startvalues[k] = pv_start.get(*it);
         if(width==0.0){
             ++n_fixed_parameters;
+            fixed_pars.insert(*it);
+            
         }
         cov(k, k) = width*width;
     }
@@ -94,7 +98,14 @@ Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> 
         get_cholesky(cov, sqrt_cov, static_cast<int>(n) - n_fixed_parameters);
     }catch(Exception & ex){
         stringstream ss;
-        ss << "get_sqrt_cov: had " << n << " - " << n_fixed_parameters << " parameters. error from gqt_sqrt_dov: " << ex.message;
+        ss << "get_sqrt_cov: had " << n << " - " << n_fixed_parameters << " parameters; fixed by Distribution were: ";
+        bool first = true;
+        for(ParIds::const_iterator it=fixed_pars.begin(); it!=fixed_pars.end(); ++it){
+            ss <<  (first?"":", ") << vm->getName(*it);
+            first = false;
+        }
+        ss << ". error from get_sqrt_cov: " << ex.message;
+        
         ex.message = ss.str();
         throw;
     }

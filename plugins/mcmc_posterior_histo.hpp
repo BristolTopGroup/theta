@@ -82,6 +82,8 @@ private:
     unsigned int burn_in;
     theta::Matrix sqrt_cov;
     std::vector<double> startvalues;
+    
+    boost::shared_ptr<theta::VarIdManager> vm;
 };
 
 #endif

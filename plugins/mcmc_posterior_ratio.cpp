@@ -70,7 +70,7 @@ void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, c
             
             NLLikelihood nll_sb = model.getNLLikelihood(d);
             nll_sb.set_override_distribution(s_plus_b.get());
-            sqrt_cov_sb = get_sqrt_cov(run.get_random(), nll_sb, startvalues_sb);
+            sqrt_cov_sb = get_sqrt_cov(run.get_random(), nll_sb, startvalues_sb, vm);
         
             //2. for background only
             ParValues b_only_values;
@@ -80,7 +80,7 @@ void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, c
             }
             NLLikelihood nll_b = model.getNLLikelihood(d);
             nll_b.set_override_distribution(b_only.get());
-            sqrt_cov_b = get_sqrt_cov(run.get_random(), nll_b, startvalues_b);
+            sqrt_cov_b = get_sqrt_cov(run.get_random(), nll_b, startvalues_b, vm);
             
             init = true;
         }catch(Exception & ex){
@@ -119,6 +119,7 @@ void mcmc_posterior_ratio::define_table(){
 
 mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), init(false){
     SettingWrapper s = cfg.setting;
+    vm = cfg.vm;
     
     s_plus_b = theta::plugin::PluginManager<Distribution>::build(theta::plugin::Configuration(cfg, s["signal-plus-background-distribution"]));
     b_only = theta::plugin::PluginManager<Distribution>::build(theta::plugin::Configuration(cfg, s["background-only-distribution"]));    

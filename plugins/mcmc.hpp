@@ -119,7 +119,7 @@ void metropolisHastings(const nlltype & nllikelihood, resulttype &res, Random & 
  * \param nll is the negative log-posterior to evaluate
  * \param[out] startvalues will contain the suggested startvalues. The contents when calling this function will be ignored.
  */
-Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> & startvalues);
+Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> & startvalues, const boost::shared_ptr<VarIdManager> & vm);
    
 /** \brief Calculate the cholesky decomposition, but allow zero eigenvalues.
  *

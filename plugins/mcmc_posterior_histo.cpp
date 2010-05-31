@@ -69,7 +69,7 @@ void mcmc_posterior_histo::produce(Run & run, const Data & data, const Model & m
                 model.get_prediction(d[*it], values, *it);
             }
             NLLikelihood nll = get_nllikelihood(d, model);
-            sqrt_cov = get_sqrt_cov(run.get_random(), nll, startvalues);
+            sqrt_cov = get_sqrt_cov(run.get_random(), nll, startvalues, vm);
             
             //find ipars:
             ParIds nll_pars = nll.getParameters();
@@ -104,6 +104,7 @@ void mcmc_posterior_histo::produce(Run & run, const Data & data, const Model & m
 mcmc_posterior_histo::mcmc_posterior_histo(const theta::plugin::Configuration & cfg): Producer(cfg),
         init(false), init_failed(false){
     SettingWrapper s = cfg.setting;
+    vm = cfg.vm;
     size_t n = s["parameters"].size();
     for(size_t i=0; i<n; ++i){
         string parameter_name = s["parameters"][i];

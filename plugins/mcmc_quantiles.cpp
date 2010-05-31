@@ -71,7 +71,7 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
                 model.get_prediction(d[*it], values, *it);
             }
             NLLikelihood nll = get_nllikelihood(d, model);
-            sqrt_cov = get_sqrt_cov(run.get_random(), nll, startvalues);
+            sqrt_cov = get_sqrt_cov(run.get_random(), nll, startvalues, vm);
             
             //find the number of the parameter of interest:
             ParIds nll_pars = nll.getParameters();

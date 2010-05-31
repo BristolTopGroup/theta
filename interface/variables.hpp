@@ -7,6 +7,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <ostream>
 
 #include "interface/exception.hpp"
 #include "interface/utils.hpp"
@@ -32,6 +33,9 @@ namespace theta {
     class VarId{
     friend class VarIdManager;
     friend class ParValues;
+    friend std::ostream & operator<<(std::ostream & out, const VarId & v){
+        return out << v.id;
+    }
     public:
         //@{
         /** \brief Implements the order and equality semantics.

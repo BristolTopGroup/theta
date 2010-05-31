@@ -77,6 +77,8 @@ private:
     std::vector<double> startvalues_b;
     
     std::auto_ptr<theta::Column> c_nl_posterior_sb, c_nl_posterior_b;
+    
+    boost::shared_ptr<theta::VarIdManager> vm;
 };
 
 #endif

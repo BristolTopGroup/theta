@@ -9,3 +9,4 @@ endif()
 
 target_link_libraries(libtheta m dl config ${Boost_LIBRARIES})
 set_property(TARGET libtheta PROPERTY OUTPUT_NAME theta)
+

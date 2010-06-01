@@ -3,6 +3,7 @@ project(theta)
 set(CMAKE_VERBOSE_MAKEFILE, 1)
 
 option(coverage "build for coverage tests" OFF)
+option(optiontest "build tests" OFF)
 option(release "build release version" ON)
 option(crlibm "use the log function from crlibm" ON)
 option(psql "use postgresql" OFF)
@@ -43,4 +44,9 @@ add_subdirectory(plugins)
 add_subdirectory(libconfig)
 add_subdirectory(bin)
 add_subdirectory(root)
-add_subdirectory(test)
+
+if(optiontest)
+   message(STATUS "building tests")
+   add_subdirectory(test)
+endif()
+

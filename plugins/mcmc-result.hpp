@@ -23,11 +23,11 @@ namespace theta {
         /// number of different points in the chain, i.e., not counting rejected proposal points
         size_t count_different_points;
         
-        /// sum of the parameter values in each dimension
-        std::vector<double> sum;
+        /// sliding mean of the parameter values in the chain
+        std::vector<double> means;
         
-        /// sumsquares(i,j) constains the sum of the chain so far over par_i * par_j
-        Matrix sumsquares;
+        // sliding covariance times count
+        Matrix count_covariance;
     public:
         /** \brief Construct result with \c npar parameters
          */
@@ -49,15 +49,7 @@ namespace theta {
          * \param nll is the negative logarithm of the likelihood / posterior
          * \param weight is the weight of the point, i.e., the number of rejected proposals to jump away from it, plus one.
          */
-        void fill(const double * p, double nll, size_t weight) throw();
-        
-        /** \brief Combine the common information with another chain
-         *
-         * Only the mean values and covariance matrix will be combined.
-         *
-         * If \c res has a different number of parameters, an InvalidArgumentException will be thrown
-         */
-        void combineResult(const Result & res);
+        void fill(const double * p, double nll, size_t weight);
         
         /// Returns the number of parameters specified in the constructor
         size_t getnpar() const;
@@ -68,45 +60,12 @@ namespace theta {
         /// Returns the number of different point in the chain, i.e., not including rejected proposals
         size_t getCountDifferent() const;
         
-        /// Returns the mean of the parameter values in the chain
+        // Returns the mean of the parameter values in the chain
         std::vector<double> getMeans() const;
-        
-        /// Returns the standard deviation of the marginal distribution of the parameters
-        std::vector<double> getSigmas() const;
         
         /// Returns the covariance matrix of the parameter values in the chain
         Matrix getCov() const;
     };
-
-    /*class FullResultMem: public Result{
-    private:
-        size_t nallocvec;
-        double* results;
-        size_t* counts;
-        inline void ensureCapacity(size_t cap);
-    public:
-        FullResultMem(size_t npar, size_t cap = 1024);
-        ~FullResultMem();
-        void fill(const double * p, double nll, size_t weight);
-        //i has to be 0 to i<getCountDifferent().   getCountRes(i) is the count (=weight) of the given point, getResult(i) is the point itself. 
-        const double* getResult(size_t i) const;
-        size_t getCountRes(size_t i) const;
-    };
-
-    class HistoResult : public Result {
-    private:
-        std::vector<Histogram> histos;
-
-    public:
-        void fill(const double*, double, size_t);
-        //takes limits of the histograms from nll.
-        HistoResult(const std::vector<std::pair<double, double> > & ranges, const std::vector<size_t> & nbins);
-        ~HistoResult();
-        void reset();
-
-        //returns a pointer to the histogram for the i-th parameter.
-        const Histogram & getHistogram(size_t i) const;
-    };*/
 
 }
 

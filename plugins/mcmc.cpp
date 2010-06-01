@@ -9,13 +9,15 @@
 #include <limits>
 
 #include <iostream>
+#include <iomanip>
 #include <cstdio>
 #include <sstream>
 
 using namespace std;
 
 namespace theta{
-
+    
+    
 void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
     size_t npar_reduced = cov.getRows();
     size_t npar = npar_reduced;
@@ -31,7 +33,7 @@ void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
             npar_reduced--;
     }
     if(npar_reduced==0){
-       throw InvalidArgumentException("get_cholesky: number of reduced dimensions is zero (all parameters fixed?)");
+        throw InvalidArgumentException("get_cholesky: number of reduced dimensions is zero (all parameters fixed?)");
     }
     if(expect_reduced > 0 && static_cast<size_t>(expect_reduced)!=npar_reduced){
         throw InvalidArgumentException("get_cholesky: number of reduced dimensions not as expected");
@@ -94,21 +96,7 @@ Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> 
         cov(k, k) = width*width;
     }
     assert(k==n);
-    try{
-        get_cholesky(cov, sqrt_cov, static_cast<int>(n) - n_fixed_parameters);
-    }catch(Exception & ex){
-        stringstream ss;
-        ss << "get_sqrt_cov: had " << n << " - " << n_fixed_parameters << " parameters; fixed by Distribution were: ";
-        bool first = true;
-        for(ParIds::const_iterator it=fixed_pars.begin(); it!=fixed_pars.end(); ++it){
-            ss <<  (first?"":", ") << vm->getName(*it);
-            first = false;
-        }
-        ss << ". error from get_sqrt_cov: " << ex.message;
-        
-        ex.message = ss.str();
-        throw;
-    }
+    get_cholesky(cov, sqrt_cov, static_cast<int>(n) - n_fixed_parameters);
     
     vector<double> jump_rates;
     jump_rates.reserve(max_passes);

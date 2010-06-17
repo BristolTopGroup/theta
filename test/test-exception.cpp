@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(etest){
 // and catch an exception created there ...
 BOOST_AUTO_TEST_CASE(etest_plugin) {
     boost::shared_ptr<VarIdManager> vm;
-    ConfigCreator cc("plugin_files = (\"test/test-ex.so\");", vm);
+    ConfigCreator cc("plugin_files = (\"lib/liblibtest.so\");", vm);
     Configuration cfg = cc.get();
     try{
         PluginLoader::execute(cfg);

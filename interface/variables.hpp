@@ -112,7 +112,7 @@ namespace theta {
             return vars.end();
         }
 
-        /** \brief Insert a new id.
+        /** \brief Insert a new id
          *
          * \param id The id object to insert. 
          * \return \c true, if an insertion actually took place and \c false if the id was already contained. 
@@ -121,6 +121,10 @@ namespace theta {
             return vars.insert(id).second;
         }
         
+        /** \brief Erase a previously inserted id
+         *
+         * \param id The id object to erase.
+         */
         void erase(const id_type & id) {
             vars.erase(id);
         }

@@ -11,15 +11,16 @@
  * in high-energy physics. It provides the possibility for the user to express a "model", i.e.,
  * the expected data distribution, as function of physical parameters. This model can be used
  * to make statistical inference about the physical parameter of interest. Modeling is "template-based"
- * in the sense that the expected data distribution is always expressed as a sum of templates (which, in general,
- * depend on the model parameters).
+ * in the sense that the expected data distribution is always expressed as a sum of templates. For a general
+ * introduction please refer to <a href="../files/theta.pdf">theta - a framework for template-based modeling and inference</a>.
+ * Almost all plots contained therein can be produced by running \c examples/paper/execute-all.sh.
  *
  * \section main_impatient For the impatient
  *
  * For getting started with %theta quickly, make sure to install sqlite3, boost, root and cmake on your machine
  * and run
  * \code
- *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/april-2010 theta
+ *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/june-2010 theta
  *  cd theta
  *  mkdir build
  *  cd build
@@ -31,26 +32,18 @@
  *  root gaussoverflat.root
  * \endcode
  *
- * For more information about how to compile %theta, see \subpage installation "Installation".
- * For an introduction into usage, see \subpage intro "Introduction".
+ * You will see the distribution of the estimated significance in sigma of a model with Gaussian signal over
+ * flat background.
  *
- * \section main_intro First Introduction
+ * \section main_intro Documentation overview
  *
- * %theta supports a physicist doing data analysis to answer commonly arising statistical questions
- * such as large-scale pseudo-experiments for coverage tests, luminosity scans, definition of the critical region
- * for a hypothesis test, etc.
- *
- * The intention of %theta is to <em>support</em> the user in the sense that it provides the necessary tools
- * and documents to address many questions.
- * However, %theta does not intent to be an all-in-one device which suits every purpose. For example,
- * it is restricted to template-based modeling in the sense described above. Also, %theta does not do any plotting.
- *
- * The documentation is split into several pages. If you are new to %theta, read them in this order:
+ * The documentation is split into several pages. If you are new to %theta, first read
+ * <a href="../files/theta.pdf">theta - a framework for template-based modeling and inference</a>. Then,
+ * depending on what you want to know, you can read the following pages:
  * <ol>
  *   <li>\subpage whatistheta "What theta can do" explains which kind of questions can (or cannot) be addressed with the help of %theta</li>
  *   <li>\subpage installation Installation explains how to obtain and compile %theta</li>
- *   <li>\subpage intro Introduction describes how to run %theta; a first example is discussed and
- *        an introduction to the internals of %theta. In also contains a \ref plugins "list of available plugins".</li>
+ *   <li>\subpage intro Introduction guides you through an example and explains the typical workflow with %theta</li>
  *   <li>\subpage cmd_interface "Command line interface" described the command line tools of %theta, namely the \c theta
  *     program and the \c merge program.</li>
  *   <li>\subpage extend "Extending theta" describes how to extend %theta using the plugin system</li>
@@ -59,7 +52,7 @@
  * Bug tracking and feature requests are managed in the <a href="https://ekptrac.physik.uni-karlsruhe.de/trac/theta">theta trac</a>.
  * If you find a bug or miss an essential feature, you can open a ticket there.
  *
- * Some additional information not necessarily of interest for every user:
+ * Some additional information not of general interest for every user, but interesting enough to be documented here:
  * <ol>
  *   <li>\subpage design "Design Goals of theta" contains some thoughts about what the code of %theta should be like.
  *       You should read that either if you want to contribute code to %theta or if you want to know what makes %theta
@@ -168,81 +161,6 @@
  * is easier to achieve. Also, %theta is easier to document and to understand if not bloated by additional code.
  * See \ref design for more information about this point.
  */
- /*
- * \section singletop Single Top Search
- *
- * 
- *
- */
-
- /* \section boostedtop Z' search
- *
- * A complete analysis example which makes use of many features of %theta is currently in preparation.
- * However, to get an impression of what can be done, an example analysis searching for \f$ Z^\prime \rightarrow
- * t \bar t \f$ in the semileptonic muon channel
- *  at Z' masses in the TeV regime at the LHC. For some background, you can read the
- * <a href="http://cdsweb.cern.ch/record/1194498/files/EXO-09-008-pas.pdf">CMS PAS 2009-09-008</a>, but it is
- * not required for further reading. Note that %theta was not
- * used for the results presented there, but it was designed for such a case.
- *
- * In this analysis, after the event selection, the invariant mass of the ttbar system, \f$ M_{t\bar t} \f$,
- * is estimated event-by-event. For a fixed Z' mass, a Monte-Carlo model predicts this \f$ M_{t\bar t} \f$ distribution
- * for signal. For the background distribution, usually Monte-Carlo templates are used, the main backgrounds being
- * vector-boson (W,Z) + jets, QCD, and standard-model \f$ t\bar t\f$.
- * As the QCD processes is assumed to be not well modeled by Monte-Carlo,
- * its shape is extracted from a background-enriched data sideband. To determine an upper limit for a fixed Z' mass,
- * two variables are fitted simultaneously: \f$ H_{T}^{lep} \f$, the scalar sum of missing \f$ E_T \f$ and muon \f$ p_T \f$,
- * and the reconstructed invariant top-quark pair mass, \f$ M_{t\bar t} \f$. By fitting both templates simultaneously,
- * the QCD background normalization can be extracted from data instead on relying on Monte-Carlo prediction.
- *
- * So far, the model (and therefore the liklihood built from this model, given data), depends on
- * 4 parameters: (i) the vector-boson + jets mean, (ii) the standard model \f$ t\bar t\f$ mean,
- * (iii) the QCD mean and (iv) the signal mean. All these parameters are mean values of the expected number of
- * events after the event selection. They can be translated to a cross section, given the selection acceptance and
- * integrated luminosity. It is assumed that inferences about the mean values after selection can be transformed
- * to statements about the cross sections easily. Two of these parameters, namely the rate for
- * vector-boson + jets and standard model \f$ t\bar t\f$, are assumed to be fairly well modeled by Monte-Carlo simulation.
- * However, instead of fixing these parameters in the model to their predicted value, some degree of mismodeling is
- * accounted for by treating the parameter as free parameter in the likelihood function but adding
- * a Gaussian term keeping it close to the predicted one where the width corresponds to the uncertainty of the prediction
- * (Bayesians would call this "prior" but this constraint can also be justified as part of the model freqentistically).
- *
- * The situation is further complicated by the presence of different systematic uncertainties which affect the
- * templates used in the model in both the shape and the rate. For example, jet energy scale uncertainty,
- * theoretical uncertainties like scale uncertainty, modeling of initial- and final-state radiation and more.
- *
- * These systematic uncertainties are incorporated in the model by template interpolation described above. This introduces
- * one additional parameter per systematic uncertainty. Assuming we have 3 systematic uncertainties
- *
- * \subsection boostedtop_upperlimit Upper limit
- *
- * Once the templates have been built, %theta can be used to perform this fit and extract the upper limit using
- * a fully Bayesian method. This method constructs the poterior density and uses a Markov-Chain Monte-Carlo
- * method to find the 95% quantile of the signal cross-section marginal posterior.
- *
- * This can be used to compute the median upper limit expected in the case that there is no Z'.
- *
- * \subsection boostedtop_discovery Discovery and frequentist intervals
- *
- * The same model can be used to produce likelihood ratio test stistics distribution which, once created, can easily
- * be used to find out the critical region of a hypothesis test attempting to find signal.
- *
- * The likelihood ratio in %theta is defined by the ratio of two likelihood values obtained for two different
- * special cases of the same model: the "signal-plus-background" case and the "background-only" case. It is assumed
- * that these special cases can be expressed by fixing parameters in the more general model.
- * The likelihood value used for the ratio is then found by minimizing with respect to all
- * other (i.e., non-fixed) parameters.
- *
- * However, as numerical is hard in case of many free parameters (what easily happens if adding more and more systematic
- * uncertainties), %theta also supports the creation of an alternate likelihood-ratio statistic which integrates over all
- * non-fixed parameters instead of minimizing.
- *
- * If scanning through the signal parameter, this likelihood-ratio test statistic can also be used to construct frequentist
- * confidence intervals (including upper limits).
- *
- * Note that, however, %theta so far only assists in the large-scale creation of test statistics, not in the
- * subsequent statistical inferences making use of it.
- */
 
 
 /** \page installation Installation
@@ -287,14 +205,14 @@
  * <ul>
  *   <li>\c psql (default: OFF) If enabled, will build experimental postgresql plugin (to be used as output_database setting at theta::Run)
  *     which allows to write the output to a central postgresql server concurrently by many workers.</li>
- *   <li>\c release (default: ON) If enabled, will optimize for a release built with high optimization and without debug information. If disabled,
- *      debug information will be included, but optimizations are still enabled to some level.</li>
- *   <li>\c openmp (default: ON) If enabled, will include <a href="http://openmp.org/">openmp</a> directives
- *     to parallelize portions of the code which helps to speed up the likelihood function evaluation.</li>
+ *   <li>\c release (default: ON) If enabled, will optimize for a release built with high optimization
+ *      and without debug information. If disabled, debug information will be included; optimizations are still enabled to some level.</li>
+ *   <li>\c optiontest (default: OFF) If enabled, will build test executables and shared objects.</li>
  *   <li>\c coverage (default: OFF) If enabled, switched off optimization and adds compiler options to for coverage tests
  *     with gcov. If enabled, the \c release option is ignored.</li>
  *   <li>\c crlibm (default: ON) If enabled, uses the logarithm function (included in %theta)
- *         from the <a href="http://lipforge.ens-lyon.fr/www/crlibm/>crlibm project</a> which is often faster than the standard log function.</li>
+ *         from the <a href="http://lipforge.ens-lyon.fr/www/crlibm/">crlibm project</a> which is often faster than the
+ *         standard log function.</li>
  * </ul>
  */
 
@@ -360,10 +278,9 @@
 /**
  * \page intro Introduction
  *
- * This page discusses  a concrete example where you get an overview over how %theta works
- * from the point of view of a user.
- * In the second section, some internals of %theta are explained which are good to know even if you
- * do not plan to extend %theta.
+ * This page discusses a concrete example where you get an overview over how %theta works
+ * from the point of view of a user. In the second section, some internals of %theta are
+ * explained which are good to know even if you do not plan to extend %theta.
  *
  * \section first_example First example
  *
@@ -481,7 +398,7 @@
  *
  * This is done by the "main" settings group. It defines a theta::run which
  * throws random pseudo data from a model and calls a list of producers. The results will be written
- * as SQL %database to a file with the path specified with "result-file".
+ * as SQL %database to a file with the path specified in the \c output_database setting.
  *
  * Pseudo data is thrown according to the configured model with following sequence:
  * <ol>
@@ -576,8 +493,9 @@
  /**
   * \page extend Extending theta
   *
-  * This section assumes that you have read the \ref intro. One important concept introduced there was that of plugins.
-  * As rule of thumb, every setting group in a %theta configuration file corresponds to a C++ instance. More
+  * One important concept introduced earlier is the plugin architecture of %theta.
+  * As a rule of thumb, every setting group in a %theta configuration file will give rise to one instance
+  * of a C++ class during runtime of %theta. More
   * specifically, <b>any setting group containing a <em>type="<typename>"</em>
   * setting is used to construct a C++ object of class &lt;typename&gt; via the plugin system.</b>
   *

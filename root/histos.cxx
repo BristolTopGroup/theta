@@ -56,7 +56,7 @@ sqlite3* sqlite3_open(const string & fname){
 
 void create_histo_from_doublequery(const string & infile, const string & query, TDirectory * cd, const string & name, int nbins, double xmin, double xmax){
     cd->cd();
-    TH1F* histo = new TH1F(name.c_str(), name.c_str(), nbins, xmin, xmax);
+    TH1D* histo = new TH1D(name.c_str(), name.c_str(), nbins, xmin, xmax);
     histo->SetDirectory(cd);
     sqlite3 * db = sqlite3_open(infile);
     sqlite3_stmt* st = sqlite3_prepare(db, query.c_str());

@@ -72,7 +72,7 @@ namespace theta {
         size_t getnpar() const{
             return par_ids.size();
         }
-
+        
         /// Declare destructor virtual as polymorphic access to derived classes will happen.
         virtual ~Function(){}
     protected:
@@ -81,6 +81,14 @@ namespace theta {
          * Has to be set correctly by derived classes
          */
         ParIds par_ids;
+        
+        /** \brief Assignment operator. For use by derived classes
+         *
+         */
+        //Do not use default implementation, as ParValues pv cannot be assigned (and they do not need to be ...).
+        void operator=(const Function & rhs){
+            par_ids = rhs.par_ids;
+        }
         
     private:
         mutable ParValues pv; //saving this class-wide and not in operator()(const double*) saves quiet some time ...

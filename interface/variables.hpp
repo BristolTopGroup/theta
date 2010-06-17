@@ -121,6 +121,10 @@ namespace theta {
             return vars.insert(id).second;
         }
         
+        void erase(const id_type & id) {
+            vars.erase(id);
+        }
+        
         /** \brief Insert new ids.
          *
          * Insert [first, last) in this container.

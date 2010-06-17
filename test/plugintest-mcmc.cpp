@@ -16,15 +16,21 @@ BOOST_AUTO_TEST_CASE(mcmc_result0){
     Result res(2);
     
     //check a minimally filled result: fill in two points with 0.0.
-    double vec[2] = {0,0};
-    res.fill(vec, 0, 2);
+    double vec[2] = {0,1};
+    res.fill(vec, 0, 1);
+    res.fill(vec, 0, 1);
     res.end();
     BOOST_CHECK(res.getCount()==2);
     BOOST_CHECK(res.getnpar()==2);
     vector<double> means = res.getMeans();
     BOOST_REQUIRE(means.size()==2);
     BOOST_CHECK(means[0] == 0.0);
-    BOOST_CHECK(means[1] == 0.0);
+    BOOST_CHECK(means[1] == 1.0);
+    Matrix cov = res.getCov();
+    BOOST_CHECK(cov(0,0)==0.0);
+    BOOST_CHECK(cov(1,1)==0.0);
+    BOOST_CHECK(cov(1,0)==0.0);
+    BOOST_CHECK(cov(0,1)==0.0);
 }
     
 BOOST_AUTO_TEST_CASE(mcmc_result1){

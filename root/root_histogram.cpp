@@ -12,6 +12,17 @@ using namespace std;
 root_histogram::root_histogram(const Configuration & ctx){
     string filename = ctx.setting["filename"];
     string histoname = ctx.setting["histoname"];
+    int rebin = 1;
+    double range_low = -999;
+    double range_high = -999;
+    if(ctx.setting.exists("rebin")){
+       rebin = ctx.setting["rebin"];
+    }
+    if(ctx.setting.exists("range")){
+       range_low = ctx.setting["range"][0];
+       range_high = ctx.setting["range"][1];
+    }
+    
     TFile file(filename.c_str(), "read");
     if(file.IsZombie()){
         stringstream s;
@@ -24,6 +35,7 @@ root_histogram::root_histogram(const Configuration & ctx){
        s << "Did not find Histogram '" << histoname << "'";
        throw ConfigurationException(s.str());
     }
+    histo->Rebin(rebin);
     double xmin = histo->GetXaxis()->GetXmin();
     double xmax = histo->GetXaxis()->GetXmax();
     int nbins = histo->GetNbinsX();
@@ -33,7 +45,15 @@ root_histogram::root_histogram(const Configuration & ctx){
     if(ctx.setting.exists("use_errors")){
          use_errors = ctx.setting["use_errors"];
     }
-    for(int i=0; i<=nbins+1; i++){
+    int bin_low = 0;
+    int bin_high = nbins+1;
+    if(range_low!=-999){
+       bin_low = histo->GetXaxis()->FindBin(range_low);
+    }
+    if(range_high!=-999){
+       bin_high = histo->GetXaxis()->FindBin(range_high);
+    }
+    for(int i=bin_low; i<=bin_high; i++){
         double content = histo->GetBinContent(i);
         h.set(i, content);
         //h_error contains the relative errors:

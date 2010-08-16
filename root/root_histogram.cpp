@@ -36,34 +36,42 @@ root_histogram::root_histogram(const Configuration & ctx){
        throw ConfigurationException(s.str());
     }
     histo->Rebin(rebin);
-    double xmin = histo->GetXaxis()->GetXmin();
-    double xmax = histo->GetXaxis()->GetXmax();
-    int nbins = histo->GetNbinsX();
-    theta::Histogram h(nbins, xmin, xmax);
-    theta::Histogram h_error(nbins, xmin, xmax);
-    bool use_errors = false;
-    if(ctx.setting.exists("use_errors")){
-         use_errors = ctx.setting["use_errors"];
-    }
-    int bin_low = 0;
-    int bin_high = nbins+1;
+    double norm = HistogramFunctionUtils::read_normalize_to(ctx.setting);
+    histo->Scale(norm / histo->Integral());
+    
+    int bin_low = 1;
+    int bin_high = histo->GetNbinsX();
     if(range_low!=-999){
        bin_low = histo->GetXaxis()->FindBin(range_low);
     }
     if(range_high!=-999){
        bin_high = histo->GetXaxis()->FindBin(range_high);
     }
-    for(int i=bin_low; i<=bin_high; i++){
+    int nbins = bin_high - bin_low + 1;
+    
+    double xmin = histo->GetXaxis()->GetXmin();
+    double xmax = histo->GetXaxis()->GetXmax();
+    //int nbins = histo->GetNbinsX();
+    if(bin_low > 0)
+       xmin = histo->GetXaxis()->GetBinLowEdge(bin_low);
+    if(bin_high <= nbins)
+       xmax = histo->GetXaxis()->GetBinUpEdge(bin_high);
+    
+    bool use_errors = false;
+    if(ctx.setting.exists("use_errors")){
+         use_errors = ctx.setting["use_errors"];
+    }
+    
+    theta::Histogram h(nbins, xmin, xmax);
+    theta::Histogram h_error(nbins, xmin, xmax);
+    for(int i = bin_low; i <= bin_high; i++){
         double content = histo->GetBinContent(i);
-        h.set(i, content);
+        h.set(i - bin_low + 1, content);
         //h_error contains the relative errors:
         if(use_errors && content > 0.0){
-           h_error.set(i, histo->GetBinError(i) / content);
+           h_error.set(i - bin_low + 1, histo->GetBinError(i) / content);
         }
     }
-    double norm = HistogramFunctionUtils::read_normalize_to(ctx.setting);
-    double integral = h.get_sum_of_bincontents();
-    h *= norm/integral;
     set_histos(h, h_error);
 }
 

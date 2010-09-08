@@ -21,7 +21,16 @@ public:
     }
 
     virtual double DoEval(const double * x) const{
-        return f(x);
+        double result = f(x);
+        if(isinf(result)){
+           cerr << "Error in function to minimize: result is infinity!" << endl;
+           for(size_t i=0; i<ndim; ++i){
+             cerr << x[i] << " ";
+           }
+           cerr << endl;
+           throw FatalException("inf");
+        }
+        return result;
     }
 
 private:

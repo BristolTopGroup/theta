@@ -36,8 +36,11 @@ root_histogram::root_histogram(const Configuration & ctx){
        throw ConfigurationException(s.str());
     }
     histo->Rebin(rebin);
-    double norm = HistogramFunctionUtils::read_normalize_to(ctx.setting);
-    histo->Scale(norm / histo->Integral());
+    
+    if(ctx.setting.exists("normalize_to")){
+       double norm = HistogramFunctionUtils::read_normalize_to(ctx.setting);
+       histo->Scale(norm / histo->Integral());
+    }
     
     int bin_low = 1;
     int bin_high = histo->GetNbinsX();

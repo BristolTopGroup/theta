@@ -10,7 +10,9 @@ using namespace std;
 bool theta::stop_execution = false;
 
 static void sigint_handler(int sig){
-   if(stop_execution) exit(1);
+   if(stop_execution){
+      throw ExitException("user insisted with several SIGINT");
+   }
    stop_execution = true;
 }
 

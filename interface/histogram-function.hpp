@@ -128,8 +128,8 @@ namespace theta {
 
     /** \brief A constant HistogramFunction, including bin-by-bin fluctuation for pseudodata generation.
      * 
-     * Similar to ConstantHistogramFunction, but includes bin-by-bin gaussian errors as uncertainty.
-     * are not correlated).
+     * Similar to ConstantHistogramFunction, but includes bin-by-bin gaussian errors as uncertainty which
+     * are assumed to be uncorrelated.
      */
     class ConstantHistogramFunctionError: public HistogramFunction{
     public:

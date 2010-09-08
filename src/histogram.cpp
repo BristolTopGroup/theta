@@ -3,7 +3,6 @@
 #include "interface/exception.hpp"
 #include "interface/utils.hpp"
 
-//for memcpy and alike:
 #include <cstring>
 #include <cmath>
 #include <limits>
@@ -74,7 +73,6 @@ void Histogram::multiply_with_ratio_exponented(const Histogram & nominator, cons
 void Histogram::add_with_coeff(double coeff, const Histogram & other){
     check_compatibility(other);
     const double * __restrict data = other.histodata;
-    #pragma omp for
     for(size_t i=0; i<=nbins+1; i++){
          histodata[i] += coeff * data[i];
     }
@@ -138,7 +136,6 @@ Histogram & Histogram::operator*=(const Histogram & h) {
 
 
 Histogram & Histogram::operator*=(double a) {
-    #pragma omp for
     for (size_t i = 0; i <= nbins + 1; i++) {
         histodata[i] *= a;
     }

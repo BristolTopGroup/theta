@@ -108,7 +108,7 @@ void metropolisHastings(const nlltype & nllikelihood, resulttype &res, Random & 
 }
     
     
-/** \brief estimate the square root (cholesky decomposition) of the covariance matrix of the lieklihood function
+/** \brief estimate the square root (cholesky decomposition) of the covariance matrix of the likelihood function
  *
  * The method will start a Markov chain at the given startvalues with the \c iterations iterations.
  * The found covariance matrix is used in a next pass where the Markov chain jumping rules

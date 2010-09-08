@@ -74,7 +74,6 @@ void Model::set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & c
 void Model::get_prediction(Histogram & result, const ParValues & parameters, const ObsId & obs_id) const {
     histos_type::const_iterator it = histos.find(obs_id);
     if (it == histos.end()) throw InvalidArgumentException("Model::getPrediction: invalid obs_id");
-    //const boost::ptr_vector<HistogramFunction> & h_producers = it->second;
     histos_type::const_mapped_reference h_producers = *(it->second);
     coeffs_type::const_iterator it2 = coeffs.find(obs_id);
     coeffs_type::const_mapped_reference h_coeffs = *(it2->second);
@@ -192,7 +191,6 @@ std::auto_ptr<Model> ModelFactory::buildModel(const Configuration & ctx) {
         }
         ss << " )";
         throw ConfigurationException(ss.str());
-        //throw ConfigurationException("parameter-distribution does not define exactly the model parameters");
     }
     return result;
 }
@@ -234,26 +232,28 @@ double NLLikelihood::operator()(const ParValues & values) const{
     }
     else{
         result += model.parameter_distribution->evalNL(values);
-    }    
+    }
     //2. the template likelihood
     for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
         const ObsId & obs_id = *obsit;
         Histogram & model_prediction = predictions[obs_id];
         try{
             model.get_prediction(predictions[obs_id], values, obs_id);
-        }catch(Exception & ex){
+        }
+        catch(Exception & ex){
             ex.message += " (in NLLikelihood::operator() calling model.get_prediction())";
             throw;
         }
         const Histogram & data_hist = data[obs_id];
         const size_t nbins = data_hist.get_nbins();
+        assert(data_hist.get_nbins() == model_prediction.get_nbins());
         const double * __restrict pred_data = model_prediction.getData();
         const double * __restrict data_data = data_hist.getData();
         double nll = 0.0;
         for(size_t i=1; i<=nbins; ++i){
             //if both, the prediction and the data are zero, that does not contribute.
             // However, if the prediction is zero and we have non-zero data, we MUST return infinity (!) ...
-            if(pred_data[i]>0.0)
+            if(pred_data[i] > 0.0)
                  nll -= data_data[i] * theta::utils::log(pred_data[i]);
              else if(data_data[i] > 0.0){
                  return numeric_limits<double>::infinity();

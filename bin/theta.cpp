@@ -181,7 +181,12 @@ int main(int argc, char** argv) {
 
     try {
         run->run();
-    } catch (Exception & ex) {
+    }
+    catch(ExitException & ex){
+       cerr << "Exit requested: " << ex.message << endl;
+       return 1;
+    }
+    catch (Exception & ex) {
         cerr << "An error ocurred in Run::run: " << ex.what() << endl;
         return 1;
     }

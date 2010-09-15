@@ -39,8 +39,10 @@
  *   
  * Note that the setting "override-parameter-distribution" is not allowed for this producer.
  *
- * The result table will contain the columns "nll_sb" and "nll_b", which contain the found value of the negative log-likelihood
- * for the "signal-plus-background" and "background-only" hypotheses, respectively.
+ * The result table will contain the columns "nll_sb" and "nll_b", and "nll_diff"
+ * which contain the found value of the negative log-likelihood
+ * for the "signal-plus-background" and "background-only" hypotheses, and the difference
+ * of these two, nll_b - nll_sb, respectively.
  *
  * For a typical application, the "signal-plus-background-distribution" setting is the same as in the model,
  * whereas the "background-only-distribution" setting group includes a delta_distributions which fixes
@@ -78,7 +80,7 @@ private:
     
     std::auto_ptr<theta::Minimizer> minimizer;
     
-    std::auto_ptr<theta::Column> c_nll_b, c_nll_sb;
+    std::auto_ptr<theta::Column> c_nll_b, c_nll_sb, c_nll_diff;
 };
 
 #endif

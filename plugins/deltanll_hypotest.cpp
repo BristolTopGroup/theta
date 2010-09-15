@@ -15,6 +15,7 @@ using namespace libconfig;
 void deltanll_hypotest::define_table(){
     c_nll_b = table->add_column(*this, "nll_b", Table::typeDouble);
     c_nll_sb = table->add_column(*this, "nll_sb", Table::typeDouble);
+    c_nll_diff = table->add_column(*this, "nll_diff", Table::typeDouble);
 }
 
 void deltanll_hypotest::produce(theta::Run & run, const theta::Data & data, const theta::Model & model){
@@ -36,6 +37,7 @@ void deltanll_hypotest::produce(theta::Run & run, const theta::Data & data, cons
     
     table->set_column(*c_nll_sb, nll_sb);
     table->set_column(*c_nll_b, nll_b);
+    table->set_column(*c_nll_diff, nll_b - nll_sb);
 }
 
 

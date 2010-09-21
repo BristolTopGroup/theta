@@ -57,7 +57,8 @@
  *  Note that overflow and underflow bin are filled for the histograms.
  *
  * \c product_data is a list of column names of the products table. Those columns will be saved as brnaches in a tree.
- *   It can be an empty list "()". It is also possible to use the special string "*" instead of a list to save <em>all</em> columns.
+ *   It can be an empty list "()". It is also possible to use the special string "*" instead of the list (or as part of the list)
+ *   to save <em>all</em> columns.
  *   Note that if you specify any column to write in this list, the "usual" columns runid and eventid will be written as well,
  *   even if you do not specify them.
  *

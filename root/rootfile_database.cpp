@@ -25,7 +25,13 @@ rootfile_database::rootfile_database(const plugin::Configuration & cfg): file(0)
    catch(libconfig::SettingTypeException & e){
        size_t n = cfg.setting["products_data"].size();
        for(size_t i=0; i<n; ++i){
-           products_data.insert(cfg.setting["products_data"][i]);
+           string column_name = cfg.setting["products_data"][i];
+           products_data.insert(column_name);
+           if(column_name=="*"){
+              save_all_products = true;
+              products_data.clear();
+              break;
+           }
        }
        //if anything is written at all, also write runid and eventid:
        if(products_data.size()){

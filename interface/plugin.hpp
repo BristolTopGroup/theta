@@ -134,7 +134,7 @@ namespace theta {
          */
          #define REGISTER_PLUGIN_NAME(type,name) namespace { class CONCAT(factory,__LINE__): public theta::plugin::factory<type::base_type>{ \
          public:\
-         virtual std::auto_ptr<type::base_type> build(const theta::plugin::Configuration & cfg){return auto_ptr<type::base_type>(new type(cfg)); }\
+         virtual std::auto_ptr<type::base_type> build(const theta::plugin::Configuration & cfg){return std::auto_ptr<type::base_type>(new type(cfg)); }\
          virtual std::string get_typename(){ return #name ;}\
          CONCAT(factory,__LINE__)(){reg();}\
          }; CONCAT(factory,__LINE__) CONCAT(factory_instance,__LINE__);}

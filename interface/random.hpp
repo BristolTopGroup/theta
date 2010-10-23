@@ -21,7 +21,7 @@ class RandomSource{
     protected:
         /** \brief Fill the buffer with full 32 bit pseudorandom numbers.
          */
-        virtual void fill(std::vector<unsigned int> & buffer) throw() = 0;
+        virtual void fill(std::vector<unsigned int> & buffer) = 0;
         
         /** \brief Set the seed of the generator.
          */
@@ -50,10 +50,10 @@ private:
     std::vector<unsigned int>::const_iterator current;
     std::vector<unsigned int>::const_iterator end;
 
-    double gauss_zig(double)throw();
-    unsigned int poisson_root(double mean)throw();
-    unsigned int get_uniform_int(unsigned int n)throw();
-    void fill() throw(){
+    double gauss_zig(double);
+    unsigned int poisson_root(double mean);
+    
+    void fill(){
         rnd->fill(random_data);
         current = random_data.begin();
     }
@@ -73,7 +73,7 @@ public:
      *
      * Uses the GNU Scientific Library "zigurrat" method. For details and references, see there.
      */
-    double gauss(double sigma = 1.0)throw(){
+    double gauss(double sigma = 1.0){
         return gauss_zig(sigma);
     }
     
@@ -81,19 +81,23 @@ public:
      *
      * Uses the GNU Scientific Library "root" method. For details and references, see there.
      */
-    unsigned int poisson(double mean)throw(){
+    unsigned int poisson(double mean){
         return poisson_root(mean);
     }
     
     /** \brief get a 32 bit random number from the generator
      */
-    unsigned int get() throw(){
+    unsigned int get() {
        if(current==end) fill();
        return *(current++);
     }
     
+    /** \brief Return a random integer between 0 and n-1 inclusively.
+     */
+    unsigned int get_uniform_int(unsigned int n);
+    
     /// returns a uniform random number on [0,1)
-    double uniform() throw(){
+    double uniform(){
         return get() / 4294967296.0;
     }
     
@@ -120,7 +124,7 @@ public:
         //@{
         /** \brief Implement the pure virtual methods from RandomSource
          */
-        virtual void fill(std::vector<unsigned int> & buffer) throw();
+        virtual void fill(std::vector<unsigned int> & buffer);
         virtual void set_seed(unsigned int);
         //@}
     public:
@@ -150,7 +154,7 @@ public:
         //@{
         /** \brief Implement the pure virtual methods from RandomSource
          */
-        virtual void fill(std::vector<unsigned int> & buffer) throw();
+        virtual void fill(std::vector<unsigned int> & buffer);
         virtual void set_seed(unsigned int);
         //@}
     public:

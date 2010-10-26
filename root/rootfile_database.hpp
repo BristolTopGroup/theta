@@ -22,7 +22,7 @@
  * database = {
  *   type = "rootfile_database";
  *   filename = "root_out.root";
- *   products_histograms = ({
+ *   products_histograms = ({  //optional. Default is to save no histograms.
  *       name = "d_nll";
  *       nbins = 100;
  *       range = [0.0, 100.0];
@@ -33,7 +33,7 @@
  *      range = [-8000.0, 8000.0];
  *      column = "deltanll__nll_sb";
  *   });
- *   products_data = ("deltanll__nll_sb");
+ *   products_data = ("deltanll__nll_sb"); //optional. Default is "*", i.e., to save all columns
  * };
  * \endcode
  *

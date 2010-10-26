@@ -65,9 +65,7 @@ void mcmc_posterior_histo::produce(Run & run, const Data & data, const Model & m
             model.get_parameter_distribution().mode(values);
             ObsIds observables = model.getObservables();
             Data d;
-            for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
-                model.get_prediction(d[*it], values, *it);
-            }
+            model.get_prediction(d, values);
             NLLikelihood nll = get_nllikelihood(d, model);
             sqrt_cov = get_sqrt_cov(run.get_random(), nll, startvalues, vm);
             

@@ -226,9 +226,6 @@ BOOST_AUTO_TEST_CASE(test_random){
    
    m.fill_with_pseudodata(m2, rnd, 1000000);
    BOOST_REQUIRE(fabs(m2.get(1) - 1000000) < 5000);
-   
-   m.fill_with_pseudodata(m2, rnd, 1000000, false);
-   BOOST_REQUIRE(fabs(m2.get(1) - 1000000) < 0.01);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -185,14 +185,13 @@ namespace theta {
     
     REGISTER_PLUGIN_BASETYPE(DataSource);
     
-    /** \brief Provides a mapping from parameters to distributions for one or more observables
+    /** \brief Represents a statistical model, i.e., a map  parameters -&gt; observable templates
      *
-     * A Model is used together with Data to construct the likelihood function.
+     * A Model is used together with Data to construct the likelihood function via Model::getNLLikelihood()
      *
      * For configuration syntax, see ModelFactory.
      */
     class Model {
-        friend class NLLikelihood;
         friend class ModelFactory;
     public:
         
@@ -200,11 +199,11 @@ namespace theta {
          */
         ParIds getParameters() const;
         
-        /** \brief Get all observables the model predicts a distribution for
+        /** \brief Get all observables the model models a template for
          */
         ObsIds getObservables() const;
         
-        /** \brief Sample pseudo data for the prediction of this Model for model parameters values
+        /** \brief Sample pseudo data for all observables of this Model, given parameter values
          *
          * The result will be filled in \c data.
          */
@@ -217,48 +216,29 @@ namespace theta {
          *
          * The likelihood will depend on all parameters of this model.
          *
-         * Before calling this method, make sure that everything is set up, i.e.
-         * you have to call setPrediction() for every observable specified in the constructor.
-         * Otherwise, an InvalidArgumentException will be thrown.
-         *
-         * The returned object is tightly coupled with this Model and the data. Ensure that both,
-         * this Model's lifetime and the lifetime of data, exceed the lifetime of the returns NLLikelihood object.
+         * The returned object is tightly coupled with this Model and the supplied data object. Ensure that both,
+         * this Model's lifetime and the lifetime of \c data, exceed the lifetime of the returns NLLikelihood object.
          */
         NLLikelihood getNLLikelihood(const Data & data) const;
 
-        /** \brief Returns the prediction for the observable \c obs_id using the variable values \c parameters into \c result.
+        /** \brief Fill the prediction for all observables, given parameter values
         *
-        *   The returned Histogram is built as a linear combination of HistogramFunctions using coefficients as previously set
+        *   The returned Histograms in \c data are built as a linear combination of HistogramFunctions using coefficients as previously set
         *   by \c set_prediction. The HistogramFunctions and coefficients are evaluated using the values in \c parameters.
         *
         *  \sa set_prediction
         */
-        void get_prediction(Histogram & result, const ParValues & parameters, const ObsId & obs_id) const;
+        void get_prediction(Data & result, const ParValues & parameters) const;
 
         /** \brief Like \c get_prediction, but fluctuate the histograms within their parametrization errors.
          *
          * This function should be used in place of \c get_prediction, if sampling pseudo data from the model.
+         * It calls HistogramFunction::getRandomFluctuation instead of HistogramFunction::operator().
          */
-        void get_prediction_randomized(Random & rnd, Histogram &result, const ParValues & parameters, const ObsId & obs_id) const;
-
-        /** \brief get a single component of the prediction for a given observable.
-         *
-         * Will return coefficient i * histogram function i
-         * as set with setPrediction. throws NotFoundException if i is too large and an InvalidArgumentException
-         * if no prediction was previously set for obs_id.
-         */
-        Histogram getPredictionComponent(const ParValues & parameters, const ObsId & obs_id, size_t i) const;
-
-        /** \brief Returns the name of component \c i as set before with set_prediction.
-        */
-        std::string getPredictionComponentName(const ObsId &, size_t i) const;
-
-        /** \brief Returns the number of components for observable \c obs_id as set before with set_prediction.
-        */
-        size_t getPredictionNComponents(const ObsId & obs_id) const;
+        void get_prediction_randomized(Random & rnd, Data & result, const ParValues & parameters) const;
 
         /** \brief Returns a reference to the parameter distribution
-         * 
+         *
          * The returned Distribution contains (at least) the parameters of this Model.
          *
          * The returned reference is only valid as long as this Model's lifetime.
@@ -281,10 +261,9 @@ namespace theta {
         histos_type histos;
         coeffs_type coeffs;
 
-        std::map<ObsId, std::vector<std::string> > names;
         std::auto_ptr<Distribution> parameter_distribution;
         
-        void set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs, boost::ptr_vector<HistogramFunction> & histos, const std::vector<std::string> & component_names);
+        void set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs, boost::ptr_vector<HistogramFunction> & histos);
         Model(const boost::shared_ptr<VarIdManager> & vm);
     };
     
@@ -313,11 +292,11 @@ namespace theta {
      * mymodel = {
      *    o = { //asuming o was declared an observable
      *       signal = { //component names can be chosen freely
-     *          coefficients = ("Theta"); // assuming Theta was declared as parameter
+     *          coefficient-function = { / * some  function definition to use as coefficient for the signal template * / };
      *          histogram = "@flat-unit-histo";
      *       };
      *       background = {
-     *          coefficients = ("mu"); // assuming mu was declared as parameter
+     *          coefficient-function = { / * some function definition to use as coefficient for the background template * / };
      *          histogram = "@flat-unit-histo";
      *       };
      *    };
@@ -328,7 +307,7 @@ namespace theta {
      *    };
      * };
      *
-     * //see fixed_poly documentation for details
+     * //see fixed_poly documentation for details; can also use any other HistogramFunction here.
      * flat-unit-histo = {
      *    type = "fixed_poly"; 
      *    observable = "o";
@@ -345,17 +324,14 @@ namespace theta {
      *   <li>Exactly one settings group per observable to be modeled by this Model. It has to have the same name
      *      as the observable to be modeled and contains the observable specification.</li>
      *    <li>
-     *   <li>A "parameter-distribution" setting group which defines the overall parameter distribution of
-     *       (at least) all model parameters.</li>
+     *   <li>A \c parameter-distribution setting group which defines the overall parameter distribution of
+     *       all model parameters.</li>
      * </ul>
      *
      * Each setting group representing an observable specification contains one or more component specifications.
      * The component names may be chosen freely ("signal" and "background" in the above example).
      * Each component specification is in turn a setting group which contains
-     * a histogram specification in a "histogram" setting and a list of parameter names in the "coefficients" list.
-     *
-     * Instead of the "coefficients" setting, a setting group "coefficient-function" can be specified which is
-     * used to construct a Function object via the plugin system.
+     * a histogram specification in a "histogram" setting and a specification of a HistogramFunction in the "coefficient-function" setting.
      */
     class ModelFactory{
     public:
@@ -445,8 +421,8 @@ namespace theta {
         //values used internally if called with the double* functions.
         mutable ParValues values;
         //cached predictions:
-        mutable std::map<ObsId, Histogram> predictions;
-        mutable std::map<ObsId, Histogram> predictions_d;
+        mutable Data predictions;
+        //mutable std::map<ObsId, Histogram> predictions_d;
         
         NLLikelihood(const Model & m, const Data & data, const ObsIds & obs);
     };

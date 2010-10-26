@@ -143,42 +143,13 @@ Histogram & Histogram::operator*=(double a) {
     return *this;
 }
 
-/*TODO: the complexity is not optimal: it is O(N*log(N) + M) for a sample size N and M bins. Also, space requirement is N*sizeof(double).
-* Maybe it would be better to use a simple N*M algo.
-* It would also be possible to do it in N*log(M), or maybe O(M + sqrt(N))
-*
-* If use_poisson is true, a O(M) complexity algorithm is used.
-*/
-void Histogram::fill_with_pseudodata(Histogram & m, Random & rnd, double mu, bool use_poisson) const{
+void Histogram::fill_with_pseudodata(Histogram & m, Random & rnd, double mu) const{
     m.reset(nbins, xmin, xmax);
-    if(mu<0) mu = sum_of_bincontents;
-    if(!use_poisson){
-        const size_t N = static_cast<size_t>(mu+0.5);
-        std::vector<double> r(N);
-        for(size_t i=0; i<N; i++){
-            r[i] = rnd.uniform();
-        }
-        std::sort(r.begin(), r.end());
-        //normalized integral up to and including bin:
-        double integral = 0;
-        //next r to probe:
-        size_t next_r = 0;
-        for(size_t bin=0; bin<=nbins+1; bin++){
-            integral += histodata[bin]/sum_of_bincontents;
-            size_t n=0;
-            while(next_r < N && r[next_r] <= integral){
-                n++;
-                next_r++;
-            }
-            m.set(bin, n);
-        }
-    }
-    else{//use_poisson.
-        double factor = mu/sum_of_bincontents;
-        for(size_t bin=0; bin<=nbins+1; bin++){
-            size_t n = rnd.poisson(factor * histodata[bin]);
-            m.set(bin, n);
-        }
+    if(mu < 0) mu = sum_of_bincontents;
+    double factor = mu/sum_of_bincontents;
+    for(size_t bin=0; bin<=nbins+1; bin++){
+        size_t n = rnd.poisson(factor * histodata[bin]);
+        m.set(bin, n);
     }
 }
 

@@ -13,9 +13,7 @@ model_source_norandom::model_source_norandom(const theta::plugin::Configuration 
         values.set(cfg.vm->getParId(par_name), pv_s[i][1]);
     }
     ObsIds observables = model->getObservables();
-    for(ObsIds::const_iterator oit=observables.begin(); oit!=observables.end(); ++oit){
-         model->get_prediction(data[*oit], values, *oit);
-    }
+    model->get_prediction(data, values);
 }
 
 

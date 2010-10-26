@@ -17,38 +17,46 @@ rootfile_database::rootfile_database(const plugin::Configuration & cfg): file(0)
        delete file;
        throw ConfigurationException("error opening output root file '" + filename + "'");
    }
-   try{
-      string s = cfg.setting["products_data"];
-      if(s=="*")save_all_products = true;
-      else throw ConfigurationException("products_data setting is a string but not '*'");
+   
+   if(cfg.setting.exists("products_data")){
+      try{
+         string s = cfg.setting["products_data"];
+         if(s=="*")save_all_products = true;
+         else throw ConfigurationException("products_data setting is a string but not '*'");
+      }
+      catch(libconfig::SettingTypeException & e){
+          size_t n = cfg.setting["products_data"].size();
+          for(size_t i=0; i<n; ++i){
+              string column_name = cfg.setting["products_data"][i];
+              products_data.insert(column_name);
+              if(column_name=="*"){
+                 save_all_products = true;
+                 products_data.clear();
+                 break;
+              }
+          }
+          //if anything is written at all, also write runid and eventid:
+          if(products_data.size()){
+             products_data.insert("runid");
+             products_data.insert("eventid");
+          }
+      }
    }
-   catch(libconfig::SettingTypeException & e){
-       size_t n = cfg.setting["products_data"].size();
-       for(size_t i=0; i<n; ++i){
-           string column_name = cfg.setting["products_data"][i];
-           products_data.insert(column_name);
-           if(column_name=="*"){
-              save_all_products = true;
-              products_data.clear();
-              break;
-           }
-       }
-       //if anything is written at all, also write runid and eventid:
-       if(products_data.size()){
-          products_data.insert("runid");
-          products_data.insert("eventid");
-       }
+   else{
+      save_all_products = true;
    }
    
-   size_t n = cfg.setting["products_histograms"].size();
-   for(size_t i=0; i<n; ++i){
-       int nbins = cfg.setting["products_histograms"][i]["nbins"];
-       double xmin = cfg.setting["products_histograms"][i]["range"][0];
-       double xmax = cfg.setting["products_histograms"][i]["range"][1];
-       hist_infos.push_back(hist_info());
-       hist_infos.back().h.reset(nbins, xmin, xmax);
-       hist_infos.back().name = static_cast<string>(cfg.setting["products_histograms"][i]["name"]);
-       hist_infos.back().column_name = static_cast<string>(cfg.setting["products_histograms"][i]["column"]);
+   if(cfg.setting.exists("products_histograms")){
+      size_t n = cfg.setting["products_histograms"].size();
+      for(size_t i=0; i<n; ++i){
+          int nbins = cfg.setting["products_histograms"][i]["nbins"];
+          double xmin = cfg.setting["products_histograms"][i]["range"][0];
+          double xmax = cfg.setting["products_histograms"][i]["range"][1];
+          hist_infos.push_back(hist_info());
+          hist_infos.back().h.reset(nbins, xmin, xmax);
+          hist_infos.back().name = static_cast<string>(cfg.setting["products_histograms"][i]["name"]);
+          hist_infos.back().column_name = static_cast<string>(cfg.setting["products_histograms"][i]["column"]);
+      }
    }
 }
 

@@ -43,24 +43,23 @@ ObsIds Model::getObservables() const{
 }
 
 void Model::samplePseudoData(Data & result, Random & rnd, const ParValues & values) const{
+   Data pred;
+   get_prediction_randomized(rnd, pred, values);
    for (ObsIds::const_iterator it = observables.begin(); it != observables.end(); it++) {
-       Histogram pred;
-       get_prediction_randomized(rnd, pred, values, *it);
-       pred.fill_with_pseudodata(result[*it], rnd);
+       pred[*it].fill_with_pseudodata(result[*it], rnd);
    }
 }
 
-void Model::set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs_, boost::ptr_vector<HistogramFunction> & histos_, const std::vector<std::string> & component_names){
+void Model::set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs_, boost::ptr_vector<HistogramFunction> & histos_){
     observables.insert(obs_id);
     const size_t n = coeffs_.size();
-    if(n!=coeffs_.size() or n!=component_names.size()) throw InvalidArgumentException("Model::setPrediction: number of histograms, coefficients and component names do not match");
+    if(n!=coeffs_.size()) throw InvalidArgumentException("Model::setPrediction: number of histograms and coefficients do not match");
     if(histos[obs_id].size()>0)
         throw InvalidArgumentException("Model::setPrediction: prediction already set for this observable");
     histos[obs_id].transfer(histos[obs_id].end(), histos_.begin(), histos_.end(), histos_);
     if(coeffs[obs_id].size()>0)
         throw InvalidArgumentException("Model::setPrediction: prediction already set for this observable (coeffs)");
     coeffs[obs_id].transfer(coeffs[obs_id].end(), coeffs_.begin(), coeffs_.end(), coeffs_);
-    names[obs_id] = component_names;
     for(boost::ptr_vector<Function>::const_iterator it=coeffs[obs_id].begin(); it!=coeffs[obs_id].end(); ++it){
         ParIds pids = (*it).getParameters();
         parameters.insert(pids.begin(), pids.end());
@@ -71,77 +70,55 @@ void Model::set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & c
     }
 }
 
-void Model::get_prediction(Histogram & result, const ParValues & parameters, const ObsId & obs_id) const {
-    histos_type::const_iterator it = histos.find(obs_id);
-    if (it == histos.end()) throw InvalidArgumentException("Model::getPrediction: invalid obs_id");
-    histos_type::const_mapped_reference h_producers = *(it->second);
-    coeffs_type::const_iterator it2 = coeffs.find(obs_id);
-    coeffs_type::const_mapped_reference h_coeffs = *(it2->second);
-    bool result_init = false;
-    for (size_t i = 0; i < h_producers.size(); i++) {
-        if(result_init){
-            result.add_with_coeff(h_coeffs[i](parameters), h_producers[i](parameters));
+void Model::get_prediction(Data & result, const ParValues & parameters) const {
+    for(ObsIds::const_iterator obsit=observables.begin(); obsit!=observables.end(); ++obsit){
+        histos_type::const_iterator it = histos.find(*obsit);
+        assert(it!=histos.end());
+        histos_type::const_mapped_reference h_producers = *(it->second);
+        coeffs_type::const_iterator it2 = coeffs.find(*obsit);
+        coeffs_type::const_mapped_reference h_coeffs = *(it2->second);
+        bool result_init = false;
+        for (size_t i = 0; i < h_producers.size(); i++) {
+            if(result_init){
+                result[*obsit].add_with_coeff(h_coeffs[i](parameters), h_producers[i](parameters));
+            }
+            else{
+                result[*obsit] = h_producers[i](parameters);
+                result[*obsit] *= h_coeffs[i](parameters);
+                result_init = true;
+            }
         }
-        else{
-            result = h_producers[i](parameters);
-            result *= h_coeffs[i](parameters);
-            result_init = true;
+        //return empty prediction as correct zero template:
+        if(not result_init){
+            const pair<double, double> & o_range = vm->get_range(*obsit);
+            result[*obsit].reset(vm->get_nbins(*obsit), o_range.first, o_range.second);
         }
-    }
-    if(not result_init){
-        const pair<double, double> & o_range = vm->get_range(obs_id);
-        result.reset(vm->get_nbins(obs_id), o_range.first, o_range.second);
     }
 }
 
-void Model::get_prediction_randomized(Random & rnd, Histogram &result, const ParValues & parameters, const ObsId & obs_id) const{
-    histos_type::const_iterator it = histos.find(obs_id);
-    if (it == histos.end()) throw InvalidArgumentException("Model::get_prediction_randomized: invalid obs_id");
-    histos_type::const_mapped_reference h_producers = *(it->second);
-    coeffs_type::const_iterator it2 = coeffs.find(obs_id);
-    coeffs_type::const_mapped_reference h_coeffs = *(it2->second);
-    bool result_init = false;
-    for (size_t i = 0; i < h_producers.size(); i++) {
-        if(result_init){
-            result.add_with_coeff(h_coeffs[i](parameters), h_producers[i].getRandomFluctuation(rnd, parameters));
+void Model::get_prediction_randomized(Random & rnd, Data & result, const ParValues & parameters) const{
+    for(ObsIds::const_iterator obsit=observables.begin(); obsit!=observables.end(); ++obsit){
+        histos_type::const_iterator it = histos.find(*obsit);
+        assert(it!=histos.end());
+        histos_type::const_mapped_reference h_producers = *(it->second);
+        coeffs_type::const_iterator it2 = coeffs.find(*obsit);
+        coeffs_type::const_mapped_reference h_coeffs = *(it2->second);
+        bool result_init = false;
+        for (size_t i = 0; i < h_producers.size(); i++) {
+            if(result_init){
+                result[*obsit].add_with_coeff(h_coeffs[i](parameters), h_producers[i].getRandomFluctuation(rnd, parameters));
+            }
+            else{
+                result[*obsit] = h_producers[i].getRandomFluctuation(rnd, parameters);
+                result[*obsit] *= h_coeffs[i](parameters);
+                result_init = true;
+            }
         }
-        else{
-            result = h_producers[i].getRandomFluctuation(rnd, parameters);
-            result *= h_coeffs[i](parameters);
-            result_init = true;
+        if(not result_init){
+            const pair<double, double> & o_range = vm->get_range(*obsit);
+            result[*obsit].reset(vm->get_nbins(*obsit), o_range.first, o_range.second);
         }
     }
-    if(not result_init){
-        const pair<double, double> & o_range = vm->get_range(obs_id);
-        result.reset(vm->get_nbins(obs_id), o_range.first, o_range.second);
-    }
-}
-
-size_t Model::getPredictionNComponents(const ObsId & obs_id) const{
-    histos_type::const_iterator it = histos.find(obs_id);
-    if(it==histos.end()) throw InvalidArgumentException("Model::getPrediction: invalid obs_id");
-    return it->second->size();
-}
-
-std::string Model::getPredictionComponentName(const ObsId & obs_id, size_t i) const{
-    std::map<ObsId, vector<string> >::const_iterator it = names.find(obs_id);
-    if(it==names.end()) throw InvalidArgumentException("Model::getPredictionComponentName: invalid obs_id");
-    const vector<string> & h_names = it->second;
-    if(i>=h_names.size()) throw NotFoundException("Model::getPredictionComponentName: i out of bounds");
-    return h_names[i];
-}
-
-Histogram Model::getPredictionComponent(const ParValues & parameters, const ObsId & obs_id, size_t i) const{
-    histos_type::const_iterator it = histos.find(obs_id);
-    if(it==histos.end()) throw InvalidArgumentException("Model::getPrediction: invalid obs_id");
-    histos_type::const_mapped_reference h_producers = *(it->second);
-    if(i>=h_producers.size()) throw NotFoundException("Model::getPredictionComponent: parameter i out of bounds");
-    coeffs_type::const_iterator it2 = coeffs.find(obs_id);
-    coeffs_type::const_mapped_reference h_coeffs = *(it2->second);
-     
-    Histogram result = h_producers[i](parameters);
-    result *= h_coeffs[i](parameters);
-    return result;
 }
 
 NLLikelihood Model::getNLLikelihood(const Data & data) const{
@@ -163,7 +140,6 @@ std::auto_ptr<Model> ModelFactory::buildModel(const Configuration & ctx) {
         SettingWrapper obs_setting = s[obs_name];
         boost::ptr_vector<HistogramFunction> histos;
         boost::ptr_vector<Function> coeffs;
-        vector<string> names;
         for (size_t i = 0; i < obs_setting.size(); i++) {
             Configuration context(ctx, obs_setting[i]["histogram"]);
             auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::build(context);
@@ -172,9 +148,8 @@ std::auto_ptr<Model> ModelFactory::buildModel(const Configuration & ctx) {
             coeffs.push_back(coeff_function);
             assert(coeff_function.get()==0);
             histos.push_back(hf);
-            names.push_back(obs_setting[i].getName());
         }
-        result->set_prediction(*obsit, coeffs, histos, names);
+        result->set_prediction(*obsit, coeffs, histos);
     }
     result->parameter_distribution = PluginManager<Distribution>::build(Configuration(ctx, s["parameter-distribution"]));
     if(not (result->parameter_distribution->getParameters() == result->getParameters())){
@@ -199,9 +174,9 @@ std::auto_ptr<Model> ModelFactory::buildModel(const Configuration & ctx) {
 /* NLLIKELIHOOD */
 NLLikelihood::NLLikelihood(const Model & m, const Data & dat, const ObsIds & obs): model(m),
         data(dat), obs_ids(obs), additional_terms(0), override_distribution(0){
-    Function::par_ids = model.parameters;
+    Function::par_ids = model.getParameters();
     for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
-        ranges[*it] = model.parameter_distribution->support(*it);
+        ranges[*it] = model.get_parameter_distribution().support(*it);
     }
 }
 
@@ -217,7 +192,7 @@ void NLLikelihood::set_override_distribution(const Distribution * d){
         }
     }else{
         for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
-            ranges[*it] = model.parameter_distribution->support(*it);
+            ranges[*it] = model.get_parameter_distribution().support(*it);
         }
     }
 }
@@ -231,19 +206,20 @@ double NLLikelihood::operator()(const ParValues & values) const{
         result += override_distribution->evalNL(values);
     }
     else{
-        result += model.parameter_distribution->evalNL(values);
+        result += model.get_parameter_distribution().evalNL(values);
     }
-    //2. the template likelihood
+    //2. get the prediciton of the model:
+    try{
+        model.get_prediction(predictions, values);
+    }
+    catch(Exception & ex){
+         ex.message += " (in NLLikelihood::operator() calling model.get_prediction())";
+        throw;
+    }
+    //3. the template likelihood
     for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
         const ObsId & obs_id = *obsit;
         Histogram & model_prediction = predictions[obs_id];
-        try{
-            model.get_prediction(predictions[obs_id], values, obs_id);
-        }
-        catch(Exception & ex){
-            ex.message += " (in NLLikelihood::operator() calling model.get_prediction())";
-            throw;
-        }
         const Histogram & data_hist = data[obs_id];
         const size_t nbins = data_hist.get_nbins();
         assert(data_hist.get_nbins() == model_prediction.get_nbins());

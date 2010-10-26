@@ -114,7 +114,9 @@ BOOST_AUTO_TEST_CASE(model0){
     values.set(beta1, 1.0);
     values.set(beta2, 0.0);
     Histogram s;
-    m->get_prediction(s, values, obs0);
+    Data pred;
+    m->get_prediction(pred, values);
+    s = pred[obs0];
     //s should be signal only:
     for(size_t i = 1; i<=nbins; i++){
         BOOST_REQUIRE(signal.get(i)==s.get(i));
@@ -122,14 +124,16 @@ BOOST_AUTO_TEST_CASE(model0){
     //background only:
     values.set(beta1, 0.0);
     values.set(beta2, 1.0);
-    m->get_prediction(s, values, obs0);
+    m->get_prediction(pred, values);
+    s = pred[obs0];
     for(size_t i = 1; i<=nbins; i++){
         BOOST_REQUIRE(background.get(i)==s.get(i));
     }
     //zero prediction:
     values.set(beta1, 0.0);
     values.set(beta2, 0.0);
-    m->get_prediction(s, values, obs0);
+    m->get_prediction(pred, values);
+    s = pred[obs0];
     for(size_t i = 1; i<=nbins; i++){
         BOOST_REQUIRE(0.0==s.get(i));
     }
@@ -137,7 +141,8 @@ BOOST_AUTO_TEST_CASE(model0){
     //The likelihood, take double background. Use average as data:
     values.set(beta1, 1.0);
     values.set(beta2, 2.0);
-    m->get_prediction(s, values, obs0);
+    m->get_prediction(pred, values);
+    s = pred[obs0];
     Data data;
     BOOST_CHECKPOINT("check");
     data[obs0] = s;

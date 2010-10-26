@@ -192,6 +192,7 @@ private:
  */
 class flat_distribution: public theta::Distribution{
 public:
+    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     flat_distribution(const theta::plugin::Configuration & cfg);
     //@{
     /** \brief Implementation of the pure methods of theta::Distribution

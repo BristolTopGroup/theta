@@ -6,7 +6,6 @@ all:
 
 clean:
 	@for d in $(DIRS); do make -C $$d clean; done
-	@make -C test clean
 	@make -C test/test-stat clean
 
 #ok, this is not very nice, as it hardcodes the documentation copy target, but as long as I am the only

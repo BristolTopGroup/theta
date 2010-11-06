@@ -30,7 +30,7 @@ else
    BS:=
    ifeq ($(shell test -e /usr/lib/libboost_system-mt.so && echo -n A),A)
       BS:=-mt
-   else
+   endif
    BOOST_LIBS := -lboost_filesystem$(BS) -lboost_regex$(BS) -lboost_program_options$(BS) -lboost_thread$(BS)
 endif
 

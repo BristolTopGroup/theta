@@ -142,10 +142,10 @@ namespace theta {
          #define REGISTER_PLUGIN(type) REGISTER_PLUGIN_NAME(type, type)
          #define REGISTER_PLUGIN_DEFAULT(type) REGISTER_PLUGIN_NAME(type, default)
          
-         //we need to make explicit template instantiations of the PluginManager registry.
-         // Otherwise, the central registry associated to the PluginManager does not work reliably,
-         // if theta core does not instantiate the PluginManager class itself but only other plugins do.
-         // This is true even if RTLD_GLOBAL is passed to dlopen.
+         //we need to make explicit template instantiations of the PluginManager registry,
+         // otherwise, the central registry associated to the PluginManager does not work reliably.
+         // This can happen if theta core does not instantiate the PluginManager class itself but some plugin does.
+         // The exact reason however is unknown ...
          #define REGISTER_PLUGIN_BASETYPE(type) template class theta::plugin::PluginManager<type>
 
         /** \brief Central registry class for plugins.
@@ -191,6 +191,7 @@ namespace theta {
              */
             static void register_factory(factory_type * new_factory);
             static std::vector<factory_type*> factories;
+            //prevent instance construction by making constructor private:
             PluginManager(){}
             
             //to increase the build_depth in an exception-safe manner, use the build_depth_sentinel,
@@ -207,7 +208,7 @@ namespace theta {
             };
         };
         
-        // to prevent endless recursion within PluginManager::build, use a usegae counter:
+        // to prevent endless recursion within PluginManager::build, use a depth counter:
         template<typename product_type>
         int PluginManager<product_type>::build_depth = 0;
         
@@ -228,26 +229,25 @@ namespace theta {
         std::auto_ptr<product_type> PluginManager<product_type>::build(const Configuration & ctx){
             build_depth_sentinel b(build_depth);
             if(build_depth > 10){
-                throw FatalException("PluginManager::build: detected too deep recursion");
+                throw FatalException("PluginManager::build: detected too deep plugin building");
             }
             std::string type;
             if(!ctx.setting.exists("type")) type = "default";
             else type = static_cast<std::string>(ctx.setting["type"]);
             for (size_t i = 0; i < factories.size(); ++i) {
+                if (factories[i]->get_typename() != type) continue;
                 try {
-                    if (factories[i]->get_typename() == type) {
-                        return factories[i]->build(ctx);
-                    }
+                    return factories[i]->build(ctx);
                 }catch (Exception & ex) {
                     std::stringstream ss;
                     ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
-                       << "', type='" << type << "': error while building plugin: " << ex.message;
+                       << "', type='" << type << "': " << ex.message;
                     ex.message = ss.str();
                     throw;
                 }
             }
             std::stringstream ss;
-            ss << "PluginManager::build at configuration path '" << ctx.setting.getPath()
+            ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
                << "': no plugin found to create type='" << type << "'";
             throw ConfigurationException(ss.str());
         }
@@ -261,7 +261,6 @@ namespace theta {
                     throw InvalidArgumentException(ss.str());
                 }
             }
-            //append plugins to the end of the list:
             factories.push_back(new_factory);
         }
 

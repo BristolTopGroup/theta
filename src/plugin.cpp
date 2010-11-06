@@ -1,4 +1,5 @@
 #include "interface/plugin.hpp"
+//#include "interface/minimizer.hpp"
 
 using namespace theta::plugin;
 using namespace std;
@@ -41,7 +42,7 @@ void PluginLoader::execute(const Configuration & cfg) {
 void PluginLoader::load(const std::string & soname) {
     void* handle = 0;
     try {
-        handle = dlopen(soname.c_str(), RTLD_NOW);
+        handle = dlopen(soname.c_str(), RTLD_NOW | RTLD_GLOBAL);
     } catch (Exception & ex) {
         std::stringstream ss;
         ss << ex.message << " (in PluginLoader::load while loading plugin file '" << soname << "')";

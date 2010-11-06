@@ -2,5 +2,9 @@
 #
 # boolean-like switches should be either either "yes" or "no"
 
+# whether or not to build the tests in the test/ directory
 OPTIONS_BUILD_TESTS := yes
+
+# whether or not to use the log function from crlibm (which is faster than the standard log)
+OPTIONS_USE_CRLIBM := yes
 

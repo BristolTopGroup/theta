@@ -3,34 +3,42 @@
 # make sure first target depends on "all" which is defined in each of the subdirs
 a: all
 
+# create .bin subdirectory, if it does not exist:
 DUMMY_MKBINDIR := $(shell [ -d .bin ] || mkdir .bin)
 
-# include dependencies. $(deps) is set by the sub-Makefiles
+# include dependencies, make on demand. $(deps) is set by the sub-Makefiles. However, do not
+# build deps for "make clean"...
 ifeq (0, $(words $(findstring $(MAKECMDGOALS), clean clean-subdir)))
   -include $(deps)
 endif
 
 #if available, use dependencies from CMSSW:
 ifneq ($(shell which scram || echo -n A),A)
-BOOST_INCLUDE := -I$(shell scram tool tag boost INCLUDE)
-BOOST_LIBLIST := $(shell scram tool tag boost LIB) $(shell scram tool tag boost_filesystem LIB) $(shell scram tool tag boost_program_options LIB) $(shell scram tool tag boost_regex LIB)
-BOOST_LIBS := -L$(shell scram tool tag boost LIBDIR) $(patsubst %,-l%,$(BOOST_LIBLIST))
-SQLITE_LIBLIST := $(shell scram tool tag sqlite LIB)
-SQLITE_LIBS := $(patsubst %,-l%,$(SQLITE_LIBLIST)) -L$(shell scram tool tag sqlite LIBDIR)
-SQLITE_INCLUDE := -I$(shell scram tool tag sqlite INCLUDE)
+   scram = $(shell cd $$CMSSW_BASE; scram tool tag $(1) $(2))
+   BOOST_INCLUDE := -I$(call scram,boost,INCLUDE)
+   BOOST_LIBLIST := $(call scram,boost,LIB) $(call boost_filesystem,LIB) $(call scram,boost_program_options,LIB) $(call scram boost_regex,LIB)
+   BOOST_LIBS := -L$(call scram,boost,LIBDIR) $(patsubst %,-l%,$(BOOST_LIBLIST))
+   SQLITE_LIBLIST := $(call scram,sqlite,LIB)
+   SQLITE_LIBS := $(patsubst %,-l%,$(SQLITE_LIBLIST)) -L$(call scram,sqlite,LIBDIR)
+   SQLITE_INCLUDE := -I$(call scram,sqlite,INCLUDE)
 else
-#otherwise: assume boost is installed system-wide (i.e., include are found without special care)
-BOOST_INCLUDE:=
-SQLITE_INCLUDE:=
-SQLITE_LIBS := -lsqlite3
-#on some systems, boost libraries have a "-mt" suffix. This is a dirty hack. If you know better, tell me:
-ifeq ($(shell test -e /usr/lib/libboost_system-mt.so && echo -n A),A)
-BS:=-mt
-else
-BS:=
+   #otherwise: assume dependencies are installed system-wide and no paths have to be set explicitely:
+   BOOST_INCLUDE:=
+   SQLITE_INCLUDE:=
+   SQLITE_LIBS := -lsqlite3
+   #on some systems, boost libraries have a "-mt" suffix. This is a dirty hack. If you know better, tell me:
+   BS:=
+   ifeq ($(shell test -e /usr/lib/libboost_system-mt.so && echo -n A),A)
+      BS:=-mt
+   else
+   BOOST_LIBS := -lboost_filesystem$(BS) -lboost_regex$(BS) -lboost_program_options$(BS) -lboost_thread$(BS)
 endif
 
-BOOST_LIBS := -lboost_filesystem$(BS) -lboost_regex$(BS) -lboost_program_options$(BS) -lboost_thread$(BS)
+
+DEFINES :=
+
+ifeq ($(OPTIONS_USE_CRLIBM),yes)
+   DEFINES += -DUSE_CRLIBM
 endif
 
 #lazy evaluation to allow subdirectories to add their own includes and libs ...
@@ -39,11 +47,8 @@ EXTRA_COMPILE =
 EXTRA_LINK_EXE =
 EXTRA_LINK_SO =
 
-#SUFFIXES += .d
-
-COMPILE = echo creating $@; $(CXX) -g -c -Wall -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
+COMPILE = echo creating $@; $(CXX) $(DEFINES) -g -c -Wall -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
 LINK_EXE = echo linking $@; $(CXX) -Wl,-R,'$$ORIGIN/../lib' -rdynamic -L../lib -ldl -ltheta -lconfig $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
-#LINK_EXE_NOLIBS = echo linking $@; $(CXX) -rdynamic $(EXTRA_LINK_EXE)
 LINK_SO = echo linking $@; $(CXX) -Wl,-R,'$$ORIGIN/../lib' -shared -rdynamic $(EXTRA_LINK_SO)
 
 .bin/%.o: %.cpp

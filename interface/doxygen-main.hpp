@@ -172,8 +172,8 @@
  * <pre>
  * svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/april-2010 theta
  * </pre>
- * If you want to compile it within CMSSW (which provides the dependencies), make sure to check it
- * out in the \c src directory of a CMSSW directory.
+ * You can use CMSSW software to provide the necessary dependencies. If you want to do that, make sure
+ * to issue \c cmsenv before you build %theta.
  *
  * \section building Building theta
  *
@@ -215,22 +215,10 @@
  *         from the <a href="http://lipforge.ens-lyon.fr/www/crlibm/">crlibm project</a> which is often faster than the
  *         standard log function.</li>
  * </ul>
- */
-
- /*
+ *
  * \subsection with_cmssw With CMSSW
  *
- * Go to the \c theta directory and run \c make. Before running the main executable \c bin/theta, execute
- * <pre>
- * source setenv.sh
- * </pre>
- * from the installation root to adapt \c LD_LIBRARY_PATH for the shared objects of boost and sqlite3. This ensures
- * that the ones from the CMSSW distribution will be used (with which it was compiled).
- *
- * If you want to test that everything is Ok, you can run the unit-tests provided with %theta, by running
- * <pre>
- * make run-test
- * </pre>
+ * After setting up CMSSW with \c cmsenv, go to the \c theta directory and run \c make.
  *
  * So a complete set of commands to check out, compile, test and run %theta with CMSSW
  * would be (assuming that cmssw was set up):
@@ -238,11 +226,10 @@
  *  scram project CMSSW CMSSW_3_8_4
  *  cd CMSSW_3_8_4/src
  *  cmsenv
- *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/april-2010 theta
+ *  cd ../..
+ *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/trunk theta
  *  cd theta
  *  make
- *  source setenv.sh
- *  make run-test
  *  bin/theta examples/gaussoverflat.cfg
  * </pre>
  *
@@ -264,16 +251,11 @@
  *
  * Then, you can follow the instructions above, skipping the CMSSW part:
  * <pre>
- *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/april-2010 theta
+ *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/trunk theta
  *  cd theta
  *  make
- *  source setenv.sh
- *  make run-test
  *  bin/theta examples/gaussoverflat.cfg
  * </pre>
- * If you install the dependencies in an unusual location (i.e., if headers and libraries
- * are not found automatically) you have to edit the SQLITE_INCLUDE, SQLITE_LIBS,
- * BOOST_INCLUDE, and BOOST_LIBS variables on top of \c Makefile.rules.
  */
 
 /**

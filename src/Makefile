@@ -1,7 +1,9 @@
-include ../Makefile.rules
 
-libsources = $(wildcard *.cpp)
-libobjects = $(patsubst %.cpp,%.o,$(libsources))
+libsources := $(wildcard *.cpp)
+libobjects := $(patsubst %.cpp,.bin/%.o,$(libsources))
+deps := $(patsubst %.cpp,.bin/%.d,$(libsources))
+
+include ../Makefile.rules
 
 all: ../lib/libtheta.so
 

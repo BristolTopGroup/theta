@@ -1,3 +1,14 @@
+# this file is included by the Makefiles of the subdirectory. These Makefiles must set $(deps) before including this
+
+# make sure first target depends on "all" which is defined in each of the subdirs
+a: all
+
+DUMMY_MKBINDIR := $(shell [ -d .bin ] || mkdir .bin)
+
+# include dependencies. $(deps) is set by the sub-Makefiles
+ifeq (0, $(words $(findstring $(MAKECMDGOALS), clean clean-subdir)))
+  -include $(deps)
+endif
 
 #if available, use dependencies from CMSSW:
 ifneq ($(shell which scram || echo -n A),A)
@@ -22,34 +33,43 @@ endif
 BOOST_LIBS := -lboost_filesystem$(BS) -lboost_regex$(BS) -lboost_program_options$(BS) -lboost_thread$(BS)
 endif
 
-#CC := g++
-
 #lazy evaluation to allow subdirectories to add their own includes and libs ...
 INCLUDES = -I.. $(BOOST_INCLUDE) $(SQLITE_INCLUDE)
 EXTRA_COMPILE =
 EXTRA_LINK_EXE =
 EXTRA_LINK_SO =
 
-COMPILE = echo compiling $<; $(CXX) -c -Wall -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
-LINK_EXE = echo linking $@; $(CXX) -rdynamic -L../lib -ldl -ltheta -lconfig $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
-LINK_EXE_NOLIBS = echo linking $@; $(CXX) -rdynamic $(EXTRA_LINK_EXE)
-LINK_SO = echo linking $@; $(CXX) -shared -rdynamic $(EXTRA_LINK_SO)
+#SUFFIXES += .d
 
-%.o: %.cpp
+COMPILE = echo creating $@; $(CXX) -g -c -Wall -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
+LINK_EXE = echo linking $@; $(CXX) -Wl,-R,'$$ORIGIN/../lib' -rdynamic -L../lib -ldl -ltheta -lconfig $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
+#LINK_EXE_NOLIBS = echo linking $@; $(CXX) -rdynamic $(EXTRA_LINK_EXE)
+LINK_SO = echo linking $@; $(CXX) -Wl,-R,'$$ORIGIN/../lib' -shared -rdynamic $(EXTRA_LINK_SO)
+
+.bin/%.o: %.cpp
 	@$(COMPILE) -o $@ $<
 
-%.o: %.cxx
+.bin/%.o: %.cxx
 	@$(COMPILE) -o $@ $<
 
-%.o: %.c
+.bin/%.o: %.c
 	@$(COMPILE) -x c -o $@ $<
 
-#redirect to "all" target which is defined in each of the subdirs
-a: all
+
+.bin/%.d: %.cpp
+	@$(COMPILE) -MM -MT '$(patsubst %.cpp,.bin/%.o,$<)' $< > $@
+
+.bin/%.d: %.cxx
+	@$(COMPILE) -MM -MT '$(patsubst %.cxx,.bin/%.o,$<)' $< > $@
+
+.bin/%.d: %.c
+	@$(COMPILE) -x c -MM -MT '$(patsubst %.c,.bin/%.o,$<)' $< > $@
+
+
 
 #make clean rule depend on subdir-specific:
 clean: clean-subdir
-	@rm -f *.o
+	@rm -rf .bin
 
 .PHONY: clean clean-subdir
 

@@ -80,20 +80,20 @@ double secant(double x_low, double x_high, double x_accuracy, double f_x_low, do
 
 
 void deltanll_intervals::produce(theta::Run & run, const theta::Data & data, const theta::Model & model) {
-    NLLikelihood nll = get_nllikelihood(data, model);
+    std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     if(not start_step_ranges_init){
-        const Distribution & d = nll.get_parameter_distribution();
+        const Distribution & d = nll->get_parameter_distribution();
         DistributionUtils::fillModeWidthSupport(start, step, ranges, d);
         start_step_ranges_init = true;
     }
     
-    MinimizationResult minres = minimizer->minimize(nll, start, step, ranges);
+    MinimizationResult minres = minimizer->minimize(*nll, start, step, ranges);
     
     const double value_at_minimum = minres.values.get(pid);
     table->set_column(*c_maxl, value_at_minimum);
     
     
-    ReducedNLL nll_r(nll, pid, minres.values, re_minimize ? minimizer.get() : 0, start, step, ranges);
+    ReducedNLL nll_r(*nll, pid, minres.values, re_minimize ? minimizer.get() : 0, start, step, ranges);
     
     const pair<double, double> & range = ranges[pid];
     for(size_t i=0; i < deltanll_levels.size(); ++i){

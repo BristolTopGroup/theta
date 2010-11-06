@@ -1,11 +1,12 @@
 #include "plugins/model_source_norandom.hpp"
+#include "interface/model.hpp"
 
 using namespace theta;
 using namespace theta::plugin;
 using namespace std;
 
 model_source_norandom::model_source_norandom(const theta::plugin::Configuration & cfg): DataSource(cfg){
-    model = ModelFactory::buildModel(Configuration(cfg, cfg.setting["model"]));
+    model = PluginManager<Model>::build(Configuration(cfg, cfg.setting["model"]));
     SettingWrapper pv_s = cfg.setting["parameter-values"];
     size_t n = pv_s.size();
     for(size_t i=0; i<n; ++i){

@@ -31,7 +31,7 @@
  *  -# for all other values, the histogram contents are interpolated binwise linearly: to get the bin value of bin k, first
  *    the sum over all kappa[i][k] * fabs(delta[i]) is calculated where i runs over all uncertainties (i.e., all parameters
  *    given in the \c parameters setting). Then, this is multiplied binwise with the nominal histogram.
- *  -# The normalization of the result is calculated as product of 1 + relexp[i] where i runs over all parameters.
+ *  -# The normalization of the result is calculated as product of (1 + abs(parameters[i]) * relexp[i]) where i runs over all parameters.
  *
  * It is valid to give only one or even no kappa histogram. In this case, only the rate uncertainty is applied. If no
  * explicit rate uncertainty is given, 0.0 is assumed.

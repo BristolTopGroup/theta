@@ -18,15 +18,15 @@ void nll_scan::define_table(){
 }
 
 void nll_scan::produce(Run & run, const Data & data, const Model & model) {
-    NLLikelihood nll = get_nllikelihood(data, model);
+    std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     if(not start_step_ranges_init){
-        const Distribution & d = nll.get_parameter_distribution();
+        const Distribution & d = nll->get_parameter_distribution();
         DistributionUtils::fillModeWidthSupport(m_start, m_step, m_ranges, d);
         start_step_ranges_init = true;
     }
-    MinimizationResult minres = minimizer->minimize(nll, m_start, m_step, m_ranges);
+    MinimizationResult minres = minimizer->minimize(*nll, m_start, m_step, m_ranges);
     table->set_column(*c_maxl, minres.values.get(pid));
-    ReducedNLL nll_r(nll, pid, minres.values, re_minimize ? minimizer.get() : 0, m_start, m_step, m_ranges);
+    ReducedNLL nll_r(*nll, pid, minres.values, re_minimize ? minimizer.get() : 0, m_start, m_step, m_ranges);
     nll_r.set_offset_nll(minres.fval);
     
     theta::Histogram result(n_steps, start, start + n_steps * step);

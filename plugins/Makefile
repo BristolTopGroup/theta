@@ -1,7 +1,9 @@
+libsources := $(wildcard *.cpp)
+libobjects := $(patsubst %.cpp,.bin/%.o,$(libsources))
+deps := $(patsubst %.cpp,.bin/%.d,$(libsources))
+
 include ../Makefile.rules
 
-libsources = $(wildcard *.cpp)
-libobjects = $(patsubst %.cpp,%.o,$(libsources))
 
 all: ../lib/core-plugins.so
 

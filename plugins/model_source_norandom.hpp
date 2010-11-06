@@ -37,6 +37,6 @@ public:
 
 private:
     theta::Data data;
-    theta::ParValues values;    
+    theta::ParValues values;
     std::auto_ptr<theta::Model> model;
 };

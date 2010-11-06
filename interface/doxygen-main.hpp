@@ -7,13 +7,14 @@
  *
  *  \image html theta-medium.png
  *
+ * A general, physics-focused introduction is available as pdf <a href="../files/theta.pdf">here</a>.
+ * The code for this introduction can be found in \c examples/paper.
+ *
  * %theta is a framework for template-based statistical modeling and inference, focussing on problems
  * in high-energy physics. It provides the possibility for the user to express a "model", i.e.,
  * the expected data distribution, as function of physical parameters. This model can be used
  * to make statistical inference about the physical parameter of interest. Modeling is "template-based"
- * in the sense that the expected data distribution is always expressed as a sum of templates. For a general
- * introduction please refer to <a href="../files/theta.pdf">theta - a framework for template-based modeling and inference</a>.
- * Almost all plots contained therein can be produced by running \c examples/paper/execute-all.sh.
+ * in the sense that the expected data distribution is always expressed as a sum of templates.
  *
  * \section main_impatient For the impatient
  *
@@ -234,8 +235,8 @@
  * So a complete set of commands to check out, compile, test and run %theta with CMSSW
  * would be (assuming that cmssw was set up):
  * <pre>
- *  scram project CMSSW CMSSW_3_5_0
- *  cd CMSSW_3_5_0/src
+ *  scram project CMSSW CMSSW_3_8_4
+ *  cd CMSSW_3_8_4/src
  *  cmsenv
  *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/april-2010 theta
  *  cd theta
@@ -245,7 +246,7 @@
  *  bin/theta examples/gaussoverflat.cfg
  * </pre>
  *
- * <tt>CMSSW_3_5_0</tt> is an example, you can poick another version. It is recommended to pick a recent one, as %theta
+ * <tt>CMSSW_3_8_4</tt> is an example, you can pick another version. It is recommended to pick a recent one, as %theta
  * was not tested with older versions of CMSSW which contain older versions of boost which %theta depends on. However,
  * your chances are good that it compiles as well under older versions.
  *
@@ -254,12 +255,12 @@
  * Be sure to get the external dependencies:
  * <ol>
  * <li><a href="http://boost.org/">Boost</a>, a bundle of general-purpose C++ libraries, which is
- *    used in %theta for filesystem interface, option parsing, memory management through
- *    smart pointers, and multi-threading.</li>
+ *    used in %theta for filesystem interface, command line option parsing, memory management through
+ *    smart pointers, and many more.</li>
  * <li><a href="http://sqlite.org/">sqlite3</a>, a light-weight, SQL-based %database engine which
- *    is used to store the results in %theta</li>
+ *    can be used to store the results of %theta</li>
  * </ol>
- * There are packages available for these on many distribution.
+ * For almost all linux distributions, there are packages available for these dependencies.
  *
  * Then, you can follow the instructions above, skipping the CMSSW part:
  * <pre>
@@ -646,13 +647,10 @@
   *
   * The %theta command expects one or two arguments: the configuration file and (optionally) the name of the run setting
   * in this file. If the run name is not given, "main" is assumed as name for the run. Additionally to this setting group,
-  * the special setting group "options" is parsed. This setting group contains:
-  * <ul>
-  *   <li>A (non-optional) setting \c plugin_files, which is a list of shared-object filenames to load as plugins. If relative paths are used, they
-  *      are searched from where theta is executed.</li>
-  *   <li>An optional integer \c n_threads which specifies the number of threads to use. This option only applies if openmp was enabled
-  *     at build time (which is the default). The default is to use the OpenMP default. This is achieved by either omitting this
-  *     option or setting it to a negative value. Setting it to 0 or 1 both do the same and disable the use of multi-threading.</li>
+  * the special setting group "options" is parsed. This setting group must contain the setting \c plugin_files,
+  * which is a list of shared-object filenames to load as plugins. If relative paths are used, they
+  * are resolved from where theta is executed.
+  *
   * %theta parses the configuration file, constructs the \link theta::Run Run \endlink object from the specified setting group
   * and invoke its \link theta::Run::run run method \endlink.
   *
@@ -668,19 +666,6 @@
   * interactive use if the whole run takes too long but you still want to be able to
   * analyze the output produced so far. It is also useful part of a batch job script
   * which can send this signal just before the job reaches the maximum time by which it is killed by the batch system.
-  *
-  * 
-  *  \subsection cmd_theta_multi Multithreading in %theta
-  *
-  * %theta uses multi-threading if enabled at build-time (which is the default) and not explicitely disabled by the \c n_threads option.
-  *
-  * Multi-threading is done by splitting up the loops which run over all bins in a template to multiple threads when calculating
-  * the lieklihood function. This is quite save as it does not make any assumptions about how the plugins are programmed. In particular,
-  * it does not require the plugins to adhere to any special considerations.
-  *
-  * Note that as floating point operations are not strictly associative, results might differ by small amounts if enabling multi-threading.
-  * As these rounding effects might lead to a different number of pseudo random numbers being used, the results might diverge, even if the same
-  * random seed is used. It is therefore advised to set \c n_threads to 1 if debugging.
   *
   * \section cmd_merge merge
   *

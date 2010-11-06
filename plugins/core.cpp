@@ -505,7 +505,7 @@ void model_source::define_table(){
 }
 
 model_source::model_source(const theta::plugin::Configuration & cfg): DataSource(cfg), save_nll(nosave){
-    model = ModelFactory::buildModel(Configuration(cfg, cfg.setting["model"]));
+    model = PluginManager<Model>::build(Configuration(cfg, cfg.setting["model"]));
     obs_ids = model->getObservables();
     par_ids = model->getParameters();
     for(ParIds::const_iterator p_it=par_ids.begin(); p_it!=par_ids.end(); ++p_it){
@@ -548,9 +548,9 @@ void model_source::fill(Data & dat, Run & run){
     }
     
     if(save_nll==nosave) return;
-    NLLikelihood nll = model->getNLLikelihood(dat);
-    if(save_nll==distribution_from_override) nll.set_override_distribution(override_parameter_distribution.get());
-    table->set_column(*c_nll, nll(values));
+    std::auto_ptr<NLLikelihood> nll = model->getNLLikelihood(dat);
+    if(save_nll==distribution_from_override) nll->set_override_distribution(override_parameter_distribution.get());
+    table->set_column(*c_nll, (*nll)(values));
 }
 
 

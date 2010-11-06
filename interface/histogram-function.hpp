@@ -193,7 +193,7 @@ namespace theta {
          * be returned by operator() and the error Histogram used by getRandomFlutuation(). As documented
          * in ConstantHistogramFunctionError::ConstantHistogramFunctionError, the \c error Histogram
          * contains bin-by-bin relative errors which are assumed to be independent.
-         */        
+         */
         void set_histos(const Histogram & histo, const Histogram & error){
             h = histo;
             err = error;

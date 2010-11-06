@@ -144,7 +144,7 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
     //get the runid from the rndinfo table:
     runid = rndinfo_table->append(seed);
     
-    model = ModelFactory::buildModel(plugin::Configuration(cfg, s["model"]));
+    model = plugin::PluginManager<Model>::build(plugin::Configuration(cfg, s["model"]));
     if(s.exists("data_source"))
         data_source = plugin::PluginManager<DataSource>::build(plugin::Configuration(cfg, s["data_source"]));
     else

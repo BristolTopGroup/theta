@@ -56,7 +56,7 @@ protected:
      * Derived classes should always use this method and never construct the NLLIkelihood
      * directly from a Model instance to ensure consistent treatment of the additional likelihood terms.
      */
-    NLLikelihood get_nllikelihood(const Data & data, const Model & model);
+    std::auto_ptr<NLLikelihood> get_nllikelihood(const Data & data, const Model & model);
 
     boost::ptr_vector<theta::Function> additional_likelihood_functions;
 };

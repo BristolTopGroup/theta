@@ -1,4 +1,5 @@
 #include "interface/producer.hpp"
+#include "interface/model.hpp"
 #include "interface/phys.hpp"
 #include "interface/histogram.hpp"
 #include "interface/distribution.hpp"
@@ -19,10 +20,10 @@ Producer::Producer(const Configuration & cfg): ProductsTableWriter(cfg){
     }
 }
 
-NLLikelihood Producer::get_nllikelihood(const Data & data, const Model & model){
-    NLLikelihood nll = model.getNLLikelihood(data);
+std::auto_ptr<NLLikelihood> Producer::get_nllikelihood(const Data & data, const Model & model){
+    std::auto_ptr<NLLikelihood> nll = model.getNLLikelihood(data);
     if(additional_likelihood_functions.size()){
-        nll.set_additional_terms(&additional_likelihood_functions);
+        nll->set_additional_terms(&additional_likelihood_functions);
     }
     return nll;
 }

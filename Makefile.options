@@ -1,0 +1,6 @@
+# You can edit this file to specify suitable options for your build.
+#
+# boolean-like switches should be either either "yes" or "no"
+
+OPTIONS_BUILD_TESTS := yes
+

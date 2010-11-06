@@ -68,11 +68,11 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
             ObsIds observables = model.getObservables();
             Data d;
             model.get_prediction(d, values);
-            NLLikelihood nll = get_nllikelihood(d, model);
-            sqrt_cov = get_sqrt_cov(run.get_random(), nll, startvalues, vm);
+            std::auto_ptr<NLLikelihood> nll = get_nllikelihood(d, model);
+            sqrt_cov = get_sqrt_cov(run.get_random(), *nll, startvalues, vm);
             
             //find the number of the parameter of interest:
-            ParIds nll_pars = nll.getParameters();
+            ParIds nll_pars = nll->getParameters();
             ipar=0;
             for(ParIds::const_iterator it=nll_pars.begin(); it!=nll_pars.end(); ++it, ++ipar){
                 if(*it == par_id) break;
@@ -91,9 +91,9 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
         }
     }
     
-    NLLikelihood nll = get_nllikelihood(data, model);
-    MCMCPosteriorQuantilesResult result(nll.getnpar(), ipar, iterations);
-    metropolisHastings(nll, result, run.get_random(), startvalues, sqrt_cov, iterations, burn_in);
+    std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
+    MCMCPosteriorQuantilesResult result(nll->getnpar(), ipar, iterations);
+    metropolisHastings(*nll, result, run.get_random(), startvalues, sqrt_cov, iterations, burn_in);
     
     for(size_t i=0; i<quantiles.size(); ++i){
         table->set_column(columns[i], result.get_quantile(quantiles[i]));

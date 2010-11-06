@@ -1,9 +1,8 @@
 #ifndef RUN_HPP
 #define RUN_HPP
 
-//#include "interface/decls.hpp"
-
 #include "interface/phys.hpp"
+#include "interface/model.hpp"
 #include "interface/exception.hpp"
 #include "interface/random.hpp"
 #include "interface/producer.hpp"

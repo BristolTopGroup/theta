@@ -140,6 +140,7 @@ namespace theta {
          }; CONCAT(factory,__LINE__) CONCAT(factory_instance,__LINE__);}
          
          #define REGISTER_PLUGIN(type) REGISTER_PLUGIN_NAME(type, type)
+         #define REGISTER_PLUGIN_DEFAULT(type) REGISTER_PLUGIN_NAME(type, default)
          
          //we need to make explicit template instantiations of the PluginManager registry.
          // Otherwise, the central registry associated to the PluginManager does not work reliably,
@@ -229,7 +230,9 @@ namespace theta {
             if(build_depth > 10){
                 throw FatalException("PluginManager::build: detected too deep recursion");
             }
-            std::string type = static_cast<std::string>(ctx.setting["type"]);
+            std::string type;
+            if(!ctx.setting.exists("type")) type = "default";
+            else type = static_cast<std::string>(ctx.setting["type"]);
             for (size_t i = 0; i < factories.size(); ++i) {
                 try {
                     if (factories[i]->get_typename() == type) {

@@ -2,6 +2,7 @@
 #include "plugins/mcmc-result.hpp"
 #include "interface/utils.hpp"
 #include "interface/distribution.hpp"
+#include "interface/model.hpp"
 
 #include <algorithm>
 #include <cassert>

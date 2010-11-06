@@ -21,13 +21,13 @@ void mle::define_table(){
 }
 
 void mle::produce(theta::Run & run, const theta::Data & data, const theta::Model & model) {
-    NLLikelihood nll = get_nllikelihood(data, model);
+    std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     if(not start_step_ranges_init){
-        const Distribution & d = nll.get_parameter_distribution();
+        const Distribution & d = nll->get_parameter_distribution();
         DistributionUtils::fillModeWidthSupport(start, step, ranges, d);
         start_step_ranges_init = true;
     }
-    MinimizationResult minres = minimizer->minimize(nll, start, step, ranges);
+    MinimizationResult minres = minimizer->minimize(*nll, start, step, ranges);
     table->set_column(*c_nll, minres.fval);
     for(size_t i=0; i<save_ids.size(); ++i){
         table->set_column(parameter_columns[i], minres.values.get(save_ids[i]));

@@ -66,11 +66,11 @@ void mcmc_posterior_histo::produce(Run & run, const Data & data, const Model & m
             ObsIds observables = model.getObservables();
             Data d;
             model.get_prediction(d, values);
-            NLLikelihood nll = get_nllikelihood(d, model);
-            sqrt_cov = get_sqrt_cov(run.get_random(), nll, startvalues, vm);
+            std::auto_ptr<NLLikelihood> nll = get_nllikelihood(d, model);
+            sqrt_cov = get_sqrt_cov(run.get_random(), *nll, startvalues, vm);
             
             //find ipars:
-            ParIds nll_pars = nll.getParameters();
+            ParIds nll_pars = nll->getParameters();
             ipars.resize(parameters.size());
             for(size_t i=0; i<parameters.size(); ++i){
                 for(ParIds::const_iterator it=nll_pars.begin(); it!=nll_pars.end(); ++it, ++ipars[i]){
@@ -90,9 +90,9 @@ void mcmc_posterior_histo::produce(Run & run, const Data & data, const Model & m
         }
     }
     
-    NLLikelihood nll = get_nllikelihood(data, model);
-    MCMCPosteriorHistoResult result(ipars, nll.getnpar(), nbins, lower, upper);
-    metropolisHastings(nll, result, run.get_random(), startvalues, sqrt_cov, iterations, burn_in);
+    std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
+    MCMCPosteriorHistoResult result(ipars, nll->getnpar(), nbins, lower, upper);
+    metropolisHastings(*nll, result, run.get_random(), startvalues, sqrt_cov, iterations, burn_in);
     
     for(size_t i=0; i<parameters.size(); ++i){
         table->set_column(columns[i], result.get_histo(i));

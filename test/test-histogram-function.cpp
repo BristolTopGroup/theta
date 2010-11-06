@@ -36,36 +36,6 @@ BOOST_AUTO_TEST_CASE(histofunction){
     hplus.push_back(hnarrow);
     hminus.push_back(hwide);
     vdelta.push_back(delta);
-    //todo test interpolating!!
-    /*std::auto_ptr<HistogramFunction> hp_sys(new InterpolatingHistogramFunction(h, vdelta, hplus, hminus));
-
-    ParValues values;
-    values.set(delta, 0.0);
-    //we should get back the nominal template now:
-    Histogram htest = (*hp_sys)(values);
-    for(size_t i = 1; i<=nbins; i++){
-        //printf("%f %f %f     %f\n", hminus[0].get(i), h.get(i), hplus[0].get(i), htest.get(i));
-        BOOST_REQUIRE(utils::close_to(htest.get(i), h.get(i), 1.0));
-    }
-
-    values.set(delta, 1.0);
-    htest = (*hp_sys)(values);
-    for(size_t i = 1; i<=nbins; i++){
-        BOOST_REQUIRE(utils::close_to(htest.get(i), hplus[0].get(i), 1.0));
-    }
-
-    values.set(delta, -1.0);
-    htest = (*hp_sys)(values);
-    for(size_t i = 1; i<=nbins; i++){
-        BOOST_REQUIRE(utils::close_to(htest.get(i), hminus[0].get(i), 1.0));
-    }
-
-    values.set(delta, -0.5);
-    htest = (*hp_sys)(values);
-    for(size_t i = 1; i<=nbins; i++){
-        //htest should be between hminus and h (except at x=0, were both are 1.0):
-        BOOST_CHECK((h.get(i) - htest.get(i)) * (hminus[0].get(i) - htest.get(i)) <= 0);
-    }*/
 }
 
 BOOST_AUTO_TEST_SUITE_END()

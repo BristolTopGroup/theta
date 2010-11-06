@@ -4,6 +4,7 @@
 #include "interface/minimizer.hpp"
 #include "interface/variables.hpp"
 #include "interface/phys.hpp"
+#include "interface/model.hpp"
 
 #include <sstream>
 
@@ -46,7 +47,7 @@ class ReducedNLL{
          * Otherwise, the parameter values at the minimum are used, just the parameter of interest is set to x.
          */
         double operator()(double x) const{
-            if(min){                
+            if(min){
                 start.set(pid, x);
                 ranges[pid].first = ranges[pid].second = x;
                 theta::MinimizationResult minres = min->minimize(nll, start, step, ranges);

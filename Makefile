@@ -1,15 +1,15 @@
 #order matters
-DIRS = src libconfig liblbfgs plugins root bin
+DIRS = src libconfig liblbfgs plugins root bin test cuda
 
 all:
-	@for d in $(DIRS); do make -C $$d; done
+	@for d in $(DIRS); do ( [ -d $$d ] && make -C $$d ) || true; done
 
 clean:
-	@for d in $(DIRS); do make -C $$d clean; done
+	@for d in $(DIRS); do ( [ -d $$d ] && make -C $$d clean ) || true; done
 	@make -C test/test-stat clean
 
 #ok, this is not very nice, as it hardcodes the documentation copy target, but as long as I am the only
-# serious developer, it should work well:
+# developer, it should work well:
 doc:
 	@doxygen
 	@( warn=`wc -l doxygen-warn.txt | cut -f 1 -d" "`; if [ $$warn -gt 0 ]; then echo There have been about $$warn warnings from doxygen, see doxygen-warn.txt; fi )

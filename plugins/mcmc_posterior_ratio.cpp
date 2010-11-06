@@ -66,17 +66,17 @@ void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, c
             Data d;
             model.get_prediction(d, s_plus_b_values);
             
-            NLLikelihood nll_sb = model.getNLLikelihood(d);
-            nll_sb.set_override_distribution(s_plus_b.get());
-            sqrt_cov_sb = get_sqrt_cov(run.get_random(), nll_sb, startvalues_sb, vm);
+            std::auto_ptr<NLLikelihood> nll_sb = model.getNLLikelihood(d);
+            nll_sb->set_override_distribution(s_plus_b.get());
+            sqrt_cov_sb = get_sqrt_cov(run.get_random(), *nll_sb, startvalues_sb, vm);
         
             //2. for background only
             ParValues b_only_values;
             b_only->mode(b_only_values);
             model.get_prediction(d, b_only_values);
-            NLLikelihood nll_b = model.getNLLikelihood(d);
-            nll_b.set_override_distribution(b_only.get());
-            sqrt_cov_b = get_sqrt_cov(run.get_random(), nll_b, startvalues_b, vm);
+            std::auto_ptr<NLLikelihood> nll_b = model.getNLLikelihood(d);
+            nll_b->set_override_distribution(b_only.get());
+            sqrt_cov_b = get_sqrt_cov(run.get_random(), *nll_b, startvalues_b, vm);
             
             init = true;
         }catch(Exception & ex){
@@ -85,19 +85,19 @@ void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, c
         }
     }
     
-    NLLikelihood nll = get_nllikelihood(data, model);
+    std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     double nl_posterior_sb, nl_posterior_b;
     nl_posterior_sb = NAN;
     nl_posterior_b = NAN;
     
     //a. calculate s plus b:
-    MCMCPosteriorRatioResult res_sb(nll.getnpar());
-    metropolisHastings(nll, res_sb, run.get_random(), startvalues_sb, sqrt_cov_sb, iterations, burn_in);
+    MCMCPosteriorRatioResult res_sb(nll->getnpar());
+    metropolisHastings(*nll, res_sb, run.get_random(), startvalues_sb, sqrt_cov_sb, iterations, burn_in);
     nl_posterior_sb = res_sb.get_nl_average_posterior();
 
     //b. calculate b only:
-    MCMCPosteriorRatioResult res_b(nll.getnpar());
-    metropolisHastings(nll, res_b, run.get_random(), startvalues_b, sqrt_cov_b, iterations, burn_in);
+    MCMCPosteriorRatioResult res_b(nll->getnpar());
+    metropolisHastings(*nll, res_b, run.get_random(), startvalues_b, sqrt_cov_b, iterations, burn_in);
     nl_posterior_b = res_b.get_nl_average_posterior();
 
     if(std::isnan(nl_posterior_sb) || std::isnan(nl_posterior_b)){

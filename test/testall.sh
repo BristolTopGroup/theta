@@ -6,7 +6,7 @@
 
 . test/lib.sh
 
-execute_checked bin/test-exe
+execute_checked bin/test
 
 fail=0
 

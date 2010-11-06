@@ -1,8 +1,5 @@
 #include "interface/exception.hpp"
 
-#include <iostream>
-
-
 using namespace theta;
 
 InvalidArgumentException::InvalidArgumentException(const std::string & m) : Exception(m) {}

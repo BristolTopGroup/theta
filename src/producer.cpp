@@ -1,8 +1,6 @@
 #include "interface/producer.hpp"
 #include "interface/model.hpp"
 #include "interface/phys.hpp"
-#include "interface/histogram.hpp"
-#include "interface/distribution.hpp"
 
 using namespace theta;
 using namespace theta::plugin;

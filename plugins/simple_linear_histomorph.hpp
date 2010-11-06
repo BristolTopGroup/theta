@@ -17,7 +17,6 @@
  *      delta1-minus-histogram = { / * fixed-histogram-specification * / };
  *      delta2-plus-histogram = { / * fixed-histogram-specification * / };
  *      delta2-minus-histogram = { / * fixed-histogram-specification * / };
- *      lower_cutoff = 0.001; // optional; default is 1/100 of the minimum of all non-zero entries of the nominal histogram
  *   };
  * \endcode
  * Here, <tt>fixed-histogram-specification</tt> is a Histogram Setting block that returns a Histogram
@@ -32,8 +31,8 @@
  * as specifying the nominal one.
  *
  * The linear interpolation can in principle result in negative bin entries, i.e. in negative predictions. This does not only make no sense from
- * the physics point of view, but is also problematic for the calculation of the value of the likelihood function. Therefore, a lower binwise
- * cutoff is introduced which is the minimal bin entry after applying all interpolations.
+ * the physics point of view, but is also problematic for the calculation of the value of the likelihood function. Therefore, the bin content
+ * is cut off at zero. Even that can be problematic, but it is not addressed here.
  */
 class simple_linear_histomorph : public theta::HistogramFunction {
 public:
@@ -62,7 +61,6 @@ private:
     theta::Histogram h0;
     std::vector<theta::Histogram> hplus_diff; // hplus_diff[i] + h0 yields hplus
     std::vector<theta::Histogram> hminus_diff;
-    double lower_cutoff;
     //the interpolation parameters used to interpolate between hplus and hminus.
     std::vector<theta::ParId> vid;
     //the Histogram returned by operator(). Defined as mutable to allow operator() to be const.

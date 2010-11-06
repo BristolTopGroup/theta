@@ -13,3 +13,5 @@ direct_data_histo::direct_data_histo(const theta::plugin::Configuration & cfg){
    }
    set_histo(h);
 }
+
+REGISTER_PLUGIN(direct_data_histo)

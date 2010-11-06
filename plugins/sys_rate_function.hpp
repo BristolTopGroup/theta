@@ -23,8 +23,7 @@
  * given r_{i,-} and r_{i,+} with i=1,...,m, this function returns f_1 * f_2 * ... * f_n * (1 + fabs(s_1) * r_{1,sgn(s_1)})
  * *...* (1 + fabs(s_m) * r_{m,sgn(s_m)}).
  *
- * Note that the function truncates at the product of (1 + ...) to 0.01 in order to prevent zero predictions. (This
- * truncation is not done to the factors f_1...f_n.)
+ * Note that the function never returns values &lt; 0.0 in order to prevent unphysical model predictions.
  *
  * Usually, the parameters used in \c sys_rates have a (gaussian) prior with mean 0 and width 1. Then, the relative
  * rate changes given in the configuration are the +-1sigma deviations for that systematic uncertainty.

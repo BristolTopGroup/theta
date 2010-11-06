@@ -2,9 +2,9 @@
 #define HISTOGRAM_FUNCTION_HPP
 
 #include "interface/decls.hpp"
-#include "interface/variables.hpp"
 #include "interface/histogram.hpp"
 #include "interface/plugin.hpp"
+#include "interface/variables.hpp"
 
 namespace theta {
 

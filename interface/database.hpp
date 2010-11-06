@@ -2,14 +2,11 @@
 #define DATABASE_HPP
 
 #include <string>
-#include <sstream>
-#include <iostream>
-#include <stdlib.h>
+#include <memory>
 
 #include <boost/utility.hpp>
 
 #include "interface/decls.hpp"
-#include "interface/exception.hpp"
 #include "interface/plugin.hpp"
 
 namespace theta {

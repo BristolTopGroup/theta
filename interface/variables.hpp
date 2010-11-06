@@ -9,9 +9,9 @@
 #include <vector>
 #include <ostream>
 
+#include "interface/decls.hpp"
 #include "interface/exception.hpp"
 #include "interface/utils.hpp"
-#include "interface/decls.hpp"
 
 #include <boost/utility.hpp>
 

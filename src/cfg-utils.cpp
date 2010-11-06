@@ -1,4 +1,5 @@
 #include "interface/cfg-utils.hpp"
+#include "interface/exception.hpp"
 #include <sstream>
 #include <limits>
 
@@ -14,10 +15,13 @@ void SettingUsageRecorder::get_unused(std::vector<std::string> & unused, const l
     int n = aggregate_setting.getLength();
     for(int i=0; i<n; ++i){
         std::string path = aggregate_setting[i].getPath();
+        bool a_unused = false;
         if(used_paths.find(path) == used_paths.end()){
             unused.push_back(path);
+            a_unused = true;
         }
-        if(aggregate_setting[i].isAggregate()){
+        //don't descend if already aggregate was reported as unused ...
+        if(aggregate_setting[i].isAggregate() && !a_unused){
             get_unused(unused, aggregate_setting[i]);
         }
     }

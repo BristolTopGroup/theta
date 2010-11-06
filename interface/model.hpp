@@ -4,14 +4,10 @@
 #include "interface/decls.hpp"
 #include "interface/variables.hpp"
 #include "interface/plugin.hpp"
-#include "interface/distribution.hpp"
 #include "interface/phys.hpp"
-
-#include "interface/histogram-function.hpp"
 
 #include <vector>
 #include <string>
-#include <limits>
 #include <set>
 #include <map>
 

@@ -3,7 +3,6 @@
 #include "interface/exception.hpp"
 #include "interface/utils.hpp"
 
-#include <cstring>
 #include <cmath>
 #include <limits>
 

@@ -15,7 +15,7 @@ const Histogram & simple_linear_histomorph::operator()(const ParValues & values)
         h.add_with_coeff(fabs(delta), t_sys);
     }
     for(size_t i=1; i<=h.get_nbins(); ++i){
-       h.set(i, max(h.get(i), lower_cutoff));
+       h.set(i, max(h.get(i), 0.0));
     }
     h.set(0,0);
     h.set(h.get_nbins() + 1,0);
@@ -65,19 +65,6 @@ simple_linear_histomorph::simple_linear_histomorph(const Configuration & ctx){
     assert(vid.size()==hminus_diff.size());
     assert(vid.size()==n);
     h = h0;
-    if(ctx.setting.exists("lower_cutoff")){
-       lower_cutoff = ctx.setting["lower_cutoff"];
-    }
-    else{
-       lower_cutoff = numeric_limits<double>::infinity();
-       for(size_t i=1; i<=h0.get_nbins(); ++i){
-          if(h0.get(i) > 0.0){
-             lower_cutoff = min(lower_cutoff, 0.01 * h0.get(i));
-          }
-       }
-       assert(!isinf(lower_cutoff));
-    }
-    cout << "lower cutoff is " << lower_cutoff << endl;
 }
 
 Histogram simple_linear_histomorph::getConstantHistogram(const Configuration & cfg, SettingWrapper s){

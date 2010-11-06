@@ -1,13 +1,11 @@
 #ifndef CFG_UTILS_HPP
-#define	CFG_UTILS_HPP
+#define CFG_UTILS_HPP
 
 #include "libconfig/libconfig.h++"
-#include "interface/exception.hpp"
 
 #include <string>
 #include <set>
 #include <vector>
-#include <sstream>
 
 #include <boost/shared_ptr.hpp>
 
@@ -110,7 +108,6 @@ namespace theta{
              * as libconfig::Setting::getLength()
              */
             size_t size() const{
-                rec->markAsUsed(setting);
                 return setting.getLength();
             }
             

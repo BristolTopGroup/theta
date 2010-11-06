@@ -1,10 +1,4 @@
 #include "interface/plugin.hpp"
-#include "interface/histogram.hpp"
-#include "interface/distribution.hpp"
-#include "interface/phys.hpp"
-#include "interface/histogram-function.hpp"
-#include "interface/run.hpp"
-#include "interface/minimizer.hpp"
 
 using namespace theta::plugin;
 using namespace std;

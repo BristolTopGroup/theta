@@ -80,10 +80,7 @@ BOOST_AUTO_TEST_CASE(sysrate0){
     BOOST_REQUIRE(utils::close_to_relative((*f)(values), values.get(beta1) * values.get(beta2) * (1 + 2.5 * 0.17) * (1 + 0.88 * -.9)));
     //set to an extreme value to test truncation:
     values.set(delta2, -2.0);
-    BOOST_REQUIRE(utils::close_to_relative((*f)(values), values.get(beta1) * values.get(beta2) * 0.01));
-    //betas should not be truncated:
-    values.set(beta1, 0.0001).set(beta2, 0.0001);
-    BOOST_REQUIRE(utils::close_to_relative((*f)(values), values.get(beta1) * values.get(beta2) * 0.01));
+    BOOST_REQUIRE(utils::close_to((*f)(values), 0.0, 1.0));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

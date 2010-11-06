@@ -26,10 +26,11 @@ double sys_rate_function::operator()(const theta::ParValues & values) const{
     for(size_t i=0; i<s_pids.size(); ++i){
        double s = values.get(s_pids[i]);
        result *= (1 + fabs(s) * (s > 0.0?r_plus[i]:r_minus[i]));
+       if(result <= 0.0) return 0.0;
     }
-    result = max(result, 0.01);
     for(size_t i=0; i<f_pids.size(); ++i){
        result *= values.get(f_pids[i]);
+       if(result <= 0.0) return 0.0;
     }
     return result;
 }

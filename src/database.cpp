@@ -1,9 +1,5 @@
-#include <sqlite3.h>
-
 #include <string>
 #include <sstream>
-#include <iostream>
-#include <stdlib.h>
 
 #include <boost/date_time/local_time/local_time.hpp>
 

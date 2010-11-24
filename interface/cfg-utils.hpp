@@ -108,6 +108,7 @@ namespace theta{
              * as libconfig::Setting::getLength()
              */
             size_t size() const{
+                rec->markAsUsed(setting);
                 return setting.getLength();
             }
             

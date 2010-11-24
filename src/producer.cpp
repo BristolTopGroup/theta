@@ -6,22 +6,13 @@ using namespace theta;
 using namespace theta::plugin;
 
 Producer::Producer(const Configuration & cfg): ProductsTableWriter(cfg){
-    if(cfg.setting.exists("add-nllikelihood-functions")){
-        SettingWrapper s = cfg.setting["add-nllikelihood-functions"];
-        size_t n = s.size();
-        if(n==0){
-            throw ConfigurationException("Producer: empty add-nllikelihood-functions specified");
-        }
-        for(size_t i=0; i<n; ++i){
-            additional_likelihood_functions.push_back(PluginManager<Function>::build(Configuration(cfg, s[i])));
-        }
+    if(cfg.setting.exists("override-parameter-distribution")){
+        override_parameter_distribution = PluginManager<Distribution>::build(Configuration(cfg, cfg.setting["override-parameter-distribution"]));
     }
 }
 
 std::auto_ptr<NLLikelihood> Producer::get_nllikelihood(const Data & data, const Model & model){
     std::auto_ptr<NLLikelihood> nll = model.getNLLikelihood(data);
-    if(additional_likelihood_functions.size()){
-        nll->set_additional_terms(&additional_likelihood_functions);
-    }
+    nll->set_override_distribution(override_parameter_distribution.get());
     return nll;
 }

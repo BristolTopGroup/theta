@@ -352,7 +352,7 @@ private:
  *   type = "model_source";
  *   model = "@some-model-path";
  *   override-parameter-distribution = "@some-dist"; // optional
- *   save-nll = "distribution-from-override"; //optional, default is ""
+ *   parameters-for-nll = { p1 = 0.0; p2 = 1.0; p3 = "diced_value"; }; //optional; assuming p1, p2, p3 are parameters
  * };
  * \endcode
  *
@@ -363,29 +363,27 @@ private:
  * \c override-parameter-distribution is an optional setting overriding the default behavior for parameter values, see below. It
  *     has to provide (at least) all the model parameters.
  *
- * \c save-nll is a string with allowed values "" (empty string), "distribution-from-override" and "distribution-from-model".
- *     Ifnot the empty string (""), the negative-log-likelihood of the sampled pseudo data will be saved to the event
- *     table for each call to fill() by constructing and evaluating the appropriate NLLikelihood.
+ * \c parameters-for-nll defines the parameter values used for saving the value of the negative log-likelihood. They are
+ *     either given directly as floating point, or the special string "diced_value". Each parameter of the model
+ *     must be specified here. If not given, the negative log-likelihood will not be saved.
  *
  * For each call of fill
  * <ol>
  *   <li>parameter values are sampled from the parameter distribution. If the setting \c override-parameter-distribution
  *       is given, it will be used for this step. Otherwise, the parameter distribution specified in the model will be used.</li>
  *   <li>the parameter values from the previous step are used in a call to call Model::samplePseudoData </li>
- *   <li>if \c save-nll is not the empty string (""), the likelihood function is built for the Data sampled
- *      in the previous step and evaluated at the parameters used sampled in step 1. As parameter distribution in the
- *      NLLikelihood instance, either the distribution from the model (if save-nll = "distribution-from-model") or the
- *      distribution specified in "override-parameter-distribution" (if save-nll = "distribution-from-override") is used.</li>
+ *   <li>if \c parameters-for-nll is given, the likelihood function is built for the Data sampled
+ *      in the previous step and evaluated at the given parameter values.
  * </ol>
  *
- * If \c save-nll is "distribution-from-override", \c override-parameter-distribution must be set.
+ * \c model_source will create a column in the event table for each model parameter and save the values used to sample the pseudo
+ * data there. If \c parameters-for-nll is given, a column "nll" will be created where the value of the negative log-likelihood is saved.
  *
- * It is guaranteed that the method Distribution::sample is called exactly once per call to model_source::fill.
- * This can be used to specify a Distribution in the "override-parameter-distribution" setting which scans
- * some parameters (and only dices some others).
+ * The \c parameters-for-nll setting is useful to construct (a variation of) Feldman-Cousins intervals: for all nuisance parameters,
+ * the most probable value can be used; for the parameter of interest, the diced value is used. This yields one likelihood value
+ * entering the ordering principle for this interval construction. The other likelihood value can be obtained by an mle
+ * producer which fixes all nuisance parameters to the same values as here, and fits the parameter of interest to data.
  * 
- * model_source will create a column in the event table for each model parameter and save the values used to sample the pseudo
- * data there. If save-nll is non-empty, a column "nll" will be created where the values will be saved.
  */
 class model_source: public theta::DataSource{
 public:
@@ -403,10 +401,8 @@ public:
     virtual void define_table();
 
 private:
-    enum e_save_nll{ nosave, distribution_from_model, distribution_from_override };
-
-    e_save_nll save_nll;
-    
+    theta::ParValues parameters_for_nll;
+    bool save_nll;
     std::auto_ptr<theta::Column> c_nll;
     
     theta::ParIds par_ids;

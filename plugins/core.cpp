@@ -499,12 +499,12 @@ void model_source::define_table(){
     for(size_t i=0; i< parameter_names.size(); ++i){
         parameter_columns.push_back(table->add_column(*this, parameter_names[i], Table::typeDouble));
     }
-    if(save_nll!=nosave){
+    if(save_nll){
         c_nll = table->add_column(*this, "nll", Table::typeDouble);
     }
 }
 
-model_source::model_source(const theta::plugin::Configuration & cfg): DataSource(cfg), save_nll(nosave){
+model_source::model_source(const theta::plugin::Configuration & cfg): DataSource(cfg), save_nll(false){
     model = PluginManager<Model>::build(Configuration(cfg, cfg.setting["model"]));
     obs_ids = model->getObservables();
     par_ids = model->getParameters();
@@ -514,20 +514,26 @@ model_source::model_source(const theta::plugin::Configuration & cfg): DataSource
     if(cfg.setting.exists("override-parameter-distribution")){
         override_parameter_distribution = PluginManager<Distribution>::build(Configuration(cfg, cfg.setting["override-parameter-distribution"]));
     }
-    if(cfg.setting.exists("save-nll")){
-        string s_save_nll = cfg.setting["save-nll"];
-        if(s_save_nll == "distribution-from-model"){
-            save_nll = distribution_from_model;
-        }
-        else if (s_save_nll == "distribution-from-override"){
-            save_nll = distribution_from_override;
-            if(override_parameter_distribution.get()==0){
-                throw ConfigurationException("model_source: save-nll set to \"distribution from override\", but no \"override-parameter-distribution\" specified!");
+    if(cfg.setting.exists("parameters-for-nll")){
+        save_nll = true;
+        const size_t n = cfg.setting["parameters-for-nll"].size();
+        ParIds pids_for_nll;
+        for(size_t i=0; i<n; ++i){
+            string pname = cfg.setting["parameters-for-nll"][i].getName();
+            ParId pid = cfg.vm->getParId(pname);
+            pids_for_nll.insert(pid);
+            try{
+                double value = cfg.setting["parameters-for-nll"][i];
+                parameters_for_nll.set(pid, value);
+            }catch(SettingTypeException &){
+               string s_value = cfg.setting["parameters-for-nll"][i];
+               if(s_value != "diced_value"){
+                   throw ConfigurationException("illegal value given in parameters-for-nll for parameter " + pname);
+               }
             }
         }
-        else if(s_save_nll != ""){
-            throw ConfigurationException("model_source: invalid setting save-nll specified (allowed "
-                     "values are \"\", \"distribution-from-model\" and \"distribution-from-override\")");
+        if(!(pids_for_nll==par_ids)){
+            throw ConfigurationException("parameters-for-nll does not specify exactly the model parameters");
         }
     }
 }
@@ -547,10 +553,11 @@ void model_source::fill(Data & dat, Run & run){
         table->set_column(parameter_columns[i], values.get(*p_it));
     }
     
-    if(save_nll==nosave) return;
-    std::auto_ptr<NLLikelihood> nll = model->getNLLikelihood(dat);
-    if(save_nll==distribution_from_override) nll->set_override_distribution(override_parameter_distribution.get());
-    table->set_column(*c_nll, (*nll)(values));
+    if(save_nll){
+       std::auto_ptr<NLLikelihood> nll = model->getNLLikelihood(dat);
+       values.set(parameters_for_nll);
+       table->set_column(*c_nll, (*nll)(values));
+    }
 }
 
 

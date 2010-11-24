@@ -20,6 +20,7 @@ using namespace std;
  * use_errors = true; // optional; default is false
  * rebin = 2; // optional; default is 1.
  * range = (0.0, 50.); // optional; default is to use the whole range
+ * zerobin_fillfactor = 0.0001; // optional, default is 0.0
  * }
  * \endcode
  *
@@ -33,7 +34,7 @@ using namespace std;
  * \c ConstantHistogramFunctionError). Otherwise, an instance of \c ConstantHistogramFunction
  * is returned which does not treat parametrization errors.
  *
- * If rebin is given, TH!::Rebin will be called with this value.
+ * If rebin is given, TH1::Rebin will be called with this value.
  *
  * If range is given, only bins within this range are copied, not the whole histogram.
  * This can also be used to explicitely include the overflow or underflow bins by specifying
@@ -42,8 +43,17 @@ using namespace std;
  * more bins that you originally wanted: if you have a ROOT TH1 with 10 bins from 0 to 100 and specify
  * a range (0, 50.0), the bin including the value 50.0 is included, so the actual range will be up to 60.0.
  *
+ * Bin entries of exactly zero can be problematic if dicing pseudo data from templates with a non-zero entry (for example,
+ * because dicing pseudo data from templates affected by a systematic uncertainty) while calculating
+ * the likelihood function for a model which has always zero prediction in that bin (for example, because the likelihood is calculated
+ * for a model without systematic uncertainties). Then, the likelihood function is exactly zero and negative log-likelihood is infinity
+ * which is a problem if you want to minimize this function. The best way is to prevent zero-prediction is
+ * in the phase of template construction where one should avoid zero-bins altogether.
+ * The parameter \c zerobin_fillfactor provides a "quick-and-dirty" workaround for this problem: 
+ * each bin entry is set to a value at least \c zerobin_fillfactor * integral where integral is the sum of all bins.
+ *
  * Note that normalize_to is applied first to the histogram excluding under / overflow, then the rebinning is done, and then
- * the range setting is applied.
+ * the range setting is applied and then the zero bins are filled.
  *
  * \sa ConstantHistogramFunctionError ConstantHistogramFunction
  */

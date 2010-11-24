@@ -10,6 +10,7 @@ const Histogram & simple_linear_histomorph::operator()(const ParValues & values)
     const size_t n_sys = hplus_diff.size();
     for (size_t isys = 0; isys < n_sys; isys++) {
         const double delta = values.get(vid[isys]);
+        if(delta==0.0) continue;
         const Histogram & t_sys = delta > 0 ? hplus_diff[isys] : hminus_diff[isys];
         if (t_sys.get_nbins() == 0)continue;
         h.add_with_coeff(fabs(delta), t_sys);

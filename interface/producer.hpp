@@ -31,14 +31,10 @@ public:
     
     /** \brief Run a statistical algorithm on the data and model and write out the results
      *
-     * The method \c produce is called for each pseudo experiment. It should execute
-     * the method and write the result to the results database (which is
-     * available through the Run object).
-     *
-     * Derived classes may assume that subsequent calls are done with the same \c model.
-     *
      * The result should be written to \c table by calling ProducerTable::set_column on
      * columns previously defined in define_table.
+     *
+     * Derived classes may assume that all calls are done with the same \c model.
      *
      * In case of an error, the method should through an Exception.
      */
@@ -51,14 +47,14 @@ protected:
      */
     Producer(const plugin::Configuration & cfg);
     
-    /** \brief Get the likelihood for the provided Data and Model, including any additional nllikelihood functions
+    /** \brief Get the likelihood for the provided Data and Model, including the setting of \c override-parameter-distribution, if applicable
      * 
      * Derived classes should always use this method and never construct the NLLIkelihood
      * directly from a Model instance to ensure consistent treatment of the additional likelihood terms.
      */
     std::auto_ptr<NLLikelihood> get_nllikelihood(const Data & data, const Model & model);
 
-    boost::ptr_vector<theta::Function> additional_likelihood_functions;
+    std::auto_ptr<theta::Distribution> override_parameter_distribution;
 };
 
 REGISTER_PLUGIN_BASETYPE(Producer);

@@ -75,6 +75,20 @@ root_histogram::root_histogram(const Configuration & ctx){
            h_error.set(i - bin_low + 1, histo->GetBinError(i) / content);
         }
     }
+    
+    //apply zerobin_fillfactor:
+    double zerobin_fillfactor = 0.0;
+    if(ctx.setting.exists("zerobin_fillfactor")){
+        zerobin_fillfactor = ctx.setting["zerobin_fillfactor"];
+        if(zerobin_fillfactor < 0){
+           throw ConfigurationException("zerobin_fillfactor must be >= 0.0!");
+        }
+    }
+    double integral = h.get_sum_of_bincontents();
+    for(size_t i=1; i<=h.get_nbins(); ++i){
+       h.set(i, max(h.get(i), integral * zerobin_fillfactor));
+    }
+    
     set_histos(h, h_error);
 }
 

@@ -21,6 +21,11 @@ public:
     }
 
     virtual double DoEval(const double * x) const{
+        for(size_t i=0; i<ndim; ++i){
+            if(isnan(x[i])){
+               throw MinimizationException("minuit called likelihood function with NAN argument!");
+            }
+        }
         double result = f(x);
         if(isinf(result)){
            cerr << "Error in function to minimize: result is infinity!" << endl;

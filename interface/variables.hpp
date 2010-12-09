@@ -351,7 +351,7 @@ namespace theta {
          */
         void addTo(const ParId & pid, double delta){
             const int id = pid.id;
-            if(id >= (int)values.size() || isnan(values[id])){
+            if(id >= (int)values.size() || std::isnan(values[id])){
                 throw NotFoundException("ParValues::addTo: given ParId not found.");
             }
             values[id] += delta;
@@ -367,7 +367,7 @@ namespace theta {
         double get(const ParId & pid) const{
             double result;
             const int id = pid.id;
-            if(id >= (int)values.size() || isnan(result = values[id])){
+            if(id >= (int)values.size() || std::isnan(result = values[id])){
                 std::stringstream ss;
                 ss << "ParValues::get: given VarId " << id << " not found";
                 throw NotFoundException(ss.str());
@@ -379,7 +379,7 @@ namespace theta {
          */
         bool contains(const ParId & pid) const{
             const int id = pid.id;
-            return id < (int)values.size() and not isnan(values[id]);
+            return id < (int)values.size() and not std::isnan(values[id]);
         }
 
         /** \brief Return all \c ParIds of the variables in this \c VarValues.

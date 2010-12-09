@@ -148,6 +148,9 @@ namespace theta {
          // The exact reason however is unknown ...
          #define REGISTER_PLUGIN_BASETYPE(type) template class theta::plugin::PluginManager<type>
 
+        // to prevent endless recursion within PluginManager::build, use a depth counter:
+        extern int plugin_build_depth;
+
         /** \brief Central registry class for plugins.
          *
          * This class serves two purposes:
@@ -180,7 +183,6 @@ namespace theta {
             typedef typename product_type::base_type base_type;
             typedef factory<base_type> factory_type;
             friend class factory<base_type>;
-            static int build_depth;
             
             /** \brief Register a new factory.
              *
@@ -208,10 +210,6 @@ namespace theta {
             };
         };
         
-        // to prevent endless recursion within PluginManager::build, use a depth counter:
-        template<typename product_type>
-        int PluginManager<product_type>::build_depth = 0;
-        
         template<typename product_type>
         std::vector<typename PluginManager<product_type>::factory_type*> PluginManager<product_type>::factories;
 
@@ -227,8 +225,8 @@ namespace theta {
 
         template<typename product_type>
         std::auto_ptr<product_type> PluginManager<product_type>::build(const Configuration & ctx){
-            build_depth_sentinel b(build_depth);
-            if(build_depth > 10){
+            build_depth_sentinel b(plugin_build_depth);
+            if(plugin_build_depth > 10){
                 throw FatalException("PluginManager::build: detected too deep plugin building");
             }
             std::string type;

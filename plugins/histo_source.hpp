@@ -11,10 +11,12 @@
  *
  * Configured via a setting group like
  * \code
- * {
+ * data_source = {
  *   type = "histo_source";
- *   obs1 = { ... }; //some constant histogram for observable obs1
- *   obs2 = { ... }; // some constant histogram for observable obs2
+ *   obs1 = { // assuming "obs1" is an observable
+ *        type = "root_histogram"; filename = "DATA.root"; histoname = "h_obs1";
+ *    }; // or some other constant histogram specification
+ *   obs2 = { ... }; // some constant histogram specification to use for observable obs2
  * };
  * \endcode
  *

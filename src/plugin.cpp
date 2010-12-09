@@ -1,8 +1,9 @@
 #include "interface/plugin.hpp"
-//#include "interface/minimizer.hpp"
 
 using namespace theta::plugin;
 using namespace std;
+
+int theta::plugin::plugin_build_depth=0;
 
 namespace{
 bool nameOk(const std::string & name){

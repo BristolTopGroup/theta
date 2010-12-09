@@ -18,10 +18,9 @@ static void sigint_handler(int sig){
 
 void theta::install_sigint_handler(){
     struct sigaction siga;
+    memset(&siga, 0, sizeof(struct sigaction));
     siga.sa_handler = sigint_handler;
-    siga.sa_flags = 0;
     sigemptyset(&siga.sa_mask);
-    siga.sa_restorer = 0;
     sigaction(SIGINT, &siga, 0);
 }
 

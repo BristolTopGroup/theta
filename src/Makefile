@@ -13,8 +13,15 @@ include ../Makefile.rules
 
 all: ../lib/libtheta.so
 
+ifeq ($(OPTIONS_BUILD_STATIC),yes)
+all: ../lib/libconfig.a
+endif
+
 ../lib/libtheta.so: $(libobjects)
 	@$(LINK_SO) -o $@ $+
+
+../lib/libtheta.a: $(objects)
+	@$(CREATE_A) $@ $+
 
 .bin/%.o: ../crlibm/%.c
 	@$(COMPILE) -x c -o $@ $<

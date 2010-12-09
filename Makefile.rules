@@ -49,7 +49,9 @@ EXTRA_LINK_SO =
 
 COMPILE = echo creating $@; $(CXX) $(DEFINES) -g -c -Wall -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
 LINK_EXE = echo linking $@; $(CXX) -Wl,-R,'$$ORIGIN/../lib' -rdynamic -L../lib -ldl -ltheta -lconfig $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
+LINK_EXE_STATIC = echo linking $@; $(CXX) -static -Wl,-R,'$$ORIGIN/../lib' -rdynamic -L../lib -ldl -ltheta -lconfig $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
 LINK_SO = echo linking $@; $(CXX) -Wl,-R,'$$ORIGIN/../lib' -shared -rdynamic $(EXTRA_LINK_SO)
+CREATE_A = echo creating $@; ar -rs
 
 .bin/%.o: %.cpp
 	@$(COMPILE) -o $@ $<

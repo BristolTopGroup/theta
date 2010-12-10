@@ -151,6 +151,13 @@ namespace theta {
         // to prevent endless recursion within PluginManager::build, use a depth counter:
         extern int plugin_build_depth;
 
+       //to increase the plugin_build_depth in an exception-safe manner, use the build_depth_sentinel,
+       // which automatically decreses depth count at destrution:
+       struct plugin_build_depth_sentinel{
+           plugin_build_depth_sentinel(){ ++plugin_build_depth; }
+           ~plugin_build_depth_sentinel(){  --plugin_build_depth; }
+       };
+
         /** \brief Central registry class for plugins.
          *
          * This class serves two purposes:
@@ -196,18 +203,6 @@ namespace theta {
             //prevent instance construction by making constructor private:
             PluginManager(){}
             
-            //to increase the build_depth in an exception-safe manner, use the build_depth_sentinel,
-            // which automatically decreses depth count at destrution:
-            struct build_depth_sentinel{
-                int & i;
-                build_depth_sentinel(int & i_): i(i_){
-                    ++i;
-                }
-                
-                ~build_depth_sentinel(){
-                    --i;
-                }
-            };
         };
         
         template<typename product_type>
@@ -225,7 +220,7 @@ namespace theta {
 
         template<typename product_type>
         std::auto_ptr<product_type> PluginManager<product_type>::build(const Configuration & ctx){
-            build_depth_sentinel b(plugin_build_depth);
+            plugin_build_depth_sentinel b;
             if(plugin_build_depth > 10){
                 throw FatalException("PluginManager::build: detected too deep plugin building");
             }

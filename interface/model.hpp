@@ -136,7 +136,6 @@ namespace theta {
         Model(const boost::shared_ptr<VarIdManager> & vm);
     };
     
-    REGISTER_PLUGIN_BASETYPE(Model);
     
     // the default model in theta
     class default_model: public Model{

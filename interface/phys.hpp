@@ -94,7 +94,6 @@ namespace theta {
         mutable ParValues pv; //saving this class-wide and not in operator()(const double*) saves quiet some time ...
     };
     
-    REGISTER_PLUGIN_BASETYPE(Function);
     
     /** \brief Contains data for one or more observables
      *  
@@ -183,7 +182,6 @@ namespace theta {
         ObsIds obs_ids;
     };
     
-    REGISTER_PLUGIN_BASETYPE(DataSource);
 
 }
 

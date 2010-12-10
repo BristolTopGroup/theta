@@ -57,7 +57,6 @@ protected:
     std::auto_ptr<theta::Distribution> override_parameter_distribution;
 };
 
-REGISTER_PLUGIN_BASETYPE(Producer);
 
 }
 

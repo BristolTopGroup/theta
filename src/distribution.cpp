@@ -1,5 +1,7 @@
 #include "interface/distribution.hpp"
 
+REGISTER_PLUGIN_BASETYPE(theta::Distribution);
+
 void theta::DistributionUtils::fillModeWidthSupport(theta::ParValues & mode, theta::ParValues & width,
                 std::map<theta::ParId, std::pair<double, double> > & support, const theta::Distribution & d){
     ParIds pids = d.getParameters();

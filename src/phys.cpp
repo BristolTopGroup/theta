@@ -2,6 +2,9 @@
 
 using namespace theta;
 
+REGISTER_PLUGIN_BASETYPE(Function);
+REGISTER_PLUGIN_BASETYPE(DataSource);
+
 /* DATA */
 ObsIds Data::getObservables() const{
     ObsIds result;

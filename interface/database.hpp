@@ -52,7 +52,6 @@ protected:
     void check_name(const std::string & table_name);
 };
 
-REGISTER_PLUGIN_BASETYPE(Database);
 
 
 /** \brief Abstract base class for all tables stored in a Database

@@ -127,8 +127,6 @@ namespace theta{
                 std::map<theta::ParId, std::pair<double, double> > & support, const theta::Distribution & d);
     }
     
-    REGISTER_PLUGIN_BASETYPE(Distribution);
-
 }
 
 #endif

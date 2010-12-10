@@ -5,6 +5,8 @@ using namespace theta;
 using namespace theta::utils;
 using namespace theta::plugin;
 
+REGISTER_PLUGIN_BASETYPE(Model);
+
 /* MODEL */
 Model::Model(const boost::shared_ptr<VarIdManager> & vm_):
                    vm(vm_){

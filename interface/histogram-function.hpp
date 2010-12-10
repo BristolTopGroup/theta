@@ -71,7 +71,6 @@ namespace theta {
         virtual ~HistogramFunction(){}
     };
     
-    REGISTER_PLUGIN_BASETYPE(HistogramFunction);
 
     /** \brief A simple HistogramFunction which always returns the same Histogram, independent of any parameters.
      *

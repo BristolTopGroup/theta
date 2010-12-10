@@ -109,7 +109,6 @@ namespace theta{
         Minimizer(const theta::plugin::Configuration & cfg): vm(cfg.vm){}
     };
     
-    REGISTER_PLUGIN_BASETYPE(Minimizer);
 }
 
 #endif

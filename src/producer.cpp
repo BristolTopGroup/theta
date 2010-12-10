@@ -5,6 +5,8 @@
 using namespace theta;
 using namespace theta::plugin;
 
+REGISTER_PLUGIN_BASETYPE(Producer);
+
 Producer::Producer(const Configuration & cfg): ProductsTableWriter(cfg){
     if(cfg.setting.exists("override-parameter-distribution")){
         override_parameter_distribution = PluginManager<Distribution>::build(Configuration(cfg, cfg.setting["override-parameter-distribution"]));

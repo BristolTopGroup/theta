@@ -2,6 +2,8 @@
 #include "interface/random.hpp"
 #include "interface/cfg-utils.hpp"
 
+REGISTER_PLUGIN_BASETYPE(theta::HistogramFunction);
+
 using namespace theta;
 
 const Histogram &  ConstantHistogramFunctionError::getRandomFluctuation(Random & rnd, const ParValues & values) const{

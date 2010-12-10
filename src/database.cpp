@@ -10,6 +10,8 @@
 using namespace std;
 using namespace theta;
 
+REGISTER_PLUGIN_BASETYPE(theta::Database);
+
 void Database::check_name(const string & column_name) {
     if (column_name.size() == 0)
         throw DatabaseException("Database::check_name: name was empty.");
@@ -118,3 +120,6 @@ int RndInfoTable::append(int seed){
     table->set_column(*c_seed, seed);
     return table->add_row();
 }
+
+
+

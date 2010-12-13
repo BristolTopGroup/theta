@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(distribution_lognormal){
     Configuration cfg(vm, SettingWrapper(s, s, rec));*/
     
     BOOST_TEST_CHECKPOINT("building lognormal");
-    std::auto_ptr<Distribution> d = PluginManager<Distribution>::build(cc.get());
+    std::auto_ptr<Distribution> d = PluginManager<Distribution>::instance().build(cc.get());
     
     //must return +infinity for argument < 0:
     ParValues values;

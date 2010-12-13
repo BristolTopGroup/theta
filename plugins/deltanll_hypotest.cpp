@@ -44,10 +44,10 @@ void deltanll_hypotest::produce(theta::Run & run, const theta::Data & data, cons
 deltanll_hypotest::deltanll_hypotest(const theta::plugin::Configuration & cfg):
         Producer(cfg), init(false){
     SettingWrapper s = cfg.setting;
-    minimizer = theta::plugin::PluginManager<Minimizer>::build(theta::plugin::Configuration(cfg, s["minimizer"]));
+    minimizer = theta::plugin::PluginManager<Minimizer>::instance().build(theta::plugin::Configuration(cfg, s["minimizer"]));
     
-    s_plus_b = theta::plugin::PluginManager<Distribution>::build(theta::plugin::Configuration(cfg, s["signal-plus-background-distribution"]));
-    b_only = theta::plugin::PluginManager<Distribution>::build(theta::plugin::Configuration(cfg, s["background-only-distribution"]));
+    s_plus_b = theta::plugin::PluginManager<Distribution>::instance().build(theta::plugin::Configuration(cfg, s["signal-plus-background-distribution"]));
+    b_only = theta::plugin::PluginManager<Distribution>::instance().build(theta::plugin::Configuration(cfg, s["background-only-distribution"]));
     
     if(not (b_only_mode.getAllParIds()==s_plus_b_mode.getAllParIds())){
         throw ConfigurationException("parameters of the signal-plus-background- and background-only distributions do not match!");

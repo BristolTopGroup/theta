@@ -167,7 +167,7 @@ void deltanll_intervals::produce(theta::Run & run, const theta::Data & data, con
 deltanll_intervals::deltanll_intervals(const theta::plugin::Configuration & cfg): Producer(cfg),
         re_minimize(true), start_step_ranges_init(false){
     SettingWrapper s = cfg.setting;
-    minimizer = theta::plugin::PluginManager<Minimizer>::build(theta::plugin::Configuration(cfg, s["minimizer"]));
+    minimizer = theta::plugin::PluginManager<Minimizer>::instance().build(theta::plugin::Configuration(cfg, s["minimizer"]));
     string par_name = s["parameter"];
     pid = cfg.vm->getParId(par_name);
     size_t ic = s["clevels"].size();

@@ -65,7 +65,7 @@ namespace theta {
             boost::shared_ptr<ProductsTable> table;
             
         private:
-                std::string type, name;
+            std::string type, name;
         };
 
         /** \brief A container class which is used to construct conrete types managed by the plugin system
@@ -122,7 +122,7 @@ namespace theta {
          protected:
              /// register this factory at the correct PluginManager
              void reg(){
-                 PluginManager<base_type>::register_factory(this);
+                 PluginManager<base_type>::instance().register_factory(this);
              }
          };
 
@@ -176,16 +176,23 @@ namespace theta {
         class PluginManager: private boost::noncopyable {
         public:
 
+            /** \brief Get the (static) instance of the PluginManager
+             */
+            static PluginManager & instance(){
+                 static PluginManager i;
+                 return i;
+            }
+
             /** \brief Use the registered factories to build an instance from a configuration settings block.
              *
              * This will go through all registered factories of that C++-type and
              * find the factory responsible by using the "type=..." setting in ctx.setting.
              */
-            static std::auto_ptr<product_type> build(const Configuration & cfg);
+            std::auto_ptr<product_type> build(const Configuration & cfg);
 
             /** \brief get all currently registered types.
              */
-            static std::vector<std::string> get_registered_types();
+            std::vector<std::string> get_registered_types();
         private:
             typedef typename product_type::base_type base_type;
             typedef factory<base_type> factory_type;
@@ -198,16 +205,13 @@ namespace theta {
              *
              * Used by the REGISTER_PLUGIN macro. Not for direct call.
              */
-            static void register_factory(factory_type * new_factory);
-            static std::vector<factory_type*> factories;
-            //prevent instance construction by making constructor private:
+            void register_factory(factory_type * new_factory);
+            std::vector<factory_type*> factories;
+            //prevent instance construction from "outside" by making constructor private:
             PluginManager(){}
             
         };
         
-        template<typename product_type>
-        std::vector<typename PluginManager<product_type>::factory_type*> PluginManager<product_type>::factories;
-
         template<typename product_type>
         std::vector<std::string> PluginManager<product_type>::get_registered_types() {
             std::vector<std::string> names;

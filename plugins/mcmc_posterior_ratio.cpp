@@ -117,8 +117,8 @@ mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & 
     SettingWrapper s = cfg.setting;
     vm = cfg.vm;
     
-    s_plus_b = theta::plugin::PluginManager<Distribution>::build(theta::plugin::Configuration(cfg, s["signal-plus-background-distribution"]));
-    b_only = theta::plugin::PluginManager<Distribution>::build(theta::plugin::Configuration(cfg, s["background-only-distribution"]));    
+    s_plus_b = theta::plugin::PluginManager<Distribution>::instance().build(theta::plugin::Configuration(cfg, s["signal-plus-background-distribution"]));
+    b_only = theta::plugin::PluginManager<Distribution>::instance().build(theta::plugin::Configuration(cfg, s["background-only-distribution"]));    
     
     iterations = s["iterations"];
     if(s.exists("burn-in")){

@@ -101,7 +101,7 @@ interpolating_histo::interpolating_histo(const Configuration & ctx){
 }
 
 Histogram interpolating_histo::getConstantHistogram(const Configuration & cfg, SettingWrapper s){
-    std::auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::build(Configuration(cfg, s));
+    std::auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, s));
     if(hf->getParameters().size()!=0){
         stringstream ss;
         ss << "Histogram defined in path " << s.getPath() << " is not constant (but has to be).";

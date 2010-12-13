@@ -121,16 +121,16 @@ default_model::default_model(const Configuration & ctx): Model(ctx.vm){
         boost::ptr_vector<Function> coeffs;
         for (size_t i = 0; i < obs_setting.size(); i++) {
             Configuration context(ctx, obs_setting[i]["histogram"]);
-            auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::build(context);
+            auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::instance().build(context);
             Configuration cfg(ctx, obs_setting[i]["coefficient-function"]);
-            auto_ptr<Function> coeff_function = PluginManager<Function>::build(cfg);
+            auto_ptr<Function> coeff_function = PluginManager<Function>::instance().build(cfg);
             coeffs.push_back(coeff_function);
             assert(coeff_function.get()==0);
             histos.push_back(hf);
         }
         set_prediction(*obsit, coeffs, histos);
     }
-    parameter_distribution = PluginManager<Distribution>::build(Configuration(ctx, s["parameter-distribution"]));
+    parameter_distribution = PluginManager<Distribution>::instance().build(Configuration(ctx, s["parameter-distribution"]));
     if(not (parameter_distribution->getParameters() == getParameters())){
         stringstream ss;
         ss << "parameter-distribution does not define exactly the model parameters dist = ( ";

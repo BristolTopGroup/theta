@@ -436,7 +436,7 @@ void product_distribution::add_distributions(const Configuration & cfg, const th
             add_distributions(cfg, dist_setting["distributions"], depth-1);
         }
         else{
-            distributions.push_back(PluginManager<Distribution>::build(Configuration(cfg, dist_setting)));
+            distributions.push_back(PluginManager<Distribution>::instance().build(Configuration(cfg, dist_setting)));
             ParIds new_pids = distributions.back().getParameters();
             par_ids.insert(new_pids.begin(), new_pids.end());
             for(ParIds::const_iterator it=new_pids.begin(); it!=new_pids.end(); ++it){
@@ -505,14 +505,14 @@ void model_source::define_table(){
 }
 
 model_source::model_source(const theta::plugin::Configuration & cfg): DataSource(cfg), save_nll(false){
-    model = PluginManager<Model>::build(Configuration(cfg, cfg.setting["model"]));
+    model = PluginManager<Model>::instance().build(Configuration(cfg, cfg.setting["model"]));
     obs_ids = model->getObservables();
     par_ids = model->getParameters();
     for(ParIds::const_iterator p_it=par_ids.begin(); p_it!=par_ids.end(); ++p_it){
         parameter_names.push_back(cfg.vm->getName(*p_it));
     }
     if(cfg.setting.exists("override-parameter-distribution")){
-        override_parameter_distribution = PluginManager<Distribution>::build(Configuration(cfg, cfg.setting["override-parameter-distribution"]));
+        override_parameter_distribution = PluginManager<Distribution>::instance().build(Configuration(cfg, cfg.setting["override-parameter-distribution"]));
     }
     if(cfg.setting.exists("parameters-for-nll")){
         save_nll = true;

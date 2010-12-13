@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE(sysrate0){
     BOOST_CHECKPOINT("building function");
     std::auto_ptr<Function> f;
     try{
-        f = PluginManager<Function>::build(Configuration(cfg, cfg.setting["f"]));
+        f = PluginManager<Function>::instance().build(Configuration(cfg, cfg.setting["f"]));
     }
     catch(Exception & ex){
         cerr << ex.message << endl;

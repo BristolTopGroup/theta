@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(model0){
     BOOST_CHECKPOINT("building model");
     std::auto_ptr<Model> m;
     try{
-        m = PluginManager<Model>::build(Configuration(cfg, cfg.setting["m"]));
+        m = PluginManager<Model>::instance().build(Configuration(cfg, cfg.setting["m"]));
     }
     catch(Exception & ex){
         cerr << ex.message << endl;
@@ -78,9 +78,9 @@ BOOST_AUTO_TEST_CASE(model0){
     BOOST_REQUIRE(m.get()!=0);
     
     BOOST_CHECKPOINT("building signal histo");
-    std::auto_ptr<HistogramFunction> f_signal_histo = PluginManager<HistogramFunction>::build(Configuration(cfg, cfg.setting["gauss-histo"]));
+    std::auto_ptr<HistogramFunction> f_signal_histo = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, cfg.setting["gauss-histo"]));
     BOOST_CHECKPOINT("building bkg histo");
-    std::auto_ptr<HistogramFunction> f_bkg_histo = PluginManager<HistogramFunction>::build(Configuration(cfg, cfg.setting["flat-histo"]));
+    std::auto_ptr<HistogramFunction> f_bkg_histo = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, cfg.setting["flat-histo"]));
     
     ParValues values;
     Histogram signal = (*f_signal_histo)(values);

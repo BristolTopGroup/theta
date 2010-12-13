@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(minuit){
     
     ConfigCreator cc2("type = \"root_minuit\";", vm);
     BOOST_REQUIRE(true);//create checkpoint
-    std::auto_ptr<Minimizer> min = PluginManager<Minimizer>::build(cc2.get());
+    std::auto_ptr<Minimizer> min = PluginManager<Minimizer>::instance().build(cc2.get());
     BOOST_REQUIRE(min.get());
     ImpossibleFunction f(pars);
     bool exception;

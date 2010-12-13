@@ -15,7 +15,7 @@ histo_source::histo_source(const Configuration & cfg): DataSource(cfg){
         if(not s.exists("type")) continue;
         string obs_name = s.getName();
         ObsId obs_id = cfg.vm->getObsId(obs_name);
-        std::auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::build(Configuration(cfg, s));
+        std::auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, s));
         if(hf->getParameters().size() > 0){
             throw ConfigurationException("histo_source: given histogram depends on parameters, which is not allowed");
         }

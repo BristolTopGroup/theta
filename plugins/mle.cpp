@@ -66,7 +66,7 @@ void mle::produce(theta::Run & run, const theta::Data & data, const theta::Model
 
 mle::mle(const theta::plugin::Configuration & cfg): Producer(cfg), start_step_ranges_init(false), write_covariance(false){
     SettingWrapper s = cfg.setting;
-    minimizer = PluginManager<Minimizer>::build(Configuration(cfg, s["minimizer"]));
+    minimizer = PluginManager<Minimizer>::instance().build(Configuration(cfg, s["minimizer"]));
     size_t n_parameters = s["parameters"].size();
     for (size_t i = 0; i < n_parameters; i++) {
         string par_name = s["parameters"][i];

@@ -114,7 +114,7 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
     SettingWrapper s = cfg.setting;
     
     //1. setup database and tables:
-    db = plugin::PluginManager<Database>::build(plugin::Configuration(cfg, s["output_database"]));
+    db = plugin::PluginManager<Database>::instance().build(plugin::Configuration(cfg, s["output_database"]));
 
     std::auto_ptr<Table> prodinfo_table_underlying = db->create_table("prodinfo");
     prodinfo_table.reset(new ProducerInfoTable(prodinfo_table_underlying));
@@ -143,11 +143,11 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
     //get the runid from the rndinfo table:
     runid = rndinfo_table->append(seed);
     
-    model = plugin::PluginManager<Model>::build(plugin::Configuration(cfg, s["model"]));
+    model = plugin::PluginManager<Model>::instance().build(plugin::Configuration(cfg, s["model"]));
     if(s.exists("data_source"))
-        data_source = plugin::PluginManager<DataSource>::build(plugin::Configuration(cfg, s["data_source"]));
+        data_source = plugin::PluginManager<DataSource>::instance().build(plugin::Configuration(cfg, s["data_source"]));
     else
-        data_source = plugin::PluginManager<DataSource>::build(plugin::Configuration(cfg, s["data-source"]));
+        data_source = plugin::PluginManager<DataSource>::instance().build(plugin::Configuration(cfg, s["data-source"]));
     
     //3. logging stuff
     LogTable::e_severity level = LogTable::warning;
@@ -176,7 +176,7 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
         throw ConfigurationException("no producers in run specified!");
     for (size_t i = 0; i < n_p; i++) {
         SettingWrapper producer_setting = s["producers"][i];
-        std::auto_ptr<Producer> p = plugin::PluginManager<Producer>::build(plugin::Configuration(cfg, producer_setting));
+        std::auto_ptr<Producer> p = plugin::PluginManager<Producer>::instance().build(plugin::Configuration(cfg, producer_setting));
         addProducer(p);
         //should transfer ownership:
         assert(p.get()==0);

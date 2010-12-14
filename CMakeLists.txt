@@ -26,7 +26,7 @@ if(crlibm)
    add_definitions(-DUSE_CRLIBM)
 endif()
 
-find_package(Boost COMPONENTS regex program_options filesystem)
+find_package(Boost COMPONENTS regex program_options filesystem system)
 
 if(NOT Boost_FOUND)
    message(SEND_ERROR "boost not found")

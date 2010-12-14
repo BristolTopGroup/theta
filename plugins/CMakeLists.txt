@@ -13,7 +13,7 @@ if(psql)
 endif()
 
 add_library(plugin MODULE ${plugin_sources})
-target_link_libraries(plugin sqlite3 ${plugin_link_libraries})
+target_link_libraries(plugin libtheta sqlite3 ${plugin_link_libraries} ${Boost_LIBRARIES})
 
 add_custom_command(TARGET plugin POST_BUILD COMMAND mv ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libplugin.so ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/core-plugins.so)
 

@@ -6,7 +6,9 @@
 
 . test/lib.sh
 
+[ -x root/create_testhistos ] && root/create_testhistos
 execute_checked bin/test
+rm -f testhistos.root
 
 fail=0
 

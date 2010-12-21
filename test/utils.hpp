@@ -7,6 +7,9 @@
 
 void load_core_plugins();
 
+//returns false if loading root plugins was not successful
+bool load_root_plugins();
+
 class ConfigCreator{
 public:
     

@@ -41,3 +41,19 @@ void load_core_plugins(){
     BOOST_TEST_CHECKPOINT("loaded core plugin");
     loaded = true;
 }
+
+bool load_root_plugins(){
+    static bool loaded(false);
+    if(loaded) return true;
+    BOOST_TEST_CHECKPOINT("loading root plugin");
+    try{
+        PluginLoader::load("lib/root.so");
+    }
+    catch(Exception & ex){
+        return false;
+    }
+    BOOST_TEST_CHECKPOINT("loaded root plugin");
+    loaded = true;
+    return true;
+}
+

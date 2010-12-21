@@ -1,3 +1,5 @@
+include ../Makefile.options
+
 ifeq ($(shell which root-config || echo -n A),A)
 all:
 	@echo -e \\nNOTE: no root-config found. Not building root-dependent stuff.\\n
@@ -18,12 +20,16 @@ EXTRA_LINK_EXE := $(EXTRA_LINK_SO)
 
 all: ../lib/root.so histos
 
+ifeq ($(OPTIONS_BUILD_TESTS),yes)
+all: create_testhistos
+endif
+
 histos: .bin/histos.o
 	@$(LINK_EXE) -o $@ $<
-	
-db2root: .bin/db2root.o
-	@$(LINK_EXE) -o $@ $<
 
+create_testhistos: .bin/create_testhistos.o
+	@$(LINK_EXE) -o $@ $<
+	
 ../lib/root.so: $(objects)
 	@$(LINK_SO) -o $@ $+
 
@@ -31,4 +37,4 @@ endif
 
 #define clean target in any case:
 clean-subdir:
-	@rm -f histos db2root ../lib/root.so
+	@rm -f histos ../lib/root.so

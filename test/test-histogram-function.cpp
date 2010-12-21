@@ -29,6 +29,61 @@ BOOST_AUTO_TEST_CASE(histofunction){
 }
 
 
+BOOST_AUTO_TEST_CASE(root_histogram){
+    bool loaded =  load_root_plugins();
+    if(!loaded){
+       cout << "In test root_histogram: root plugin not loaded, not executing test" << endl;
+       return;
+    }
+    boost::shared_ptr<VarIdManager> vm(new VarIdManager);
+    ConfigCreator cc(
+            "root-histo1 = {type = \"root_histogram\"; filename=\"testhistos.root\"; histoname = \"histo1d\";};\n"
+            "root-histo2 = {type = \"root_histogram\"; filename=\"testhistos.root\"; histoname = \"histo2d\";};\n"
+            "root-histo3 = {type = \"root_histogram\"; filename=\"testhistos.root\"; histoname = \"histo3d\";};\n"
+            , vm);
+    const theta::plugin::Configuration & cfg = cc.get();
+    BOOST_CHECKPOINT("building hf");
+    std::auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, cfg.setting["root-histo1"]));
+    ParValues pv;
+    Histogram h = (*hf)(pv);
+    BOOST_REQUIRE(h.get_nbins()==23);
+    for(size_t i=1; i<=h.get_nbins(); ++i){
+        BOOST_ASSERT(h.get(i)==i+1);
+    }
+    //overflow and underflow are not included:
+    BOOST_ASSERT(h.get(0)==0);
+    BOOST_ASSERT(h.get(h.get_nbins()+1)==0);
+    //2D histogram:
+    hf = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, cfg.setting["root-histo2"]));
+    h = (*hf)(pv);
+    BOOST_REQUIRE(h.get_nbins()==10*11);
+    //calculate the expected integral (excluding overflow / underflow!!);
+    // if this matches, we are satisfied and believe the rest is Ok as well:
+    double expected_integral = 0.0;
+    for(int i=1; i<=10; ++i){
+       for(int j=1; j<=11; ++j){
+          expected_integral += (i + 0.78) * (j + 3.02);
+       }
+    }
+    BOOST_ASSERT(utils::close_to_relative(h.get_sum_of_bincontents(),expected_integral));
+    //3D histogram, same as 2D:
+    hf = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, cfg.setting["root-histo3"]));
+    h = (*hf)(pv);
+    BOOST_REQUIRE(h.get_nbins()==10*11*12);
+    //calculate the expected integral (excluding overflow / underflow!!);
+    // if this matches, we are satisfied and believe the rest is Ok as well:
+    expected_integral = 0.0;
+    for(int i=1; i<=10; ++i){
+       for(int j=1; j<=11; ++j){
+          for(int k=1; k<=12; ++k){
+             expected_integral += (i + 0.12) * (j + 1.34) * (k + 5.67);
+          }
+       }
+    }
+    BOOST_ASSERT(utils::close_to_relative(h.get_sum_of_bincontents(),expected_integral));
+}
+
+
 BOOST_AUTO_TEST_CASE(cubiclinear_histomorph){
     load_core_plugins();
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);

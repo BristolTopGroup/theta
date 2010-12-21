@@ -14,7 +14,6 @@ using namespace theta::utils;
 
 BOOST_AUTO_TEST_SUITE(minimizer_tests)
 
-static bool root_plugin = false;
 
 class ImpossibleFunction: public Function{
 public:
@@ -33,15 +32,9 @@ public:
 
 BOOST_AUTO_TEST_CASE(minuit){
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
-    ConfigCreator cc("plugin_files = (\"lib/root.so\");", vm);
-    try{
-       PluginLoader::execute(cc.get());
+    if(!load_root_plugins()){
+      cout << "In test minuit: root plugin could not be loaded, not executing root tests";
     }
-    catch(Exception & ex){
-      cout << "Note: root plugin could not be loaded, not executing root tests";
-      return;
-    }
-    root_plugin = true;
     
     ParId p0 = vm->createParId("p0");
     ParId p1 = vm->createParId("p1");

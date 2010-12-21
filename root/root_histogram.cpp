@@ -22,6 +22,10 @@ root_histogram::root_histogram(const Configuration & ctx){
        range_low = ctx.setting["range"][0];
        range_high = ctx.setting["range"][1];
     }
+    bool use_errors = false;
+    if(ctx.setting.exists("use_errors")){
+         use_errors = ctx.setting["use_errors"];
+    }
     
     TFile file(filename.c_str(), "read");
     if(file.IsZombie()){
@@ -32,48 +36,72 @@ root_histogram::root_histogram(const Configuration & ctx){
     TH1* histo = dynamic_cast<TH1*>(file.Get(histoname.c_str()));
     if(not histo){
        stringstream s;
-       s << "Did not find Histogram '" << histoname << "'";
+       s << "Did not find TH1 '" << histoname << "' in file '" << filename << "'";
        throw ConfigurationException(s.str());
     }
-    histo->Rebin(rebin);
-    
     if(ctx.setting.exists("normalize_to")){
        double norm = HistogramFunctionUtils::read_normalize_to(ctx.setting);
        histo->Scale(norm / histo->Integral());
     }
+
+    Histogram h, h_error;
+    //take care of 1D histograms:
+    if(histo->GetDimension() == 1){
+       histo->Rebin(rebin);
+       int bin_low = 1;
+       int bin_high = histo->GetNbinsX();
+       if(range_low!=-999){
+          bin_low = histo->GetXaxis()->FindBin(range_low);
+       }
+       if(range_high!=-999){
+          bin_high = histo->GetXaxis()->FindBin(range_high);
+       }
+       int nbins = bin_high - bin_low + 1;
     
-    int bin_low = 1;
-    int bin_high = histo->GetNbinsX();
-    if(range_low!=-999){
-       bin_low = histo->GetXaxis()->FindBin(range_low);
+       double xmin = histo->GetXaxis()->GetXmin();
+       double xmax = histo->GetXaxis()->GetXmax();
+       if(bin_low > 0)
+          xmin = histo->GetXaxis()->GetBinLowEdge(bin_low);
+       if(bin_high <= nbins)
+          xmax = histo->GetXaxis()->GetBinUpEdge(bin_high);
+    
+    
+       h.reset(nbins, xmin, xmax);
+       h_error.reset(nbins, xmin, xmax);
+       for(int i = bin_low; i <= bin_high; i++){
+          double content = histo->GetBinContent(i);
+          h.set(i - bin_low + 1, content);
+          //h_error contains the relative errors:
+          if(use_errors && content > 0.0){
+             h_error.set(i - bin_low + 1, histo->GetBinError(i) / content);
+          }
+       }
     }
-    if(range_high!=-999){
-       bin_high = histo->GetXaxis()->FindBin(range_high);
-    }
-    int nbins = bin_high - bin_low + 1;
-    
-    double xmin = histo->GetXaxis()->GetXmin();
-    double xmax = histo->GetXaxis()->GetXmax();
-    //int nbins = histo->GetNbinsX();
-    if(bin_low > 0)
-       xmin = histo->GetXaxis()->GetBinLowEdge(bin_low);
-    if(bin_high <= nbins)
-       xmax = histo->GetXaxis()->GetBinUpEdge(bin_high);
-    
-    bool use_errors = false;
-    if(ctx.setting.exists("use_errors")){
-         use_errors = ctx.setting["use_errors"];
-    }
-    
-    theta::Histogram h(nbins, xmin, xmax);
-    theta::Histogram h_error(nbins, xmin, xmax);
-    for(int i = bin_low; i <= bin_high; i++){
-        double content = histo->GetBinContent(i);
-        h.set(i - bin_low + 1, content);
-        //h_error contains the relative errors:
-        if(use_errors && content > 0.0){
-           h_error.set(i - bin_low + 1, histo->GetBinError(i) / content);
-        }
+    //take care of 2D/3D histograms:
+    else{
+        if(rebin!=1 || range_low!=-999 || range_high!=-999) throw ConfigurationException("rebin and range setting not allowed for multidimensional Histograms!");
+       size_t nbins_x = histo->GetNbinsX();
+       size_t nbins_y = histo->GetNbinsY();
+       size_t nbins_z = histo->GetNbinsZ();
+       h.reset(nbins_x * nbins_y * max<size_t>(nbins_z, 1), 0, nbins_x * nbins_y * max<size_t>(nbins_z, 1));
+       h_error = h;
+       for(size_t i=1; i <= nbins_x; ++i){
+          for(size_t j=1; j<=nbins_y; ++j){
+              // to treat both 2D and 3D histos, use k==0 as z-index for 2D histos,
+              // but skip k==0 for 3D histos, as then, this is an underflow bin
+              for(size_t k=0; k<=nbins_z; ++k){
+                  if(k==0 && nbins_z > 0)continue;
+                  double content = histo->GetBinContent(i, j, k);
+                  size_t ibin = (i-1) * nbins_y * max<size_t>(nbins_z, 1) + (j-1) * max<size_t>(nbins_z, 1) + k;
+                  if(nbins_z==0) ++ibin;
+                  h.set(ibin, content);
+                  if(use_errors && content > 0.0){
+                      h_error.set(ibin, histo->GetBinError(i, j, k) / content);
+                  }
+              }
+          }
+       }
+        
     }
     
     //apply zerobin_fillfactor:

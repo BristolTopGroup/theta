@@ -55,6 +55,14 @@ using namespace std;
  * Note that normalize_to is applied first to the histogram excluding under / overflow, then the rebinning is done, and then
  * the range setting is applied and then the zero bins are filled.
  *
+ * It is also possible to read in multidimensional Histograms (TH2 / TH3) with this plugin. In this case, however,
+ * <ul>
+ *   <li>it is not allowed to specify rebin or range (otherwise, reading the histogram will fail). All bins except overflow / uncerflow will
+ *      be used.</li>
+ *   <li>internally, the range will always be set to [0, nbinsx*nbinsy*nbinsz]. Usually, this is not relevant, except if you want to
+ *     mix root_histograms and Histograms created by other theta plugins and have to make sure that the ranges are the same. </ul>
+ * </ul>
+ *
  * \sa ConstantHistogramFunctionError ConstantHistogramFunction
  */
 class root_histogram: public ConstantHistogramFunctionError{

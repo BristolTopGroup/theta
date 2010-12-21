@@ -6,26 +6,25 @@ logfile=$tmpdir/log.txt
 
 fail()
 {
- echo "FAIL: " $* | tee -a $logfile
- cp $logfile $curr_dir
- exit 1
+ echo "FAIL: " $* | tee -a $logfile;
+ cp $logfile $curr_dir;
+ echo "note: logfile was copied to ${curr_dir}/log.txt"
+ exit 1;
 }
 
 if [ $? -gt 0 ] || [ ! -d "$tmpdir" ]; then
    fail creating tempdir
 fi
-echo Using directory $tmpdir ...
+echo [0] Using directory $tmpdir
 cd $tmpdir
-svn --non-interactive --trust-server-cert co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta &> /dev/null
-[ $? -eq 0 ] || { fail svn co }
+echo [1] Subversion checkout
+svn --non-interactive --trust-server-cert co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta &> $logfile
+[ $? -eq 0 ] || fail subversion checkout
 cd theta
-
-{
-make &> /dev/null
-[ $? -eq 0 ] || fail make
-test/testall.sh || fail test
-} &> $logfile
-
+echo [2] Compiling
+make &> $logfile || fail Compiling
+echo [3] Running tests
+test/testall.sh &> $logfile || fail tests
 echo SUCCESS
 
 #TODO: copy back logfile

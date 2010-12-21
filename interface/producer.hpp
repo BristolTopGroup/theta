@@ -54,7 +54,7 @@ protected:
      */
     std::auto_ptr<NLLikelihood> get_nllikelihood(const Data & data, const Model & model);
 
-    std::auto_ptr<theta::Distribution> override_parameter_distribution;
+    boost::shared_ptr<theta::Distribution> override_parameter_distribution;
 };
 
 

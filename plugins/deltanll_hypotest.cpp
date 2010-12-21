@@ -27,11 +27,11 @@ void deltanll_hypotest::produce(theta::Run & run, const theta::Data & data, cons
         init = true;
     }
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
-    nll->set_override_distribution(s_plus_b.get());
+    nll->set_override_distribution(s_plus_b);
     MinimizationResult minres = minimizer->minimize(*nll, s_plus_b_mode, s_plus_b_width, s_plus_b_support);
     double nll_sb = minres.fval;
     
-    nll->set_override_distribution(b_only.get());
+    nll->set_override_distribution(b_only);
     minres = minimizer->minimize(*nll, b_only_mode, b_only_width, b_only_support);
     double nll_b = minres.fval;
     

@@ -15,6 +15,6 @@ Producer::Producer(const Configuration & cfg): ProductsTableWriter(cfg){
 
 std::auto_ptr<NLLikelihood> Producer::get_nllikelihood(const Data & data, const Model & model){
     std::auto_ptr<NLLikelihood> nll = model.getNLLikelihood(data);
-    nll->set_override_distribution(override_parameter_distribution.get());
+    nll->set_override_distribution(override_parameter_distribution);
     return nll;
 }

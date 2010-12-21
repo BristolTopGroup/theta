@@ -69,8 +69,8 @@ public:
     virtual void define_table();
     
 private:    
-    std::auto_ptr<theta::Distribution> s_plus_b;
-    std::auto_ptr<theta::Distribution> b_only;
+    boost::shared_ptr<theta::Distribution> s_plus_b;
+    boost::shared_ptr<theta::Distribution> b_only;
     
     bool init;
     

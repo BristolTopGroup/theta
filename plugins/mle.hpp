@@ -16,6 +16,7 @@
  *   parameters = ("signal", "background");
  *   minimizer = "@myminuit";
  *   write_covariance = true; //optional, default is false
+ *   write_ks_ts = true; //optional, default is false
  * }
  * myminuit = {...}; // minimizer definition
  * \endcode
@@ -28,8 +29,14 @@
  *
  * \c write_covariance controls whether the covariance matrix at the minimum is written to the
  *    result table. If set to true, a column of name 'covariance' of type typeHistogram is created.
- *    For n pspecified arameters, it will have n*n bins with range 0 to n*n. Matrix element at (i,j) will be
- *    at index i*n + j. 
+ *    For n specified parameters, it will have n*n bins with range 0 to n*n. Matrix element at (i,j) will be
+ *    at index i*n + j. The exact meaning and construction of this matrix depends on the minimizer used; see documentation
+ *    of the used Minimizer for details.
+ *
+ * \c write_ks_ts controls whether a Kolmogorov-Smirnov test statistic is written to the result table in column 'ks_ts'. If
+ *   set to true, the KS test statistic, defined as the maximum difference of the data and prediction integrals, using
+ *   the parameter values from the maximum likelihood estimate. Note that the prediction histogram and data histograms are
+ *   compared directly, no normalization is applied.
  *
  * This producer uses the given minimizer to find the maximum likelihood estimates for the
  * configured parameters. For each parameter, two columns are created in the products table,
@@ -60,12 +67,14 @@ private:
     std::map<theta::ParId, std::pair<double, double> > ranges;
     
     bool write_covariance;
+    bool write_ks_ts;
     
     //the two columns with parameter and error:
     boost::ptr_vector<theta::Column> parameter_columns;
     boost::ptr_vector<theta::Column> error_columns;
     std::auto_ptr<theta::Column> c_nll;
     std::auto_ptr<theta::Column> c_covariance;
+    std::auto_ptr<theta::Column> c_ks_ts;
 };
 
 #endif

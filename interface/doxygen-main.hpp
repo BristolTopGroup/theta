@@ -29,7 +29,7 @@
  *  make
  *  cd ..
  *  bin/theta examples/gaussoverflat.cfg
- *  root/histos examples/plot-gaussoverflat.cfg
+ *  bin/histos examples/plot-gaussoverflat.cfg
  *  root gaussoverflat.root
  * \endcode
  *
@@ -105,38 +105,22 @@
  * a specification of the probability density of one or more observables as function of
  * some parameters, including possible probability densities of the parameters.
  *
+ * %theta is designed to run a large to huge numbers of pseudo-experiments by drawing pseudo data
+ * from such a model and running statistical methods called "producers". These "producers" calculate
+ * quantities useful for statistical methods such as maximum likelihood estimate for a model parameter (see \link mle mle\endlink) or a likelihood ratio
+ * (see \link deltanll_hypotest deltanll_hypotest\endlink ) which can be used for frequentist methods such as p-values and Neyman construction.
+ * Other producers directly yield statistical results such as intervals via the profile likelihood method (\link deltanll_intervals deltanll_intervals\endlink)
+ * or Bayesian intervals or marginal posteriors (\link mcmc_quantiles mcmc_quantiles\endlink and \link mcmc_histo mcmc_histo\endlink).
+ *
  * In %theta, models are <em>always</em> given as a linear combination of templates (i.e., histograms), where
- * both the coefficients and the templates depend in general on the parameters of the model. %theta uses this
- * model for both, pseudo data creation and to make statistical inferences.
+ * both the coefficients and the templates depend in general on the parameters of the model.
+ * Specifying a model is done by specifying all coefficiencts and histograms in this linear combination. The coefficients
+ * are often given simply by multiplying some model parameters (see theta::mult).
  *
- * %theta uses a plugin system which enables you to easily extend %theta. For example, you can define
- * your own parameter-dependend template or template coefficient. But you can also use one of the already supplied
- * methods for these tasks, including
- * <ul>
- *  <li>reading histograms from a ROOT file</li>
- *  <li>specifying a histogram by a polynomial or gaussian</li>
- *  <li>specifying a histogram interpolation (sometimes called "morphing") which  uses model parameters
- *     to interpolate between a "nominal" and several "distorted" templates. This can be used as generic model to
- *     treat systematic uncertainties</li>
- *  <li>Template uncertainties can be treated effectively by fluctuating the templates before throwing the pseudo
- *    data from the tempaltes. This can be bin-by-bin independent errors or (if the user provides own plugins) any other errors.</li>
- * </ul>
- *
- * Some typical statistical questions which can be addresses are (of course, this can be done
- * with the full modeling available, e.g., for models using template interpolation to treat systematic uncertainties):
- * <ul>
- * <li>Determine the quantiles of the marginal posterior using markov chains. This can be used for
- *    upper limits or symmetrical credible intervals.</li>
- * <li>Determine the marginal posterior density, given data.</li>
- * <li>Dicovery or observation in a signal search by create large-scale
- *   likelihood ratio test statistic to find out the critical region of
- *   a hypothesis test</li>
- * <li>Run MINUIT minimization and error estimation on the negative log-likelihood to estimate a
- *    parameter (cross section or other); make pseudo experiments as consistency check and to cite the expected
- *    statistical and systematic uncertainty.</li>
- * </ul>
- *
- * Combining models is an easy task: just extend the parameter and observable list and extend the model appropriately.
+ * In many places, plugins are used. For example, all coefficient functions, parameter dependent histograms and producers (and more components)
+ * are all constructed via a plugin system. This is great for extensibility because it allows the user to write own plugins
+ * replacing this particular component. For example, if you have a coefficient function in mind (which is the predicted yield) which is not implemented
+ * in %theta, you can implement it as part of the plugin system and use %theta for eveything else.
  *
  * \section whatcant What theta cannot do
  *

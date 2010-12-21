@@ -137,7 +137,8 @@ namespace theta {
     };
     
     
-    // the default model in theta
+    /** \brief The default model in theta
+     */
     class default_model: public Model{
     private:
         //The problem of std::map<ObsId, ptr_vector<Function> > is that
@@ -191,28 +192,18 @@ namespace theta {
      * \sa Model::getNLLikelihood
      */
     class NLLikelihood: public Function {
-    //friend class Model;
-    public:
-        //using Function::operator();
-
-        /** \brief Evaluate the likelihood function, using the parameter values given in \c values.
-         * 
-         * \param values The parameter values to use for evaluation.
-         * \return The value of the negative log likelihood at \c values.
-         */
-        //virtual double operator()(const ParValues & values) const;
         
-        /** \brief Set the additional terms for the likelihood
+    public:
+        /** \brief Set the additional term for the negative log-likelihood
          *
          * The result of the function evaluation will add these function values.
          *
-         * This can be used as additional constraints / priors for the likelihood function.
+         * This can be used as additional constraints / priors for the likelihood function or
+         * external information.
          */
-        virtual void set_additional_terms(const boost::ptr_vector<Function> * terms) = 0;
+        virtual void set_additional_term(const boost::shared_ptr<Function> & term) = 0;
         
         /** \brief Set an alternate prior distribution for the parameters
-         *
-         * The ownership of the memory pointed to by d remains at the caller.
          *
          * In the calculation of the likelihood function, the prior distributions
          * for the parameters are added. By default, the prior distributions from
@@ -224,7 +215,7 @@ namespace theta {
          * \c d must be defined exactly for the model parameters. Otherwise, an InvalidArgumentException
          * will be thrown.
          */
-        virtual void set_override_distribution(const Distribution * d) = 0;
+        virtual void set_override_distribution(const boost::shared_ptr<Distribution> & d) = 0;
         
         /** \brief Returns the currently set parameter distribution used in the likelihood evaluation
          * 
@@ -248,8 +239,8 @@ namespace theta {
         using Function::operator();
         virtual double operator()(const ParValues & values) const;
         
-        virtual void set_additional_terms(const boost::ptr_vector<Function> * terms);
-        virtual void set_override_distribution(const Distribution * d);
+        virtual void set_additional_term(const boost::shared_ptr<Function> & term);
+        virtual void set_override_distribution(const boost::shared_ptr<Distribution> & d);
         virtual const Distribution & get_parameter_distribution() const{
             if(override_distribution) return *override_distribution;
             else return model.get_parameter_distribution();
@@ -261,8 +252,8 @@ namespace theta {
 
         const ObsIds obs_ids;
         
-        const boost::ptr_vector<Function> * additional_terms;
-        const Distribution * override_distribution;
+        boost::shared_ptr<Function> additional_term;
+        boost::shared_ptr<Distribution> override_distribution;
 
         std::map<ParId, std::pair<double, double> > ranges;
 

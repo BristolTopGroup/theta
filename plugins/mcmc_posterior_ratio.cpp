@@ -67,7 +67,7 @@ void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, c
             model.get_prediction(d, s_plus_b_values);
             
             std::auto_ptr<NLLikelihood> nll_sb = model.getNLLikelihood(d);
-            nll_sb->set_override_distribution(s_plus_b.get());
+            nll_sb->set_override_distribution(s_plus_b);
             sqrt_cov_sb = get_sqrt_cov(run.get_random(), *nll_sb, startvalues_sb, vm);
         
             //2. for background only
@@ -75,7 +75,7 @@ void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, c
             b_only->mode(b_only_values);
             model.get_prediction(d, b_only_values);
             std::auto_ptr<NLLikelihood> nll_b = model.getNLLikelihood(d);
-            nll_b->set_override_distribution(b_only.get());
+            nll_b->set_override_distribution(b_only);
             sqrt_cov_b = get_sqrt_cov(run.get_random(), *nll_b, startvalues_b, vm);
             
             init = true;

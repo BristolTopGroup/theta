@@ -151,18 +151,18 @@ default_model::default_model(const Configuration & ctx): Model(ctx.vm){
 
 /* default_model_nll */
 default_model_nll::default_model_nll(const default_model & m, const Data & dat, const ObsIds & obs): model(m),
-        data(dat), obs_ids(obs), additional_terms(0), override_distribution(0){
+        data(dat), obs_ids(obs){
     Function::par_ids = model.getParameters();
     for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
         ranges[*it] = model.get_parameter_distribution().support(*it);
     }
 }
 
-void default_model_nll::set_additional_terms(const boost::ptr_vector<Function> * terms){
-    additional_terms = terms;
+void default_model_nll::set_additional_term(const boost::shared_ptr<Function> & term){
+    additional_term = term;
 }
 
-void default_model_nll::set_override_distribution(const Distribution * d){
+void default_model_nll::set_override_distribution(const boost::shared_ptr<Distribution> & d){
     override_distribution = d;
     if(d){
         for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
@@ -218,10 +218,8 @@ double default_model_nll::operator()(const ParValues & values) const{
     }
     
     //3. The additional likelihood terms, if set:
-    if(additional_terms){
-        for(size_t i=0; i < additional_terms->size(); i++){
-            result += ((*additional_terms)[i])(values);
-        }
+    if(additional_term){
+       result += (*additional_term)(values);
     }
     return result;
 }

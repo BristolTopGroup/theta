@@ -1,33 +1,37 @@
 #!/bin/bash
 
-#tmpdir=$(mktemp -d)
-#logfile=$tmpdir/log.txt
-#if [ $? -gt 0 ] || [ ! -d "$tmpdir" ]; then
-#   echo "creating tmpdir failed!";
-#   exit 1;
-#fi
-#cd $tmpdir
-#svn --non-interactive --trust-server-cert co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta
-#cd theta
+curr_dir=$PWD
+tmpdir=$(mktemp -d)
+logfile=$tmpdir/log.txt
 
-. test/lib.sh
+fail()
+{
+ echo "FAIL: " $* | tee -a $logfile
+ cp $logfile $curr_dir
+ exit 1
+}
 
-rm -rf build-coverage
-mkdir build-coverage
-cd build-coverage
+if [ $? -gt 0 ] || [ ! -d "$tmpdir" ]; then
+   fail creating tempdir
+fi
+echo Using directory $tmpdir ...
+cd $tmpdir
+svn --non-interactive --trust-server-cert co https://ekptrac.physik.uni-karlsruhe.de/svn/theta/trunk theta &> /dev/null
+[ $? -eq 0 ] || { fail svn co }
+cd theta
 
-execute_checked cmake .. -Dcoverage:BOOL=ON
-execute_checked make
+{
+make &> /dev/null
+[ $? -eq 0 ] || fail make
+test/testall.sh || fail test
+} &> $logfile
 
-cd ..
-
-logfile=log.txt
-test/testall.sh > $logfile 2>&1
+echo SUCCESS
 
 #TODO: copy back logfile
 #valgrind is not run because ROOT spoils it all ...
 #valgrind --leak-check=full --show-reachable=yes test/test >> $logfile
 
-lcov -c --directory build-coverage --output-file theta.info
-genhtml theta.info --no-function-coverage -o doc/coverage
+#lcov -c --directory build-coverage --output-file theta.info
+#genhtml theta.info --no-function-coverage -o doc/coverage
 

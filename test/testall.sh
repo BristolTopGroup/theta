@@ -25,4 +25,5 @@ for i in test/test-stat/*.py; do
 done
 
 echo "Failures: ${fail}"
+[ $fail -eq 0 ] || exit 1
 

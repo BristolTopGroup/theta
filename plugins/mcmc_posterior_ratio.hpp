@@ -64,8 +64,8 @@ private:
     //whether sqrt_cov* and startvalues* have been initialized:
     bool init;
     
-    std::auto_ptr<theta::Distribution> s_plus_b;
-    std::auto_ptr<theta::Distribution> b_only;
+    boost::shared_ptr<theta::Distribution> s_plus_b;
+    boost::shared_ptr<theta::Distribution> b_only;
     
     unsigned int iterations;
     unsigned int burn_in;

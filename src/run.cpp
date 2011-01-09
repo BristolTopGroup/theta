@@ -28,30 +28,25 @@ void Run::set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
     progress_listener = l;
 }
 
-namespace{
+/*namespace{
     template<class T>
     void noop_deleter(T*){}
-}
+}*/
 
 void Run::run(){
-    //make a shared_ptr out of a auto_ptr. While this is not very nice, I personally
-    // like shared_ptr in interfaces much better than naked pointers as with naked pointers,
-    // it is never a-priori clear who has to take care of them.
-    // For a shared_ptr, the responsibility is clear.
-    boost::shared_ptr<ProductsTable> products_table_shared(products_table.get(), noop_deleter<ProductsTable>);
-    
-    data_source->set_table(products_table_shared);
+    data_source->set_table(products_table);
     data_source->define_table();
     for(size_t i=0; i<producers.size(); i++){
         prodinfo_table->append(static_cast<int>(i), producers[i].getName(), producers[i].getType());
-        producers[i].set_table(products_table_shared);
+        producers[i].set_table(products_table);
         producers[i].define_table();
     }
     
     //log the start of the run:
     eventid = 0;
     logtable->append(*this, LogTable::info, "run start");
-    
+   
+    Data data; 
     //main event loop:
     for (eventid = 1; eventid <= n_event; eventid++) {
         if(stop_execution)break;
@@ -129,16 +124,15 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
     products_table.reset(new ProductsTable(products_table_underlying));
     
     //2. misc
-    int i_seed = -1;
-    if(s.exists("seed")) i_seed = s["seed"];
-    if(i_seed==-1){
+    int seed = -1;
+    if(s.exists("seed")) seed = s["seed"];
+    if(seed==-1){
         using namespace boost::posix_time;
         using namespace boost::gregorian;
         ptime t(microsec_clock::universal_time());
         time_duration td = t - ptime(date(1970, 1, 1));
-        i_seed = td.total_microseconds();
+        seed = td.total_microseconds();
     }
-    seed = i_seed;
     rnd.set_seed(seed);
     //get the runid from the rndinfo table:
     runid = rndinfo_table->append(seed);

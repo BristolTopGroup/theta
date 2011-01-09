@@ -68,6 +68,9 @@ private:
     
     bool write_covariance;
     bool write_ks_ts;
+    bool write_bh_ts;
+
+    theta::ObsId bh_ts_obsid;
     
     //the two columns with parameter and error:
     boost::ptr_vector<theta::Column> parameter_columns;
@@ -75,6 +78,7 @@ private:
     std::auto_ptr<theta::Column> c_nll;
     std::auto_ptr<theta::Column> c_covariance;
     std::auto_ptr<theta::Column> c_ks_ts;
+    std::auto_ptr<theta::Column> c_bh_ts;
 };
 
 #endif

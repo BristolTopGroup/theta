@@ -24,6 +24,9 @@ void mle::define_table(){
     if(write_ks_ts){
        c_ks_ts = table->add_column(*this, "ks_ts", Table::typeDouble);
     }
+    if(write_bh_ts){
+       c_bh_ts = table->add_column(*this, "bh_ts", Table::typeDouble);
+    }
 }
 
 
@@ -83,9 +86,26 @@ void mle::produce(theta::Run & run, const theta::Data & data, const theta::Model
         }
         table->set_column(*c_ks_ts, ks_ts);
     }
+    if(write_bh_ts){
+        ObsIds obs = data.getObservables();
+        Data pred;
+        model.get_prediction(pred, minres.values);
+        double bh_ts = 0.0;
+        const Histogram & data_o = data[bh_ts_obsid];
+        const Histogram & pred_o = pred[bh_ts_obsid];
+        data_o.check_compatibility(pred_o);
+        for(size_t i=1; i<=data_o.get_nbins(); ++i){
+            double bump = 0.0;
+            for(size_t j=i; j<=data_o.get_nbins(); ++j){
+                bump += data_o.get(j) - pred_o.get(j);
+                bh_ts = max(bh_ts, bump);
+            }
+        }
+        table->set_column(*c_bh_ts, bh_ts);
+    }
 }
 
-mle::mle(const theta::plugin::Configuration & cfg): Producer(cfg), start_step_ranges_init(false), write_covariance(false), write_ks_ts(false){
+mle::mle(const theta::plugin::Configuration & cfg): Producer(cfg), start_step_ranges_init(false), write_covariance(false), write_ks_ts(false), write_bh_ts(false){
     SettingWrapper s = cfg.setting;
     minimizer = PluginManager<Minimizer>::instance().build(Configuration(cfg, s["minimizer"]));
     size_t n_parameters = s["parameters"].size();
@@ -99,6 +119,10 @@ mle::mle(const theta::plugin::Configuration & cfg): Producer(cfg), start_step_ra
     }
     if(s.exists("write_ks_ts")){
        write_ks_ts = s["write_ks_ts"];
+    }
+    if(s.exists("bh")){
+        bh_ts_obsid = cfg.vm->getObsId(s["bh"]);
+        write_bh_ts = true;
     }
 }
 

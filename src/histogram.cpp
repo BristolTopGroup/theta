@@ -4,6 +4,7 @@
 #include "interface/utils.hpp"
 
 #include <cmath>
+#include <sstream>
 #include <limits>
 
 using namespace theta;
@@ -100,10 +101,13 @@ void Histogram::fill(double xvalue, double weight) {
 }
 
 void Histogram::check_compatibility(const Histogram & h) const {
-    if (nbins != h.nbins) throw InvalidArgumentException("Histogram:check_compatibility: number of bins mismatch");
-    double binwidth = (xmax - xmin) / nbins;
-    if (!utils::close_to(h.xmax, xmax, binwidth) || !utils::close_to(h.xmin, xmin, binwidth))
-        throw InvalidArgumentException("Histogram borders mismatch (too much).");
+    if (nbins != h.nbins || xmin!=h.xmin || xmax != h.xmax){
+        std::stringstream s;
+        s <<  "Histogram::check_compatibility: Histograms are not compatible (nbins, xmin, xmax) are: "
+              " (" << nbins << ", " << xmin << ", " << xmax << ") and "
+              " (" << h.nbins << ", " << h.xmin << ", " << h.xmax << ")";
+        throw InvalidArgumentException(s.str());
+    }
 }
 
 Histogram & Histogram::operator+=(const Histogram & h) {

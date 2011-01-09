@@ -106,7 +106,8 @@ public:
  *
  * \c log-level controls the amount of logging information written to the log table: only log messages with a
  *      severity level equal to or exceeding the level given here are actually logged. Valid values
- *      are "error", "warning", "info" and "debug". Note that it is not possible to disable logging of error messages.
+ *      are "error", "warning", "info" and "debug". Note that it is not possible to disable logging of messages with severity
+ *      "error".
  *
  * \c log-report is a boolean specifying whether or not to print a logging report to standard output at
  *       the end of the run. This report summarizes how many messages there have been from any non-suppressed
@@ -139,31 +140,26 @@ public:
 
     /** \brief Perform the actual run.
      * 
-     * The actual meaning depends on the derived classes. Common to all is
-     * that some pseudo experiments is performed whose data is
-     * passed to each of the producers.
+     * In a pseudo-experiment loop, ask the configuraed data_source for data and run
+     * all the producers on it, using the configured model.
      */
     void run();
 
-    //@{
-    /** \brief Get information about the current Run state
-     *
-     * These methods are meant to be used by the producers which are passed
-     * a reference to the current run each time.
+    /** \brief Get random number generator
      */
-    
     Random & get_random(){
         return rnd;
     }
-    
+   
+    /** \brief Get current run id */
     int get_runid() const{
         return runid;
     }
 
+    /** \brief Get current event id */
     int get_eventid() const{
         return eventid;
     }
-    //@}
     
     /** \brief Construct a Run using the supplied configuration
      */
@@ -197,19 +193,12 @@ private:
         logtable->append(*this, LogTable::info, "end");
     }
 
-    //random number generator seed and generator:
-    unsigned int seed;
     Random rnd;
-    
     boost::shared_ptr<VarIdManager> vm;
-    
     std::auto_ptr<Model> model;
-
-    //(pseudo-) data:
-    Data data;
     std::auto_ptr<DataSource> data_source;
-
     std::auto_ptr<Database> db;
+
     std::auto_ptr<LogTable> logtable;
     bool log_report;
     std::auto_ptr<ProducerInfoTable> prodinfo_table;

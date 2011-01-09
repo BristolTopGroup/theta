@@ -8,8 +8,3 @@ OPTIONS_BUILD_TESTS := yes
 # whether or not to use the log function from crlibm (which is faster than the standard log)
 OPTIONS_USE_CRLIBM := yes
 
-# build theta-static which links some libraries statically instead of dynamically.
-# Useful to build version to be sent to a cluster which do not have all libraries installed.
-OPTIONS_BUILD_STATIC := no
-
-

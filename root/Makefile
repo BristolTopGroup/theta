@@ -37,4 +37,4 @@ endif
 
 #define clean target in any case:
 clean-subdir:
-	@rm -f histos ../lib/root.so
+	@rm -f histos create_testhistos ../lib/root.so

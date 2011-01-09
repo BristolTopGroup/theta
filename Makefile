@@ -1,5 +1,5 @@
 #order matters
-DIRS = src libconfig liblbfgs plugins root bin test cuda
+DIRS = src libconfig liblbfgs plugins root bin test
 
 all:
 	@for d in $(DIRS); do ( [ -d $$d ] && make -C $$d ) || true; done

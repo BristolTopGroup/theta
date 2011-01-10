@@ -18,6 +18,11 @@ namespace theta {
  * It is called "producer" as it produces results, given Data and
  * a Model. Every Producer belongs to exactly one Run, which calls its produce method (typically
  * repeatedly on some pseudo data).
+ *
+ * Common to all producers are the settings "override-parameter-distribution" and "additional-nll-term".
+ * The former is a distribution for all model parameters to be used for the likelihood function instead
+ * of the ones from the model. The latter is a Function to add to the negative log-likelihood such as external
+ * constraints or priors which cannot be expressed as parameter distributions.
  */
 class Producer: public theta::plugin::ProductsTableWriter{
 public:
@@ -55,6 +60,7 @@ protected:
     std::auto_ptr<NLLikelihood> get_nllikelihood(const Data & data, const Model & model);
 
     boost::shared_ptr<theta::Distribution> override_parameter_distribution;
+    boost::shared_ptr<theta::Function> additional_nll_term;
 };
 
 

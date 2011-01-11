@@ -27,12 +27,21 @@ if code!=0:
 #print out
 lines = out.split('\n')
 for line in lines:
+   if line.find('ld-linux') > -1:
+      p = line.find('ld-linux')
+      p_end = line.find(' ', p)
+      p_start = p
+      while p_start > 0 and line[p_start].strip()!="": p_start -= 1
+      ld_path = line[p_start+1:p_end]
+      shutil.copy2(ld_path, os.path.join(target_path, 'ld-linux.so'))
+      continue
    if line.find('=>') == -1: continue
    so_name, so_path = line.split('=>', 2)
    so_path = so_path.strip()
    so_name = so_name.strip()
-   so_path, dummy = so_path.split('(', 2)
-   so_path = so_path.strip()
+   if so_path.find('(') != -1:
+      so_path, dummy = so_path.split('(', 2)
+      so_path = so_path.strip()
    if so_path=='': continue
    so_path = os.path.realpath(so_path)
    in_ld_paths = False

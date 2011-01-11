@@ -6,6 +6,8 @@
 
 [ -e ../bin/theta ] || { echo "../bin/theta not found. Compile theta and execute this script from within its directory!"; exit 1; }
 
+
+echo "[0] creating gridpack-tmp"
 rm -rf gridpack-tmp
 mkdir -p gridpack-tmp/lib
 mkdir -p gridpack-tmp/bin
@@ -16,17 +18,27 @@ cp scripts/theta gridpack-tmp/bin/
 cp ../bin/theta gridpack-tmp/bin/theta.exe
 cp ../lib/*.so gridpack-tmp/lib/
 if [ ! -z "$ROOTSYS" ]; then
+   echo "[0.5] Copying essential ROOT dependencies"
    cp -r $ROOTSYS/etc/plugins/TVirtualStreamerInfo gridpack-tmp/etc/plugins/
    cp $ROOTSYS/etc/system.rootrc gridpack-tmp/etc/
 fi
 
 # add the dependencies:
+echo "[1] copying theta and its dependencies to gridpack-tmp"
 scripts/copydeps.py gridpack-tmp/bin/theta.exe gridpack-tmp/extlib gridpack-tmp/lib
 for plugin in gridpack-tmp/lib/*.so; do
    scripts/copydeps.py $plugin gridpack-tmp/extlib gridpack-tmp/lib gridpack-tmp/extlib
 done
+for so_file in gridpack-tmp/extlib/*.so; do
+   scripts/copydeps.py $so_file gridpack-tmp/extlib gridpack-tmp/lib gridpack-tmp/extlib
+done
 
+if [ ! -f gridpack-tmp/extlib/ld-linux.so ]; then
+   echo "Did not find ld-linux!";
+   exit 1;
+fi
+
+echo "[2] creating gridpack.tgz from gridpack-tmp"
 rm -f gridpack.tgz
 cd gridpack-tmp
 tar zcf ../gridpack.tgz *
-

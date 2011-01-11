@@ -14,5 +14,5 @@ extlibdir=`readlink -e $dir/../extlib`
 
 export LD_LIBRARY_PATH=$libdir:$extlibdir:$LD_LIBRARY_PATH
 export ROOTSYS=`readlink -e $dir/..`
-exec $dir/theta.exe $*
+exec $dir/../extlib/ld-linux.so $dir/theta.exe $*
 

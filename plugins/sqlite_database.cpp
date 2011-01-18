@@ -11,8 +11,33 @@ using namespace std;
 using namespace theta;
 
 sqlite_database::sqlite_database(const plugin::Configuration & cfg) :
-    db(0), transaction_active(false){
+    db(0), transaction_active(false), save_all_products(true){
     std::string filename = cfg.setting["filename"];
+    if(cfg.setting.exists("products_data")){
+      try{
+         string s = cfg.setting["products_data"];
+         if(s=="*")save_all_products = true;
+         else throw ConfigurationException("products_data setting is a string but not '*'");
+      }
+      catch(libconfig::SettingTypeException & e){
+          save_all_products = false;
+          size_t n = cfg.setting["products_data"].size();
+          for(size_t i=0; i<n; ++i){
+              string column_name = cfg.setting["products_data"][i];
+              products_data.insert(column_name);
+              if(column_name=="*"){
+                 save_all_products = true;
+                 products_data.clear();
+                 break;
+              }
+          }
+          //if anything is written at all, also write runid and eventid:
+          if(products_data.size()){
+             products_data.insert("runid");
+             products_data.insert("eventid");
+          }
+      }
+    }
     if (boost::filesystem::exists(filename)) {
         boost::filesystem::remove(filename);
     }
@@ -107,16 +132,23 @@ void sqlite_database::error(const string & functionName) {
 
 std::auto_ptr<Table> sqlite_database::create_table(const string & table_name){
     check_name(table_name);
-    return std::auto_ptr<Table>(new sqlite_table(table_name, this));
+    sqlite_table * result = new sqlite_table(table_name, this);
+    if(table_name == "products"){
+        result->save_all_columns = save_all_products;
+        result->save_columns = products_data;
+    }
+    return std::auto_ptr<Table>(result);
 }
 
 
 sqlite_database::sqlite_table::sqlite_table(const string & name_, sqlite_database * db_) :
-    name(name_), have_autoinc(false), table_created(false), next_insert_index(1), insert_statement(0), db(db_) {
+    name(name_), have_autoinc(false), table_created(false), next_insert_index(1), insert_statement(0), db(db_),
+    save_all_columns(true) {
 }
 
 std::auto_ptr<Column> sqlite_database::sqlite_table::add_column(const std::string & name, const data_type & type){
     if(table_created) throw FatalException("sqlite_table::add_column called after table already created (via call to set_column / add_row).");
+    if(!save_all_columns && save_columns.find(name) == save_columns.end()) return std::auto_ptr<Column>(new sqlite_column(-1));
     if(column_definitions.str().size() > 0)
         column_definitions << ", ";
     column_definitions << "'" << name << "' ";
@@ -174,21 +206,29 @@ sqlite_database::sqlite_table::~sqlite_table(){
 
 void sqlite_database::sqlite_table::set_column(const Column & c, double d){
     if(not table_created) create_table();
-    sqlite3_bind_double(insert_statement, static_cast<const sqlite_column&>(c).insert_index, d);
+    int index = static_cast<const sqlite_column&>(c).insert_index;
+    if(index >= 0)
+        sqlite3_bind_double(insert_statement, index, d);
 }
 
 void sqlite_database::sqlite_table::set_column(const Column & c, int i){
     if(not table_created) create_table();
-    sqlite3_bind_int(insert_statement, static_cast<const sqlite_column&>(c).insert_index, i);
+    int index = static_cast<const sqlite_column&>(c).insert_index;
+    if(index >= 0)
+        sqlite3_bind_int(insert_statement, index, i);
 }
 
 void sqlite_database::sqlite_table::set_column(const Column & c, const std::string & s){
     if(not table_created) create_table();
-    sqlite3_bind_text(insert_statement, static_cast<const sqlite_column&>(c).insert_index, s.c_str(), s.size(), SQLITE_TRANSIENT);
+    int index = static_cast<const sqlite_column&>(c).insert_index;
+    if(index >= 0)
+        sqlite3_bind_text(insert_statement, index, s.c_str(), s.size(), SQLITE_TRANSIENT);
 }
 
 void sqlite_database::sqlite_table::set_column(const Column & c, const theta::Histogram & h){
     if(not table_created) create_table();
+    int index = static_cast<const sqlite_column&>(c).insert_index;
+    if(index < 0) return;
     //including overflow and underflow, we have nbins+2 bins. Encoding the range with the first
     // two, we have nbins+4 double to save.
     boost::scoped_array<double> blob_data(new double[h.get_nbins()+4]);
@@ -196,8 +236,7 @@ void sqlite_database::sqlite_table::set_column(const Column & c, const theta::Hi
     blob_data[1] = h.get_xmax();
     std::copy(h.getData(), h.getData() + h.get_nbins()+2, &blob_data[2]);
     size_t nbytes = sizeof(double) * (h.get_nbins() + 4);
-    sqlite3_bind_blob(insert_statement, static_cast<const sqlite_column&>(c).insert_index,
-                      &blob_data[0], nbytes, SQLITE_TRANSIENT);
+    sqlite3_bind_blob(insert_statement, index, &blob_data[0], nbytes, SQLITE_TRANSIENT);
 }
 
 //NOTE: If coding for multiple threads accessing a single sqlite database,
@@ -223,3 +262,4 @@ int sqlite_database::sqlite_table::add_row(){
 
 
 REGISTER_PLUGIN(sqlite_database)
+

@@ -7,6 +7,7 @@
 #include <sqlite3.h>
 #include <memory>
 #include <string>
+#include <set>
 
 
 /** \brief Database which stores all information in a single sqlite3 database file
@@ -16,12 +17,16 @@
  * {
  *   type = "sqlite_database";
  *   filename = "abc.db";
+ *   products_data = ("deltanll__nll_sb"); // optional, default is '*'
  * }
  * \endcode
  *
  * \c type must always be "sqlite_database" in order to select this plugin
  *
  * \c filename is the filename of the sqlite3 output file. It is a path relative to the path where theta is invoked
+ *
+ * \c products_data is a list of column names to save. The default is to save all columns which can
+ *    be configured by setting it to "*". Note that the 'runid' and 'eventid' columns will always be saved.
  *
  * If the file already exists, it is overwritten silently.
  *
@@ -77,7 +82,8 @@ private:
     
     sqlite3* db;
     bool transaction_active;
-    
+    bool save_all_products;
+    std::set<std::string> products_data;
     
     //declare privately(!) the sqlite_table class:
     class sqlite_table: public theta::Table {
@@ -109,6 +115,9 @@ private:
         
         sqlite3_stmt * insert_statement; // this ressource is owned by sqlite_database.
         sqlite_database * db;
+
+        bool save_all_columns;
+        std::set<std::string> save_columns;
         
         void create_table();
         

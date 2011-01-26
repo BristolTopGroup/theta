@@ -2,10 +2,11 @@
 #define PLUGIN_MCMC_POSTERIOR_RATIO_HPP
 
 #include "interface/decls.hpp"
-
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
+#include "interface/random-utils.hpp"
 #include "interface/matrix.hpp"
+
 #include <string>
 
 /** \brief A producer to create test statistics based on the ratio of the posterior in case of signal search.
@@ -50,7 +51,7 @@
  * The negative logarithm of the found average values of the likelihood (which takes the role of a posterior here) are
  * saved in the \c nl_posterior_sb and \c nl_posterior_b columns of the result table.
  */
-class mcmc_posterior_ratio: public theta::Producer{
+class mcmc_posterior_ratio: public theta::Producer, public theta::RandomConsumer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     mcmc_posterior_ratio(const theta::plugin::Configuration & ctx);

@@ -65,7 +65,19 @@ public:
     virtual void progress(int done, int total) = 0;
 };
 
-/** \brief Represents a run, i.e., a chain of producer executions on pseudo data (or data).
+/** \brief A set of producers executed on (pseudo-data)
+ *
+ * This is the central class in theta which "wires together" all required components and
+ * implements the main algorithm of theta which consists of
+ * <ol>
+ *   <li>Get (pseudo-) data from a DataSource</li>
+ *   <li>Pass this data to a list of producers which in turn write their results to the 'products' table</li>
+ *   <li>Repeat steps 1 and 2 as many time as configured
+ * </ol>
+ *
+ * Furthermore, this class serves as container for many objects shared across
+ * one run, namly database and table objects, the random number generator, and the
+ * (common) Model used by all producers.
  *
  * The configuration is done via a setting like:
  * \code
@@ -145,12 +157,6 @@ public:
      */
     void run();
 
-    /** \brief Get random number generator
-     */
-    Random & get_random(){
-        return rnd;
-    }
-   
     /** \brief Get current run id */
     int get_runid() const{
         return runid;
@@ -161,22 +167,20 @@ public:
         return eventid;
     }
     
-    /** \brief Construct a Run using the supplied configuration
+    /** \brief Get the RndInfoTable associated with this Run
+     *
+     * Used by RandomConsumer to save the random number seed
      */
-    Run(const plugin::Configuration & cfg);
+    RndInfoTable & get_rndinfo_table(){
+        return *rndinfo_table;
+    }
+    
+    /** \brief Initialize the members using the supplied configuration
+     */
+    void init(const plugin::Configuration & cfg);
     
 private:
       
-    /** \brief Add a producer to the list of producers to run.
-     *
-     * Add \c p to the internal list of producers. Memory ownership will be transferred,
-     * i.e., p.get() will be 0 after this function returns.
-     * 
-     * It is only valid to call this function after creation, before any calls to the *run methods.
-     * If violating this, the behavior is undefined.
-     */
-    void addProducer(std::auto_ptr<Producer> & p);
-        
     /** \brief Make an informational log entry to indicate the start of a pseudo experiment.
      * 
      * Should be called by derived classes before pseudo data generation.
@@ -193,7 +197,6 @@ private:
         logtable->append(*this, LogTable::info, "end");
     }
 
-    Random rnd;
     boost::shared_ptr<VarIdManager> vm;
     std::auto_ptr<Model> model;
     //note: we must make sure that the Database destructor is called *after* all table
@@ -205,7 +208,6 @@ private:
 
     std::auto_ptr<LogTable> logtable;
     bool log_report;
-    std::auto_ptr<ProducerInfoTable> prodinfo_table;
     std::auto_ptr<RndInfoTable> rndinfo_table;
 
     //the producers to be run on the pseudo data:
@@ -215,7 +217,7 @@ private:
     //the runid, eventid and the total number of events to produce:
     int runid;
     int eventid;
-    const int n_event;
+    int n_event;
     
     boost::shared_ptr<ProgressListener> progress_listener;
 };

@@ -96,30 +96,17 @@ void LogTable::really_append(const Run & run, e_severity s, const string & messa
     table->add_row();
 }
 
-// ProducerInfoTable
-ProducerInfoTable::ProducerInfoTable(std::auto_ptr<Table> & table_): table(table_){
-    c_ind = table->add_column("ind", Table::typeInt);
-    c_name = table->add_column("name", Table::typeString);
-    c_type = table->add_column("type", Table::typeString);
-}
-    
-void ProducerInfoTable::append(int index, const std::string & p_name, const std::string & p_type){
-    table->set_column(*c_ind, index);
-    table->set_column(*c_name, p_name);
-    table->set_column(*c_type, p_type);
-    table->add_row();
-}
-
 //RndInfoTable
 RndInfoTable::RndInfoTable(std::auto_ptr<Table> & table_): table(table_){
-    table->set_autoinc_column("runid");
+    c_runid = table->add_column("runid", Table::typeInt);
+    c_name = table->add_column("name", Table::typeString);
     c_seed = table->add_column("seed", Table::typeInt);
 }
 
-int RndInfoTable::append(int seed){
+void RndInfoTable::append(const Run & run, const string & name, int seed){
+    table->set_column(*c_runid, run.get_runid());
+    table->set_column(*c_name, name);
     table->set_column(*c_seed, seed);
-    return table->add_row();
+    table->add_row();
 }
-
-
 

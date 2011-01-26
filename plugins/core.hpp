@@ -7,6 +7,7 @@
 #include "interface/distribution.hpp"
 #include "interface/matrix.hpp"
 #include "interface/database.hpp"
+#include "interface/random-utils.hpp"
 
 /** \brief A polynomial distribution where coefficients do not depend on any parameters
  *
@@ -216,7 +217,7 @@ private:
     std::map<theta::ParId, std::pair<double, double> > ranges;
 };
 
-/** \brief A truncated normal distribution in one or more dimensions
+/** \brief A (possibly truncated) normal distribution in one or more dimensions
  *
  * A rectangular-truncated normal distribution.
  *
@@ -280,6 +281,51 @@ class gauss: public theta::Distribution{
         theta::Matrix sqrt_cov; //required for sampling
         theta::Matrix inverse_cov;//required for density evaluation
         std::vector<std::pair<double, double> > ranges;
+};
+
+/** \brief A one-dimensional gauss-distribution
+ *
+ * It does the same as \link gauss gauss \endlink in the one-dimensional case, but is faster.
+ *
+ * It is cponfigured via a setting group like
+ * \code
+ * { 
+ *  type = "gauss1d";
+ *  parameter = "p0";
+ *  range = (0.0, 5.0);
+ *  mean = 2.0;
+ *  width = 0.5;
+ * };
+ * \endcode
+ *
+ * \c parameter specifies the parameter the normal distribution depends on
+ *
+ * \c range is a list of doubles (or the special strings "inf", "-inf") specifying the truncation range.
+ *
+ * \c mean is a floating point value specifying the mean value of the distribution, \c width is its standard deviation.
+ *
+ */
+class gauss1d: public theta::Distribution{
+   public:
+        /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
+        gauss1d(const theta::plugin::Configuration & cfg);
+
+        //@{
+        /** \brief Implementation of the pure methods of theta::Distribution
+         *
+         * See documentation of theta::Distribution.
+         */
+        virtual void sample(theta::ParValues & result, theta::Random & rnd) const;
+        virtual void mode(theta::ParValues & result) const;
+        virtual double evalNL(const theta::ParValues & values) const;
+        virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
+        virtual const std::pair<double, double> & support(const theta::ParId&) const;
+        virtual double width(const theta::ParId &) const;
+        //@}
+    private:
+        double mu;
+        double sigma;
+        std::pair<double, double> range;
 };
 
 /** \brief A function which multiplies all its parameters
@@ -353,6 +399,7 @@ private:
  *   model = "@some-model-path";
  *   override-parameter-distribution = "@some-dist"; // optional
  *   parameters-for-nll = { p1 = 0.0; p2 = 1.0; p3 = "diced_value"; }; //optional; assuming p1, p2, p3 are parameters
+ *   rnd_gen = { seed = 123; }; // optional
  * };
  * \endcode
  *
@@ -366,6 +413,9 @@ private:
  * \c parameters-for-nll defines the parameter values used for saving the value of the negative log-likelihood. They are
  *     either given directly as floating point, or the special string "diced_value". Each parameter of the model
  *     must be specified here. If not given, the negative log-likelihood will not be saved.
+ *
+ * \c rnd_gen defined the random number generator to use. The default is to construct a \link Random Random \endlink class
+ *    with a empty setting group which will use defaults documented there.
  *
  * For each call of fill
  * <ol>
@@ -385,7 +435,7 @@ private:
  * producer which fixes all nuisance parameters to the same values as here, and fits the parameter of interest to data.
  * 
  */
-class model_source: public theta::DataSource{
+class model_source: public theta::DataSource, public theta::RandomConsumer {
 public:
 
     /// Construct from a Configuration; required by the plugin system
@@ -402,6 +452,7 @@ public:
 
 private:
     theta::ParValues parameters_for_nll;
+    
     bool save_nll;
     std::auto_ptr<theta::Column> c_nll;
     

@@ -13,7 +13,7 @@ using namespace std;
 
 
 ConfigCreator::ConfigCreator(const std::string & cfg_string, const boost::shared_ptr<theta::VarIdManager> & vm):
-      dummy(setup_config(cfg_string)), rec(new SettingUsageRecorder()), cfg(vm, SettingWrapper(config.getRoot(), config.getRoot(), rec)){
+      dummy(setup_config(cfg_string)), rec(new SettingUsageRecorder()), cfg(vm, boost::shared_ptr<Run>(), SettingWrapper(config.getRoot(), config.getRoot(), rec)){
 }
 
 int ConfigCreator::setup_config(const std::string & cfg_string){

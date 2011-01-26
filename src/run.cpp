@@ -2,7 +2,7 @@
 #include "interface/histogram.hpp"
 
 #include <signal.h>
-#include <boost/date_time/local_time/local_time.hpp>
+//#include <boost/date_time/local_time/local_time.hpp>
 
 using namespace theta;
 using namespace std;
@@ -28,16 +28,10 @@ void Run::set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
     progress_listener = l;
 }
 
-/*namespace{
-    template<class T>
-    void noop_deleter(T*){}
-}*/
-
 void Run::run(){
     data_source->set_table(products_table);
     data_source->define_table();
     for(size_t i=0; i<producers.size(); i++){
-        prodinfo_table->append(static_cast<int>(i), producers[i].getName(), producers[i].getType());
         producers[i].set_table(products_table);
         producers[i].define_table();
     }
@@ -98,22 +92,19 @@ void Run::run(){
     }
 }
 
-void Run::addProducer(std::auto_ptr<Producer> & p){
-    producers.push_back(p);
-}
-
-Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
-  vm(cfg.vm), /*db(new Database(cfg.setting["result-file"])),  logtable(new LogTable("log", db)),*/
-  log_report(true), /*, prodinfo_table("prodinfo", db), rndinfo_table("rndinfo", db),*/
-      runid(1), eventid(0), n_event(cfg.setting["n-events"]){
+void Run::init(const plugin::Configuration & cfg){
     SettingWrapper s = cfg.setting;
+    
+    //0. set default values for members:
+    vm = cfg.vm;
+    log_report = true;
+    runid = 1;
+    eventid = 0;
+    n_event = s["n-events"];
     
     //1. setup database and tables:
     db = plugin::PluginManager<Database>::instance().build(plugin::Configuration(cfg, s["output_database"]));
 
-    std::auto_ptr<Table> prodinfo_table_underlying = db->create_table("prodinfo");
-    prodinfo_table.reset(new ProducerInfoTable(prodinfo_table_underlying));
-    
     std::auto_ptr<Table> logtable_underlying = db->create_table("log");
     logtable.reset(new LogTable(logtable_underlying));
     
@@ -123,25 +114,9 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
     std::auto_ptr<Table> products_table_underlying = db->create_table("products");
     products_table.reset(new ProductsTable(products_table_underlying));
     
-    //2. misc
-    int seed = -1;
-    if(s.exists("seed")) seed = s["seed"];
-    if(seed==-1){
-        using namespace boost::posix_time;
-        using namespace boost::gregorian;
-        ptime t(microsec_clock::universal_time());
-        time_duration td = t - ptime(date(1970, 1, 1));
-        seed = td.total_microseconds();
-    }
-    rnd.set_seed(seed);
-    //get the runid from the rndinfo table:
-    runid = rndinfo_table->append(seed);
-    
+    //2. model and data_source
     model = plugin::PluginManager<Model>::instance().build(plugin::Configuration(cfg, s["model"]));
-    if(s.exists("data_source"))
-        data_source = plugin::PluginManager<DataSource>::instance().build(plugin::Configuration(cfg, s["data_source"]));
-    else
-        data_source = plugin::PluginManager<DataSource>::instance().build(plugin::Configuration(cfg, s["data-source"]));
+    data_source = plugin::PluginManager<DataSource>::instance().build(plugin::Configuration(cfg, s["data_source"]));
     
     //3. logging stuff
     LogTable::e_severity level = LogTable::warning;
@@ -162,17 +137,14 @@ Run::Run(const plugin::Configuration & cfg): rnd(new RandomSourceTaus()),
     if(s.exists("log-report")){
         log_report = s["log-report"];
     }
-    eventid = 0;
     
-    //4. add the producers:
+    //4. producers:
     size_t n_p = s["producers"].size();
     if (n_p == 0)
         throw ConfigurationException("no producers in run specified!");
     for (size_t i = 0; i < n_p; i++) {
         SettingWrapper producer_setting = s["producers"][i];
         std::auto_ptr<Producer> p = plugin::PluginManager<Producer>::instance().build(plugin::Configuration(cfg, producer_setting));
-        addProducer(p);
-        //should transfer ownership:
-        assert(p.get()==0);
+        producers.push_back(p);
     }
 }

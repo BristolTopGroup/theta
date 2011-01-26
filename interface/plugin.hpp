@@ -80,19 +80,22 @@ namespace theta {
             /// Information about all currently known parameters and observables
             boost::shared_ptr<VarIdManager> vm;
             
+            /// The current Run object. Might be empty.
+            boost::shared_ptr<Run> run;
+            
             /// The setting in the configuration file from which to build the instance
             SettingWrapper setting;
             
             /** \brief Construct Configuration by specifying all data members
              */
-            Configuration(const boost::shared_ptr<VarIdManager> & vm_, const SettingWrapper & setting_): vm(vm_),
-                setting(setting_){}
+            Configuration(const boost::shared_ptr<VarIdManager> & vm_, const boost::shared_ptr<Run> & run_, const SettingWrapper & setting_):
+                vm(vm_), run(run_), setting(setting_){}
 
             /** \brief Copy elements from another Configuration, but replace Configuration::setting
              *
              * Copy all from \c cfg but \c cfg.setting which is replaced by \c setting_.
              */
-            Configuration(const Configuration & cfg, const SettingWrapper & setting_): vm(cfg.vm),
+            Configuration(const Configuration & cfg, const SettingWrapper & setting_): vm(cfg.vm), run(cfg.run),
                 setting(setting_){}
 
         };        

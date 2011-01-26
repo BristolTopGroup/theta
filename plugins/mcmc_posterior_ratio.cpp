@@ -68,7 +68,7 @@ void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, c
             
             std::auto_ptr<NLLikelihood> nll_sb = model.getNLLikelihood(d);
             nll_sb->set_override_distribution(s_plus_b);
-            sqrt_cov_sb = get_sqrt_cov(run.get_random(), *nll_sb, startvalues_sb, vm);
+            sqrt_cov_sb = get_sqrt_cov(*rnd_gen, *nll_sb, startvalues_sb, vm);
         
             //2. for background only
             ParValues b_only_values;
@@ -76,7 +76,7 @@ void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, c
             model.get_prediction(d, b_only_values);
             std::auto_ptr<NLLikelihood> nll_b = model.getNLLikelihood(d);
             nll_b->set_override_distribution(b_only);
-            sqrt_cov_b = get_sqrt_cov(run.get_random(), *nll_b, startvalues_b, vm);
+            sqrt_cov_b = get_sqrt_cov(*rnd_gen, *nll_b, startvalues_b, vm);
             
             init = true;
         }catch(Exception & ex){
@@ -92,12 +92,12 @@ void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, c
     
     //a. calculate s plus b:
     MCMCPosteriorRatioResult res_sb(nll->getnpar());
-    metropolisHastings(*nll, res_sb, run.get_random(), startvalues_sb, sqrt_cov_sb, iterations, burn_in);
+    metropolisHastings(*nll, res_sb, *rnd_gen, startvalues_sb, sqrt_cov_sb, iterations, burn_in);
     nl_posterior_sb = res_sb.get_nl_average_posterior();
 
     //b. calculate b only:
     MCMCPosteriorRatioResult res_b(nll->getnpar());
-    metropolisHastings(*nll, res_b, run.get_random(), startvalues_b, sqrt_cov_b, iterations, burn_in);
+    metropolisHastings(*nll, res_b, *rnd_gen, startvalues_b, sqrt_cov_b, iterations, burn_in);
     nl_posterior_b = res_b.get_nl_average_posterior();
 
     if(std::isnan(nl_posterior_sb) || std::isnan(nl_posterior_b)){
@@ -113,7 +113,7 @@ void mcmc_posterior_ratio::define_table(){
     c_nl_posterior_b =  table->add_column(*this, "nl_posterior_b",  Table::typeDouble);
 }
 
-mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), init(false){
+mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()), init(false){
     SettingWrapper s = cfg.setting;
     vm = cfg.vm;
     

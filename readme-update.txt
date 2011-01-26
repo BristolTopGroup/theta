@@ -2,13 +2,32 @@ This file summarizes changes relevant to users, i.e., changes in config file
 convention and output. It does not cover internal changes.
 
 
-from April 2010 to trunk:
--------------------------
+from June to trunk:
+-------------------
+* there used to be one global random number generator, configured via the (optional) setting 'main.seed'. Now,
+  every plugin requiring random numbers has its own generator. With this approach, it is now
+  possible to reproduce the exact same pseudo-data by using the same random seed in main.data_source. In earlier
+  releases, a perfect pseudo-data reproduction would only work if using producers which do not consume random numbers.
+
+  There are no required changes to the configuration files.
+  It is recommended to drop 'main.seed' to avoid the warning about it being unused.
+  To set the seed explicitely for plugins which use random numbers, you can add a setting 'rnd_gen' like this:
+  rnd_gen = {
+      seed = 123; // default of -1 means: use current time.
+  };
+  This affects the 'model_source', and the mcmc producers.
+* The RndInfoTable schema has changed: it now contains seeds used for each module (instead of one per Run)
+* The ProducerInfoTable has been dropped; it did not contain much useful information and was hardly used
+* 'data-source' setting is not supported any more; use 'data_source'
+      
+
+from April 2010 to June 2010:
+-----------------------------
 * instead of the
   plugins = {
       files = ("some-so-file", "some-other-so-file");
   };
-  setting group, you noe have to use
+  setting group, you now have to use
   options = {
      plugin_files = ("some-so-file", "some-other-so-file");
   };

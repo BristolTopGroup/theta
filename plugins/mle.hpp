@@ -7,7 +7,7 @@
 
 #include <string>
 
-/** \brief A maximum likelihood estimator.
+/** \brief A maximum likelihood estimator
  *
  * It is configuared via a setting group like
  * \code
@@ -30,16 +30,20 @@
  * \c write_covariance controls whether the covariance matrix at the minimum is written to the
  *    result table. If set to true, a column of name 'covariance' of type typeHistogram is created.
  *    For n specified parameters, it will have n*n bins with range 0 to n*n. Matrix element at (i,j) will be
- *    at index i*n + j. The exact meaning and construction of this matrix depends on the minimizer used; see documentation
- *    of the used Minimizer for details.
+ *    at bin index i*n + j + 1 (assuming bin index convention where the lowest non-underflow bin has index 1).
+ *    The exact meaning and construction of this matrix depends on the minimizer used; see documentation of the used Minimizer for details.
  *
  * \c write_ks_ts controls whether a Kolmogorov-Smirnov test statistic is written to the result table in column 'ks_ts'. If
- *   set to true, the KS test statistic, defined as the maximum difference of the data and prediction integrals, using
+ *   set to true, the KS test statistic is written to the products table. The KS test statistic is defined as the maximum
+ *   absolute difference of the data and prediction cumulative distributions. The prediction from the model is evaluated using
  *   the parameter values from the maximum likelihood estimate. Note that the prediction histogram and data histograms are
- *   compared directly, no normalization is applied.
+ *   compared directly, no normalization is applied. If there is more than one observable, the KS test statistic is calculated for
+ *   each observable and the maximum value is written to the products table.
  *
  * This producer uses the given minimizer to find the maximum likelihood estimates for the
- * configured parameters. For each parameter, two columns are created in the products table,
+ * configured parameters by minimizing the negative log-likelihood of the model, given data.
+ *
+ * <b>created columns</b> in the products table: for each parameter, two columns are created in the products table,
  * one with the parameter's name which contains the maximum likelihood estimate. The other
  * column with name '&lt;parameter name&gt;_error' contains the error estimate rom the minimizer
  * for that parameter. Additionally, one column is 'nll' is created which contains the value of the
@@ -51,11 +55,11 @@ public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     mle(const theta::plugin::Configuration & cfg);
     
-    /** \brief Run the method and write out results.
+    /** \brief Run the method and write out results
      */
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
     
-    /// Define the columns in the result table as specified in the class documentation
+    /// Define the columns in the products table as specified in the class documentation
     virtual void define_table();
 private:
     std::auto_ptr<theta::Minimizer> minimizer;

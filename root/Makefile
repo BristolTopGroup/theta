@@ -29,7 +29,7 @@ histos: .bin/histos.o
 
 create_testhistos: .bin/create_testhistos.o
 	@$(LINK_EXE) -o $@ $<
-	
+
 ../lib/root.so: $(objects)
 	@$(LINK_SO) -o $@ $+
 

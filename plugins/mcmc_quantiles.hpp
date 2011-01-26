@@ -5,6 +5,7 @@
 #include "interface/variables.hpp"
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
+#include "interface/random-utils.hpp"
 #include "interface/matrix.hpp"
 
 #include <string>
@@ -47,7 +48,7 @@
  * will be "quant" + 10000 * quantile, written with leading zeros. For example, if the quantile is 0.5,
  * the column name will be "quant05000", if the 99.9% quantile is requested (i.e., 0.999), the name will be "quant09990".
  */
-class mcmc_quantiles: public theta::Producer{
+class mcmc_quantiles: public theta::Producer, public theta::RandomConsumer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     mcmc_quantiles(const theta::plugin::Configuration & ctx);

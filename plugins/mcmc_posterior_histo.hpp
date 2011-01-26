@@ -2,9 +2,9 @@
 #define PLUGIN_MCMC_POSTERIOR_HISTO_HPP
 
 #include "interface/decls.hpp"
-
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
+#include "interface/random-utils.hpp"
 #include "interface/matrix.hpp"
 
 #include <string>
@@ -51,7 +51,7 @@
  * and the value of the parameters is filled in the histogram. The histogram is
  * written to a column "posterior_&lt;parameter name&gt;".
  */
-class mcmc_posterior_histo: public theta::Producer{
+class mcmc_posterior_histo: public theta::Producer, public theta::RandomConsumer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     mcmc_posterior_histo(const theta::plugin::Configuration & ctx);

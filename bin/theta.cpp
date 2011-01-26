@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
 
     Config cfg;
     boost::shared_ptr<SettingUsageRecorder> rec(new SettingUsageRecorder());
-    std::auto_ptr<Run> run;
+    boost::shared_ptr<Run> run;
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
     
     try {
@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
         }
         
         SettingWrapper root(cfg.getRoot(), cfg.getRoot(), rec);
-        Configuration config(vm, root);
+        Configuration config(vm, run, root);
         
         //process options:
         Configuration cfg_options(config, config.setting["options"]);
@@ -143,7 +143,9 @@ int main(int argc, char** argv) {
         //fill VarIdManager:
         VarIdManagerUtils::apply_settings(config);
         //build run:
-        run.reset(new Run(Configuration(config, root[run_name])));
+        run.reset(new Run());
+        config.run = run;
+        run->init(Configuration(config, root[run_name]));
         if(not quiet){
             boost::shared_ptr<ProgressListener> l(new MyProgressListener());
             run->set_progress_listener(l);

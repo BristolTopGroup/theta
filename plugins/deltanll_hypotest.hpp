@@ -52,7 +52,7 @@
  * inequality can only come from roundoff errors in the minimization process or from the
  * minimizer not finding the correct minimum.
  *
- * If the number of observed events is large, \code 2 * sqrt(nll_b - nll_sb) \endcode will be a good estimate of
+ * If the number of observed events is large, \code sqrt(2 * (nll_b - nll_sb)) \endcode will be a good estimate of
  * the significance (in sigma) with which the "background only" null-hypothesis "background-only" can be rejected.
  * Even if the asymptotic property is not fulfilled, this quantity can still be used as test statistic for the
  * hypothesis test which has the "background-only" case as null hypothesis.

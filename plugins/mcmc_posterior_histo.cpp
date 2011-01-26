@@ -67,7 +67,7 @@ void mcmc_posterior_histo::produce(Run & run, const Data & data, const Model & m
             Data d;
             model.get_prediction(d, values);
             std::auto_ptr<NLLikelihood> nll = get_nllikelihood(d, model);
-            sqrt_cov = get_sqrt_cov(run.get_random(), *nll, startvalues, vm);
+            sqrt_cov = get_sqrt_cov(*rnd_gen, *nll, startvalues, vm);
             
             //find ipars:
             ParIds nll_pars = nll->getParameters();
@@ -92,14 +92,14 @@ void mcmc_posterior_histo::produce(Run & run, const Data & data, const Model & m
     
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     MCMCPosteriorHistoResult result(ipars, nll->getnpar(), nbins, lower, upper);
-    metropolisHastings(*nll, result, run.get_random(), startvalues, sqrt_cov, iterations, burn_in);
+    metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
     
     for(size_t i=0; i<parameters.size(); ++i){
         table->set_column(columns[i], result.get_histo(i));
     }
 }
 
-mcmc_posterior_histo::mcmc_posterior_histo(const theta::plugin::Configuration & cfg): Producer(cfg),
+mcmc_posterior_histo::mcmc_posterior_histo(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()),
         init(false), init_failed(false){
     SettingWrapper s = cfg.setting;
     vm = cfg.vm;

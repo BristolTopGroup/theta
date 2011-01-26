@@ -14,9 +14,6 @@ mkdir -p gridpack-tmp/bin
 mkdir -p gridpack-tmp/extlib
 mkdir -p gridpack-tmp/etc/plugins
 
-cp scripts/theta gridpack-tmp/bin/
-cp ../bin/theta gridpack-tmp/bin/theta.exe
-cp ../lib/*.so gridpack-tmp/lib/
 if [ ! -z "$ROOTSYS" ]; then
    echo "[0.5] Copying essential ROOT dependencies"
    cp -r $ROOTSYS/etc/plugins/TVirtualStreamerInfo gridpack-tmp/etc/plugins/
@@ -24,7 +21,12 @@ if [ ! -z "$ROOTSYS" ]; then
 fi
 
 # add the dependencies:
-echo "[1] copying theta and its dependencies to gridpack-tmp"
+echo "[1] copying theta to gridpack-tmp"
+cp scripts/theta gridpack-tmp/bin/
+cp ../bin/theta gridpack-tmp/bin/theta.exe
+cp ../lib/*.so gridpack-tmp/lib/
+
+echo "[2] copying dependencies to gridpack-tmp"
 scripts/copydeps.py gridpack-tmp/bin/theta.exe gridpack-tmp/extlib gridpack-tmp/lib
 for plugin in gridpack-tmp/lib/*.so; do
    scripts/copydeps.py $plugin gridpack-tmp/extlib gridpack-tmp/lib gridpack-tmp/extlib
@@ -38,7 +40,10 @@ if [ ! -f gridpack-tmp/extlib/ld-linux.so ]; then
    exit 1;
 fi
 
-echo "[2] creating gridpack.tgz from gridpack-tmp"
+echo "[3] stripping all symbols to reduce size"
+strip -s gridpack-tmp/bin/theta.exe gridpack-tmp/lib/* gridpack-tmp/extlib/*
+
+echo "[4] creating gridpack.tgz from gridpack-tmp"
 rm -f gridpack.tgz
 cd gridpack-tmp
 tar zcf ../gridpack.tgz *

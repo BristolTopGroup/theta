@@ -28,12 +28,11 @@
  * \c observables is a list of observable names for which to write out the pseudodata information
  *
  * \c write-data is a boolean which specifies whether or not to actually write the data: if \c true, the
- *    data will be saved as a SQL-blob for each observable (see PseudodataTable). If set to \c false, only
- *    the number of events will be saved for each event.
+ *    data will be saved as a Histogram for each observable. If set to \c false, only
+ *    the normalization of the data will be saved.
  *
  * For each observable, the result table will contain a column of the name "n_events_&lt;observable name&gt;" and -- if \c write-data
- * is true -- a column "data_&lt;observable name&gt;" with the histogram data as BLOB. This blob contains the raw double
- * array of the histogram, including underflow and overflow.
+ * is true -- a column "data_&lt;observable name&gt;" with the histogram.
  */
 class pseudodata_writer: public theta::Producer {
 public:

@@ -18,9 +18,14 @@ const Histogram & simple_linear_histomorph::operator()(const ParValues & values)
     for(size_t i=1; i<=h.get_nbins(); ++i){
        h.set(i, max(h.get(i), 0.0));
     }
-    h.set(0,0);
-    h.set(h.get_nbins() + 1,0);
     return h;
+}
+
+namespace{
+   void remove_overflow_underflow(Histogram & h){
+       h.set(0,0);
+       h.set(h.get_nbins() + 1,0);
+   }
 }
 
 theta::ParIds simple_linear_histomorph::getParameters() const {
@@ -35,6 +40,7 @@ simple_linear_histomorph::simple_linear_histomorph(const Configuration & ctx){
     SettingWrapper psetting = ctx.setting["parameters"];
     //build nominal histogram:
     h0 = getConstantHistogram(ctx, ctx.setting["nominal-histogram"]);
+    remove_overflow_underflow(h0);
     size_t n = psetting.size();
     for(size_t i=0; i<n; i++){
         string par_name = psetting[i];
@@ -48,8 +54,7 @@ simple_linear_histomorph::simple_linear_histomorph(const Configuration & ctx){
            hplus_diff.back().add_with_coeff(-1.0, h0);
         }
         else{
-           hplus_diff.push_back(h0);
-           hplus_diff.back().reset();
+           hplus_diff.push_back(Histogram());
         }
         //minus:
         setting_name = par_name + "-minus-histogram";
@@ -58,14 +63,14 @@ simple_linear_histomorph::simple_linear_histomorph(const Configuration & ctx){
            hminus_diff.back().add_with_coeff(-1.0, h0);
         }
         else{
-           hminus_diff.push_back(h0);
-           hminus_diff.back().reset();
+           hminus_diff.push_back(Histogram());
         }
+        remove_overflow_underflow(hplus_diff.back());
+        remove_overflow_underflow(hminus_diff.back());
     }
     assert(hplus_diff.size()==hminus_diff.size());
     assert(vid.size()==hminus_diff.size());
     assert(vid.size()==n);
-    h = h0;
 }
 
 Histogram simple_linear_histomorph::getConstantHistogram(const Configuration & cfg, SettingWrapper s){

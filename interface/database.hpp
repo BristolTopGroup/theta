@@ -306,44 +306,10 @@ private:
 };
 
 
-/** \brief Table to store information about all producers
+/** \brief Table to store information about the random number seeds.
  *
- * This table object is used by an instance of \link theta::Run Run \endlink.
- * 
- * The corresponding table has following columns:
- * <ol>
- * <li>ind (typeInt): the index (starting from 0) for this producer in the current run configuration,
- *   i.e. the index it appeared in the producers = ("...") list in the configuration. </li>
- * <li>type (typeString): the type setting used to configure this producer, as given in the type="..."  setting for this producer</li> 
- * <li>name (typeString): the name of the producer, as defined in the setting (via the setting name).</li>
- * </ol>
- *
- * This table is the only table without a "runid" entry as its contents is not run-dependent.
- */
-class ProducerInfoTable: private boost::noncopyable {
-public:
-    /** \brief Construct with an underlying Table
-     *
-     * Ownership of table will be transferred.
-     */
-    ProducerInfoTable(std::auto_ptr<Table> & table);
-    
-    /** \brief Append an entry to the ProducerInfoTable.
-     * 
-     * \param index The index for this producer in the current run configuration
-     * \param p_name The name of the producer
-     * \param p_type The right hand side of the type="..."; setting used to configure this producer
-     */
-    void append(int index, const std::string & p_name, const std::string & p_type);
-
-private:
-    std::auto_ptr<Column> c_ind, c_type, c_name, c_info;
-    std::auto_ptr<Table> table;
-};
-
-/** \brief Table to store per-run information about the random number seed.
- *
- * This table object is used by an instance of \link theta::Run Run \endlink.
+ * There is a one-to-one relationship between this class and \link theta::Run Run \endlink, i.e.,
+ * to each RndInfoTable instance, there is one Run instance and vice versa.
  *
  * The corresponding table has following columns:
  * <ol>
@@ -361,13 +327,12 @@ public:
 
     /** \brief append an entry to the RndInfoTable
      *
-     * Returns the runid.
-     *
-     * \param seed is the seed to save in the table
+     * \param name is the name of the module of the seed, according to \link theta::ProductsTableWriter ProductsTableWriter \endlink .
+     * \param seed is the seed of the random number generator used for this module
      */
-    int append(int seed);
+    void append(const theta::Run & run, const std::string & name, int seed);
 private:
-    std::auto_ptr<Column> c_runid, c_seed;
+    std::auto_ptr<Column> c_runid, c_name, c_seed;
     std::auto_ptr<Table> table;
 };
 

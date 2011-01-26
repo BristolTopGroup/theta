@@ -2,7 +2,6 @@
 #include "plugins/mcmc.hpp"
 #include "interface/plugin.hpp"
 #include "interface/run.hpp"
-//#include "interface/minimizer.hpp"
 #include "interface/histogram.hpp"
 #include "interface/distribution.hpp"
 
@@ -69,7 +68,7 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
             Data d;
             model.get_prediction(d, values);
             std::auto_ptr<NLLikelihood> nll = get_nllikelihood(d, model);
-            sqrt_cov = get_sqrt_cov(run.get_random(), *nll, startvalues, vm);
+            sqrt_cov = get_sqrt_cov(*rnd_gen, *nll, startvalues, vm);
             
             //find the number of the parameter of interest:
             ParIds nll_pars = nll->getParameters();
@@ -93,14 +92,14 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
     
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     MCMCPosteriorQuantilesResult result(nll->getnpar(), ipar, iterations);
-    metropolisHastings(*nll, result, run.get_random(), startvalues, sqrt_cov, iterations, burn_in);
+    metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
     
     for(size_t i=0; i<quantiles.size(); ++i){
         table->set_column(columns[i], result.get_quantile(quantiles[i]));
     }
 }
 
-mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Producer(cfg),
+mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()),
         init(false), init_failed(false){
     vm = cfg.vm;
     SettingWrapper s = cfg.setting;

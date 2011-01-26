@@ -10,6 +10,9 @@ all: merge theta
 merge: .bin/merge.o
 	@$(LINK_EXE) -o $@ $<
 
+theta-neyman: .bin/theta-neyman.o
+	@$(LINK_EXE) -o $@ $<
+
 theta: .bin/theta.o
 	@$(LINK_EXE) -o $@ $<
 

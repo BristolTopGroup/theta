@@ -128,21 +128,7 @@ void merge(const string & file1, const string & file2){
         return;
     }
     
-    //2. compare list of producers
-    //two sets A, B are identical if   A | B  and  B \ A  are both empty, so this should return 0:
-    /*int count = select_int(db, "select count(*) from ((select * from 'prodinfo' except select * from o.'prodinfo') "
-          "union all (select * from o.'prodinfo' except select * from 'prodinfo'));");*/
-    //two sets A, B are identical if   A union B contains the same number of elements as A and B alone
-    int n_ab = select_int(db, "select count(*) from (select distinct * from (select * from prodinfo union all select * from o.prodinfo));");
-    int n_a = select_int(db, "select count(*) from prodinfo;");
-    int n_b = select_int(db, "select count(*) from o.prodinfo;");
-    if(not (n_a == n_b && n_b==n_ab)){
-        cerr << "Error: the list of producers is different in the files to merge ('" << file1 << "', '" << file2 << "')." << endl;
-        throw Exception("list of producers is different");
-        return;
-    }
-    
-    //3. compare random number seed
+    //2. compare random number seed
     int count_rnd = select_int(db, "select count(*) from 'rndinfo' as r, o.'rndinfo' as s where r.seed = s.seed;");
     if(count_rnd!=0){
         cerr << "Error: the random seeds are identical in the files to merge ('" << file1 << "', '" << file2 << "')." << endl;
@@ -185,15 +171,11 @@ void merge(const string & file1, const string & file2){
                     ss << ", \"" << column_names1[ic] << "\"";
                 }
                 ss << " FROM o.'" << tables[itable] << "';";
-		sqlite3_exec(db, ss.str().c_str());
+                sqlite3_exec(db, ss.str().c_str());
             }
             else{
-                //Should only happen for the prodinfo table ...
-                if(tables[itable]!="prodinfo"){
-                    cerr << "Error: table '" << tables[itable] << "' does not contain runid! Exiting." << endl;
-                    throw Exception("no runid in a table");
-                }
-                //prodinfo table does not have to be merged.
+                cerr << "Error: table '" << tables[itable] << "' does not contain runid! Exiting." << endl;
+                throw Exception("no runid in a table");
             }
         }
         sqlite3_exec(db, "END");

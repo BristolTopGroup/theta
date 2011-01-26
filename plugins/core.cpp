@@ -400,6 +400,74 @@ void gauss::mode(theta::ParValues & result) const{
     }
 }
 
+/* START gauss1d */
+void gauss1d::sample(ParValues & result, Random & rnd) const{
+    if(range.first==range.second){
+        result.set(*par_ids.begin(), range.first);
+        return;
+    }
+    for(size_t rep=0; rep <=100000; ++rep){
+         double value = rnd.gauss(sigma) + mu;
+         if(value >= range.first && value <= range.second){
+             result.set(*par_ids.begin(), value);
+             return;
+         }
+    }
+    throw Exception("gauss1d::sample: too many iterations necessary to fulfill configured range");
+}
+
+double gauss1d::evalNL(const ParValues & values) const{
+    double value = values.get(*par_ids.begin());
+    if(value > range.second || value < range.first){
+        return std::numeric_limits<double>::infinity();
+    }
+    double delta = (value - mu) / sigma;
+    return 0.5 * delta * delta;
+}
+
+double gauss1d::evalNL_withDerivatives(const ParValues & values, ParValues & derivatives) const{
+    const ParId & pid = *par_ids.begin();
+    double value = values.get(pid);
+    if(value > range.second || value < range.first){
+        derivatives.set(pid, 0.0);
+        return std::numeric_limits<double>::infinity();
+    }
+    double delta = (value - mu) / sigma;
+    derivatives.set(pid, delta / sigma);
+    return 0.5 * delta * delta;
+}
+
+gauss1d::gauss1d(const Configuration & cfg){
+   string par_name = cfg.setting["parameter"];
+   par_ids.insert(cfg.vm->getParId(par_name));
+   mu = cfg.setting["mean"];
+   sigma = cfg.setting["width"];
+   if(sigma <= 0){
+      throw ConfigurationException("invalid 'width' given (must be > 0)");
+   }
+   range.first = cfg.setting["range"][0].get_double_or_inf();
+   range.second = cfg.setting["range"][1].get_double_or_inf();
+   if(range.second < range.first){
+      throw ConfigurationException("empty 'range' given");
+   }
+   if(range.second < mu || mu < range.first){
+      throw ConfigurationException("given range does not include mean");
+   }
+}
+
+double gauss1d::width(const ParId & p)const{
+    return min(sigma, range.second - range.first);
+}
+
+const std::pair<double, double> & gauss1d::support(const ParId & p)const{
+    if(p!=*par_ids.begin()) throw InvalidArgumentException("gauss1d::support(): invalid parameter");
+    return range;
+}
+
+void gauss1d::mode(theta::ParValues & result) const{
+    result.set(*par_ids.begin(), mu);
+}
+
 
 mult::mult(const Configuration & cfg){
     size_t n = cfg.setting["parameters"].size();
@@ -504,7 +572,7 @@ void model_source::define_table(){
     }
 }
 
-model_source::model_source(const theta::plugin::Configuration & cfg): DataSource(cfg), save_nll(false){
+model_source::model_source(const theta::plugin::Configuration & cfg): DataSource(cfg), RandomConsumer(cfg, getName()), save_nll(false){
     model = PluginManager<Model>::instance().build(Configuration(cfg, cfg.setting["model"]));
     obs_ids = model->getObservables();
     par_ids = model->getParameters();
@@ -539,7 +607,7 @@ model_source::model_source(const theta::plugin::Configuration & cfg): DataSource
 }
 
 void model_source::fill(Data & dat, Run & run){
-    Random & rnd = run.get_random();
+    Random & rnd = *rnd_gen;
     ParValues values;
     if(override_parameter_distribution.get()){
         override_parameter_distribution->sample(values, rnd);
@@ -562,6 +630,7 @@ void model_source::fill(Data & dat, Run & run){
 
 
 REGISTER_PLUGIN(gauss)
+REGISTER_PLUGIN(gauss1d)
 REGISTER_PLUGIN(log_normal)
 REGISTER_PLUGIN(flat_distribution)
 REGISTER_PLUGIN(delta_distribution)

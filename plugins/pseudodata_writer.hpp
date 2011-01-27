@@ -44,8 +44,6 @@ public:
      */
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
     
-    /// Define the columns as described in the class documentation
-    virtual void define_table();
 private:
     boost::shared_ptr<theta::VarIdManager> vm;
     std::vector<theta::ObsId> observables;

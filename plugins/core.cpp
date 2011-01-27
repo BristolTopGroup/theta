@@ -563,18 +563,8 @@ double product_distribution::width(const ParId & p) const{
     return distributions[it->second].width(p);
 }
 
-void model_source::define_table(){
-    for(size_t i=0; i< parameter_names.size(); ++i){
-        parameter_columns.push_back(table->add_column(*this, parameter_names[i], Table::typeDouble));
-    }
-    if(save_nll){
-        c_nll = table->add_column(*this, "nll", Table::typeDouble);
-    }
-}
-
 model_source::model_source(const theta::plugin::Configuration & cfg): DataSource(cfg), RandomConsumer(cfg, getName()), save_nll(false){
     model = PluginManager<Model>::instance().build(Configuration(cfg, cfg.setting["model"]));
-    obs_ids = model->getObservables();
     par_ids = model->getParameters();
     for(ParIds::const_iterator p_it=par_ids.begin(); p_it!=par_ids.end(); ++p_it){
         parameter_names.push_back(cfg.vm->getName(*p_it));
@@ -603,6 +593,13 @@ model_source::model_source(const theta::plugin::Configuration & cfg): DataSource
         if(!(pids_for_nll==par_ids)){
             throw ConfigurationException("parameters-for-nll does not specify exactly the model parameters");
         }
+    }
+    //define the table:
+    for(size_t i=0; i< parameter_names.size(); ++i){
+        parameter_columns.push_back(table->add_column(*this, parameter_names[i], Table::typeDouble));
+    }
+    if(save_nll){
+        c_nll = table->add_column(*this, "nll", Table::typeDouble);
     }
 }
 

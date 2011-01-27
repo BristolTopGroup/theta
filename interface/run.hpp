@@ -175,6 +175,14 @@ public:
         return *rndinfo_table;
     }
     
+    /** \brief Get the ProductsTable associated with this Run
+     *
+     * Used by Producers to save their result
+     */
+    boost::shared_ptr<ProductsTable> get_products_table(){
+        return products_table;
+    }
+    
     /** \brief Initialize the members using the supplied configuration
      */
     void init(const plugin::Configuration & cfg);

@@ -148,21 +148,6 @@ namespace theta {
          */
         class DataUnavailable{};
         
-        /** \brief Returns the observables this DataSource provides data for
-         *
-         * This stays the same over the lifetime of the instance.
-         *
-         * The return value is the same as \c obs_ids in
-         * \code
-         * Data data;
-         * this->fill(data);
-         * ParIds obs_ids = values.getObservables();
-         * \endcode 
-         */
-        ObsIds getObservables() const{
-            return obs_ids;
-        }
-        
         /** \brief Fill the provided Data instance with data
          *
          * This method is called exactly once per event. It sets
@@ -179,7 +164,6 @@ namespace theta {
     protected:
         /// proxy to ProductsTableWriter constructor for derived classes
         DataSource(const theta::plugin::Configuration & cfg): theta::plugin::ProductsTableWriter(cfg){}
-        ObsIds obs_ids;
     };
     
 

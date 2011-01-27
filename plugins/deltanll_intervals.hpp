@@ -76,11 +76,6 @@ public:
      */
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
     
-    /** \brief Define the table columns
-     *
-     * Called by theta::Run::run as part of the setup. It defined the columns as described in the class documentation.
-     */
-    void define_table();
 private:
     //boost::shared_ptr<theta::VarIdManager> vm;
     theta::ParId pid;

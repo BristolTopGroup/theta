@@ -12,12 +12,6 @@ using namespace theta;
 using namespace std;
 using namespace libconfig;
 
-void deltanll_hypotest::define_table(){
-    c_nll_b = table->add_column(*this, "nll_b", Table::typeDouble);
-    c_nll_sb = table->add_column(*this, "nll_sb", Table::typeDouble);
-    c_nll_diff = table->add_column(*this, "nll_diff", Table::typeDouble);
-}
-
 void deltanll_hypotest::produce(theta::Run & run, const theta::Data & data, const theta::Model & model){
     if(not init){
         ParIds model_pars = model.getParameters();
@@ -55,6 +49,9 @@ deltanll_hypotest::deltanll_hypotest(const theta::plugin::Configuration & cfg):
 
     DistributionUtils::fillModeWidthSupport(s_plus_b_mode, s_plus_b_width, s_plus_b_support, *s_plus_b);
     DistributionUtils::fillModeWidthSupport(b_only_mode, b_only_width, b_only_support, *b_only);
+    c_nll_b = table->add_column(*this, "nll_b", Table::typeDouble);
+    c_nll_sb = table->add_column(*this, "nll_sb", Table::typeDouble);
+    c_nll_diff = table->add_column(*this, "nll_diff", Table::typeDouble);
 }
 
 REGISTER_PLUGIN(deltanll_hypotest)

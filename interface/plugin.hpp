@@ -24,27 +24,8 @@ namespace theta {
          * Currently, the DataSource and the Producer derive from this class.
          */
         class ProductsTableWriter{
-            
         public:
         
-            /** \brief Set the table where the results should be written to
-            *
-            * This is called during the setup phase of a theta::Run. It is called just before
-            * define_table, which does the producer-specific table definition.
-            */
-            void set_table(const boost::shared_ptr<theta::ProductsTable> & table_){
-                table = table_;
-            }
-        
-            /** \brief Define the columns of the result table
-            *
-            * This method is implemented by derived classes. It should call table->add_column for
-            * each column it wants to fill in the produce method.
-            *
-            * Implementations may assume that the table pointer is valid upon invocation of this method.
-            */
-            virtual void define_table() = 0;
-            
             /// Declare Destrutor virtual as we will probably have polymorphic access to derived classes
             virtual ~ProductsTableWriter();
             

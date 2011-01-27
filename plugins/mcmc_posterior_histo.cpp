@@ -11,12 +11,6 @@ using namespace theta;
 using namespace std;
 using namespace libconfig;
 
-void mcmc_posterior_histo::define_table(){
-    for(size_t i=0; i<parameters.size(); ++i){
-        columns.push_back(table->add_column(*this, "posterior_" + parameter_names[i], Table::typeHisto));
-    }
-}
-
 //the result class for the metropolisHastings routine.
 class MCMCPosteriorHistoResult{
     public:
@@ -119,6 +113,9 @@ mcmc_posterior_histo::mcmc_posterior_histo(const theta::plugin::Configuration & 
     }
     else{
         burn_in = iterations / 10;
+    }
+    for(size_t i=0; i<parameters.size(); ++i){
+        columns.push_back(table->add_column(*this, "posterior_" + parameter_names[i], Table::typeHisto));
     }
 }
 

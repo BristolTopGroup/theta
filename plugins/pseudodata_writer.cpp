@@ -9,14 +9,6 @@ using namespace theta;
 using namespace std;
 using namespace libconfig;
 
-void pseudodata_writer::define_table(){
-    for(size_t i=0; i<observables.size(); ++i){
-        n_events_columns.push_back(table->add_column(*this, "n_events_" + vm->getName(observables[i]), Table::typeDouble));
-        if(write_data)
-            data_columns.push_back(table->add_column(*this, "data_" + vm->getName(observables[i]), Table::typeHisto));
-    }
-}
-
 void pseudodata_writer::produce(Run & run, const Data & data, const Model & model) {
     for(size_t i=0; i<observables.size(); ++i){
         const Histogram & h = data[observables[i]];
@@ -35,6 +27,11 @@ pseudodata_writer::pseudodata_writer(const theta::plugin::Configuration & cfg): 
         observables.push_back(cfg.vm->getObsId(cfg.setting["observables"][i]));
     }
     write_data = cfg.setting["write-data"];
+    for(size_t i=0; i<observables.size(); ++i){
+        n_events_columns.push_back(table->add_column(*this, "n_events_" + vm->getName(observables[i]), Table::typeDouble));
+        if(write_data)
+            data_columns.push_back(table->add_column(*this, "data_" + vm->getName(observables[i]), Table::typeHisto));
+    }
 }
 
 REGISTER_PLUGIN(pseudodata_writer)

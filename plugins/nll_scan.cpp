@@ -12,11 +12,6 @@ using namespace theta;
 using namespace std;
 using namespace libconfig;
 
-void nll_scan::define_table(){
-    c_nll = table->add_column(*this, "nll", Table::typeHisto);
-    c_maxl = table->add_column(*this, "maxl", Table::typeDouble);
-}
-
 void nll_scan::produce(Run & run, const Data & data, const Model & model) {
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     if(not start_step_ranges_init){
@@ -56,6 +51,8 @@ nll_scan::nll_scan(const theta::plugin::Configuration & cfg): Producer(cfg),
         throw ConfigurationException("nll_scan: start < stop must hold");
     }
     step = (stop - start) / n_steps;
+    c_nll = table->add_column(*this, "nll", Table::typeHisto);
+    c_maxl = table->add_column(*this, "maxl", Table::typeDouble);
 }
 
 REGISTER_PLUGIN(nll_scan)

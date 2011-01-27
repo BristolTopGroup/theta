@@ -12,19 +12,6 @@ using namespace theta;
 using namespace std;
 using namespace libconfig;
 
-void deltanll_intervals::define_table(){
-    c_maxl = table->add_column(*this, "maxl", Table::typeDouble);
-    for(size_t i=0; i<clevels.size(); ++i){
-        stringstream ss;
-        ss << "lower" << setw(5) << setfill('0') << static_cast<int>(clevels[i] * 10000 + 0.5);
-        lower_columns.push_back(table->add_column(*this, ss.str(), Table::typeDouble));
-        ss.str("");
-        ss << "upper" << setw(5) << setfill('0') << static_cast<int>(clevels[i] * 10000 + 0.5);
-        upper_columns.push_back(table->add_column(*this, ss.str(), Table::typeDouble));
-    }
-}
-
-
 /** \brief The secant method to find the root of a one-dimensional function
  *
  * \param x_low The lower end of the start interval
@@ -186,6 +173,15 @@ deltanll_intervals::deltanll_intervals(const theta::plugin::Configuration & cfg)
         if(clevels[i] >= 1.0) throw InvalidArgumentException("deltanll_intervals: clevel >= 1.0 not allowed.");
         deltanll_levels[i] = utils::phi_inverse((1+clevels[i])/2);
         deltanll_levels[i] *= deltanll_levels[i]*0.5;
+    }
+    c_maxl = table->add_column(*this, "maxl", Table::typeDouble);
+    for(size_t i=0; i<clevels.size(); ++i){
+        stringstream ss;
+        ss << "lower" << setw(5) << setfill('0') << static_cast<int>(clevels[i] * 10000 + 0.5);
+        lower_columns.push_back(table->add_column(*this, ss.str(), Table::typeDouble));
+        ss.str("");
+        ss << "upper" << setw(5) << setfill('0') << static_cast<int>(clevels[i] * 10000 + 0.5);
+        upper_columns.push_back(table->add_column(*this, ss.str(), Table::typeDouble));
     }
 }
 

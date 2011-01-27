@@ -33,8 +33,6 @@ public:
      */
     virtual void fill(theta::Data & dat, theta::Run & run);
     
-    virtual void define_table(){}
-
 private:
     theta::Data data;
     theta::ParValues values;

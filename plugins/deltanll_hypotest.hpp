@@ -65,9 +65,6 @@ public:
     /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
     virtual void produce(theta::Run & run, const theta::Data &, const theta::Model&);
     
-    /// Define the table columns "nll_sb" and "nll_b" in the result table
-    virtual void define_table();
-    
 private:    
     boost::shared_ptr<theta::Distribution> s_plus_b;
     boost::shared_ptr<theta::Distribution> b_only;

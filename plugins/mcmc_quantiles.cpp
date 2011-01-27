@@ -11,14 +11,6 @@ using namespace theta;
 using namespace std;
 using namespace libconfig;
 
-void mcmc_quantiles::define_table(){
-    for(size_t i=0; i<quantiles.size(); ++i){
-        stringstream ss;
-        ss << "quant" << setw(5) << setfill('0') << static_cast<int>(quantiles[i] * 10000 + 0.5);
-        columns.push_back(table->add_column(*this, ss.str(), Table::typeDouble));
-    }
-}
-
 //the result class for the metropolisHastings routine.
 class MCMCPosteriorQuantilesResult{
     public:
@@ -122,6 +114,11 @@ mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Produc
     }
     else{
         burn_in = iterations / 10;
+    }
+    for(size_t i=0; i<quantiles.size(); ++i){
+        stringstream ss;
+        ss << "quant" << setw(5) << setfill('0') << static_cast<int>(quantiles[i] * 10000 + 0.5);
+        columns.push_back(table->add_column(*this, ss.str(), Table::typeDouble));
     }
 }
 

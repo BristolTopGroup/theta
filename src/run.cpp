@@ -29,13 +29,6 @@ void Run::set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
 }
 
 void Run::run(){
-    data_source->set_table(products_table);
-    data_source->define_table();
-    for(size_t i=0; i<producers.size(); i++){
-        producers[i].set_table(products_table);
-        producers[i].define_table();
-    }
-    
     //log the start of the run:
     eventid = 0;
     logtable->append(*this, LogTable::info, "run start");

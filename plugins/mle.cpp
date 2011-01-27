@@ -12,24 +12,6 @@ using namespace std;
 using namespace libconfig;
 using namespace theta::plugin;
 
-void mle::define_table(){
-    c_nll = table->add_column(*this, "nll", Table::typeDouble);
-    for(size_t i=0; i<save_ids.size(); ++i){
-        parameter_columns.push_back(table->add_column(*this, parameter_names[i], Table::typeDouble));
-        error_columns.push_back(table->add_column(*this, parameter_names[i] + "_error", Table::typeDouble));
-    }
-    if(write_covariance){
-       c_covariance = table->add_column(*this, "covariance", Table::typeHisto);
-    }
-    if(write_ks_ts){
-       c_ks_ts = table->add_column(*this, "ks_ts", Table::typeDouble);
-    }
-    if(write_bh_ts){
-       c_bh_ts = table->add_column(*this, "bh_ts", Table::typeDouble);
-    }
-}
-
-
 namespace{
 
 int get_index(const ParId & pid, const ParIds & pids){
@@ -123,6 +105,20 @@ mle::mle(const theta::plugin::Configuration & cfg): Producer(cfg), start_step_ra
     if(s.exists("bh")){
         bh_ts_obsid = cfg.vm->getObsId(s["bh"]);
         write_bh_ts = true;
+    }
+    c_nll = table->add_column(*this, "nll", Table::typeDouble);
+    for(size_t i=0; i<save_ids.size(); ++i){
+        parameter_columns.push_back(table->add_column(*this, parameter_names[i], Table::typeDouble));
+        error_columns.push_back(table->add_column(*this, parameter_names[i] + "_error", Table::typeDouble));
+    }
+    if(write_covariance){
+       c_covariance = table->add_column(*this, "covariance", Table::typeHisto);
+    }
+    if(write_ks_ts){
+       c_ks_ts = table->add_column(*this, "ks_ts", Table::typeDouble);
+    }
+    if(write_bh_ts){
+       c_bh_ts = table->add_column(*this, "bh_ts", Table::typeDouble);
     }
 }
 

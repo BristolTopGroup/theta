@@ -5,9 +5,6 @@ using namespace theta;
 using namespace theta::plugin;
 using namespace std;
 
-void histo_source::define_table(){
-}
-
 histo_source::histo_source(const Configuration & cfg): DataSource(cfg){
     size_t n = cfg.setting.size();
     for(size_t i=0; i<n; ++i){

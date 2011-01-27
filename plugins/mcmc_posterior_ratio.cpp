@@ -107,12 +107,6 @@ void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, c
     table->set_column(*c_nl_posterior_b, nl_posterior_b);
 }
 
-
-void mcmc_posterior_ratio::define_table(){
-    c_nl_posterior_sb = table->add_column(*this, "nl_posterior_sb", Table::typeDouble);
-    c_nl_posterior_b =  table->add_column(*this, "nl_posterior_b",  Table::typeDouble);
-}
-
 mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()), init(false){
     SettingWrapper s = cfg.setting;
     vm = cfg.vm;
@@ -127,6 +121,8 @@ mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & 
     else{
         burn_in = iterations / 10;
     }
+    c_nl_posterior_sb = table->add_column(*this, "nl_posterior_sb", Table::typeDouble);
+    c_nl_posterior_b =  table->add_column(*this, "nl_posterior_b",  Table::typeDouble);
 }
 
 REGISTER_PLUGIN(mcmc_posterior_ratio)

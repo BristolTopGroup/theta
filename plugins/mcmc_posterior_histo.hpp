@@ -59,9 +59,6 @@ public:
     /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
     
-    /// Define the table columns
-    virtual void define_table();
-    
 private:
     //whether sqrt_cov* and startvalues* have been initialized:
     bool init;

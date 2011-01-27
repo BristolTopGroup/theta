@@ -59,8 +59,6 @@ public:
      */
     virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
     
-    /// Define the columns in the products table as specified in the class documentation
-    virtual void define_table();
 private:
     std::auto_ptr<theta::Minimizer> minimizer;
     std::vector<theta::ParId> save_ids;

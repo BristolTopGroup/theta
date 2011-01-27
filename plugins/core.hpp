@@ -448,8 +448,6 @@ public:
      */
     virtual void fill(theta::Data & dat, theta::Run & run);
     
-    virtual void define_table();
-
 private:
     theta::ParValues parameters_for_nll;
     

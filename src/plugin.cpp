@@ -1,4 +1,5 @@
 #include "interface/plugin.hpp"
+#include "interface/run.hpp"
 
 using namespace theta::plugin;
 using namespace std;
@@ -29,6 +30,7 @@ ProductsTableWriter::ProductsTableWriter(const Configuration & cfg){
     if(not nameOk(name)){
         throw InvalidArgumentException("name '" + name + "' is not a valid name for building column names. ");
     }
+    table = cfg.run->get_products_table();
 }
 
 void PluginLoader::execute(const Configuration & cfg) {

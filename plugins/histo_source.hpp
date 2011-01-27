@@ -40,8 +40,6 @@ public:
      */
     virtual void fill(theta::Data & dat, theta::Run & run);
     
-    /// Does not define anything ...
-    virtual void define_table();
 private:
     theta::Data data;
 };

@@ -18,7 +18,12 @@ Producer::Producer(const Configuration & cfg): ProductsTableWriter(cfg){
 
 std::auto_ptr<NLLikelihood> Producer::get_nllikelihood(const Data & data, const Model & model){
     std::auto_ptr<NLLikelihood> nll = model.getNLLikelihood(data);
-    nll->set_override_distribution(override_parameter_distribution);
+    if(override_parameter_distribution){
+        if(!(override_parameter_distribution->getParameters()==model.getParameters())){
+            throw FatalException("producer " + getName() + ": override parameter distribution does not define the model parameters");
+        }
+        nll->set_override_distribution(override_parameter_distribution);
+    }
     nll->set_additional_term(additional_nll_term);
     return nll;
 }

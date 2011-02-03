@@ -13,6 +13,10 @@ add_sources::add_sources(const theta::plugin::Configuration & cfg): DataSource(c
 }
 
 void add_sources::fill(theta::Data & dat, theta::Run & run){
+    ObsIds obs_dat = dat.getObservables();
+    for(ObsIds::const_iterator it=obs_dat.begin(); it!=obs_dat.end(); ++it){
+        dat[*it].reset();
+    }
     sources[0].fill(dat, run);
     ObsIds obs_result = dat.getObservables();
     ObsIds obs_all = obs_result;

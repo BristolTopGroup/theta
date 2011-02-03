@@ -133,17 +133,19 @@ default_model::default_model(const Configuration & ctx): Model(ctx.vm){
     parameter_distribution = PluginManager<Distribution>::instance().build(Configuration(ctx, s["parameter-distribution"]));
     if(not (parameter_distribution->getParameters() == getParameters())){
         stringstream ss;
-        ss << "parameter-distribution does not define exactly the model parameters dist = ( ";
+        ss << "'parameter-distribution' has to define the same set of parameters the model depends on. However";
         ParIds dist_pars = parameter_distribution->getParameters();
         ParIds m_pars = getParameters();
-        for(ParIds::const_iterator p_it=dist_pars.begin(); p_it!=dist_pars.end(); ++p_it){
-            ss << ctx.vm->getName(*p_it) << " ";
+        ParIds all_pars = m_pars;
+        all_pars.insert(dist_pars.begin(), dist_pars.end());
+        for(ParIds::const_iterator p_it=all_pars.begin(); p_it!=all_pars.end(); ++p_it){
+            if(m_pars.contains(*p_it) && dist_pars.contains(*p_it)) continue;
+            if(m_pars.contains(*p_it)){
+               ss << ", the model depends on '"<< ctx.vm->getName(*p_it) << "' which the parameter distribution does not include";
+            }
+            else ss << ", the parameter distribution depends on '" << ctx.vm->getName(*p_it) << "' which the model does not depend on";
+            
         }
-        ss << "); model = ( ";
-        for(ParIds::const_iterator p_it=m_pars.begin(); p_it!=m_pars.end(); ++p_it){
-            ss << ctx.vm->getName(*p_it) << " ";
-        }
-        ss << " )";
         throw ConfigurationException(ss.str());
     }
 }

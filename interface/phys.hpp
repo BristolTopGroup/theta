@@ -128,6 +128,15 @@ namespace theta {
             return it->second;
         }
         //@}
+        
+        
+        /// \brief reset all current Histograms, i.e., set to zero entry
+        void reset(){
+            std::map<ObsId, Histogram>::iterator it = data.begin();
+            for(; it!=data.end(); ++it){
+               it->second.reset();
+            }
+        }
 
     private:
         std::map<ObsId, Histogram> data;

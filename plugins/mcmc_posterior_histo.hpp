@@ -18,6 +18,7 @@
  * \code
  * post = {
  *   type = "mcmc_posterior_histo";
+ *   name = "post";
  *   parameters = ("s");  //assuming "s" was defined as parameter earlier
  *   iterations = 100000;
  *   burn-in = 100; //optional. default is iterations / 10 
@@ -31,6 +32,9 @@
  * \endcode
  *
  * \c type is always "mcmc_posterior_histo" to select this producer.
+ *
+ * \c name is a name chosen by the user used to construct unique column names in the result table (this name and two underscores are
+ *   prepended to the column names explained below).
  *
  * \c parameters is a list of parameter names you want to calculate the posterior Histograms for
  *
@@ -62,8 +66,6 @@ public:
 private:
     //whether sqrt_cov* and startvalues* have been initialized:
     bool init;
-    //if initialization failed, do not attempt to initialize again ...
-    bool init_failed;
     
     std::vector<theta::ParId> parameters;
     std::vector<std::string> parameter_names;

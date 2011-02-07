@@ -298,12 +298,35 @@ namespace theta {
         */
         ParValues():values(10, NAN){}
         
-        /** Constructor for \c VarValues which will hold values of \c vm.
+        /** \brief Constructor optimized for parameter information from \c vm.
          *
          * This is semantically equivalent to the default constructor. Using this
-         * constructor makes possible some optimizations.
+         * constructor makes possible some optimizations based on the total number of
+         * parameters.
          */
-        ParValues(const VarIdManager & vm): values(vm.next_pid_id, NAN){}
+        explicit ParValues(const VarIdManager & vm): values(vm.next_pid_id, NAN){}
+        
+        /** \brief Constructor initializing the values according to an array of doubles
+         *
+         * The resulting ParValues instance is initialized with the given data
+         * by iterating over par_ids and using the value at that position from data.
+         * This is the convention to convert array data to ParValues used in theta.
+         *
+         * Assumed that data contains (at least) par_ids.size() values. Otherwise,
+         * behaviour is undefined.
+         */
+        ParValues(const double * data, const ParIds & par_ids){
+           //to reallocate only once, find the maximum id:
+           size_t s = 1;
+           for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
+               s = std::max<size_t>(s, it->id + 1);
+           }
+           values.resize(s, NAN);
+           size_t i = 0;
+           for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it, ++i){
+               values[it->id] = data[i];
+           }
+        }
         
         /** \brief Set a value.
          *

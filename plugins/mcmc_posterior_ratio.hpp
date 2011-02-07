@@ -21,6 +21,7 @@
  * \code
  * hypotest = {
  *   type = "mcmc_posterior_ratio";
+ *   name = "ratio";
  *   background-only-distribution = "@bkg-only-dist";
  *   signal-plus-background-distribution = "@default-dist";
  *   iterations = 10000;
@@ -29,6 +30,9 @@
  * \endcode
  *
  * \c type is always "mcmc_posterior_ratio" to select this producer.
+ *
+ * \c name is a name chosen by the user used to construct unique column names in the result table (this name and two underscores are
+ *   prepended to the column names explained below).
  *
  * \c background-only-distribution and \c signal-plus-background-distribution deinfe the Distribution instances to use for the
  *   two MCMC integrations.

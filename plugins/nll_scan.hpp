@@ -14,6 +14,7 @@
  * \code
  * {
  *  type = "nll_scan";
+ *  name = "nll";
  *  parameter = "p0";
  *  minimizer = "@myminimizer";
  *  parameter-values = {start = 0.0; stop = 1.0; n-steps = 101;};
@@ -25,6 +26,9 @@
  * \endcode
  *
  * \c type has always to be "nll_scan" in order to use this producer
+ *
+ * \c name is a name chosen by the user used to construct unique column names in the result table (this name and two underscores are
+ *   prepended to the column names explained below).
  *
  * \c parameter is the name of the parameter for which the interval shall be calculated.
  *

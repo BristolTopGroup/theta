@@ -59,8 +59,6 @@ public:
 private:
     //whether sqrt_cov* and startvalues* have been initialized:
     bool init;
-    //if initialization failed, do not attempt to initialize again ...
-    bool init_failed;
     
     //the requested quantiles:
     std::vector<double> quantiles;

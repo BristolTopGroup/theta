@@ -94,7 +94,7 @@ void mcmc_posterior_histo::produce(Run & run, const Data & data, const Model & m
 }
 
 mcmc_posterior_histo::mcmc_posterior_histo(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()),
-        init(false), init_failed(false){
+        init(false){
     SettingWrapper s = cfg.setting;
     vm = cfg.vm;
     size_t n = s["parameters"].size();

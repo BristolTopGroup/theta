@@ -92,7 +92,7 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
 }
 
 mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()),
-        init(false), init_failed(false){
+        init(false){
     vm = cfg.vm;
     SettingWrapper s = cfg.setting;
     string parameter = s["parameter"];

@@ -47,6 +47,5 @@ public:
     virtual void fill(theta::Data & dat, theta::Run & run);
     
 private:
-    theta::Data data_tmp;
     boost::ptr_vector<theta::DataSource> sources;
 };

@@ -339,7 +339,7 @@ gauss::gauss(const Configuration & cfg){
                ss << "While building gauss distribution defined at path " << cfg.setting.getPath() << ": expected one or more 'parameters'.";
                throw ConfigurationException(ss.str());
            }
-           if(cfg.setting["ranges"].size()!=n || cfg.setting["mu"].size()!=n || cfg.setting["covariance"].size()!=n){
+           if(cfg.setting["ranges"].size()!=n || cfg.setting["mean"].size()!=n || cfg.setting["covariance"].size()!=n){
                throw ConfigurationException("gauss: length of ranges, mu, covariance mismatch!");
            }
            mu.resize(n);
@@ -348,8 +348,8 @@ gauss::gauss(const Configuration & cfg){
            for(size_t i=0; i<n; i++){
                v_par_ids.push_back(cfg.vm->getParId(cfg.setting["parameters"][i]));
                mu[i] = cfg.setting["mean"][i];
-               ranges[i].first = cfg.setting["ranges"][i][0];
-               ranges[i].second = cfg.setting["ranges"][i][1];
+               ranges[i].first = cfg.setting["ranges"][i][0].get_double_or_inf();
+               ranges[i].second = cfg.setting["ranges"][i][1].get_double_or_inf();
                for(size_t j=0; j<n; j++){
                    cov(i,j) = cfg.setting["covariance"][i][j];
                }
@@ -604,6 +604,7 @@ model_source::model_source(const theta::plugin::Configuration & cfg): DataSource
 }
 
 void model_source::fill(Data & dat, Run & run){
+    dat.reset();
     Random & rnd = *rnd_gen;
     ParValues values;
     if(override_parameter_distribution.get()){

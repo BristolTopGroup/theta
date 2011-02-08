@@ -212,20 +212,4 @@ BOOST_AUTO_TEST_CASE(test_reset){
    BOOST_CHECK(exception);
 }
 
-BOOST_AUTO_TEST_CASE(test_random){
-   Random rnd(new RandomSourceTaus());
-   Histogram m(1, 0, 1);
-   m.set(1, 10000);
-   Histogram m2;
-   m.fill_with_pseudodata(m2, rnd);
-   BOOST_REQUIRE(m2.get_nbins()==m.get_nbins());
-   BOOST_REQUIRE(m2.get_xmin() == m.get_xmin());
-   BOOST_REQUIRE(m2.get_xmax() == m.get_xmax());
-   //check 5sigma:
-   BOOST_REQUIRE(fabs(m2.get(1) - 10000) < 500);
-   
-   m.fill_with_pseudodata(m2, rnd, 1000000);
-   BOOST_REQUIRE(fabs(m2.get(1) - 1000000) < 5000);
-}
-
 BOOST_AUTO_TEST_SUITE_END()

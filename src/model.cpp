@@ -20,15 +20,6 @@ ObsIds Model::getObservables() const{
     return observables;
 }
 
-void Model::samplePseudoData(Data & result, Random & rnd, const ParValues & values) const{
-   Data pred;
-   get_prediction_randomized(rnd, pred, values);
-   for (ObsIds::const_iterator it = observables.begin(); it != observables.end(); it++) {
-       pred[*it].fill_with_pseudodata(result[*it], rnd);
-   }
-}
-
-
 
 /* default_model */
 void default_model::set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs_, boost::ptr_vector<HistogramFunction> & histos_){

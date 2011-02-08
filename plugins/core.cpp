@@ -563,14 +563,18 @@ double product_distribution::width(const ParId & p) const{
     return distributions[it->second].width(p);
 }
 
-model_source::model_source(const theta::plugin::Configuration & cfg): DataSource(cfg), RandomConsumer(cfg, getName()), save_nll(false){
+model_source::model_source(const theta::plugin::Configuration & cfg): DataSource(cfg), RandomConsumer(cfg, getName()), save_nll(false), dice_poisson(true),
+  dice_template_uncertainties(true){
     model = PluginManager<Model>::instance().build(Configuration(cfg, cfg.setting["model"]));
     par_ids = model->getParameters();
-    for(ParIds::const_iterator p_it=par_ids.begin(); p_it!=par_ids.end(); ++p_it){
-        parameter_names.push_back(cfg.vm->getName(*p_it));
-    }
     if(cfg.setting.exists("override-parameter-distribution")){
         override_parameter_distribution = PluginManager<Distribution>::instance().build(Configuration(cfg, cfg.setting["override-parameter-distribution"]));
+    }
+    if(cfg.setting.exists("dice_poisson")){
+        dice_poisson = cfg.setting["dice_poisson"];
+    }
+    if(cfg.setting.exists("dice_template_uncertainties")){
+        dice_template_uncertainties = cfg.setting["dice_template_uncertainties"];
     }
     if(cfg.setting.exists("parameters-for-nll")){
         save_nll = true;
@@ -595,8 +599,8 @@ model_source::model_source(const theta::plugin::Configuration & cfg): DataSource
         }
     }
     //define the table:
-    for(size_t i=0; i< parameter_names.size(); ++i){
-        parameter_columns.push_back(table->add_column(*this, parameter_names[i], Table::typeDouble));
+    for(ParIds::const_iterator p_it=par_ids.begin(); p_it!=par_ids.end(); ++p_it){
+        parameter_columns.push_back(table->add_column(*this, cfg.vm->getName(*p_it), Table::typeDouble));
     }
     if(save_nll){
         c_nll = table->add_column(*this, "nll", Table::typeDouble);
@@ -607,23 +611,42 @@ void model_source::fill(Data & dat, Run & run){
     dat.reset();
     Random & rnd = *rnd_gen;
     ParValues values;
+    //1. sample parameter values
     if(override_parameter_distribution.get()){
         override_parameter_distribution->sample(values, rnd);
     }
     else{
         model->get_parameter_distribution().sample(values, rnd);
     }
-    model->samplePseudoData(dat, rnd, values);
     size_t i=0;
     for(ParIds::const_iterator p_it=par_ids.begin(); p_it!=par_ids.end(); ++p_it, ++i){
         table->set_column(parameter_columns[i], values.get(*p_it));
     }
     
+    //2. get model prediction
+    if(dice_template_uncertainties){
+       model->get_prediction_randomized(rnd, dat, values);
+    }
+    else{
+       model->get_prediction(dat, values);
+    }
+    
+    //3. (maybe) sample poisson
+    if(dice_poisson){
+        ObsIds observables = dat.getObservables();
+        for (ObsIds::const_iterator it = observables.begin(); it != observables.end(); it++) {
+             randomize_poisson(dat[*it], rnd);
+        }
+    }
+    
+    //4. calculate nll value
     if(save_nll){
        std::auto_ptr<NLLikelihood> nll = model->getNLLikelihood(dat);
        values.set(parameters_for_nll);
        table->set_column(*c_nll, (*nll)(values));
     }
+    
+
 }
 
 

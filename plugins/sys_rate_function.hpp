@@ -36,7 +36,9 @@ private:
     std::vector<double> r_minus;
 
 public:
+    /// constructor used by the plugin system
     sys_rate_function(const theta::plugin::Configuration & cfg);
+    /// overloaded evaluation operator from theta::Function
     virtual double operator()(const theta::ParValues & v) const;
 };
 

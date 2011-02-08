@@ -146,13 +146,3 @@ Histogram & Histogram::operator*=(double a) {
     return *this;
 }
 
-void Histogram::fill_with_pseudodata(Histogram & m, Random & rnd, double mu) const{
-    m.reset(nbins, xmin, xmax);
-    if(mu < 0) mu = sum_of_bincontents;
-    double factor = mu/sum_of_bincontents;
-    for(size_t bin=0; bin<=nbins+1; bin++){
-        size_t n = rnd.poisson(factor * histodata[bin]);
-        m.set(bin, n);
-    }
-}
-

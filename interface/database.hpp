@@ -327,8 +327,9 @@ public:
 
     /** \brief append an entry to the RndInfoTable
      *
-     * \param name is the name of the module of the seed, according to \link theta::ProductsTableWriter ProductsTableWriter \endlink .
-     * \param seed is the seed of the random number generator used for this module
+     * \c run is the current Run
+     * \c name is the name of the module of the seed, according to \link theta::ProductsTableWriter ProductsTableWriter \endlink . <br />
+     * \c seed is the seed of the random number generator used for this module
      */
     void append(const theta::Run & run, const std::string & name, int seed);
 private:

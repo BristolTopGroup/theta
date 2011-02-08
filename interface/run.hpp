@@ -130,10 +130,9 @@ public:
  *  are managed here, that is
  *  <ul>
  *   <li>A \link LogTable LogTable \endlink called 'log', where all log entries are stored.</li>
- *   <li>A \link ProducerInfoTable ProducerInfoTable \endlink called 'prodinfo', where the list of configured
- *        producers is stored.</li>
- *   <li>A \link RndInfoTable RndInfoTable \endlink called 'runs', where the per-run information is stored from
- *      the producers or other sources.</li>
+ *   <li>A \link RndInfoTable RndInfoTable \endlink called 'rndinfo', where information about used random seeds by all plugin
+ *     which consume randomness are saved. This can be useful if one wants to reproduce the exact same run (e.g., the same
+ *     pseudo data between different theta runs or to provoke a certain rarely ocurring bug). </li>
  *   <li>A \link ProductsTable ProductsTable \endlink called 'events' where the per-event results from all
  *     the producers are stored and other per-event information.</li>
  *  </ul>

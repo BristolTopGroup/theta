@@ -110,7 +110,7 @@
  * quantities useful for statistical methods such as maximum likelihood estimate for a model parameter (see \link mle mle\endlink) or a likelihood ratio
  * (see \link deltanll_hypotest deltanll_hypotest\endlink ) which can be used for frequentist methods such as p-values and Neyman construction.
  * Other producers directly yield statistical results such as intervals via the profile likelihood method (\link deltanll_intervals deltanll_intervals\endlink)
- * or Bayesian intervals or marginal posteriors (\link mcmc_quantiles mcmc_quantiles\endlink and \link mcmc_histo mcmc_histo\endlink).
+ * or Bayesian intervals or marginal posteriors (\link mcmc_quantiles mcmc_quantiles\endlink and \link mcmc_posterior_histo mcmc_posterior_histo\endlink).
  *
  * In %theta, models are <em>always</em> given as a linear combination of templates (i.e., histograms), where
  * both the coefficients and the templates depend in general on the parameters of the model.

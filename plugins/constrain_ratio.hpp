@@ -25,7 +25,9 @@ private:
     double mean, width;
 
 public:
+    /// constructor used by the plugin system
     constrain_ratio(const theta::plugin::Configuration & cfg);
+    /// overloaded evaluation of the function
     virtual double operator()(const theta::ParValues & v) const;
 };
 

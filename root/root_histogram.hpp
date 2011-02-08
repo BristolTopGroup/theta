@@ -60,7 +60,7 @@ using namespace std;
  *   <li>it is not allowed to specify rebin or range (otherwise, reading the histogram will fail). All bins except overflow / uncerflow will
  *      be used.</li>
  *   <li>internally, the range will always be set to [0, nbinsx*nbinsy*nbinsz]. Usually, this is not relevant, except if you want to
- *     mix root_histograms and Histograms created by other theta plugins and have to make sure that the ranges are the same. </ul>
+ *     mix root_histograms and Histograms created by other theta plugins and have to make sure that the ranges are the same. </li>
  * </ul>
  *
  * \sa ConstantHistogramFunctionError ConstantHistogramFunction

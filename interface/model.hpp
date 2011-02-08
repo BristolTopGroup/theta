@@ -84,12 +84,6 @@ namespace theta {
          */
         ObsIds getObservables() const;
         
-        /** \brief Sample pseudo data for all observables of this Model, given parameter values
-         *
-         * The result will be filled in \c data.
-         */
-        void samplePseudoData(Data & data, Random & rnd, const ParValues & values) const;
-
         /** \brief Creates a likelihood function object for this model, given the data.
          *
          * The observables of this Model and the given Data must be the same. Otherwise,
@@ -133,7 +127,7 @@ namespace theta {
         ParIds parameters;
         ObsIds observables;
 
-        Model(const boost::shared_ptr<VarIdManager> & vm);
+        explicit Model(const boost::shared_ptr<VarIdManager> & vm);
     };
     
     

@@ -4,6 +4,8 @@ convention and output. It does not cover internal changes.
 
 from June to trunk:
 -------------------
+* the plugin 'model_source_norandom' has been dropped. Instead, use the 'model_source' plugin, set 'dice_poisson' to false
+  and use delta distributions as 'override-parameter-distribution'.
 * there used to be one global random number generator, configured via the (optional) setting 'main.seed'. Now,
   every plugin requiring random numbers has its own generator. With this approach, it is now
   possible to reproduce the exact same pseudo-data by using the same random seed in main.data_source. In earlier

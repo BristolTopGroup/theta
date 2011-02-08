@@ -397,6 +397,8 @@ private:
  * source = {
  *   type = "model_source";
  *   model = "@some-model-path";
+ *   dice_poisson = false; // optional; default is true
+ *   dice_template_uncertainties = false; // optional; default is true
  *   override-parameter-distribution = "@some-dist"; // optional
  *   parameters-for-nll = { p1 = 0.0; p2 = 1.0; p3 = "diced_value"; }; //optional; assuming p1, p2, p3 are parameters
  *   rnd_gen = { seed = 123; }; // optional
@@ -407,33 +409,42 @@ private:
  *
  * \c model specifies the model to use for data creation
  *
- * \c override-parameter-distribution is an optional setting overriding the default behavior for parameter values, see below. It
- *     has to provide (at least) all the model parameters.
+ * \c dice_poisson controls whether the pseudo data this plugin provides dices a poisson around the model prediction in each bin
+ *   or just returns the model prediction directly; see below for details.
+ *
+ * \c dice_template_uncertainties controls whether there will be a random smearing of the templates within their uncertainties prior to sampling pseudo data;
+ *    see below for details.
+ *
+ * \c override-parameter-distribution is an optional setting overriding the distribution from which parameter values are drawn, see below. It
+ *     has to provide exactly the same parameters as the model.
  *
  * \c parameters-for-nll defines the parameter values used for saving the value of the negative log-likelihood. They are
  *     either given directly as floating point, or the special string "diced_value". Each parameter of the model
  *     must be specified here. If not given, the negative log-likelihood will not be saved.
  *
- * \c rnd_gen defined the random number generator to use. The default is to construct a \link Random Random \endlink class
+ * \c rnd_gen defined the random number generator to use. The default is to construct a \link theta::Random Random \endlink class
  *    with a empty setting group which will use defaults documented there.
  *
  * For each call of fill
  * <ol>
- *   <li>parameter values are sampled from the parameter distribution. If the setting \c override-parameter-distribution
- *       is given, it will be used for this step. Otherwise, the parameter distribution specified in the model will be used.</li>
- *   <li>the parameter values from the previous step are used in a call to call Model::samplePseudoData </li>
+ *   <li>parameter values are sampled from the parameter distribution of the model. If the setting \c override-parameter-distribution
+ *       is given, it will be used for this step instead.</li>
+ *   <li>the parameter values from the previous step are used to calculate the Model prediction. If \c dice_template_uncertainties is true,
+ *      this will be done using the method HistogramFunction::getRandomFluctuation instead of the evaluation operator of \link HistogramFunction HistogramFunction\endlink.
+ *      What this means exactly depends on the HistogramFunction instances used; see their documentation of \c getRandomFlucutation method for details.</li>
+ *   <li>if \c dice_poisson is \c true, a Poisson random number is drawn for each bin around the mean of the prediciton from the previous step. Otherwise,
+ *      the bin contents from the model prediction are used as pseudo data directly (somtimes called "Asimov data").</li>
  *   <li>if \c parameters-for-nll is given, the likelihood function is built for the Data sampled
- *      in the previous step and evaluated at the given parameter values.
+ *      in the previous step and evaluated at the given parameter values.</li>
  * </ol>
  *
  * \c model_source will create a column in the event table for each model parameter and save the values used to sample the pseudo
- * data there. If \c parameters-for-nll is given, a column "nll" will be created where the value of the negative log-likelihood is saved.
+ * data. If \c parameters-for-nll is given, a column "nll" will be created where the value of the negative log-likelihood is saved.
  *
- * The \c parameters-for-nll setting is useful to construct (a variation of) Feldman-Cousins intervals: for all nuisance parameters,
- * the most probable value can be used; for the parameter of interest, the diced value is used. This yields one likelihood value
- * entering the ordering principle for this interval construction. The other likelihood value can be obtained by an mle
- * producer which fixes all nuisance parameters to the same values as here, and fits the parameter of interest to data.
- * 
+ * The \c parameters-for-nll setting can be used to contruct Feldman-Cousins intervals which uses the likelihood ratio as
+ * ordering principle. One of the likelihood values uses the true value of the parameter of interest and is calculated here in \c model_source.
+ * The other likelihood value can be calculated used the \link mle mle \endlink producer which saves the nll value at the
+ * minimum of the negative log-likelihood.
  */
 class model_source: public theta::DataSource, public theta::RandomConsumer {
 public:
@@ -455,11 +466,13 @@ private:
     std::auto_ptr<theta::Column> c_nll;
     
     theta::ParIds par_ids;
-    std::vector<std::string> parameter_names;
     boost::ptr_vector<theta::Column> parameter_columns;
     
     std::auto_ptr<theta::Model> model;
     std::auto_ptr<theta::Distribution> override_parameter_distribution;
+    
+    bool dice_poisson;
+    bool dice_template_uncertainties;
 
 };
 

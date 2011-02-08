@@ -12,7 +12,9 @@ private:
     theta::ParId pid;
 
 public:
+    /// constructor for the plugin system
     one_over_sqrt(const theta::plugin::Configuration & cfg);
+    /// overloaded evaluation operator of theta::Function
     virtual double operator()(const theta::ParValues & v) const;
 };
 

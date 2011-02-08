@@ -150,17 +150,7 @@ public:
     * An \c InvalidArgumentException is thrown if \c other is not compatible with this.
     */
     void add_with_coeff(double coeff, const Histogram & other);
-
-    /** \brief Populate a Histogram with Poisson random data sampled from this Histogram.
-     *
-     * Use the current Histogram as pdf to draw random numbers and fill them into \c m.
-     *
-     * \c m will be reset to match the range and number of bins of the current Histogram.
-     * \c rnd is the random number generator to use
-     * \c mu is either the exact number of points to sample or the mean of a Poisson to use to determine the number of sample points.
-     *    If \c mu &lt; 0, the current \c sum_of_bincontents is used as \c mu.
-     */
-    void fill_with_pseudodata(Histogram & m, Random & rnd, double mu=-1) const;
+    
 };
 
 }

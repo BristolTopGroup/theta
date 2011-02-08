@@ -39,3 +39,13 @@ RandomConsumer::RandomConsumer(const theta::plugin::Configuration & cfg, const s
    }
 }
          
+         
+void theta::randomize_poisson(Histogram & h, Random & rnd){
+    const size_t nbins = h.get_nbins();
+    for(size_t bin=0; bin<=nbins+1; ++bin){
+        size_t n = rnd.poisson(h.get(bin));
+        h.set(bin, n);
+    }
+}
+                   
+

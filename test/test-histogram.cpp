@@ -25,18 +25,22 @@ void check_histos_equal(const Histogram & h1, const Histogram & h2){
     }
 }
 
+// general note: use odd bin numbers to test SSE implementation for which
+// an odd number of bins is a special case.
+
 BOOST_AUTO_TEST_SUITE(histogram_tests)
 
 //test construcors and copy assignment
 BOOST_AUTO_TEST_CASE(ctest){
    //default construction:
-   Histogram m(100, -1, 1);
-   BOOST_CHECK(m.get_nbins()==100);
+   const size_t nbins = 101;
+   Histogram m(nbins, -1, 1);
+   BOOST_CHECK(m.get_nbins()==nbins);
    BOOST_CHECK(m.get_xmin()==-1);
    BOOST_CHECK(m.get_xmax()==1);
    BOOST_CHECK(m.get_sum_of_bincontents()==0);
    //fill a bit:
-   for(size_t i=0; i<=101; i++){
+   for(size_t i=0; i<=nbins+1; i++){
        m.set(i, i*i);
    }
 
@@ -46,10 +50,10 @@ BOOST_AUTO_TEST_CASE(ctest){
    check_histos_equal(m, mcopy);
 
    //copy assignment:
-   Histogram m200(200, -1, 1);
-   BOOST_CHECK(m200.get_nbins()==200);
+   Histogram m200(2 * nbins, -1, 1);
+   BOOST_CHECK(m200.get_nbins()==2*nbins);
    m200 = m;
-   BOOST_CHECK(m200.get_nbins()==100);
+   BOOST_CHECK(m200.get_nbins()==nbins);
    check_histos_equal(m200, m);
 
    //copy assignment with empty histo:
@@ -59,7 +63,7 @@ BOOST_AUTO_TEST_CASE(ctest){
    
    bool exception = false;
    try{
-      Histogram m2(100, 1, 0);
+      Histogram m2(nbins, 1, 0);
    }
    catch(InvalidArgumentException & ex){
       exception = true;
@@ -68,7 +72,7 @@ BOOST_AUTO_TEST_CASE(ctest){
    
    exception = false;
    try{
-      Histogram m2(100, -1, -1);
+      Histogram m2(nbins, -1, -1);
    }
    catch(InvalidArgumentException & ex){
       exception = true;
@@ -125,10 +129,11 @@ BOOST_AUTO_TEST_CASE(getset){
 //test +=
 BOOST_AUTO_TEST_CASE(test_plus){
     Random rnd(new RandomSourceTaus());
-    Histogram m0(100, 0, 1);
+    const size_t nbins = 101;
+    Histogram m0(nbins, 0, 1);
     Histogram m1(m0);
     Histogram m_expected(m0);
-    for(size_t i=0; i<=101; i++){
+    for(size_t i=0; i<=nbins+1; ++i){
         volatile double g0 = rnd.get();
         m0.set(i, g0);
         volatile double g1 = rnd.get();
@@ -140,24 +145,26 @@ BOOST_AUTO_TEST_CASE(test_plus){
     Histogram m1_before(m1);
     Histogram m0_before(m0);
     m0+=m1;
-    //the sum of weights could be slightly off.
+    //the sum of weights could be slightly off, but check_histos_equal does handle this.
     check_histos_equal(m0, m_expected);
     check_histos_equal(m1, m1_before);
     //... and it should commute:
     m1+=m0_before;
     check_histos_equal(m1, m_expected);
+    //BOOST_CHECKPOINT("test_plus m1, m0");
     check_histos_equal(m1, m0);
 }
 
 //test *=
 BOOST_AUTO_TEST_CASE(test_multiply){
     Random rnd(new RandomSourceTaus());
-    Histogram m0(100, 0, 1);
+    const size_t nbins = 101;
+    Histogram m0(nbins, 0, 1);
     Histogram m1(m0);
     Histogram m0m1(m0);
     Histogram m0factor_expected(m0);
     double factor = rnd.get();
-    for(size_t i=0; i<=101; i++){
+    for(size_t i=0; i<=nbins+1; i++){
         double g0 = rnd.get();
         m0.set(i, g0);
         m0factor_expected.set(i, g0*factor);
@@ -173,7 +180,7 @@ BOOST_AUTO_TEST_CASE(test_multiply){
     bool exception = false;
     //check error behaviour:
     try{
-       Histogram m2(101, 0, 1);
+       Histogram m2(nbins + 1, 0, 1);
        m0 *= m2;
     }
     catch(InvalidArgumentException & ex){
@@ -184,9 +191,9 @@ BOOST_AUTO_TEST_CASE(test_multiply){
 
 BOOST_AUTO_TEST_CASE(test_reset){
    Random rnd(new RandomSourceTaus());
-   
-   Histogram m(100, rnd.uniform(), rnd.uniform() + 2.0);
-   for(size_t i=0; i<=101; i++){
+   const size_t nbins = 101;
+   Histogram m(nbins, rnd.uniform(), rnd.uniform() + 2.0);
+   for(size_t i=0; i<=nbins+1; i++){
        m.set(i, 0.1*i);
    }
    Histogram m0=m;
@@ -198,13 +205,13 @@ BOOST_AUTO_TEST_CASE(test_reset){
    BOOST_CHECK(m.get_xmax()==m0.get_xmax());
    BOOST_CHECK(m.get_nbins()==m0.get_nbins());
    BOOST_CHECK(m.get_sum_of_bincontents()==0.0);
-   for(size_t i=0; i<=101; i++){
+   for(size_t i=0; i<=nbins+1; i++){
        BOOST_REQUIRE(m.get(i)==0.0);
    }
    
    bool exception = false;
    try{
-      m.reset(101);
+      m.reset(nbins + 1);
    }
    catch(InvalidArgumentException & ex){
       exception = true;

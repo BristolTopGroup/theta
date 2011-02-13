@@ -41,13 +41,17 @@ ifeq ($(OPTIONS_USE_CRLIBM),yes)
    DEFINES += -DUSE_CRLIBM
 endif
 
+ifeq ($(OPTIONS_USE_SSE),yes)
+   DEFINES += -DUSE_SSE
+endif
+
 #lazy evaluation to allow subdirectories to add their own includes and libs ...
 INCLUDES = -I.. $(BOOST_INCLUDE) $(SQLITE_INCLUDE)
 EXTRA_COMPILE =
 EXTRA_LINK_EXE =
 EXTRA_LINK_SO =
 
-COMPILE = echo creating $@; $(CXX) $(DEFINES) -g -c -Wall -fPIC -O3 $(OPTIONS_CFLAGS) $(INCLUDES) $(EXTRA_COMPILE)
+COMPILE = echo creating $@; $(CXX) $(DEFINES) -g -c -Wall -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
 LINK_EXE = echo linking $@; $(CXX) $(OPTIONS_LDFLAGS) -Wl,-R,'$$ORIGIN/../lib' -rdynamic -L../lib -ldl -ltheta -lconfig $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
 LINK_SO = echo linking $@; $(CXX) $(OPTIONS_LDFLAGS) -Wl,-R,'$$ORIGIN/../lib' -shared -rdynamic $(EXTRA_LINK_SO)
 

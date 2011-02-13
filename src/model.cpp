@@ -196,18 +196,20 @@ double default_model_nll::operator()(const ParValues & values) const{
         assert(data_hist.get_nbins() == model_prediction.get_nbins());
         const double * __restrict pred_data = model_prediction.getData();
         const double * __restrict data_data = data_hist.getData();
-        double nll = 0.0;
         for(size_t i=1; i<=nbins; ++i){
+            result += pred_data[i];
             //if both, the prediction and the data are zero, that does not contribute.
             // However, if the prediction is zero and we have non-zero data, we MUST return infinity (!) ...
-            if(pred_data[i] > 0.0)
-                 nll -= data_data[i] * theta::utils::log(pred_data[i]);
-             else if(data_data[i] > 0.0){
+            if(pred_data[i] > 0.0){
+                 // To save the evaluation of log, skip entries with zero data, as they would not contribute anyway.
+                 // If evaluating likelihoods for data with many zero entries, this can lead to a considerable speedup.
+                 if(data_data[i] > 0.0){
+                     result -= data_data[i] * theta::utils::log(pred_data[i]);
+                 }
+             }else if(data_data[i] > 0.0){
                  return numeric_limits<double>::infinity();
              }
         }
-        result += nll;
-        result += model_prediction.get_sum_of_bincontents();
     }
     
     //3. The additional likelihood terms, if set:

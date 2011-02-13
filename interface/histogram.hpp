@@ -2,6 +2,7 @@
 #define HISTOGRAM_HPP
 
 #include "interface/decls.hpp"
+#include "interface/utils.hpp"
 #include <cstring>
 
 namespace theta{
@@ -19,12 +20,25 @@ namespace theta{
 class Histogram {
 private:
     double* histodata;
-    double sum_of_bincontents;
+    //sum_of_bincontens is a cache:
+    mutable double sum_of_bincontents;
+    mutable bool sum_of_bincontents_valid;
     //number of bins for the histogram, *excluding* underflow and overflow:
     size_t nbins;
     double xmin, xmax;
     
     void initFromHisto(const Histogram & h);
+    
+    // throws the actual exception, with the message.
+    void fail_check_compatibility(const Histogram & h) const;
+    
+    void calculate_sum_of_bincontents() const{
+        sum_of_bincontents = 0.0;
+        for(size_t i=0; i<=nbins+1; ++i){
+            sum_of_bincontents += histodata[i];
+        }
+        sum_of_bincontents_valid = true;
+    }
     
 public:
     /** \brief Create an empty Histogram with \c bins bins with range (\c xmin, \c xmax )
@@ -35,7 +49,7 @@ public:
     Histogram(const Histogram& rhs);
 
     /// Copy assignment. Copies the content of \c rhs into this.
-    Histogram & operator=(const Histogram& rhs);
+    void operator=(const Histogram& rhs);
 
     ///Destructor. De-allocates internal memory of the histogram data
     ~Histogram();
@@ -68,7 +82,9 @@ public:
      * See bin index convention in the class documentation. This function does no range checking.
      */
     void set(size_t i, double weight){
-       sum_of_bincontents += weight - histodata[i];
+       //note: set if often evaluated in tight loops. Therfore, delay the evaluation
+       // of sum_of_bincontents
+       sum_of_bincontents_valid = false;
        histodata[i] = weight;
     }
 
@@ -105,6 +121,7 @@ public:
 
     /// Get the sum of bin contents of all bins of the Histogram.
     double get_sum_of_bincontents() const{
+        if(!sum_of_bincontents_valid) calculate_sum_of_bincontents();
         return sum_of_bincontents;
     }
 
@@ -116,40 +133,56 @@ public:
         return xmin + (ibin-0.5) * (xmax - xmin) / nbins;
     }
 
-    /** \brief Add another Histogram to this
-     *
-     * Throws an \c InvalidArgumentException if \c other is not compatible to this.
-     */
-    Histogram & operator+=(const Histogram & other);
-
     /** \brief Multiply the Histogram \c other with this, bin-by-bin
      *
      * Throws an \c InvalidArgumentException if \c other is not compatible with this Histogram.
      * \c &other must be different from \c this.
      */
-    Histogram & operator*=(const Histogram & other);
+    void operator*=(const Histogram & other);
 
     /// Multiply the entry of each bin by \c a.
-    Histogram & operator*=(const double a);
+    void operator*=(const double a){
+       utils::mul_fast(histodata, a, nbins+2);
+       sum_of_bincontents *= a;
+    }
 
     /** \brief check compatibility of \c this to the \c other Histogram.
      *
-     * A Histogram is considered compatible if it has the exact same number of bins and range. In case if incompatibility, an 
+     * A Histogram is considered compatible if it has the exact same number of bins and range. In case if incompatibility, an
      * \c InvalidArgumentException is thrown.
      */
-    void check_compatibility(const Histogram & h) const;
+    //note: this is split into checking and reporting to increase inlining probability
+    void check_compatibility(const Histogram & h) const{
+        if (nbins != h.nbins || xmin!=h.xmin || xmax != h.xmax){
+           fail_check_compatibility(h);
+        }
+    }
     
     /** \brief Calculate this = this * (nominator/denominator)^exponent, bin-by-bin.
     *
     * An \c InvalidArgumentException is thrown if either \c nominator or \c denominator are not compatible with this.
     */
     void multiply_with_ratio_exponented(const Histogram & nominator, const Histogram & denominator, double exponent);
+    
+    /** \brief Add another Histogram to this
+     *
+     * Throws an \c InvalidArgumentException if \c other is not compatible to this.
+     */
+    void operator+=(const Histogram & other){
+        check_compatibility(other);
+        utils::add_fast(histodata, other.histodata, nbins+2);
+        sum_of_bincontents_valid = false;
+    }
 
     /** \brief Calculate this = this + coeff * other.
-    *
-    * An \c InvalidArgumentException is thrown if \c other is not compatible with this.
-    */
-    void add_with_coeff(double coeff, const Histogram & other);
+     *
+     * Throws an \c InvalidArgumentException if \c other is not compatible with this.
+     */
+    void add_with_coeff(double coeff, const Histogram & other){
+       check_compatibility(other);
+       utils::add_fast_with_coeff(histodata, other.histodata, coeff, nbins+2);
+       sum_of_bincontents_valid = false;
+    }
     
 };
 

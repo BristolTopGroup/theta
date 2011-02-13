@@ -198,6 +198,7 @@
  *   <li>\c crlibm (default: ON) If enabled, uses the logarithm function (included in %theta)
  *         from the <a href="http://lipforge.ens-lyon.fr/www/crlibm/">crlibm project</a> which is often faster than the
  *         standard log function.</li>
+ *   <li>\c sse (default: OFF) If enabled, use SSE optimization for vector operations in the Histogram class. </li>
  * </ul>
  *
  * \subsection with_cmssw With CMSSW

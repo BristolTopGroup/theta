@@ -293,6 +293,12 @@ namespace theta {
      * For the latter, ParIds and ObsIds objects are used.
      */
     class ParValues {
+    private:
+        void fail_get(const ParId & pid) const{
+            std::stringstream ss;
+            ss << "ParValues::get: given VarId " << pid.id << " not found";
+            throw NotFoundException(ss.str());
+        }
     public:
         /** \brief Default constructor which creates an empty container.
         */
@@ -388,12 +394,11 @@ namespace theta {
          *  \return The current value for the parameter \c pid.
          */
         double get(const ParId & pid) const{
-            double result;
+            double result = 0.0;
             const int id = pid.id;
-            if(id >= (int)values.size() || std::isnan(result = values[id])){
-                std::stringstream ss;
-                ss << "ParValues::get: given VarId " << id << " not found";
-                throw NotFoundException(ss.str());
+            if(id >= static_cast<int>(values.size()) || std::isnan(result = values[id])){
+                //do failure outside this function to keep this function small to increase inlining probability
+                fail_get(pid);
             }
             return result;
         }
@@ -402,7 +407,7 @@ namespace theta {
          */
         bool contains(const ParId & pid) const{
             const int id = pid.id;
-            return id < (int)values.size() and not std::isnan(values[id]);
+            return id < static_cast<int>(values.size()) and not std::isnan(values[id]);
         }
 
         /** \brief Return all \c ParIds of the variables in this \c VarValues.

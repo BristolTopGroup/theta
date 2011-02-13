@@ -6,13 +6,38 @@
 #include <cmath>
 #include <sstream>
 #include <limits>
+#include <new>
 
 using namespace theta;
 
+namespace{
+   double * allocate_histodata(size_t nbins){
+      double * result = 0;
+      const size_t nbins_orig = nbins;
+      //always allocate an even number of bins:
+      if(nbins_orig % 2) ++nbins;
+      //for the add_fast routine, which ight use SSE optimizations, we need this alignment. And
+      // while we at it, we should make sure double is as expected:
+      BOOST_STATIC_ASSERT(sizeof(double)==8);
+      int err = posix_memalign((void**)(&result), 16, sizeof(double) * (nbins + 2));
+      if(err!=0){
+        throw std::bad_alloc();
+      }
+      //set the extra allocated double to zero to make sure no time-consuming garbage is there ...
+      if(nbins_orig % 2) result[nbins + 1] = 0.0;
+      return result;
+   }
+   
+   void free_histodata(double * histodata){
+      free(histodata);
+   }
+}
+
+
 Histogram::Histogram(size_t b, double x_min, double x_max) :
-sum_of_bincontents(0.0), nbins(b), xmin(x_min), xmax(x_max) {
+sum_of_bincontents(0.0), sum_of_bincontents_valid(true), nbins(b), xmin(x_min), xmax(x_max) {
     if(xmin >= xmax) throw InvalidArgumentException("Histogram: xmin >= xmax not allowed");
-    histodata = new double[nbins + 2];
+    histodata = allocate_histodata(nbins);
     memset(histodata, 0, sizeof (double) *(nbins + 2));
 }
 
@@ -20,32 +45,33 @@ Histogram::Histogram(const Histogram& rhs) {
     initFromHisto(rhs);
 }
 
-Histogram & Histogram::operator=(const Histogram & rhs) {
-    if (&rhs == this) return *this;
+void Histogram::operator=(const Histogram & rhs) {
+    if (&rhs == this) return;
     if (nbins != rhs.nbins || xmin != rhs.xmin || xmax != rhs.xmax) {
-        delete[] histodata;
+        free_histodata(histodata);
         initFromHisto(rhs);
     } else {
         memcpy(histodata, rhs.histodata, sizeof (double) *(nbins + 2));
+        sum_of_bincontents_valid = rhs.sum_of_bincontents_valid;
         sum_of_bincontents = rhs.sum_of_bincontents;
     }
-    return *this;
 }
 
 Histogram::~Histogram() {
-    delete[] histodata;
+    free_histodata(histodata);
 }
 
 void Histogram::reset(size_t b, double x_min, double x_max) {
     sum_of_bincontents = 0.0;
+    sum_of_bincontents_valid = true;
     //only re-allocate if there where changes.
-    if (b != 0 && (b != nbins || x_min != xmin || x_max != xmax)) {
+    if (b > 0 && (b != nbins || x_min != xmin || x_max != xmax)) {
         nbins = b;
         xmin = x_min;
         xmax = x_max;
         if(xmin >= xmax) throw InvalidArgumentException("Histogram: xmin >= xmax not allowed");
-        delete[] histodata;
-        histodata = new double[nbins + 2];
+        free_histodata(histodata);
+        histodata = allocate_histodata(nbins);
     }
     memset(histodata, 0, sizeof (double) *(nbins + 2));
 }
@@ -54,6 +80,8 @@ void Histogram::reset_to_1(){
    for(size_t i=0; i<=nbins+1; i++){
       histodata[i] = 1.0;
    }
+   sum_of_bincontents = nbins+2;
+   sum_of_bincontents_valid = true;
 }
 
 void Histogram::multiply_with_ratio_exponented(const Histogram & nominator, const Histogram & denominator, double exponent){
@@ -68,15 +96,7 @@ void Histogram::multiply_with_ratio_exponented(const Histogram & nominator, cons
       s += histodata[i];
    }
    sum_of_bincontents = s;
-}
-
-void Histogram::add_with_coeff(double coeff, const Histogram & other){
-    check_compatibility(other);
-    const double * __restrict data = other.histodata;
-    for(size_t i=0; i<=nbins+1; i++){
-         histodata[i] += coeff * data[i];
-    }
-    sum_of_bincontents += coeff * other.sum_of_bincontents;
+   sum_of_bincontents_valid = true;
 }
 
 void Histogram::initFromHisto(const Histogram & h) {
@@ -84,10 +104,9 @@ void Histogram::initFromHisto(const Histogram & h) {
     xmin = h.xmin;
     xmax = h.xmax;
     sum_of_bincontents = h.sum_of_bincontents;
-    histodata = new double[nbins + 2];
-    if (h.histodata != 0) {
-        memcpy(histodata, h.histodata, sizeof (double) *(nbins + 2));
-    }
+    sum_of_bincontents_valid = h.sum_of_bincontents_valid;
+    histodata = allocate_histodata(nbins);
+    memcpy(histodata, h.histodata, sizeof (double) *(nbins + 2));
 }
 
 void Histogram::fill(double xvalue, double weight) {
@@ -97,10 +116,11 @@ void Histogram::fill(double xvalue, double weight) {
     if (static_cast<size_t> (bin) > nbins + 1)
         bin = nbins + 1;
     histodata[bin] += weight;
-    sum_of_bincontents += weight;
+    if(sum_of_bincontents_valid)
+        sum_of_bincontents += weight;
 }
 
-void Histogram::check_compatibility(const Histogram & h) const {
+void Histogram::fail_check_compatibility(const Histogram & h) const {
     if (nbins != h.nbins || xmin!=h.xmin || xmax != h.xmax){
         std::stringstream s;
         s <<  "Histogram::check_compatibility: Histograms are not compatible (nbins, xmin, xmax) are: "
@@ -110,39 +130,14 @@ void Histogram::check_compatibility(const Histogram & h) const {
     }
 }
 
-Histogram & Histogram::operator+=(const Histogram & h) {
-    if(&h == this){
-        this->operator*=(2.0);
-        return *this;
-    }
-    check_compatibility(h);
-    const double * __restrict hdata = h.histodata;
-    for (size_t i = 0; i <= nbins + 1; i++) {
-        histodata[i] += hdata[i];
-    }
-    sum_of_bincontents += h.sum_of_bincontents;
-    return *this;
-}
-
-Histogram & Histogram::operator*=(const Histogram & h) {
+void Histogram::operator*=(const Histogram & h) {
     check_compatibility(h);
     const double * hdata = h.histodata;
     sum_of_bincontents = 0.0;
-    double sum = 0.0;
-    for (size_t i = 0; i <= nbins + 1; i++) {
+    for (size_t i = 0; i <= nbins + 1; ++i) {
         histodata[i] *= hdata[i];
-        sum += histodata[i];
+        sum_of_bincontents += histodata[i];
     }
-    sum_of_bincontents = sum;
-    return *this;
-}
-
-
-Histogram & Histogram::operator*=(double a) {
-    for (size_t i = 0; i <= nbins + 1; i++) {
-        histodata[i] *= a;
-    }
-    sum_of_bincontents *= a;
-    return *this;
+    sum_of_bincontents_valid = true;
 }
 

@@ -8,3 +8,6 @@ OPTIONS_BUILD_TESTS := yes
 # whether or not to use the log function from crlibm (which is faster than the standard log)
 OPTIONS_USE_CRLIBM := yes
 
+# use sse2 to speed up vector operations
+OPTIONS_USE_SSE := no
+

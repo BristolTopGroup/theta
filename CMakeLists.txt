@@ -6,7 +6,7 @@ option(coverage "build for coverage tests" OFF)
 option(optiontest "build tests" OFF)
 option(release "build release version" ON)
 option(crlibm "use the log function from crlibm" ON)
-option(sse "use sse optimizations" OFF)
+option(generic "use generic implementation of funtions; not optimized, platform-specific ones" OFF)
 option(psql "use postgresql" OFF)
 
 if(coverage)
@@ -27,9 +27,20 @@ if(crlibm)
    add_definitions(-DUSE_CRLIBM)
 endif()
 
-if(sse)
-   message(STATUS "using SSE optimizations")
-   add_definitions(-DUSE_SSE)
+
+if(NOT generic)
+  if(NOT "${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64" OR NOT CMAKE_ASM-ATT_COMPILER_WORKS)
+      message(STATUS "non-optimized platform / assembler not working; enabling 'generic' option")
+      set(generic ON)
+  endif()
+endif()
+   
+
+if(generic)
+   message(STATUS "using generic functions")
+   add_definitions(-DGENERIC_ARCH)
+else()
+   enable_language(ASM-ATT)
 endif()
 
 find_package(Boost COMPONENTS regex program_options filesystem system)

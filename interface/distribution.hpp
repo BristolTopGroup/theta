@@ -45,9 +45,14 @@ namespace theta{
         /** \brief Provides the mode (most probable values)
          *
          * All parameters returned by getParameters() are set to their most
-         * probable value. It is guaranteed to lie within the support.
+         * probable value.
          *
-         * This is useful as start value for minimizations or markov chains.
+         * Derived classes must ensure that if calling evalNL with all parameter values
+         * set to their mode as returned by this function has a non-zero probability
+         * (i.e., a non-infinite evalNL result).
+         *
+         * This function is mainly used to select valid start values for
+         * algorithms like minimizations or markov chains.
          */
         virtual void mode(ParValues & result) const = 0;
 
@@ -82,7 +87,7 @@ namespace theta{
          *
          * This is mainly used to set constraints for that parameter in a minimization procedure.
          *
-         * If \c p is not in getParameters(), the result is undefined (i.e., derived one-dimensional classes
+         * If \c p is not in getParameters(), the behaviour is undefined (i.e., derived one-dimensional classes
          *  need not check whether p is the correct ParId).
          */
         virtual const std::pair<double, double> & support(const ParId & p) const = 0;
@@ -91,14 +96,14 @@ namespace theta{
          *
          * This value is used as initial step size for parameter p in a
          * minimization process or for step sizes in Markov Chains. It should
-         * correspond to the standard deviation of the distribution in this parameter.
-         * If the standard deviation is not defined, it should be set to a heuristic, finite
-         * value.
+         * correspond approximately to the standard deviation of the marginal
+         * distribution in this parameter. If the standard deviation is not defined,
+         * it should be set to a heuristic, non-zero value.
          *
          * It must zero if and only if the parameter is to be considered as fixed (i.e., in case of
          * a delta distribution).
          *
-         * If \c p is not in getParameters(), the result is undefined (i.e., derived one-dimensional classes
+         * If \c p is not in getParameters(), the behaviour is undefined (i.e., derived one-dimensional classes
          * need not check whether p is the correct ParId).
          */
         virtual double width(const ParId & p) const = 0;
@@ -115,6 +120,7 @@ namespace theta{
         ParIds par_ids;
     };
     
+    /// \brief namespace for free functions closely related to the \link Distribution Distribution\endlink class
     namespace DistributionUtils{
         
         /** \brief Fill mode, width and support from a Distribution instance

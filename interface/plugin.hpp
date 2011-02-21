@@ -7,6 +7,7 @@
 
 #include <boost/utility.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <sstream>
 #include <iostream>
@@ -57,6 +58,8 @@ namespace theta {
          * for which this plugin class should be created.
          */
         class Configuration{
+        private:
+           const std::string theta_dir;
         public:
             /// Information about all currently known parameters and observables
             boost::shared_ptr<VarIdManager> vm;
@@ -67,16 +70,22 @@ namespace theta {
             /// The setting in the configuration file from which to build the instance
             SettingWrapper setting;
             
+            /// Replaces the string "$THETA_DIR" by the theta directory; to be used by plugins resolving filenames
+            std::string replace_theta_dir(const std::string & path) const {
+                return boost::algorithm::replace_all_copy(path, "$THETA_DIR", theta_dir);
+            }
+            
             /** \brief Construct Configuration by specifying all data members
              */
-            Configuration(const boost::shared_ptr<VarIdManager> & vm_, const boost::shared_ptr<Run> & run_, const SettingWrapper & setting_):
-                vm(vm_), run(run_), setting(setting_){}
+            Configuration(const boost::shared_ptr<VarIdManager> & vm_, const SettingWrapper & setting_,
+               const boost::shared_ptr<Run> & run_ = boost::shared_ptr<Run>(), const std::string & theta_dir_ = "."):
+                theta_dir(theta_dir_), vm(vm_), run(run_), setting(setting_){}
 
             /** \brief Copy elements from another Configuration, but replace Configuration::setting
              *
              * Copy all from \c cfg but \c cfg.setting which is replaced by \c setting_.
              */
-            Configuration(const Configuration & cfg, const SettingWrapper & setting_): vm(cfg.vm), run(cfg.run),
+            Configuration(const Configuration & cfg, const SettingWrapper & setting_): theta_dir(cfg.theta_dir), vm(cfg.vm), run(cfg.run),
                 setting(setting_){}
 
         };        

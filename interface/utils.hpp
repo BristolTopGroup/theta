@@ -13,7 +13,7 @@
 #include "crlibm/crlibm.h"
 #endif
 
-#ifdef USE_SSE
+#ifdef __SSE2__
 #include <emmintrin.h>
 #endif
 
@@ -36,7 +36,7 @@ inline double lngamma(double x){
  * that an even number of doubles has been allocated for x, even if n is odd.
  */
 inline void add_fast(double * x, const double * y, const size_t n){
-#ifndef USE_SSE
+#ifndef __SSE2__
    for(size_t i=0; i<n; ++i){
       x[i] += y[i];
    }
@@ -57,7 +57,7 @@ inline void add_fast(double * x, const double * y, const size_t n){
  *
  */
 inline void mul_fast(double * x, double c, const size_t n){
-#ifndef USE_SSE
+#ifndef __SSE2__
    for(size_t i=0; i<n; ++i){
       x[i] *= c;
    }
@@ -78,7 +78,7 @@ inline void mul_fast(double * x, double c, const size_t n){
  * that an even number of doubles has been allocated for x, even if n is odd.
  */
 inline void add_fast_with_coeff(double * x, const double * y, double c, const size_t n){
-#ifndef USE_SSE
+#ifndef __SSE2__
    for(size_t i=0; i<n; ++i){
       x[i] += c * y[i];
    }
@@ -93,7 +93,6 @@ inline void add_fast_with_coeff(double * x, const double * y, double c, const si
   }
 #endif
 }
-
 
 /** \brief possible redirections of log
  *

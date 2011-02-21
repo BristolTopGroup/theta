@@ -19,8 +19,7 @@ const Histogram & cubiclinear_histomorph::operator()(const ParValues & values) c
             //cubic interpolation:
             diff_total = diff[isys];
             diff_total *= 0.5 * delta;
-            diff_total.add_with_coeff(delta * delta, sum[isys]);
-            diff_total.add_with_coeff(-0.5 * pow(fabs(delta), 3), sum[isys]);
+            diff_total.add_with_coeff(delta * delta - 0.5 * pow(fabs(delta), 3), sum[isys]);
             h += diff_total;
         }
     }

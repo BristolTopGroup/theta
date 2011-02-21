@@ -26,6 +26,9 @@
  * Here, <tt>fixed-histogram-specification</tt> is a Histogram Setting block that returns a Histogram
  * which does not depend on any parameters. That is, any Histogram of type="fixed_*".
  *
+ * No random fluctuations are done: the method \c getRandomFluctuation is not overriden from \link theta::HistogramFunction HistogramFunction \endlink
+ * and will therefore return the same values as the usual, non-random, evaluation operator, \c operator().
+ *
  * A histogram \c h0 is interpolated by parameters p_i specified in the \c parameters linearly:
  *  -# if all p_i = 0, the original Histogram h0 is returned
  *  -# for all other values, the histogram contents are interpolated binwise linearly: to get the bin value of bin k, first

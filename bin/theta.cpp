@@ -8,6 +8,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
+#include "boost/date_time/posix_time/posix_time_types.hpp"
 
 #include <termios.h>
 
@@ -21,22 +22,25 @@ using namespace libconfig;
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
+namespace btime = boost::posix_time;
 
 class MyProgressListener: public ProgressListener{
 public:
     virtual void progress(int done, int total){
-      if(isatty(1)){
-          //move back to beginning of terminal line:
-          printf("\033[%dD", chars_written);
-          chars_written = 0;
-          double d = 100.0 * done / total;
-          chars_written += printf("%6d / %-6d [%5.1f%%] ", done, total, d);
-          cout.flush();
-        }
+        if(!is_tty) return;
+        btime::ptime now = btime::microsec_clock::local_time();
+        if(now < next_update && done < total) return;
+        //move back to beginning of terminal line:
+        printf("\033[%dD", chars_written);
+        chars_written = 0;
+        double d = 100.0 * done / total;
+        chars_written += printf("%6d / %-6d [%5.1f%%] ", done, total, d);
+        cout.flush();
+        next_update = now + btime::milliseconds(50);
     }
 
-    MyProgressListener(): chars_written(0){
-        if(not isatty(1)) return;
+    MyProgressListener(): is_tty(isatty(1)), chars_written(0), next_update(btime::microsec_clock::local_time()){
+        if(!is_tty) return;
         //disable terminmal echoing; we don't expect any input.
         termios settings;
         if (tcgetattr (1, &settings) < 0) return; //ignore error
@@ -45,7 +49,7 @@ public:
     }
     
     ~MyProgressListener(){
-        if(not isatty(1)) return;
+        if(!is_tty) return;
         //enable terminmal echoing again; don't be evil
         termios settings;
         if (tcgetattr (1, &settings) < 0) return; //ignore error
@@ -54,8 +58,32 @@ public:
     }
     
 private:
-   int chars_written;
+    bool is_tty;
+    int chars_written;
+    btime::ptime next_update;
 };
+
+namespace{
+
+string get_theta_dir(char** argv){
+    string theta_dir;
+    fs::path guessed_self_path = fs::current_path() / argv[0];
+    if(fs::is_regular_file(guessed_self_path)){
+        theta_dir = fs::system_complete(guessed_self_path.parent_path().parent_path()).string();
+    }
+    else if(fs::is_symlink("/proc/self/exe")){
+        char path[4096];
+        ssize_t s = readlink("/proc/self/exe", path, 4096);
+        if(s > 0 && s < 4096){
+            path[s] = '\0';
+            theta_dir = fs::path(path).parent_path().parent_path().string();
+        }
+    }
+    return theta_dir;
+}
+
+
+}
 
 int main(int argc, char** argv) {
     po::options_description desc("Supported options");
@@ -101,6 +129,12 @@ int main(int argc, char** argv) {
     if(cmdline_vars.count("run-name")) run_name = cmdline_vars["run-name"].as<string>();
     bool quiet = cmdline_vars.count("quiet");
     bool nowarn = cmdline_vars.count("nowarn");
+    
+    //determine theta_dir (for config file replacements with $THETA_DIR
+    string theta_dir = get_theta_dir(argv);
+    if(theta_dir==""){
+        cout << "WARNING: could not determine THETA_DIR, leaving empty" << endl;
+    }
 
     Config cfg;
     boost::shared_ptr<SettingUsageRecorder> rec(new SettingUsageRecorder());
@@ -134,7 +168,7 @@ int main(int argc, char** argv) {
         }
         
         SettingWrapper root(cfg.getRoot(), cfg.getRoot(), rec);
-        Configuration config(vm, run, root);
+        Configuration config(vm, root, run, theta_dir);
         
         //process options:
         Configuration cfg_options(config, config.setting["options"]);

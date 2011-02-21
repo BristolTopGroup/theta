@@ -21,13 +21,22 @@ EXTRA_LINK_EXE := $(EXTRA_LINK_SO)
 all: ../lib/root.so histos
 
 ifeq ($(OPTIONS_BUILD_TESTS),yes)
-all: create_testhistos
+all: create_testhistos create_testtree
 endif
 
 histos: .bin/histos.o
 	@$(LINK_EXE) -o $@ $<
 
 create_testhistos: .bin/create_testhistos.o
+	@$(LINK_EXE) -o $@ $<
+
+create_histos: .bin/create_histos.o
+	@$(LINK_EXE) -o $@ $<
+
+merge_trees: .bin/merge_trees.o
+	@$(LINK_EXE) -o $@ $<
+
+create_testtree: .bin/create_testtree.o
 	@$(LINK_EXE) -o $@ $<
 
 ../lib/root.so: $(objects)

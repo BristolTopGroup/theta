@@ -34,8 +34,7 @@ namespace{
 }
 
 
-Histogram::Histogram(size_t b, double x_min, double x_max) :
-sum_of_bincontents(0.0), sum_of_bincontents_valid(true), nbins(b), xmin(x_min), xmax(x_max) {
+Histogram::Histogram(size_t b, double x_min, double x_max) : nbins(b), xmin(x_min), xmax(x_max) {
     if(xmin >= xmax) throw InvalidArgumentException("Histogram: xmin >= xmax not allowed");
     histodata = allocate_histodata(nbins);
     memset(histodata, 0, sizeof (double) *(nbins + 2));
@@ -52,8 +51,6 @@ void Histogram::operator=(const Histogram & rhs) {
         initFromHisto(rhs);
     } else {
         memcpy(histodata, rhs.histodata, sizeof (double) *(nbins + 2));
-        sum_of_bincontents_valid = rhs.sum_of_bincontents_valid;
-        sum_of_bincontents = rhs.sum_of_bincontents;
     }
 }
 
@@ -62,8 +59,6 @@ Histogram::~Histogram() {
 }
 
 void Histogram::reset(size_t b, double x_min, double x_max) {
-    sum_of_bincontents = 0.0;
-    sum_of_bincontents_valid = true;
     //only re-allocate if there where changes.
     if (b > 0 && (b != nbins || x_min != xmin || x_max != xmax)) {
         nbins = b;
@@ -80,8 +75,6 @@ void Histogram::reset_to_1(){
    for(size_t i=0; i<=nbins+1; i++){
       histodata[i] = 1.0;
    }
-   sum_of_bincontents = nbins+2;
-   sum_of_bincontents_valid = true;
 }
 
 void Histogram::multiply_with_ratio_exponented(const Histogram & nominator, const Histogram & denominator, double exponent){
@@ -95,16 +88,12 @@ void Histogram::multiply_with_ratio_exponented(const Histogram & nominator, cons
          histodata[i] *= pow(n_data[i] / d_data[i], exponent);
       s += histodata[i];
    }
-   sum_of_bincontents = s;
-   sum_of_bincontents_valid = true;
 }
 
 void Histogram::initFromHisto(const Histogram & h) {
     nbins = h.nbins;
     xmin = h.xmin;
     xmax = h.xmax;
-    sum_of_bincontents = h.sum_of_bincontents;
-    sum_of_bincontents_valid = h.sum_of_bincontents_valid;
     histodata = allocate_histodata(nbins);
     memcpy(histodata, h.histodata, sizeof (double) *(nbins + 2));
 }
@@ -116,8 +105,6 @@ void Histogram::fill(double xvalue, double weight) {
     if (static_cast<size_t> (bin) > nbins + 1)
         bin = nbins + 1;
     histodata[bin] += weight;
-    if(sum_of_bincontents_valid)
-        sum_of_bincontents += weight;
 }
 
 void Histogram::fail_check_compatibility(const Histogram & h) const {
@@ -133,11 +120,8 @@ void Histogram::fail_check_compatibility(const Histogram & h) const {
 void Histogram::operator*=(const Histogram & h) {
     check_compatibility(h);
     const double * hdata = h.histodata;
-    sum_of_bincontents = 0.0;
     for (size_t i = 0; i <= nbins + 1; ++i) {
         histodata[i] *= hdata[i];
-        sum_of_bincontents += histodata[i];
     }
-    sum_of_bincontents_valid = true;
 }
 

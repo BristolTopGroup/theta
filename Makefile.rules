@@ -41,8 +41,8 @@ ifeq ($(OPTIONS_USE_CRLIBM),yes)
    DEFINES += -DUSE_CRLIBM
 endif
 
-ifeq ($(OPTIONS_USE_SSE),yes)
-   DEFINES += -DUSE_SSE
+ifeq ($(OPTIONS_GENERIC_ARCH),yes)
+   DEFINES += -DGENERIC_ARCH
 endif
 
 #lazy evaluation to allow subdirectories to add their own includes and libs ...

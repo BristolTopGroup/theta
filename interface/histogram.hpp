@@ -14,15 +14,12 @@ namespace theta{
  *
  * Bin index convention:
  * - bin 0 is the "underflow bin", it corresponds to the range (-infinity, xmin)
- * - bin \c i with \c i &gt;=0 and \c i &lt;= nbins holds weight for the range [xmin + (i-1)*binwidth, xmin + i*binwidth), where binwidth = (xmax-xmin)/nbins.
+ * - bin \c i with \c i &gt;=1 and \c i &lt;= nbins holds weight for the range [xmin + (i-1)*binwidth, xmin + i*binwidth), where binwidth = (xmax-xmin)/nbins.
  * - bin nbins+1 is the "overflow bin", it corresponds to the range [xmax, infinity).
  */
 class Histogram {
 private:
     double* histodata;
-    //sum_of_bincontens is a cache:
-    mutable double sum_of_bincontents;
-    mutable bool sum_of_bincontents_valid;
     //number of bins for the histogram, *excluding* underflow and overflow:
     size_t nbins;
     double xmin, xmax;
@@ -31,14 +28,6 @@ private:
     
     // throws the actual exception, with the message.
     void fail_check_compatibility(const Histogram & h) const;
-    
-    void calculate_sum_of_bincontents() const{
-        sum_of_bincontents = 0.0;
-        for(size_t i=0; i<=nbins+1; ++i){
-            sum_of_bincontents += histodata[i];
-        }
-        sum_of_bincontents_valid = true;
-    }
     
 public:
     /** \brief Create an empty Histogram with \c bins bins with range (\c xmin, \c xmax )
@@ -82,9 +71,6 @@ public:
      * See bin index convention in the class documentation. This function does no range checking.
      */
     void set(size_t i, double weight){
-       //note: set if often evaluated in tight loops. Therfore, delay the evaluation
-       // of sum_of_bincontents
-       sum_of_bincontents_valid = false;
        histodata[i] = weight;
     }
 
@@ -96,10 +82,13 @@ public:
     const double* getData() const{
         return histodata;
     }
+    double* getData() {
+        return histodata;
+    }
 
     /// Get the number of bins of this Histogram
     size_t get_nbins() const{
-        return nbins;
+       return nbins;
     }
 
     /// Get the minimum x value for this Histogram
@@ -121,8 +110,11 @@ public:
 
     /// Get the sum of bin contents of all bins of the Histogram.
     double get_sum_of_bincontents() const{
-        if(!sum_of_bincontents_valid) calculate_sum_of_bincontents();
-        return sum_of_bincontents;
+        double result = 0.0;
+        for(size_t i=0; i<=nbins+1; ++i){
+            result += histodata[i];
+        }
+        return result;
     }
 
     /** \brief Returns the x value for the bin center of bin ibin
@@ -143,7 +135,6 @@ public:
     /// Multiply the entry of each bin by \c a.
     void operator*=(const double a){
        utils::mul_fast(histodata, a, nbins+2);
-       sum_of_bincontents *= a;
     }
 
     /** \brief check compatibility of \c this to the \c other Histogram.
@@ -171,7 +162,6 @@ public:
     void operator+=(const Histogram & other){
         check_compatibility(other);
         utils::add_fast(histodata, other.histodata, nbins+2);
-        sum_of_bincontents_valid = false;
     }
 
     /** \brief Calculate this = this + coeff * other.
@@ -181,7 +171,6 @@ public:
     void add_with_coeff(double coeff, const Histogram & other){
        check_compatibility(other);
        utils::add_fast_with_coeff(histodata, other.histodata, coeff, nbins+2);
-       sum_of_bincontents_valid = false;
     }
     
 };
@@ -189,3 +178,4 @@ public:
 }
 
 #endif
+

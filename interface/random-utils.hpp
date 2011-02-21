@@ -1,3 +1,6 @@
+#ifndef RANDOM_UTILS_HPP
+#define RANDOM_UTILS_HPP
+
 #include "interface/plugin.hpp"
 #include "interface/random.hpp"
 #include <string>
@@ -9,7 +12,7 @@ class RandomConsumer{
 protected:
    /** \brief Constructor to be used by derived classes
     *
-    * Will save the random seed in the 'rndinfo' table of the Run.
+    * Will save the random seed in the 'rndinfo' table of the Run cfg.run, if it is set.
     */
    RandomConsumer(const theta::plugin::Configuration & cfg, const std::string & name);
    
@@ -31,3 +34,5 @@ void randomize_poisson(Histogram & h, Random & rnd);
 
 }
 
+
+#endif

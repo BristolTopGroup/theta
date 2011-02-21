@@ -22,6 +22,9 @@
  * Here, <tt>fixed-histogram-specification</tt> is a Histogram Setting block that returns a Histogram
  * which does not depend on any parameters.
  *
+ * No random fluctuations are done: the method \c getRandomFluctuation is not overriden from \link theta::HistogramFunction HistogramFunction \endlink
+ * and will therefore return the same values as the usual, non-random, evaluation operator, \c operator().
+ *
  * The bin content of the returned histogram is calculated independently for each bin:
  *
  * If this calculation leads to a negative bin entry, it is set to zero to avoid unphysical templates.

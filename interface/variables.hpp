@@ -33,9 +33,7 @@ namespace theta {
     class VarId{
     friend class VarIdManager;
     friend class ParValues;
-    friend std::ostream & operator<<(std::ostream & out, const VarId & v){
-        return out << v.id;
-    }
+    friend class Data;
     public:
         //@{
         /** \brief Implements the order and equality semantics.
@@ -53,10 +51,10 @@ namespace theta {
         
         /** Creates in invalid VarId which evaluates to false
          */
-        VarId(): id(-1){}
+        //VarId(): id(-1){}
     private:
-        int id;
-        VarId(int i): id(i){}
+        size_t id;
+        explicit VarId(size_t i): id(i){}
     };
     
     // An alternative to tag structs would be using common inheritance from
@@ -272,15 +270,15 @@ namespace theta {
 
     private:
         //ParIds:
-        std::map<ParId, std::string> pid_to_name;
-        std::map<std::string, ParId> name_to_pid;
-        int next_pid_id;
+        std::map<size_t, std::string> pid_to_name;
+        std::map<std::string, size_t> name_to_pid;
+        size_t next_pid_id;
         //ObsIds:
-        std::map<ObsId, std::string> oid_to_name;
-        std::map<std::string, ObsId> name_to_oid;
-        std::map<ObsId, std::pair<double, double> > oid_to_range;
-        std::map<ObsId, size_t> oid_to_nbins;
-        int next_oid_id;
+        std::map<size_t, std::string> oid_to_name;
+        std::map<std::string, size_t> name_to_oid;
+        std::map<size_t, std::pair<double, double> > oid_to_range;
+        std::map<size_t, size_t> oid_to_nbins;
+        size_t next_oid_id;
     };
 
     /** \brief A mapping-like class storing parameter values.
@@ -344,8 +342,8 @@ namespace theta {
          * \param val The new value for the parameter.
          */
         ParValues & set(const ParId & pid, double val){
-            const int id = pid.id;
-            if(id >= (int)values.size()){
+            const size_t id = pid.id;
+            if(id >= values.size()){
                 values.resize(id+1, NAN);
             }
             values[id] = val;
@@ -375,8 +373,8 @@ namespace theta {
          * \param delta The value to add to the parameter. 
          */
         void addTo(const ParId & pid, double delta){
-            const int id = pid.id;
-            if(id >= (int)values.size() || std::isnan(values[id])){
+            const size_t id = pid.id;
+            if(id >= values.size() || std::isnan(values[id])){
                 throw NotFoundException("ParValues::addTo: given ParId not found.");
             }
             values[id] += delta;
@@ -391,8 +389,8 @@ namespace theta {
          */
         double get(const ParId & pid) const{
             double result = 0.0;
-            const int id = pid.id;
-            if(id >= static_cast<int>(values.size()) || std::isnan(result = values[id])){
+            const size_t id = pid.id;
+            if(id >= values.size() || std::isnan(result = values[id])){
                 //do failure outside this function to keep this function small to increase inlining probability
                 fail_get(pid);
             }
@@ -402,13 +400,13 @@ namespace theta {
         /** \brief Returns whether \c pid is contained in this VarVariables.
          */
         bool contains(const ParId & pid) const{
-            const int id = pid.id;
-            return id < static_cast<int>(values.size()) and not std::isnan(values[id]);
+            const size_t id = pid.id;
+            return id < values.size() && !std::isnan(values[id]);
         }
 
         /** \brief Return all \c ParIds of the variables in this \c VarValues.
          */
-        ParIds getAllParIds() const;
+        ParIds getParameters() const;
 
     private:
         //Make private an do not implement, because usually, one should not replace

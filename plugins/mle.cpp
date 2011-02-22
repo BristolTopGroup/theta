@@ -73,8 +73,8 @@ void mle::produce(theta::Run & run, const theta::Data & data, const theta::Model
         Data pred;
         model.get_prediction(pred, minres.values);
         double bh_ts = 0.0;
-        const Histogram & data_o = data[bh_ts_obsid];
-        const Histogram & pred_o = pred[bh_ts_obsid];
+        const Histogram & data_o = data[*bh_ts_obsid];
+        const Histogram & pred_o = pred[*bh_ts_obsid];
         data_o.check_compatibility(pred_o);
         for(size_t i=1; i<=data_o.get_nbins(); ++i){
             double bump = 0.0;
@@ -103,7 +103,7 @@ mle::mle(const theta::plugin::Configuration & cfg): Producer(cfg), start_step_ra
        write_ks_ts = s["write_ks_ts"];
     }
     if(s.exists("bh")){
-        bh_ts_obsid = cfg.vm->getObsId(s["bh"]);
+        bh_ts_obsid.reset(new ObsId(cfg.vm->getObsId(s["bh"])));
         write_bh_ts = true;
     }
     c_nll = table->add_column(*this, "nll", Table::typeDouble);

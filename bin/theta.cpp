@@ -55,6 +55,7 @@ public:
         if (tcgetattr (1, &settings) < 0) return; //ignore error
         settings.c_lflag |= ECHO;
         tcsetattr (1, TCSANOW, &settings);
+        cout << endl;
     }
     
 private:

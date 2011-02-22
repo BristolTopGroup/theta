@@ -32,12 +32,11 @@ void nll_scan::produce(Run & run, const Data & data, const Model & model) {
     table->set_column(*c_nll, result);
 }
 
-nll_scan::nll_scan(const theta::plugin::Configuration & cfg): Producer(cfg),
+nll_scan::nll_scan(const theta::plugin::Configuration & cfg): Producer(cfg), pid(cfg.vm->getParId(cfg.setting["parameter"])),
    re_minimize(true), start_step_ranges_init(false){
     SettingWrapper s = cfg.setting;
     minimizer = plugin::PluginManager<Minimizer>::instance().build(theta::plugin::Configuration(cfg, s["minimizer"]));
     string par_name = s["parameter"];
-    pid = cfg.vm->getParId(par_name);
     if(s.exists("re-minimize")){
         re_minimize = s["re-minimize"];
     }

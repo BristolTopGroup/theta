@@ -126,7 +126,7 @@ delta_distribution::delta_distribution(const theta::plugin::Configuration & cfg)
         values.set(pid, val);
         supports[pid].second = supports[pid].first = val;
     }
-    par_ids = values.getAllParIds();
+    par_ids = values.getParameters();
 }
 
 void delta_distribution::sample(theta::ParValues & result, theta::Random &) const{

@@ -21,7 +21,7 @@ EXTRA_LINK_EXE := $(EXTRA_LINK_SO)
 all: ../lib/root.so histos
 
 ifeq ($(OPTIONS_BUILD_TESTS),yes)
-all: create_testhistos create_testtree
+all: create_testhistos
 endif
 
 histos: .bin/histos.o

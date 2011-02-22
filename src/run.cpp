@@ -33,7 +33,7 @@ void Run::run(){
     eventid = 0;
     logtable->append(*this, LogTable::info, "run start");
    
-    Data data; 
+    Data data;
     //main event loop:
     for (eventid = 1; eventid <= n_event; eventid++) {
         if(stop_execution)break;

@@ -92,11 +92,10 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
 }
 
 mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()),
-        init(false){
+   init(false), par_id(cfg.vm->getParId(cfg.setting["parameter"])){
     vm = cfg.vm;
     SettingWrapper s = cfg.setting;
     string parameter = s["parameter"];
-    par_id = vm->getParId(parameter);
     size_t n = s["quantiles"].size();
     if(n==0){
         throw ConfigurationException("mcmc_quantiles: list of requested quantiles is empty");

@@ -5,6 +5,8 @@
 #include "interface/utils.hpp"
 #include <cstring>
 
+void get_allocs_frees(int & n_alls, int & n_frs);
+
 namespace theta{
 
 /** A Histogram class holding binned data.
@@ -160,7 +162,6 @@ public:
      * Throws an \c InvalidArgumentException if \c other is not compatible to this.
      */
     void operator+=(const Histogram & other){
-        check_compatibility(other);
         utils::add_fast(histodata, other.histodata, nbins+2);
     }
 
@@ -169,7 +170,6 @@ public:
      * Throws an \c InvalidArgumentException if \c other is not compatible with this.
      */
     void add_with_coeff(double coeff, const Histogram & other){
-       check_compatibility(other);
        utils::add_fast_with_coeff(histodata, other.histodata, coeff, nbins+2);
     }
     

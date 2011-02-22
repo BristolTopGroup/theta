@@ -11,7 +11,11 @@
 using namespace theta;
 
 namespace{
+   int n_allocs = 0;
+   int n_frees = 0;
+
    double * allocate_histodata(size_t nbins){
+      ++n_allocs;
       double * result = 0;
       const size_t nbins_orig = nbins;
       //always allocate an even number of bins:
@@ -29,15 +33,21 @@ namespace{
    }
    
    void free_histodata(double * histodata){
+      ++n_frees;
       free(histodata);
    }
 }
 
+void get_allocs_frees(int & n_alls, int & n_frs){
+    n_alls = n_allocs;
+    n_frs = n_frees;
+}
 
-Histogram::Histogram(size_t b, double x_min, double x_max) : nbins(b), xmin(x_min), xmax(x_max) {
+
+Histogram::Histogram(size_t b, double x_min, double x_max) : histodata(0), nbins(b), xmin(x_min), xmax(x_max) {
     if(xmin >= xmax) throw InvalidArgumentException("Histogram: xmin >= xmax not allowed");
     histodata = allocate_histodata(nbins);
-    memset(histodata, 0, sizeof (double) *(nbins + 2));
+    reset();
 }
 
 Histogram::Histogram(const Histogram& rhs) {
@@ -80,8 +90,8 @@ void Histogram::reset_to_1(){
 void Histogram::multiply_with_ratio_exponented(const Histogram & nominator, const Histogram & denominator, double exponent){
    check_compatibility(nominator);
    check_compatibility(denominator);
-   const double * __restrict n_data = nominator.histodata;
-   const double * __restrict d_data = denominator.histodata;
+   const double * n_data = nominator.histodata;
+   const double * d_data = denominator.histodata;
    double s = 0.0;
    for(size_t i=0; i<=nbins+1; i++){
       if(d_data[i]>0.0)

@@ -62,7 +62,16 @@ namespace theta {
         const ParIds & getParameters() const{
             return par_ids;
         }
-        
+
+        /** \brief Get a Histogram of the dimensions (nbins, xmin, xmax) also returned by the evaluation operator
+         *
+         * The content of the returned Histogram does not matter.
+         *
+         * This function is used as part of the setup to make sure that the Histogram dimensions match; to save
+         * time, it is not usually not used during usual likelihood evaluation, etc.
+         */
+        virtual Histogram get_histogram_dimensions() const = 0;
+
         /// Declare the destructor virtual as there will be polymorphic access to derived classes
         virtual ~HistogramFunction(){}
         
@@ -91,6 +100,11 @@ namespace theta {
         /** \brief Returns the Histogram \c h set at construction time.
          */
         virtual const Histogram & operator()(const ParValues & values) const{
+            return h;
+        }
+        
+        /// Return a Histogram of the same dimenions as the one returned by operator()
+        virtual Histogram get_histogram_dimensions() const{
             return h;
         }
 
@@ -160,6 +174,11 @@ namespace theta {
          * bin entries, so the density of a truncated gaussian is continous for *everywhere*.
          */
         virtual const Histogram & getRandomFluctuation(Random & rnd, const ParValues & values) const;
+        
+        /// Return a Histogram of the same dimenions as the one returned by operator()
+        virtual Histogram get_histogram_dimensions() const{
+            return h;
+        }
 
     protected:
         /** \brief Set the Histogram and the errors to to return
@@ -172,7 +191,6 @@ namespace theta {
         void set_histos(const Histogram & histo, const Histogram & error){
             h = histo;
             err = error;
-            
             h.check_compatibility(error);//throws if not compatible
             h.set(0,0);
             h.set(h.get_nbins()+1,0);
@@ -182,7 +200,7 @@ namespace theta {
                 if(error.get(i)<0.0) throw InvalidArgumentException("ConstantHistogramFunctionError: error histogram contains negative entries");
             }
         }
-                
+
         /** \brief Default constructor to be used by derived classes
          */
         ConstantHistogramFunctionError(){}
@@ -194,7 +212,6 @@ namespace theta {
     };
     
     namespace HistogramFunctionUtils{
-    
         /** \brief Read the normalize_to setting
          *
          * parese the normalize_to setting, which can either be a double, or an array/list of doubles which are

@@ -9,8 +9,6 @@
 #include <sstream>
 
 using namespace theta;
-using namespace std;
-using namespace libconfig;
 
 void deltanll_hypotest::produce(theta::Run & run, const theta::Data & data, const theta::Model & model){
     if(not init){
@@ -39,16 +37,13 @@ deltanll_hypotest::deltanll_hypotest(const theta::plugin::Configuration & cfg):
         Producer(cfg), init(false){
     SettingWrapper s = cfg.setting;
     minimizer = theta::plugin::PluginManager<Minimizer>::instance().build(theta::plugin::Configuration(cfg, s["minimizer"]));
-    
     s_plus_b = theta::plugin::PluginManager<Distribution>::instance().build(theta::plugin::Configuration(cfg, s["signal-plus-background-distribution"]));
     b_only = theta::plugin::PluginManager<Distribution>::instance().build(theta::plugin::Configuration(cfg, s["background-only-distribution"]));
-    
-    if(not (b_only_mode.getAllParIds()==s_plus_b_mode.getAllParIds())){
-        throw ConfigurationException("parameters of the signal-plus-background- and background-only distributions do not match!");
-    }    
-
     DistributionUtils::fillModeWidthSupport(s_plus_b_mode, s_plus_b_width, s_plus_b_support, *s_plus_b);
     DistributionUtils::fillModeWidthSupport(b_only_mode, b_only_width, b_only_support, *b_only);
+    if(not (b_only_mode.getParameters()==s_plus_b_mode.getParameters())){
+        throw ConfigurationException("parameters of the distributions 'signal-plus-background' and 'background-only' do not match");
+    }
     c_nll_b = table->add_column(*this, "nll_b", Table::typeDouble);
     c_nll_sb = table->add_column(*this, "nll_sb", Table::typeDouble);
     c_nll_diff = table->add_column(*this, "nll_diff", Table::typeDouble);

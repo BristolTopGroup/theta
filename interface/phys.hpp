@@ -107,6 +107,8 @@ namespace theta {
      * \sa Model::getLikelihood(Data) DataFactory Model::samplePseudoData
      */
     class Data {
+    private:
+        void fail_get(const ObsId & oid) const;
     public:
         /** \brief Returns all obs_ids for which any data was added using addData(obs_id).
          */
@@ -120,26 +122,26 @@ namespace theta {
          */
         //@{
         Histogram & operator[](const ObsId & id){
-            return data[id];
+            if(id.id >= data.size()) data.resize(id.id + 1);
+            return data[id.id];
         }
         const Histogram & operator[](const ObsId & id) const{
-            std::map<ObsId, Histogram>::const_iterator it = data.find(id);
-            if(it==data.end()) throw NotFoundException("Data::operator[]() const: no data found for given ObsId");
-            return it->second;
+            if(id.id >= data.size() || data[id.id].get_nbins()==0) fail_get(id);
+            return data[id.id];
         }
         //@}
         
         
         /// \brief reset all current Histograms, i.e., set to zero entry
         void reset(){
-            std::map<ObsId, Histogram>::iterator it = data.begin();
+            std::vector<Histogram>::iterator it = data.begin();
             for(; it!=data.end(); ++it){
-               it->second.reset();
+               it->reset();
             }
         }
 
     private:
-        std::map<ObsId, Histogram> data;
+        std::vector<Histogram> data;
     };
     
     /** \brief A data-providing class, can be used as base class in the plugin system

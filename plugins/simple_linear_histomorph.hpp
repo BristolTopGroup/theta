@@ -49,6 +49,12 @@ public:
      */
     virtual const theta::Histogram & operator()(const theta::ParValues & values) const;
 
+    /// Return a Histogram of the same dimenions as the one returned by operator()
+    virtual theta::Histogram get_histogram_dimensions() const{
+        return h0;
+    }
+
+
 private:
     /** \brief Build a (constant) Histogram from a Setting block.
     *

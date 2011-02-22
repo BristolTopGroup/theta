@@ -44,6 +44,7 @@ simple_linear_histomorph::simple_linear_histomorph(const Configuration & ctx){
         setting_name = par_name + "-plus-histogram";
         if(ctx.setting.exists(setting_name)){
            hplus_diff.push_back(getConstantHistogram(ctx, ctx.setting[setting_name]));
+           hplus_diff.back().check_compatibility(h0);
            hplus_diff.back().add_with_coeff(-1.0, h0);
         }
         else{
@@ -53,6 +54,7 @@ simple_linear_histomorph::simple_linear_histomorph(const Configuration & ctx){
         setting_name = par_name + "-minus-histogram";
         if(ctx.setting.exists(setting_name)){
            hminus_diff.push_back(getConstantHistogram(ctx, ctx.setting[setting_name]));
+           hminus_diff.back().check_compatibility(h0);
            hminus_diff.back().add_with_coeff(-1.0, h0);
         }
         else{

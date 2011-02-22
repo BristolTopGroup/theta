@@ -37,7 +37,14 @@ void default_model::set_prediction(const ObsId & obs_id, boost::ptr_vector<Funct
         ParIds pids = (*it).getParameters();
         parameters.insert(pids.begin(), pids.end());
     }
+    Histogram h;
     for(boost::ptr_vector<HistogramFunction>::const_iterator it=histos[obs_id].begin(); it!=histos[obs_id].end(); ++it){
+        if(h.get_nbins()==0){
+            h = it->get_histogram_dimensions();
+        }
+        else{
+            h.check_compatibility(it->get_histogram_dimensions());
+        }
         ParIds pids = (*it).getParameters();
         parameters.insert(pids.begin(), pids.end());
     }
@@ -96,7 +103,7 @@ void default_model::get_prediction_randomized(Random & rnd, Data & result, const
 
 std::auto_ptr<NLLikelihood> default_model::getNLLikelihood(const Data & data) const{
     if(not(data.getObservables()==observables)){
-        throw InvalidArgumentException("Model::createNLLikelihood: observables of model and data mismatch!");
+        throw FatalException("Model::createNLLikelihood: observables of model and data mismatch!");
     }
     return std::auto_ptr<NLLikelihood>(new default_model_nll(*this, data, observables));
 }
@@ -136,7 +143,6 @@ default_model::default_model(const Configuration & ctx): Model(ctx.vm){
                ss << ", the model depends on '"<< ctx.vm->getName(*p_it) << "' which the parameter distribution does not include";
             }
             else ss << ", the parameter distribution depends on '" << ctx.vm->getName(*p_it) << "' which the model does not depend on";
-            
         }
         throw ConfigurationException(ss.str());
     }
@@ -181,50 +187,13 @@ double default_model_nll::operator()(const ParValues & values) const{
         result += model.get_parameter_distribution().evalNL(values);
     }
     //2. get the prediciton of the model:
-    try{
-        model.get_prediction(predictions, values);
-    }
-    catch(Exception & ex){
-         ex.message += " (in NLLikelihood::operator() calling model.get_prediction())";
-        throw;
-    }
+    model.get_prediction(predictions, values);
     //3. the template likelihood
     for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
-        const ObsId & obs_id = *obsit;
-        Histogram & model_prediction = predictions[obs_id];
-        const Histogram & data_hist = data[obs_id];
-        const size_t nbins = data_hist.get_nbins();
-        assert(data_hist.get_nbins() == model_prediction.get_nbins());
-        const double * pred_data = model_prediction.getData();
-        const double * data_data = data_hist.getData();
-        result += template_nllikelihood(data_data + 1, pred_data + 1, nbins);
-        /*for(size_t i=1; i<=nbins; ++i){
-            result += pred_data[i];
-            if(pred_data[i] <= 0){
-                if(data_data[i] > 0){
-                    return numeric_limits<double>::infinity();
-                }
-                else{
-                    //prevent log2(pred_data[i]) to mess up everything ...
-                    pred_data[i] = 1.0;
-                }
-            }
-            //if both, the prediction and the data are zero, that does not contribute.
-            // However, if the prediction is zero and we have non-zero data, we MUST return infinity (!) ...
-            / *if(pred_data[i] > 0.0){
-                 // To save the evaluation of log, skip entries with zero data, as they would not contribute anyway.
-                 // If evaluating likelihoods for data with many zero entries, this can lead to a considerable speedup.
-                 if(data_data[i] > 0.0){
-                     result -= data_data[i] * theta::utils::log(pred_data[i]);
-                 }
-             }else if(data_data[i] > 0.0){
-                 return numeric_limits<double>::infinity();
-             }* /
-        }
-        result -= log2_dot(pred_data + 1, data_data + 1, nbins) * ( 1.0 / M_LOG2E);
-        */
+        const double * pred_data = predictions[*obsit].getData();
+        const double * data_data = data[*obsit].getData();
+        result += template_nllikelihood(data_data + 1, pred_data + 1, data[*obsit].get_nbins());
     }
-    
     //3. The additional likelihood terms, if set:
     if(additional_term){
        result += (*additional_term)(values);

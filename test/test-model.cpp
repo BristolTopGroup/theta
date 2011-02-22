@@ -86,14 +86,15 @@ BOOST_AUTO_TEST_CASE(model0){
     Histogram signal = (*f_signal_histo)(values);
     Histogram background = (*f_bkg_histo)(values);
     
-    BOOST_CHECKPOINT("before setting prediction");
-    //m.set_prediction(obs0, coeffs, histos, names);
     values.set(beta1, 1.0);
     values.set(beta2, 0.0);
     Histogram s;
     Data pred;
+    BOOST_CHECKPOINT("");
     m->get_prediction(pred, values);
+    BOOST_CHECKPOINT("");
     s = pred[obs0];
+    BOOST_CHECKPOINT("");
     //s should be signal only:
     for(size_t i = 1; i<=nbins; i++){
         BOOST_REQUIRE(signal.get(i)==s.get(i));

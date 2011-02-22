@@ -72,7 +72,7 @@ private:
     bool write_ks_ts;
     bool write_bh_ts;
 
-    theta::ObsId bh_ts_obsid;
+    std::auto_ptr<theta::ObsId> bh_ts_obsid;
     
     //the two columns with parameter and error:
     boost::ptr_vector<theta::Column> parameter_columns;

@@ -45,10 +45,12 @@ cubiclinear_histomorph::cubiclinear_histomorph(const Configuration & ctx){
         //plus:
         setting_name = par_name + "-plus-histogram";
         hplus_diff.push_back(getConstantHistogram(ctx, ctx.setting[setting_name]));
+        hplus_diff.back().check_compatibility(h0);
         hplus_diff.back().add_with_coeff(-1.0, h0);
         //minus:
         setting_name = par_name + "-minus-histogram";
         hminus_diff.push_back(getConstantHistogram(ctx, ctx.setting[setting_name]));
+        hminus_diff.back().check_compatibility(h0);
         hminus_diff.back().add_with_coeff(-1.0, h0);
         
         sum.push_back(hplus_diff.back());

@@ -59,16 +59,16 @@ namespace theta {
 
         /** \brief Returns the parameters which this HistogramFunction depends on.
          */
-        virtual ParIds getParameters() const = 0;
-        
-        /** \brief Returns whether a derivative w.r.t. pid could be !=0.
-         * 
-         * Same as getParameters().contains(pid).
-         */
-        virtual bool dependsOn(const ParId & pid) const = 0;
+        const ParIds & getParameters() const{
+            return par_ids;
+        }
         
         /// Declare the destructor virtual as there will be polymorphic access to derived classes
         virtual ~HistogramFunction(){}
+        
+    protected:
+        /// To be filled by derived classes:
+        ParIds par_ids;
     };
     
 
@@ -92,18 +92,6 @@ namespace theta {
          */
         virtual const Histogram & operator()(const ParValues & values) const{
             return h;
-        }
-
-        /** \brief Returns the empty parameter set as it does not depend on any parameters.
-         */
-        virtual ParIds getParameters() const{
-            return ParIds();//empty set.
-        }
-
-        /** \brief Always returns false, as the Histogram is constant and does not depend on any parameters.
-         */
-        virtual bool dependsOn(const ParId &) const{
-            return false;
         }
 
     protected:
@@ -172,18 +160,6 @@ namespace theta {
          * bin entries, so the density of a truncated gaussian is continous for *everywhere*.
          */
         virtual const Histogram & getRandomFluctuation(Random & rnd, const ParValues & values) const;
-
-        /** \brief Returns the empty parameter set as it does not depend on any parameters.
-         */
-        virtual ParIds getParameters() const{
-            return ParIds();//empty set.
-        }
-
-        /** \brief Always returns false, as this HistogramFunction is constant and does not depend on any parameters.
-         */
-        virtual bool dependsOn(const ParId &) const{
-            return false;
-        }
 
     protected:
         /** \brief Set the Histogram and the errors to to return

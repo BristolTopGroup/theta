@@ -294,11 +294,7 @@ namespace theta {
      */
     class ParValues {
     private:
-        void fail_get(const ParId & pid) const{
-            std::stringstream ss;
-            ss << "ParValues::get: given VarId " << pid.id << " not found";
-            throw NotFoundException(ss.str());
-        }
+        void fail_get(const ParId & pid) const;
     public:
         /** \brief Default constructor which creates an empty container.
         */

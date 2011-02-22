@@ -51,12 +51,6 @@ public:
      */
     virtual const theta::Histogram & operator()(const theta::ParValues & values) const;
 
-    virtual theta::ParIds getParameters() const;
-
-    virtual bool dependsOn(const theta::ParId & pid) const {
-        return std::find(parameters.begin(), parameters.end(), pid) != parameters.end();
-    }
-
 private:
     /** \brief Build a (constant) Histogram from a Setting block.
     *

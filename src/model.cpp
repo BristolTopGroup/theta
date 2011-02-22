@@ -195,9 +195,10 @@ double default_model_nll::operator()(const ParValues & values) const{
         const Histogram & data_hist = data[obs_id];
         const size_t nbins = data_hist.get_nbins();
         assert(data_hist.get_nbins() == model_prediction.get_nbins());
-        double * pred_data = model_prediction.getData();
+        const double * pred_data = model_prediction.getData();
         const double * data_data = data_hist.getData();
-        for(size_t i=1; i<=nbins; ++i){
+        result += template_nllikelihood(data_data + 1, pred_data + 1, nbins);
+        /*for(size_t i=1; i<=nbins; ++i){
             result += pred_data[i];
             if(pred_data[i] <= 0){
                 if(data_data[i] > 0){
@@ -210,7 +211,7 @@ double default_model_nll::operator()(const ParValues & values) const{
             }
             //if both, the prediction and the data are zero, that does not contribute.
             // However, if the prediction is zero and we have non-zero data, we MUST return infinity (!) ...
-            /*if(pred_data[i] > 0.0){
+            / *if(pred_data[i] > 0.0){
                  // To save the evaluation of log, skip entries with zero data, as they would not contribute anyway.
                  // If evaluating likelihoods for data with many zero entries, this can lead to a considerable speedup.
                  if(data_data[i] > 0.0){
@@ -218,9 +219,10 @@ double default_model_nll::operator()(const ParValues & values) const{
                  }
              }else if(data_data[i] > 0.0){
                  return numeric_limits<double>::infinity();
-             }*/
+             }* /
         }
         result -= log2_dot(pred_data + 1, data_data + 1, nbins) * ( 1.0 / M_LOG2E);
+        */
     }
     
     //3. The additional likelihood terms, if set:

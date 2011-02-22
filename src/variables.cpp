@@ -138,7 +138,14 @@ ParIds ParValues::getAllParIds() const {
     return result;
 }
 
-void theta::VarIdManagerUtils::apply_settings(theta::plugin::Configuration & ctx){
+void ParValues::fail_get(const ParId & pid) const{
+    std::stringstream ss;
+    ss << "ParValues::get: given VarId " << pid.id << " not found";
+    throw NotFoundException(ss.str());
+}
+
+
+void VarIdManagerUtils::apply_settings(plugin::Configuration & ctx){
     SettingWrapper s = ctx.setting;
     size_t nobs = s["observables"].size();
     if (nobs == 0){

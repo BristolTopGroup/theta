@@ -36,20 +36,13 @@ const Histogram & linear_histo_morph::operator()(const ParValues & values) const
     return h;
 }
 
-theta::ParIds linear_histo_morph::getParameters() const {
-    theta::ParIds result;
-    for (size_t i = 0; i < parameters.size(); ++i) {
-        result.insert(parameters[i]);
-    }
-    return result;
-}
-
 linear_histo_morph::linear_histo_morph(const Configuration & ctx){
     SettingWrapper psetting = ctx.setting["parameters"];
     size_t n = psetting.size();
     for(size_t i=0; i<n; i++){
         string par_name = psetting[i];
         ParId pid = ctx.vm->getParId(par_name);
+        par_ids.insert(pid);
         parameters.push_back(pid);
         if(ctx.setting.exists(par_name + "-kappa-plus-histogram"))
            kappa_plus.push_back(getConstantHistogram(ctx, ctx.setting[par_name + "-kappa-plus-histogram"] ));

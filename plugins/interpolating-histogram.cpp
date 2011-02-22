@@ -45,14 +45,6 @@ const Histogram & interpolating_histo::gradient(const ParValues & values, const 
     return h;
 }
 
-theta::ParIds interpolating_histo::getParameters() const {
-    theta::ParIds result;
-    for (size_t i = 0; i < vid.size(); ++i) {
-        result.insert(vid[i]);
-    }
-    return result;
-}
-
 interpolating_histo::interpolating_histo(const Configuration & ctx){
     SettingWrapper psetting = ctx.setting["parameters"];
     //build nominal histogram:
@@ -64,6 +56,7 @@ interpolating_histo::interpolating_histo(const Configuration & ctx){
     for(size_t i=0; i<n; i++){
         string par_name = psetting[i];
         ParId pid = ctx.vm->getParId(par_name);
+        par_ids.insert(pid);
         vid.push_back(pid);
         stringstream setting_name;
         //plus:

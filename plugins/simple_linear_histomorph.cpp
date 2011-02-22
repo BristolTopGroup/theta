@@ -28,14 +28,6 @@ namespace{
    }
 }
 
-theta::ParIds simple_linear_histomorph::getParameters() const {
-    theta::ParIds result;
-    for (size_t i = 0; i < vid.size(); ++i) {
-        result.insert(vid[i]);
-    }
-    return result;
-}
-
 simple_linear_histomorph::simple_linear_histomorph(const Configuration & ctx){
     SettingWrapper psetting = ctx.setting["parameters"];
     //build nominal histogram:
@@ -45,6 +37,7 @@ simple_linear_histomorph::simple_linear_histomorph(const Configuration & ctx){
     for(size_t i=0; i<n; i++){
         string par_name = psetting[i];
         ParId pid = ctx.vm->getParId(par_name);
+        par_ids.insert(pid);
         vid.push_back(pid);
         string setting_name;
         //plus:

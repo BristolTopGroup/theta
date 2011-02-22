@@ -15,3 +15,4 @@ OPTIONS_USE_CRLIBM := yes
 # Note that some platform-specific optimizations are controlled by compiler-defined defines such as __SSE2__ and ignore
 # the value given here.
 OPTIONS_GENERIC_ARCH := no
+

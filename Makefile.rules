@@ -12,6 +12,19 @@ ifeq (0, $(words $(findstring $(MAKECMDGOALS), clean clean-subdir)))
   -include $(deps)
 endif
 
+# Find out build architecture (not host architecture), i.e., the architecture for which to compile.
+# This could be 32 bit for a 64 bit system (e.g., if running 32-bit CMS software on a 64-bit machine).
+# The variable BUILD_ARCH will be 'x86_64' for 64 bit systems, 'x86_32' for 32-bit systems and
+# empty for non-recognized systems.
+BUILD_ARCH:=
+ifneq ($(shell :|$(CXX) -dM -E - | grep __amd64__),)
+   BUILD_ARCH:=x86_64
+else
+   ifneq ($(shell :|$(CXX) -dM -E - | grep __i386__),)
+      BUILD_ARCH:=x86_32
+   endif
+endif
+
 # if available, use dependencies from CMSSW:
 ifneq ($(shell which scram || echo -n A),A)
    scram = $(shell cd $$CMSSW_BASE; scram tool tag $(1) $(2))
@@ -35,6 +48,22 @@ else
 endif
 
 
+#check options for consistentcy:
+ifneq ($(BUILD_ARCH),x86_64)
+   ifneq ($(OPTIONS_GENERIC_ARCH),yes)
+       DUMMY := $(warning build platform is not x86_64, setting OPTIONS_GENERIC_ARCH to yes)
+       OPTIONS_GENERIC_ARCH:=yes
+   endif
+endif
+
+ifeq ($(BUILD_ARCH),)
+   ifeq ($(OPTIONS_USE_CRLIBM),yes)
+      DUMMY := $(warning build platform unknown, setting OPTIONS_USE_CRLIBM to no)
+      OPTIONS_USE_CRLIBM:=no
+    endif
+endif
+
+
 DEFINES :=
 
 ifeq ($(OPTIONS_USE_CRLIBM),yes)
@@ -45,12 +74,13 @@ ifeq ($(OPTIONS_GENERIC_ARCH),yes)
    DEFINES += -DGENERIC_ARCH
 endif
 
-#lazy evaluation to allow subdirectories to add their own includes and libs ...
-INCLUDES = -I.. $(BOOST_INCLUDE) $(SQLITE_INCLUDE)
-EXTRA_COMPILE =
-EXTRA_LINK_EXE =
-EXTRA_LINK_SO =
 
+INCLUDES := -I.. $(BOOST_INCLUDE) $(SQLITE_INCLUDE)
+EXTRA_COMPILE :=
+EXTRA_LINK_EXE :=
+EXTRA_LINK_SO :=
+
+#lazy evaluation of compile and link command to allow subdirectory-Makefiles to override the value of EXTRA_* ...
 COMPILE = echo creating $@; $(CXX) $(DEFINES) -g -c -Wall -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
 LINK_EXE = echo linking $@; $(CXX) $(OPTIONS_LDFLAGS) -Wl,-R,'$$ORIGIN/../lib' -rdynamic -L../lib -ldl -ltheta -lconfig $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
 LINK_SO = echo linking $@; $(CXX) $(OPTIONS_LDFLAGS) -Wl,-R,'$$ORIGIN/../lib' -shared -rdynamic $(EXTRA_LINK_SO)

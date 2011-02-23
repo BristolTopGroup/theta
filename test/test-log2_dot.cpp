@@ -53,8 +53,6 @@ BOOST_AUTO_TEST_CASE(tl){
     res = template_nllikelihood(data, pred, N);
     BOOST_REQUIRE(!isinf(res) && !isinf(ref));
     BOOST_CHECK(utils::close_to_relative(ref, res));
-    
-    cout << fstcw() << endl;
 }
 
 

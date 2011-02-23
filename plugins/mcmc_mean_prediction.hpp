@@ -46,7 +46,7 @@
  * likelihood value is saved.
  *
  * The results are written to the 'products' table. In this table, 
- * columns per observable of type \link theta::Table::typeHisto Table::typeHisto \endlink are created
+ * columns per observable of type typoeHisto (see \link theta::Table Table \endlink) are created
  * (the actual data format this is saved in depends on the 'output_database' used; see documentation of the chosen 
  * Database class).
  * The column names for an observable "obs1" will be "obs1_mean" and "obs1_width" where the former contains the mean

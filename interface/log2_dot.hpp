@@ -21,6 +21,8 @@ extern "C"{
      * If, for some i, data[i] > 0.0 and pred[i] <= 0.0, +infinity is returned.
      */
     double template_nllikelihood(const double * data, const double * pred, unsigned int n);
+    
+    int fstcw();
 }
 
 #endif

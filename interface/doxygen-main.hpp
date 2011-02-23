@@ -21,13 +21,16 @@
  * For getting started with %theta quickly, make sure to install sqlite3, boost, root and cmake on your machine
  * and run
  * \code
- *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/june-2010 theta
+ *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/trunk theta
  *  cd theta
+ *  # Option 1: you have cmake
  *  mkdir build
  *  cd build
  *  cmake ..
  *  make
  *  cd ..
+ *  # Option 2: you do not have cmake (note: this "simple make" works on fewer platforms compared to cmake)
+ *  make
  *  bin/theta examples/gaussoverflat.cfg
  *  bin/histos examples/plot-gaussoverflat.cfg
  *  root gaussoverflat.root
@@ -161,8 +164,20 @@
  *
  * \section building Building theta
  *
+ * Be sure to get the external dependencies first:
+ * <ol>
+ * <li><a href="http://boost.org/">Boost</a>, a bundle of general-purpose C++ libraries, which is
+ *    used in %theta for filesystem interface, command line option parsing, memory management through
+ *    smart pointers, etc.</li>
+ * <li><a href="http://sqlite.org/">sqlite3</a>, a light-weight, SQL-based %database engine which
+ *    can be used to store the results of %theta</li>
+ * <li>Optional, but recommended for most users: <a href="http:root.cern.ch/">ROOT</a>, an analysis framework
+ *   popular in high-energy physics. Used for reading histograms from "*.root"-files. Also, the producers for minimization
+ *   can use root's MINUIT implementation.</li>
+ * </ol>
+ *
  * The recommended way to compile %theta is to use cross-platform make, <a href="http://www.cmake.org/">CMake</a>.
- * After getting the dependencies (sqlite3, boost and root), issue
+ * In order not to overwrite the hand-written Makefiles included in %theta, do an "out-of-source" build withing another directory, e.g. "build":
  * <pre>
  *  cd %theta
  *  mkdir build
@@ -171,12 +186,16 @@
  * </pre>
  *
  * It is also possible to compile %theta using Makefiles. However, note that these are simple, hand-written Makefiles
- * which do not include all dependencies correctly. Therefore, be sure to always issue
- * \code make clean \endcode after an update.
+ * which do not work on all platforms correctly.
  *
  * \subsection Build options
  *
- * There are several build-time options. These options are switched on or off by passing the \c cmake command
+ * There are several build-time options. Usually, you do not have to change the default settings.
+ *
+ * For the Makefile build, have a look at "Makefile.options" where these parameters are explained. The rest of this section
+ * only applies to cmake-type builds.
+ *
+ * For cmake, these options are switched on or off by passing the \c cmake command
  * a define parameter. For example, to build with experimental postgresql support, you would issue
  * <pre>
  *   cmake .. -Dpsql:bool=ON
@@ -184,7 +203,6 @@
  * You can pass more than one \c -D option to cmake at a time. The \c -D option always specifies the parameter name,
  * the type of the parameter (always bool here) and the value (use \c ON and \c OFF for bools).
  *
- * Usually, you do not have to change the default settings.
  *
  * The following options are currently supported (roughly ordered by probability that you want to change these):
  * <ul>
@@ -218,29 +236,8 @@
  *  bin/theta examples/gaussoverflat.cfg
  * </pre>
  *
- * <tt>CMSSW_3_8_4</tt> is an example, you can pick another version. It is recommended to pick a recent one, as %theta
- * was not tested with older versions of CMSSW which contain older versions of boost which %theta depends on. However,
- * your chances are good that it compiles as well under older versions.
- *
- * \subsection without_cmssw Without CMSSW
- *
- * Be sure to get the external dependencies:
- * <ol>
- * <li><a href="http://boost.org/">Boost</a>, a bundle of general-purpose C++ libraries, which is
- *    used in %theta for filesystem interface, command line option parsing, memory management through
- *    smart pointers, and many more.</li>
- * <li><a href="http://sqlite.org/">sqlite3</a>, a light-weight, SQL-based %database engine which
- *    can be used to store the results of %theta</li>
- * </ol>
- * For almost all linux distributions, there are packages available for these dependencies.
- *
- * Then, you can follow the instructions above, skipping the CMSSW part:
- * <pre>
- *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/trunk theta
- *  cd theta
- *  make
- *  bin/theta examples/gaussoverflat.cfg
- * </pre>
+ * <tt>CMSSW_3_8_4</tt> is an example, you can pick another version. It is recommended to pick a recent one, and -- if you can -- a 64-bit version.
+ * Reports about failing builds (and of course, patches for these), are always welcome.
  */
 
 /**
@@ -366,22 +363,24 @@
  *
  * This is done by the "main" settings group. It defines a theta::run which
  * throws random pseudo data from a model and calls a list of producers. The results will be written
- * as SQL %database to a file with the path specified in the \c output_database setting.
+ * to what is configured via the "output_database" setting. Currently, you can shoose between \link sqlite_database \endlink
+ * and \link rootfile_database \endlink.
  *
- * Pseudo data is thrown according to the configured model with following sequence:
+ * If you issue the %theta command, it will read the configuration file and build an instance of \link theta::Run \endlink using the "main" setting group.
+ * Then, the run method of \link theta::Run theta::Run \endlink method is called which:
  * <ol>
- *  <li>Determine a random value for each model parameter. This is done with the parameter-distribution given
- *        in the model.</li>
- *  <li>For each observable, use these parameters to evaluate the Histograms and coefficients.</li>
- *  <li>For each observable, add all components (i.e., coefficients and histograms)</li>
- *  <li>For each observable, draw a poisson-random sample from the obtained summed histogram</li>
+ *  <li>Uses the "data_source" to get the (pseudo-)data in form of a \link theta::Data Data \endlink instance (which is basically one Histogram for each observable).
+ *    For the type "model_source", this means generating random values for model parameters and poisson data around the model prediction. But you can also
+ *    use a "histo_source" if you have actual data.</li>
+ *  <li>The data from the previous step is passed to each of the producers, along with the configured "model".</li>
+ *  <li>What the producers do with the \link theta::Model Model \endlink and \link theta::Data Data\endlink is up to them. Usually, they construct the likelihood function
+ *    and do something with it. In this case, a producer of the type \link deltanll_hypotest deltanll_hypotest\endlink is run which minimizes the likelihood function twice, using
+ *    different parameter distributions.</li>
+ *  <li>The results from the producers just run is appended to the "products" table in the configured "output_database". In case of an error, no row is added to
+ *    the "products" table. Instead, an entry in the "log" table is done.</li>
  * </ol>
  *
- * After the pseudo data is determined from the data_source (in this case the model),
- * all producers are run on the same pseudo data. As many pseudo experiments are repeated, %theta
- * will save the result using the concept of runid and eventids: every execution of %theta corresponds to
- * a run, every pseudo experiment within an execution of %theta is a separate event with a unique id within
- * this run.
+ * These steps are repeated "n-events" times.
  *
  * \subsection running_theta Executing theta
  *
@@ -402,25 +401,25 @@
  * .schema
  * </pre>
  *
- * You will see that there are four tables:
+ * You will see that there are three tables:
  * <ul>
  *  <li>'log' which contains log messages of all errors and warnings during the run</li>
- *  <li>'prodinfo' which contains a list of the producers which have run</li>
  *  <li>'rndinfo' which contains the random number seed used for the run</li>
  *  <li>'products'. This is the most important table which contains one line per pseudo experiment where the results of all producers is saved</li>
  * </ul>
  *
- * While the first three tables always have the same structure, the columns of the fourth table is defined by the producers which run.
+ * While the first two tables always have the same schema, the columns of the last table is defined by the producers which run.
  * In this case, the value of s and b as used in the data source are saved as well as the result of the deltanll_hypotest producer,
- * i.e., \c hypotest__nll_b and \c hypotest__nll_sb. Note that the column names are always built from the name of the producer in the
- * configuration file, followed by a producer-specific column name. This makes it possible to run the same producer more than once in one#
- * run.
+ * i.e., \c hypotest__nll_b and \c hypotest__nll_sb. Note that the column names are always built from the 'name' of the producer in the
+ * configuration file, followed by two underscores, followed by a producer-specific column name.
+ * Using the producer's name as columns name makes it possible to run the same type of producer more than once in one run of %theta.
+ * To find out about the columns a producer generates, read the according class documentation (the C++ class name is the name given in the 'type' setting).
  *
  * \subsection analyzing Analyzing the output
  *
  * The output of a run of %theta is saved as SQLite %database to the output file configured in the run
  * settings group. What to do with these parameters very much depends on the use case.
- 
+ *
  * %theta only supports very rudimentary root histogram production through SQL queries. For this example, execute
  * <pre>
  * bin/histos examples/plot-gaussoverflat.cfg
@@ -449,11 +448,12 @@
  * <li>\link theta::Function Function \endlink: used as coefficients of the components of an observable or as prior
  *         specification in a model. The only core plugin available is \link mult mult \endlink, which multiplies a list of parameters.</li>
  * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood, profile likelihood methods.</li>
- * <li>\link theta::Distribution Distribution \endlink: used in model constraints and as priors in a statistical method.</li>
+ * <li>\link theta::Distribution Distribution \endlink: used in model constraints and as priors in a statistical method. Used in "main.model.parameter-distribution".
+ *     Also, many producers and DataSources allow to use a setting "override-parameter-distribution". </li>
  * <li>\link theta::Producer Producer \endlink: statistical method called by theta::Run which are provided Data and Model and write
- *      results to the theta::ProductsTable.</li>
- * <li>\link theta::DataSource DataSource \endlink: provides the data/pseudo data on which to run the producers.</li>
- * <li>\link theta::Database Database \endlink: saves the products produced by the producers on disk.</li>
+ *      results to the theta::ProductsTable. Used in "main.producers".</li>
+ * <li>\link theta::DataSource DataSource \endlink: provides the data/pseudo data on which to run the producers. Used in "main.data_source".</li>
+ * <li>\link theta::Database Database \endlink: saves the products produced by the producers on disk. Used in "main.output_database".</li>
  * </ul>
  */
  
@@ -463,55 +463,46 @@
   *
   * One important concept introduced earlier is the plugin architecture of %theta.
   * As a rule of thumb, every setting group in a %theta configuration file will give rise to one instance
-  * of a C++ class during runtime of %theta. More
-  * specifically, <b>any setting group containing a <em>type="<typename>"</em>
+  * of a C++ class during runtime of %theta. More specifically, <b>any setting group containing a <em>type="<typename>"</em>
   * setting is used to construct a C++ object of class &lt;typename&gt; via the plugin system.</b>
   *
-  * So far, plugins can be defined for following types:
-  * <ul>
-  * <li>\link theta::HistogramFunction HistogramFunction\endlink: used in the "histogram=..."-setting
-  *      in the observables specification of a  model</li >
-  * <li>\link theta::Function Function\endlink: used as coefficients of the components of an observable specification in a model or as
-  *     additional term in the log-likelihood for a statistical method</li>
-  * <li>\link theta::Minimizer Minimizer\endlink: used by some producers such as maximum likelihood, profile likelihood methods</li>
-  * <li>\link theta::Run Run \endlink: the "top-level" object constructed by the %theta main program responsible for creating
-  *     pseudo data and invocation of the producers</li>
-  * <li>\link theta::Distribution Distribution\endlink: used in model constraints or as priors in a statistical method</li>
-  * <li>\link theta::Producer Producer\endlink: statistical method called by a Run object</li>
-  * </ul>
-  *
   * To define and use your own plugin, you have to:
-  *<ol>
-  * <li>Define a new class derived from a class in the list above and implement all its pure virtual methods and a constructor
+  * <ol>
+  * <li>Define a new class which is derived from a plugin-class and implement all its pure virtual methods and a constructor
   *     taking a \link theta::plugin::Configuration Configuration \endlink object as the only argument.</li>
   * <li>In a .cpp-file, call the REGISTER_PLUGIN(yourclass) macro</li>
   * <li>Make sure to compile and link this definition to a shared-object file.</li>
   * <li>In the configuration file, make sure to load the shared-object file as plugin.
   *     You can now use the plugin defined as any other %theta component via
-  *     a setting group containing type="yourclass";
-  *</ol>
-  * For examples of plugins, you can have a look at the \c plugins/ directory, which contains the core plugins of %theta.
+  *     a setting group containing type="yourclass";</li>
+  * </ol>
+  * For examples of plugins, you can have a look at the \c plugins/ directory, which contains the core plugins of %theta compiled as \c lib/core-plugins.so.
+  * The easiest way to get started is to create the new ".cpp" file in the \c plugins/ directory. This way, it will be automatically compiled
+  * into \c lib/core-plugins.so and you do not have to care about 3. and 4.
   *
   * \section extend_example Example: Function plugin
   *
   * To have a simple but complete example, consider you want to use a 1/sqrt(s) prior for a Bayesian method.
-  * In the corresponding producer, it is possible to pass a list of function specifications. The first thing
-  * to do is to write down the documentation, specifically addressing how it will be configured. Note that
+  * In the corresponding producer, it is possible to pass this prior as the setting "additional-nll-term". This is a
+  * setting group which specifies a \link theta::Function Function \endlink, so the plugin required here is a class derived from Function.
+  *
+  * The first thing to do is to write down the documentation, of how this plugin will be configured. Note that
   * the setting group you speficy has to provide enough information to completely specify the instance to create:
-  * the constructor will <em>only</em> have accedd to the \ref theta::plugin::Configuration object which essentially
+  * the constructor will <em>only</em> have accedd to the \link theta::plugin::Configuration Configuration \endlink object which essentially
   * contains the settings from the configuration file and the defined observables and parameters, but not more.
   *
   * The setting group should look like this:
   * \code
   *   some_name = {
-  *     type = "one_over_sqrt";
+  *     type = "nl_one_over_sqrt";
   *     parameter = "s";
   *   };
   * \endcode
-  * The type setting is always there. This is required by the plugin system to delegate the construction of such an object
-  * to the right plugin. The rest of the settings is up to the author of the plugin.
+  * The "type" setting is always there. This is required by the plugin system to delegate the construction of such an object
+  * to the right plugin. The rest of the settings are up to the author of the plugin. Note that, depending on the type of the plugin,
+  * base classes also might require some settings.
   *
-  * For the implementation, it is considered good style to use the plugin type-name as filename and you <em>have to</em>
+  * For the implementation, it is considered good style to use the plugin "type" name as filename and to
   * use this name as C++ class name. You should also create a separate header file which contains the class declaration and
   * the documentation (this  is required for the documentation generation). For sake of simplicity, I will omit this
   * complication.
@@ -522,22 +513,20 @@
   * using namespace theta;
   * using namespace theta::plugin;
   *
-  * class one_over_sqrt: public Function{
+  * class nl_one_over_sqrt: public Function{
   * private:
   *    ParId pid;
   * public:
-  *    one_over_sqrt(const Configuration & cfg){
-  *        string parameter_name = cfg.setting["parameter"];
-  *        pid = cfg.vm->getParId(parameter_name);
+  *    nl_one_over_sqrt(const Configuration & cfg): pid(cfg.vm->getParId(cfg.setting["parameter"])){
   *    }
   *
   *   virtual double operator()(const ParValues & values) const{
-  *      return 1.0 / sqrt(values.get(pid));
+  *      return 0.5 * values.get(pid);
   *   }
   *
   *  };
   *
-  * REGISTER_PLUGIN(one_over_sqrt)
+  * REGISTER_PLUGIN(nl_one_over_sqrt)
   * \endcode
   *
   * Let's go through this step-by-step.
@@ -545,14 +534,15 @@
   * The first lines just include the namespaces \c theta and \c theta::plugin in the lookup in order to save
   * some typing.
   *
-  * The class \c one_over_sqrt is defined as derived class of \ref theta::Function. Each class used in the
-  * plugin system must be derived from one of the classes of the list given in the introduction of this page.
+  * The class \c nl_one_over_sqrt is defined as derived class of \link theta::Function Function \endlink. Each class used in the
+  * plugin system must be derived from one of the classes suited for plugins (see section "Available Plugin" on the \subpage intro Introduction
+  * page.
   *
-  * The \c one_over_sqrt class defines a private data member of type \c ParId. \c ParId instances are used to
+  * The \c nl_one_over_sqrt class defines a private data member of type \c ParId. \c ParId instances are used to
   * manage parameter identities: each parameter defined in the configuration file corresponds to a certain
   * value of \c ParId. \c ParId instances can be copied, assigned and compared, but this is all what you can
-  * do with them. Any additional information about the parameter (i.e., its name, default value and range)
-  * is managed with an instance of \ref theta::VarIdManager, see below in the discussion of the constructor.
+  * do with them. Any additional information about the parameter (currently only its name)
+  * is managed with an instance of \link theta::VarIdManager \endlink.
   *
   * The public constructor must be defined to have a \code const Configuration & \endcode as the only parameter.
   * \c cfg.setting represents the configuration file setting group the instance is constructed from.
@@ -563,11 +553,15 @@
   * This has to be done with an instance of \ref theta::VarIdManager. The currently relevant instance
   * is available through the Configuration instance, \c cfg.vm.
   *
+  * Note that the code is a bit complicated by the fact that there is no default constructor for the class \c ParId. This
+  * is a design choise meant to prevent access to invalid (i.e., non-existing) parameters. The <em>only</em> way
+  * to get instances of \c ParId and \c ObsId is though an instance of \c VarIdManager, usually \c cfg.vm.
+  *
   * Before going on, it is also important to see what's <em>not</em> there:
   * <ul>
   *   <li>There is no code which handles the case that there is no "parameter" setting in \c cfg.setting. There does not have
   *      to be as the call \c cfg.setting["parameter"] will throw an exception which will be caught in the %theta
-  *        main program and reported to the user.</li>
+  *      main program and reported to the user.</li>
   *   <li>There is no explicit type casting of the configuration file setting. This is done implicitely via the overloaded
   *     casting operators of \link theta::SettingWrapper SettingWrapper \endlink (this concept is actually
   *     stolen form libconfig). In case the 
@@ -586,23 +580,18 @@
   * smaller than zero. Therefore, this code should be modified such that the method body is:
   * \code
   *   double val = values.get(pid);
-  *   if(val <= 0.0) throw MathException("one_over_sqrt: negative argument");
-  *   return 1.0 / sqrt(val);
+  *   if(val < 0.0) throw MathException("nl_one_over_sqrt: negative argument");
+  *   return 0.5 * val;
   * \endcode
   *
-  * The last line registers the new class at the plugin system with a macro. You have to do this exactly
-  * once for every plugin you ant to use (never put this line into a header, only do that in C++ source files.
-  * Otherwise, you define two plugins with the same type name and %theta will abort).
-  *
-  * You have to compile this file as part of a shared object file which is loaded through the \c plugins
-  * setting group.
+  * The macro REGISTER_PLUGIN registers the new class at the plugin system. You have to call this macro exactly
+  * once for every plugin you want to register. Do this in a .cpp file, never in the header file.
   *
   * One piece is still missing: as the documented in theta::Function::par_ids, this variable
-  * should contain all the parameters this function depends on (this is used for optimizations
-  * and to define which parameters a model depends on).
+  * should contain all the parameters this function depends on.
   *
   * The completed example (including the split of .hpp and .cpp) is implemented in
-  * plugins/one_over_sqrt.hpp and plugins/one_over_sqrt.cpp.
+  * \c plugins/nl_one_over_sqrt.hpp and \c plugins/nl_one_over_sqrt.cpp.
   */
  
  

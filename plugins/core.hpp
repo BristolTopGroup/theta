@@ -430,7 +430,7 @@ private:
  *   <li>parameter values are sampled from the parameter distribution of the model. If the setting \c override-parameter-distribution
  *       is given, it will be used for this step instead.</li>
  *   <li>the parameter values from the previous step are used to calculate the Model prediction. If \c dice_template_uncertainties is true,
- *      this will be done using the method HistogramFunction::getRandomFluctuation instead of the evaluation operator of \link HistogramFunction HistogramFunction\endlink.
+ *      this will be done using the method HistogramFunction::getRandomFluctuation instead of the evaluation operator of \link theta::HistogramFunction HistogramFunction\endlink.
  *      What this means exactly depends on the HistogramFunction instances used; see their documentation of \c getRandomFlucutation method for details.</li>
  *   <li>if \c dice_poisson is \c true, a Poisson random number is drawn for each bin around the mean of the prediciton from the previous step. Otherwise,
  *      the bin contents from the model prediction are used as pseudo data directly (somtimes called "Asimov data").</li>

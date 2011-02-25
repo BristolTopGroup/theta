@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include <stdint.h>
+#include <math.h>
 
 #include "interface/log2_dot.hpp"
 #include "interface/utils.hpp"
@@ -16,13 +17,13 @@ double template_nllikelihood_reference(const double * data, const double * pred,
         pred_norm += pred[i];
         if(pred[i] > 0.0){
              if(data[i] > 0.0){
-                 result -= data[i] * log2(pred[i]);
+                 result -= data[i] * log(pred[i]);
              }
          }else if(data[i] > 0.0){
              return std::numeric_limits<double>::infinity();
          }
     }
-    return result * ( 1.0 / M_LOG2E) + pred_norm;
+    return result + pred_norm;
 }
 
 

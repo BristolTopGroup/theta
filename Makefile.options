@@ -10,6 +10,9 @@ OPTIONS_BUILD_TESTS := yes
 # whether or not to use the log function from crlibm (which is faster than the standard log)
 OPTIONS_USE_CRLIBM := yes
 
+OPTIONS_CFLAGS := -I/usr/local/include
+OPTIONS_LDFLAGS := -L/usr/local/lib
+
 # Usually, theta assumes building for 64-bit x86 cpus (and an assembler compatible with the one gcc uses).
 # Setting this flag to 'yes' disables some optimizations and replaces functions with generic ones.
 # Note that some platform-specific optimizations are controlled by compiler-defined defines such as __SSE2__ and ignore

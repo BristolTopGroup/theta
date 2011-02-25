@@ -3,6 +3,7 @@
 #include "interface/log2_dot.hpp"
 #include <cstddef>
 #include <limits>
+#include <math.h>
 
 #include "interface/utils.hpp"
 

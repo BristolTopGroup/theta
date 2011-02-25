@@ -2,11 +2,11 @@
 DIRS = src libconfig liblbfgs plugins root bin test
 
 all:
-	@for d in $(DIRS); do ( [ -d $$d ] && make -C $$d ) || true; done
+	@for d in $(DIRS); do ( [ -d $$d ] && $(MAKE) -C $$d ) || true; done
 
 clean:
-	@for d in $(DIRS); do ( [ -d $$d ] && make -C $$d clean ) || true; done
-	@make -C test/test-stat clean
+	@for d in $(DIRS); do ( [ -d $$d ] && $(MAKE) -C $$d clean ) || true; done
+	@$(MAKE) -C test/test-stat clean
 
 #ok, this is not very nice, as it hardcodes the documentation copy target, but as long as I am the only
 # developer, it should work well:

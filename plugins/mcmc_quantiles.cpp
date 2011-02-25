@@ -6,6 +6,7 @@
 #include "interface/distribution.hpp"
 
 #include <sstream>
+#include <iomanip>
 
 using namespace theta;
 using namespace std;

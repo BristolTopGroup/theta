@@ -7,8 +7,6 @@
 
 #include <iostream>
 
-#include <boost/math/special_functions/gamma.hpp>
-
 #ifdef USE_CRLIBM
 #include "crlibm/crlibm.h"
 #endif
@@ -26,9 +24,7 @@ double phi_inverse(double p);
  * Forwards to the boost implementation which is thread save (note that
  * C99 implementations need not be therad save).
  */
-inline double lngamma(double x){
-   return boost::math::lgamma(x);
-}
+double lngamma(double x);
 
 /** \brief add 2 vectors, possibly with sse optimization
  *

@@ -44,7 +44,7 @@ else
    ifeq ($(shell test -e /usr/lib/libboost_system-mt.so && echo -n A),A)
       BS:=-mt
    endif
-   BOOST_LIBS := -lboost_filesystem$(BS) -lboost_regex$(BS) -lboost_program_options$(BS) -lboost_thread$(BS) -lboost_system$(BS)
+   BOOST_LIBS := -lboost_filesystem$(BS) -lboost_regex$(BS) -lboost_program_options$(BS) -lboost_thread$(BS) -lboost_system$(BS) -lboost_serialization$(BS)
 endif
 
 

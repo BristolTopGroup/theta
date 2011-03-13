@@ -2,8 +2,13 @@ This file summarizes changes relevant to users, i.e., changes in config file
 convention and output. It does not cover internal changes.
 
 
-from June to trunk:
--------------------
+from June 2010 to trunk:
+------------------------
+* the command line of theta changed: the name of the "main" setting cannot be specifiec any more, it is always "main".
+  On the other hand, it is possible to specify more than one configuration file at once. In this case, they will be executed sequentially
+  almost as if one would call theta for each of them.
+  "almost" because there is one exception: the plugin files (configured via options.plugin_files) are not re-loaded between
+  the runs for the configuration files.
 * the plugin 'model_source_norandom' has been dropped. Instead, use the 'model_source' plugin, set 'dice_poisson' to false
   and use delta distributions as 'override-parameter-distribution'.
 * there used to be one global random number generator, configured via the (optional) setting 'main.seed'. Now,
@@ -15,7 +20,7 @@ from June to trunk:
   It is recommended to drop 'main.seed' to avoid the warning about it being unused.
   To set the seed explicitely for plugins which use random numbers, you can add a setting 'rnd_gen' like this:
   rnd_gen = {
-      seed = 123; // default of -1 means: use current time.
+      seed = 123; // default of -1 means: use seed based on current (sub-second precision) time.
   };
   This affects the 'model_source', and the mcmc producers.
 * The RndInfoTable schema has changed: it now contains seeds used for each module (instead of one per Run)

@@ -1,9 +1,7 @@
 .text
-.p2align 4
+.align 4
 .globl log2_dot
 .globl template_nllikelihood
-.type log2_dot, @function
-.type template_nllikelihood, @function
 log2_dot:
     fldz
     testl %edx, %edx
@@ -25,16 +23,6 @@ log2_dot:
     movsd -8(%rsp), %xmm0
     ret
 
-/*	
-.globl fstcw
-.type fstcw, @function
-fstcw:
-    fstcw -4(%rsp)
-    xor %rax,%rax
-    mov -4(%rsp),%eax
-    ret
-*/
-
 /* note: according to the System V AMD64 ABI, we only have to preserve %rbx, %rsp, %rbp, %r12-%r15, so we just do not use these ... */
 .p2align 4
 template_nllikelihood:  /* data = %rdi, pred = %rsi; n = %edx */
@@ -47,7 +35,7 @@ template_nllikelihood:  /* data = %rdi, pred = %rsi; n = %edx */
     leaq 8(,%rdx,8), %rdx
     xorpd %xmm1, %xmm1 /* xmm1 is always 0.0 */
 .tl_loopstart:
-    movsd (%rsi,%rax), %xmm0  /* xmm0 = pred[i] */             
+    movsd (%rsi,%rax), %xmm0  /* xmm0 = pred[i] */
     ucomisd %xmm0, %xmm1
     jae .tl_predzero
     fldl (%rdi,%rax)
@@ -57,8 +45,8 @@ template_nllikelihood:  /* data = %rdi, pred = %rsi; n = %edx */
     faddp %st, %st(1)
 .tl_loopinc:
     addq $8, %rax
-	cmpq %rdx, %rax
-	jne	.tl_loopstart
+    cmpq %rdx, %rax
+    jne .tl_loopstart
 .tl_exit:
     fstpl -8(%rsp)
     movsd -8(%rsp), %xmm0

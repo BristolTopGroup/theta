@@ -86,62 +86,13 @@ string get_theta_dir(char** argv){
 
 }
 
-int main(int argc, char** argv) {
-    po::options_description desc("Supported options");
-    desc.add_options()("help,h", "show help message")
-    ("quiet,q", "quiet mode (suppress progress message)")
-    ("nowarn", "do not warn about unused configuration file statements");
 
-    po::options_description hidden("Hidden options");
-
-    hidden.add_options()
-    ("cfg-file", po::value<string>(), "configuration file")
-    ("run-name", po::value<string>(), "run name");
-
-    po::positional_options_description p;
-    p.add("cfg-file", 1);
-    p.add("run-name", 1);
-
-    po::options_description cmdline_options;
-    cmdline_options.add(desc).add(hidden);
-
-    po::variables_map cmdline_vars;
-    try{
-        po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(p).run(), cmdline_vars);
-    }
-    catch(std::exception & ex){
-        cerr << "Error parsing command line options: " << ex.what() << endl;
-        return 1;
-    }
-    po::notify(cmdline_vars);
-    
-    if(cmdline_vars.count("help")){
-        cout << desc << endl;
-        return 0;
-    }
-    
-    if(cmdline_vars.count("cfg-file")==0){
-        cerr << "Error: you have to specify a configuration file" << endl;
-        return 1;
-    }
-    
-    string cfg_filename = cmdline_vars["cfg-file"].as<string>();
-    string run_name = "main";
-    if(cmdline_vars.count("run-name")) run_name = cmdline_vars["run-name"].as<string>();
-    bool quiet = cmdline_vars.count("quiet");
-    bool nowarn = cmdline_vars.count("nowarn");
-    
-    //determine theta_dir (for config file replacements with $THETA_DIR
-    string theta_dir = get_theta_dir(argv);
-    if(theta_dir==""){
-        cout << "WARNING: could not determine THETA_DIR, leaving empty" << endl;
-    }
-
+boost::shared_ptr<Run> build_run(string cfg_filename, const string & theta_dir, bool nowarn){
     Config cfg;
     boost::shared_ptr<SettingUsageRecorder> rec(new SettingUsageRecorder());
     boost::shared_ptr<Run> run;
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
-    
+    bool init_complete = false;
     try {
         try {
             //as includes in config files shouled always be resolved relative to the config file's location:
@@ -180,24 +131,21 @@ int main(int argc, char** argv) {
         //build run:
         run.reset(new Run());
         config.run = run;
-        run->init(Configuration(config, root[run_name]));
-        if(not quiet){
-            boost::shared_ptr<ProgressListener> l(new MyProgressListener());
-            run->set_progress_listener(l);
-        }
+        run->init(Configuration(config, root["main"]));
+        init_complete = true;
     }
     catch (SettingNotFoundException & ex) {
         cerr << "Error: the required setting " << ex.getPath() << " was not found." << endl;
-        return 1;
     } catch (SettingTypeException & ex) {
         cerr << "Error: the setting " << ex.getPath() << " has the wrong type." << endl;
-        return 1;
     } catch (SettingException & ex) {
         cerr << "Error while processing the configuration at " << ex.getPath() << endl;
-        return 1;
     } catch (Exception & e) {
         cerr << "Error: " << e.message << endl;
-        return 1;
+    }
+    if(not init_complete){
+        run.reset();
+        return run;
     }
     
     if(not nowarn){
@@ -211,13 +159,75 @@ int main(int argc, char** argv) {
             cout << "Comment out these settings to get rid of this message." << endl;
         }
     }
+    return run;
+}
 
-    //install signal handler now, not much earlier. Otherwise, plugin loading
-    // might change it ...
-    install_sigint_handler();
 
+int main(int argc, char** argv) {
+    po::options_description desc("Supported options");
+    desc.add_options()("help,h", "show help message")
+    ("quiet,q", "quiet mode (suppress progress message)")
+    ("nowarn", "do not warn about unused configuration file statements");
+
+    po::options_description hidden("Hidden options");
+
+    hidden.add_options()
+    ("cfg-file", po::value<vector<string> >(), "configuration file");
+
+    po::positional_options_description p;
+    p.add("cfg-file", -1);
+
+    po::options_description cmdline_options;
+    cmdline_options.add(desc).add(hidden);
+
+    po::variables_map cmdline_vars;
+    try{
+        po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(p).run(), cmdline_vars);
+    }
+    catch(std::exception & ex){
+        cerr << "Error parsing command line options: " << ex.what() << endl;
+        return 1;
+    }
+    po::notify(cmdline_vars);
+    
+    if(cmdline_vars.count("help")){
+        cout << desc << endl;
+        return 0;
+    }
+    
+    if(cmdline_vars.count("cfg-file")==0){
+        cerr << "Error: you have to specify a configuration file" << endl;
+        return 1;
+    }
+    
+    vector<string> cfg_filenames = cmdline_vars["cfg-file"].as<vector<string> >();
+    bool quiet = cmdline_vars.count("quiet");
+    bool nowarn = cmdline_vars.count("nowarn");
+    
+    //determine theta_dir (for config file replacements with $THETA_DIR
+    string theta_dir = get_theta_dir(argv);
+    if(theta_dir==""){
+        cout << "WARNING: could not determine THETA_DIR, leaving empty" << endl;
+    }
+    
     try {
-        run->run();
+        for(size_t i=0; i<cfg_filenames.size(); ++i){
+            if(!quiet and cfg_filenames.size() > 1){
+                cout << "processing file " << (i+1) << " of " << cfg_filenames.size() << ", " << cfg_filenames[i] << endl;
+            }
+            boost::shared_ptr<Run> run = build_run(cfg_filenames[i], theta_dir, nowarn);
+            if(!run) return 1;
+            if(not quiet){
+                boost::shared_ptr<ProgressListener> l(new MyProgressListener());
+                run->set_progress_listener(l);
+            }
+
+            //install signal handler now, not much earlier. Otherwise, plugin loading in build_run()
+            // might change it ...
+            install_sigint_handler();
+            run->run();
+            if(stop_execution) break;
+        }
     }
     catch(ExitException & ex){
        cerr << "Exit requested: " << ex.message << endl;

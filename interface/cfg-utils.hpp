@@ -173,6 +173,14 @@ namespace theta{
                 return setting.getPath();
             }
             
+            /** \brief Returns the type of the setting
+             *
+             * See libconfig documentation for details.
+             */
+            libconfig::Setting::Type getType() const{
+                return setting.getType();
+            }
+            
             /** \brief Construct a SettingWrapper from a Setting, the root Setting and a setting recorder
              *
              * The SettingRecorder \c recorder will be used to record the usage of all settings accessed through

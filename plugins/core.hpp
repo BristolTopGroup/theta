@@ -328,10 +328,16 @@ class gauss1d: public theta::Distribution{
         std::pair<double, double> range;
 };
 
-/** \brief A function which multiplies all its parameters
+/** \brief A function which multiplies a number of parameters
  *
- * For example, defining a Function to depend on ParId p0 and ParId p1,
- * operator(values) will always return values.get(p0)*values.get(p1).
+ * Example configuration:
+ * \code
+ * {
+ *   type = "mult";
+ *   parameters = ("p1", "p2");
+ * }
+ * \endcode
+ * This will make a Function object which returns p1 * p2.
  */
 class mult: public theta::Function{
 public:

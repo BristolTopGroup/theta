@@ -30,6 +30,9 @@ histos: .bin/histos.o
 create_testhistos: .bin/create_testhistos.o
 	@$(LINK_EXE) -o $@ $<
 
+create_testhistos2: .bin/create_testhistos2.o
+	@$(LINK_EXE) -o $@ $<
+
 create_histos: .bin/create_histos.o
 	@$(LINK_EXE) -o $@ $<
 

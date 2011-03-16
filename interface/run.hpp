@@ -9,6 +9,7 @@
 #include "interface/database.hpp"
 #include "interface/cfg-utils.hpp"
 #include "interface/plugin.hpp"
+#include "interface/pm.hpp"
 
 #include "libconfig/libconfig.h++"
 
@@ -125,7 +126,7 @@ public:
  *       the end of the run. This report summarizes how many messages there have been from any non-suppressed
  *       level. This allows for a quick check by the user whether everything went Ok or whether there
  *       have been obvious errors.
- *  
+ *
  *  Handling of result tables is done in the individual producers. Only run-wide tables
  *  are managed here, that is
  *  <ul>
@@ -138,8 +139,10 @@ public:
  *  </ul>
  *
  *  For more information about these tables, refer to the documentation of the corresponding Table classes.
+ *
+ * The RndInfoTable and ProductsTable are stored via the PropertyMap interface as "default" instances.
  */
-class Run{
+class Run: public PropertyMap{
 public:
 
    /** \brief Register progress listener.
@@ -164,22 +167,6 @@ public:
     /** \brief Get current event id */
     int get_eventid() const{
         return eventid;
-    }
-    
-    /** \brief Get the RndInfoTable associated with this Run
-     *
-     * Used by RandomConsumer to save the random number seed
-     */
-    RndInfoTable & get_rndinfo_table(){
-        return *rndinfo_table;
-    }
-    
-    /** \brief Get the ProductsTable associated with this Run
-     *
-     * Used by Producers to save their result
-     */
-    boost::shared_ptr<ProductsTable> get_products_table(){
-        return products_table;
     }
     
     /** \brief Initialize the members using the supplied configuration
@@ -215,7 +202,7 @@ private:
 
     std::auto_ptr<LogTable> logtable;
     bool log_report;
-    std::auto_ptr<RndInfoTable> rndinfo_table;
+    boost::shared_ptr<RndInfoTable> rndinfo_table;
 
     //the producers to be run on the pseudo data:
     boost::ptr_vector<Producer> producers;

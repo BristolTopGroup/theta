@@ -35,11 +35,10 @@ RandomConsumer::RandomConsumer(const theta::plugin::Configuration & cfg, const s
    rnd_gen.reset(new Random(rnd_source.release()));
    rnd_gen->set_seed(seed);
    if(cfg.run){
-      cfg.run->get_rndinfo_table().append(*cfg.run, name, seed);
+      cfg.run->get<RndInfoTable>()->append(*cfg.run, name, seed);
    }
 }
-         
-         
+
 void theta::randomize_poisson(Histogram & h, Random & rnd){
     const size_t nbins = h.get_nbins();
     for(size_t bin=0; bin<=nbins+1; ++bin){
@@ -47,5 +46,5 @@ void theta::randomize_poisson(Histogram & h, Random & rnd){
         h.set(bin, n);
     }
 }
-                   
+
 

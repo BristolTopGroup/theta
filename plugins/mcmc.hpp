@@ -120,6 +120,10 @@ void metropolisHastings(const nlltype & nllikelihood, resulttype &res, Random & 
  * \param[out] startvalues will contain the suggested startvalues. The contents when calling this function will be ignored.
  */
 Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> & startvalues, const boost::shared_ptr<VarIdManager> & vm);
+
+Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & startvalues,
+                    const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,
+                    const boost::shared_ptr<VarIdManager> & vm);
    
 /** \brief Calculate the cholesky decomposition, but allow zero eigenvalues.
  *

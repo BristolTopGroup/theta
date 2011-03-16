@@ -104,9 +104,11 @@ void Run::init(const plugin::Configuration & cfg){
     
     std::auto_ptr<Table> rndinfo_table_underlying = db->create_table("rndinfo");
     rndinfo_table.reset(new RndInfoTable(rndinfo_table_underlying));
+    set("default", rndinfo_table);
     
     std::auto_ptr<Table> products_table_underlying = db->create_table("products");
     products_table.reset(new ProductsTable(products_table_underlying));
+    set("default", products_table);
     
     //2. model and data_source
     model = plugin::PluginManager<Model>::instance().build(plugin::Configuration(cfg, s["model"]));

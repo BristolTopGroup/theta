@@ -30,7 +30,7 @@ ProductsTableWriter::ProductsTableWriter(const Configuration & cfg){
     if(not nameOk(name)){
         throw InvalidArgumentException("name '" + name + "' is not a valid name for building column names. ");
     }
-    table = cfg.run->get_products_table();
+    table = cfg.run->get<ProductsTable>();
 }
 
 void PluginLoader::execute(const Configuration & cfg) {

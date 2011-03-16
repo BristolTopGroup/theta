@@ -76,7 +76,7 @@
  *  <li>Table::typeHisto is mapped to \c TH1D </li>
  * </ul>
  */
-class rootfile_database: public theta::Database{
+class rootfile_database: public theta::Database {
 public:
     
     /** \brief Constructor for the plugin system
@@ -111,7 +111,7 @@ private:
         friend class rootfile_database;
         class rootfile_column_int;
         
-        rootfile_database & db;
+        boost::shared_ptr<rootfile_database> db;
         //this pointer is owned by user of the table via the auto_ptr returned by add_column(!)
         std::auto_ptr<rootfile_column_int> autoinc_column;
         
@@ -122,7 +122,7 @@ private:
         
         TTree * tree;
         
-        rootfile_table(const std::string & tablename, rootfile_database & db);
+        rootfile_table(const std::string & tablename, const boost::shared_ptr<rootfile_database> & db);
         virtual ~rootfile_table();
         
         std::auto_ptr<theta::Column> add_column(const std::string & name, const data_type & type);

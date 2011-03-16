@@ -132,7 +132,7 @@ void sqlite_database::error(const string & functionName) {
 
 std::auto_ptr<Table> sqlite_database::create_table(const string & table_name){
     check_name(table_name);
-    sqlite_table * result = new sqlite_table(table_name, this);
+    sqlite_table * result = new sqlite_table(table_name, boost::dynamic_pointer_cast<sqlite_database>(shared_from_this()));
     if(table_name == "products"){
         result->save_all_columns = save_all_products;
         result->save_columns = products_data;
@@ -141,7 +141,7 @@ std::auto_ptr<Table> sqlite_database::create_table(const string & table_name){
 }
 
 
-sqlite_database::sqlite_table::sqlite_table(const string & name_, sqlite_database * db_) :
+sqlite_database::sqlite_table::sqlite_table(const string & name_, const boost::shared_ptr<sqlite_database> & db_) : Table(db_),
     name(name_), have_autoinc(false), table_created(false), next_insert_index(1), insert_statement(0), db(db_),
     save_all_columns(true) {
 }

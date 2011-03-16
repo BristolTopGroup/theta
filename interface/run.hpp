@@ -193,11 +193,8 @@ private:
 
     boost::shared_ptr<VarIdManager> vm;
     std::auto_ptr<Model> model;
-    //note: we must make sure that the Database destructor is called *after* all table
-    // destructors which use this Database. As member destructors are called in reverse order of
-    // their definition within the class, definition of 'db' should come before 'data_source',
-    // 'producers', and '*_table'.
-    std::auto_ptr<Database> db;
+    //note: the tables hold a shared_ptr to this database to ensure proper destruction order
+    boost::shared_ptr<Database> db;
     std::auto_ptr<DataSource> data_source;
 
     std::auto_ptr<LogTable> logtable;

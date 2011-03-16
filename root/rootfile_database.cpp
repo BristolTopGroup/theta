@@ -79,7 +79,7 @@ rootfile_database::~rootfile_database() {
 
 std::auto_ptr<Table> rootfile_database::create_table(const string & table_name){
     check_name(table_name);
-    rootfile_table * result = new rootfile_table(table_name, *this);
+    rootfile_table * result = new rootfile_table(table_name, boost::dynamic_pointer_cast<rootfile_database>(shared_from_this()));
     if(table_name == "products"){
         result->save_all_columns = save_all_products;
         result->save_columns = products_data;
@@ -88,10 +88,10 @@ std::auto_ptr<Table> rootfile_database::create_table(const string & table_name){
 }
 
 
-rootfile_database::rootfile_table::rootfile_table(const std::string & tablename, rootfile_database & db_):
+rootfile_database::rootfile_table::rootfile_table(const std::string & tablename, const boost::shared_ptr<rootfile_database> & db_):Table(db_),
    db(db_), save_all_columns(true){
        tree = new TTree(tablename.c_str(), tablename.c_str());
-       tree->SetDirectory(db.file);
+       tree->SetDirectory(db->file);
        //ugly switch, but should work:
        products_table = tablename == "products";
 }
@@ -136,9 +136,9 @@ void rootfile_database::rootfile_table::set_column(const Column & c_, double d){
    const rootfile_column_double& c = static_cast<const rootfile_column_double&> (c_);
    c.d = d;
    if(products_table){
-       for(size_t i=0; i< db.hist_infos.size(); ++i){
-           if(db.hist_infos[i].column_name == c.name){
-               db.hist_infos[i].h.fill(d, 1.0);
+       for(size_t i=0; i< db->hist_infos.size(); ++i){
+           if(db->hist_infos[i].column_name == c.name){
+               db->hist_infos[i].h.fill(d, 1.0);
            }
        }
    }

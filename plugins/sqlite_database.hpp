@@ -3,6 +3,7 @@
 
 #include "interface/decls.hpp"
 #include "interface/database.hpp"
+#include <boost/enable_shared_from_this.hpp>
 
 #include <sqlite3.h>
 #include <memory>
@@ -103,7 +104,7 @@ private:
 
     private:
         
-        sqlite_table(const std::string & name_, sqlite_database * db_);
+        sqlite_table(const std::string & name_, const boost::shared_ptr<sqlite_database> & db_);
         
         std::string name;
         bool have_autoinc;
@@ -114,7 +115,7 @@ private:
         int next_insert_index; // next free insert_index to use by add_column to construct an sqlite_column, starting at 1.
         
         sqlite3_stmt * insert_statement; // this ressource is owned by sqlite_database.
-        sqlite_database * db;
+        boost::shared_ptr<sqlite_database> db;
 
         bool save_all_columns;
         std::set<std::string> save_columns;

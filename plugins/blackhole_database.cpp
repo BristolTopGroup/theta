@@ -16,7 +16,7 @@ blackhole_database::~blackhole_database() {}
 
 std::auto_ptr<Table> blackhole_database::create_table(const string & table_name){
     check_name(table_name);
-    return std::auto_ptr<Table>(new blackhole_table());
+    return std::auto_ptr<Table>(new blackhole_table(boost::dynamic_pointer_cast<blackhole_database>(shared_from_this())));
 }
 
 blackhole_database::blackhole_table::~blackhole_table(){}

@@ -601,9 +601,10 @@
   *
   * \section cmd_theta theta
   *
-  * The %theta command expects one or two arguments: the configuration file and (optionally) the name of the run setting
-  * in this file. If the run name is not given, "main" is assumed as name for the run. Additionally to this setting group,
-  * the special setting group "options" is parsed. This setting group must contain the setting \c plugin_files,
+  * The %theta command expects the configuration file(s) to use as argument(s). theta will use the
+  * setting group "main" to construct and configure a \link theta::Run \endlink instance.
+  * Additionally to this setting group, the special setting group "options" is parsed.
+  * This setting group must contain the setting \c plugin_files,
   * which is a list of shared-object filenames to load as plugins. If relative paths are used, they
   * are resolved from where theta is executed.
   *
@@ -617,11 +618,11 @@
   * reproduce it without using this option first).
   *
   * If you send the \c SIGINT signal to %theta (e.g., by hitting ctrl+C on a terminal running %theta),
-  * it will exit gracefully as soon as possible (which usually means
-  * after the run has called all producers on the current pseudo data). This feature is useful for
+  * it will exit gracefully as soon as the current toy experiment is processed. This feature is useful for
   * interactive use if the whole run takes too long but you still want to be able to
-  * analyze the output produced so far. It is also useful part of a batch job script
-  * which can send this signal just before the job reaches the maximum time by which it is killed by the batch system.
+  * analyze the output produced so far. It can also be used in a batch job script
+  * which can send this signal to theta just before the job reaches the maximum time by which it would be 
+  * killed by the batch system.
   *
   * \section cmd_merge merge
   *
@@ -635,16 +636,16 @@
   * \c merge will refuse to merge result databases which use the same random number generator seed.
   *
   * A typical invocation is :
-  * \verbatim
-  * merge --outfile=merged.db result1.db result2.db result3.db
-  * \endverbatim
+  * \code
+  *  merge --outfile=merged.db result1.db result2.db result3.db
+  * \endcode
   * which merges the files result{1,2,3}.db into the output file merged.db. If the output file exists,
   * it will be overwritten.
   *
   * Another possibility is to merge all files matching \c *.db within one directory via
-  * \verbatim
-  * merge --outfile=merged.db --in-dir=results
-  * \endverbatim
+  * \code
+  *  merge --outfile=merged.db --in-dir=results
+  * \endcode
   *
   * The only other supported option is \c -v or \c --verbose which increases the verbosity of merge.
   */

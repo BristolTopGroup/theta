@@ -39,6 +39,7 @@ private:
     //declare privately(!) the sqlite_table class:
     class blackhole_table: public theta::Table {
         friend class blackhole_database;
+        blackhole_table(const boost::shared_ptr<Database> & db): Table(db){}
         
         virtual ~blackhole_table();
         

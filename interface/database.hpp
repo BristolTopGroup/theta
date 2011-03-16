@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <boost/utility.hpp>
+#include <boost/enable_shared_from_this.hpp>
 
 #include "interface/decls.hpp"
 #include "interface/plugin.hpp"
@@ -15,7 +16,7 @@ namespace theta {
  *
  * This is an abstract class to be used via the plugin system.
  */
-class Database: private boost::noncopyable {
+class Database: private boost::noncopyable, public boost::enable_shared_from_this<Database> {
 public:
     
     /// Required for the plugin system
@@ -129,6 +130,13 @@ public:
      * the added id is returned. Otherwise, the result will always be 0.
      */
     virtual int add_row() = 0;
+protected:
+    //the tables always hold a shared ptr to the database to prevent
+    // the database being destroyed earlier than all its tables (!)
+    boost::shared_ptr<Database> db;
+    Table(const boost::shared_ptr<Database> & db_): db(db_){}
+private:
+    Table(); //not implemented
 };
 
 /** \brief Base class for columns managed by Tables

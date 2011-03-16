@@ -46,9 +46,7 @@
  * likelihood value is saved.
  *
  * The results are written to the 'products' table. In this table, 
- * columns per observable of type typoeHisto (see \link theta::Table Table \endlink) are created
- * (the actual data format this is saved in depends on the 'output_database' used; see documentation of the chosen 
- * Database class).
+ * columns per observable of type \link theta::Table::typeHisto \endlink are created.
  * The column names for an observable "obs1" will be "obs1_mean" and "obs1_width" where the former contains the mean
  * and the latter the rms of the predictions in each bin, as seen along the chain. The third column is called
  * "obs1_best" and contains the prediction with the highest likelihood value the chain has seen.

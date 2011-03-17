@@ -58,26 +58,8 @@ class MCMCPosteriorRatioResult{
 void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, const theta::Model & model) {
     if(!init){
         try{
-            //1. for signal plus background
-            ObsIds observables = model.getObservables();
-            
-            ParValues s_plus_b_values;
-            s_plus_b->mode(s_plus_b_values);
-            Data d;
-            model.get_prediction(d, s_plus_b_values);
-            
-            std::auto_ptr<NLLikelihood> nll_sb = model.getNLLikelihood(d);
-            nll_sb->set_override_distribution(s_plus_b);
-            sqrt_cov_sb = get_sqrt_cov(*rnd_gen, *nll_sb, startvalues_sb, vm);
-        
-            //2. for background only
-            ParValues b_only_values;
-            b_only->mode(b_only_values);
-            model.get_prediction(d, b_only_values);
-            std::auto_ptr<NLLikelihood> nll_b = model.getNLLikelihood(d);
-            nll_b->set_override_distribution(b_only);
-            sqrt_cov_b = get_sqrt_cov(*rnd_gen, *nll_b, startvalues_b, vm);
-            
+            sqrt_cov_sb = get_sqrt_cov2(*rnd_gen, model, startvalues_sb, s_plus_b, vm);
+            sqrt_cov_b = get_sqrt_cov2(*rnd_gen, model, startvalues_b, b_only, vm);
             init = true;
         }catch(Exception & ex){
             ex.message = "initialization failed: " + ex.message;

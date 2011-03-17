@@ -75,8 +75,6 @@ private:
     unsigned int burn_in;
     theta::Matrix sqrt_cov;
     std::vector<double> startvalues;
-    
-    bool use_get_sqrt_cov2;
 };
 
 #endif

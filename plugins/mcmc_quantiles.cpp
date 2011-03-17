@@ -54,20 +54,7 @@ class MCMCPosteriorQuantilesResult{
 void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) {
     if(!init){
         try{
-            if(use_get_sqrt_cov2){
-                sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, vm);
-            }
-            else{
-                //get the covariance for average data:
-                ParValues values;
-                model.get_parameter_distribution().mode(values);
-                ObsIds observables = model.getObservables();
-                Data d;
-                model.get_prediction(d, values);
-                std::auto_ptr<NLLikelihood> nll = get_nllikelihood(d, model);
-                sqrt_cov = get_sqrt_cov(*rnd_gen, *nll, startvalues, vm);
-            }
-            
+            sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, vm);
             //find the number of the parameter of interest:
             ParIds model_pars = model.getParameters();
             ipar=0;
@@ -98,7 +85,7 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
 }
 
 mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()),
-   init(false), par_id(cfg.vm->getParId(cfg.setting["parameter"])), use_get_sqrt_cov2(false){
+   init(false), par_id(cfg.vm->getParId(cfg.setting["parameter"])){
     vm = cfg.vm;
     SettingWrapper s = cfg.setting;
     string parameter = s["parameter"];
@@ -119,9 +106,6 @@ mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Produc
     }
     else{
         burn_in = iterations / 10;
-    }
-    if(s.exists("use_get_sqrt_cov2")){
-        use_get_sqrt_cov2 = true;
     }
     for(size_t i=0; i<quantiles.size(); ++i){
         stringstream ss;

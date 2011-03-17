@@ -99,7 +99,6 @@ public:
     virtual double evalNL(const theta::ParValues & values) const;
     virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
     virtual const std::pair<double, double> & support(const theta::ParId&) const;
-    virtual double width(const theta::ParId &) const;
     //@}
 private:
     double mu, sigma;
@@ -144,7 +143,6 @@ public:
     virtual double evalNL(const theta::ParValues & values) const;
     virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
     virtual const std::pair<double, double> & support(const theta::ParId&) const;
-    virtual double width(const theta::ParId &) const;
     //@}
 private:
     theta::ParValues values;
@@ -168,7 +166,6 @@ private:
  *   
  *   b = {
  *     range = (0.0, 5.0);
- *     width = 2.0; //optional for finite range
  *     fix-sample-value = 2.0; //optional for finite range
  *   };
  * };
@@ -182,13 +179,7 @@ private:
  *     The special strings "inf" and "-inf" are allowed here.</li>
  *   <li>An optional \c fix-sample-value setting which will be used by the sample routine. In case of finite
  *     intervals, the default is to sample from a flat distribution on this interval. For infinite intervals,
- *     an exception will be thrown upon call of Distributiuon::sample</li>     
- *   <li>an optional \c width setting which will be used as starting step size for various algorithms
- *       (including markov chains and minimization). It should be set to a value of the same order of
- *       magnitude as the expected error of the likelihood function in this parameter. For finite intervals,
- *       the default used is 10% of the interval length. For infinite intervals with a non-zero
- *       \c fix-parameter-value setting, 10% of the absolute value is used. Otherwise, an exception will be thrown
- *       upon the call of flat_distribution::width().</li>
+ *     an exception will be thrown upon call of Distributiuon::sample</li>
  * </ul>
  */
 class flat_distribution: public theta::Distribution{
@@ -207,13 +198,11 @@ public:
     virtual double evalNL(const theta::ParValues & values) const;
     virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
     virtual const std::pair<double, double> & support(const theta::ParId&) const;
-    virtual double width(const theta::ParId &) const;
     //@}
     
 private:
     theta::ParValues fix_sample_values;
     theta::ParValues modes;
-    theta::ParValues widths;
     std::map<theta::ParId, std::pair<double, double> > ranges;
 };
 
@@ -273,7 +262,6 @@ class gauss: public theta::Distribution{
         virtual double evalNL(const theta::ParValues & values) const;
         virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
         virtual const std::pair<double, double> & support(const theta::ParId&) const;
-        virtual double width(const theta::ParId &) const;
         //@}
     private:
         std::vector<theta::ParId> v_par_ids;
@@ -320,7 +308,6 @@ class gauss1d: public theta::Distribution{
         virtual double evalNL(const theta::ParValues & values) const;
         virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
         virtual const std::pair<double, double> & support(const theta::ParId&) const;
-        virtual double width(const theta::ParId &) const;
         //@}
     private:
         double mu;
@@ -386,7 +373,6 @@ public:
     virtual double evalNL(const theta::ParValues & values) const;
     virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
     virtual const std::pair<double, double> & support(const theta::ParId & p) const;
-    virtual double width(const theta::ParId & p) const;
     //@}
 
 private:

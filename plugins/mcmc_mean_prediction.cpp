@@ -96,14 +96,7 @@ void mcmc_mean_prediction::produce(Run & run, const Data & data, const Model & m
     if(!init){
         try{
             //get the covariance for average data:
-            ParValues values;
-            model.get_parameter_distribution().mode(values);
-            ObsIds observables = model.getObservables();
-            Data d;
-            model.get_prediction(d, values);
-            std::auto_ptr<NLLikelihood> nll = get_nllikelihood(d, model);
-            sqrt_cov = get_sqrt_cov(*rnd_gen, *nll, startvalues, vm);
-            
+            sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, vm);
             init = true;
         }
         catch(NotFoundException & ex){

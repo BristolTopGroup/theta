@@ -41,7 +41,6 @@ public:
     virtual double evalNL(const theta::ParValues & values) const;
     virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
     virtual const std::pair<double, double> & support(const theta::ParId&) const;
-    virtual double width(const theta::ParId &) const;
     //@}
 private:
     unsigned int n;

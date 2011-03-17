@@ -36,9 +36,4 @@ const std::pair<double, double> & equidistant_deltas::support(const theta::ParId
     return support_;
 }
 
-
-double equidistant_deltas::width(const theta::ParId &) const{
-    return 0;
-}
-
 REGISTER_PLUGIN(equidistant_deltas)

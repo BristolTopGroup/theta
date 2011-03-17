@@ -55,16 +55,10 @@ void mcmc_posterior_histo::produce(Run & run, const Data & data, const Model & m
     if(!init){
         try{
             //get the covariance for average data:
-            ParValues values;
-            model.get_parameter_distribution().mode(values);
-            ObsIds observables = model.getObservables();
-            Data d;
-            model.get_prediction(d, values);
-            std::auto_ptr<NLLikelihood> nll = get_nllikelihood(d, model);
-            sqrt_cov = get_sqrt_cov(*rnd_gen, *nll, startvalues, vm);
+            sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, vm);
             
             //find ipars:
-            ParIds nll_pars = nll->getParameters();
+            ParIds nll_pars = model.getParameters();
             ipars.resize(parameters.size());
             for(size_t i=0; i<parameters.size(); ++i){
                 for(ParIds::const_iterator it=nll_pars.begin(); it!=nll_pars.end(); ++it, ++ipars[i]){

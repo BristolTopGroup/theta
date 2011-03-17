@@ -172,7 +172,7 @@ namespace theta {
          *
          * Two VarIds are the same if and only if the set of contained VarId s is the same.
          */
-        bool operator==(const VarIds<id_type> & rhs) {
+        bool operator==(const VarIds<id_type> & rhs) const{
             return vars == rhs.vars;
         }
 

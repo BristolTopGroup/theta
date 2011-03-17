@@ -1,4 +1,5 @@
 #include "plugins/nll_scan.hpp"
+#include "plugins/asimov_likelihood_widths.hpp"
 #include "plugins/reduced_nll.hpp"
 #include "interface/plugin.hpp"
 #include "interface/run.hpp"
@@ -16,7 +17,8 @@ void nll_scan::produce(Run & run, const Data & data, const Model & model) {
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     if(not start_step_ranges_init){
         const Distribution & d = nll->get_parameter_distribution();
-        DistributionUtils::fillModeWidthSupport(m_start, m_step, m_ranges, d);
+        DistributionUtils::fillModeSupport(m_start, m_ranges, d);
+        m_step.set(asimov_likelihood_widths(model, override_parameter_distribution));
         start_step_ranges_init = true;
     }
     MinimizationResult minres = minimizer->minimize(*nll, m_start, m_step, m_ranges);

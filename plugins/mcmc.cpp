@@ -68,7 +68,7 @@ void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
     }
 }
 
-
+/*
 Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> & startvalues,
                     const boost::shared_ptr<VarIdManager> & vm){
     const size_t n = nll.getnpar();
@@ -126,12 +126,11 @@ Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> 
         throw Exception(ss.str());
     }
     return sqrt_cov;
-}
+} */
 
 Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & startvalues,
                     const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,
                     const boost::shared_ptr<VarIdManager> & vm){
-    cout << "get_sqrt_cov2" << endl;
     const size_t max_passes = 20;
     const size_t iterations = 8000;
     const size_t n = model.getParameters().size();

@@ -92,25 +92,9 @@ namespace theta{
          */
         virtual const std::pair<double, double> & support(const ParId & p) const = 0;
 
-        /** \brief The width of the distribution in the given parameter
-         *
-         * This value is used as initial step size for parameter p in a
-         * minimization process or for step sizes in Markov Chains. It should
-         * correspond approximately to the standard deviation of the marginal
-         * distribution in this parameter. If the standard deviation is not defined,
-         * it should be set to a heuristic, non-zero value.
-         *
-         * It must zero if and only if the parameter is to be considered as fixed (i.e., in case of
-         * a delta distribution).
-         *
-         * If \c p is not in getParameters(), the behaviour is undefined (i.e., derived one-dimensional classes
-         * need not check whether p is the correct ParId).
-         */
-        virtual double width(const ParId & p) const = 0;
-
         /** \brief Get the parameters this Distribution depends on and provides values for
          */
-        ParIds getParameters() const{
+        const ParIds & getParameters() const{
             return par_ids;
         }
         
@@ -123,14 +107,13 @@ namespace theta{
     /// \brief namespace for free functions closely related to the \link Distribution Distribution\endlink class
     namespace DistributionUtils{
         
-        /** \brief Fill mode, width and support from a Distribution instance
+        /** \brief Fill mode and and support from a Distribution instance
          *
-         * This is a utility routine calling the Distribution::mode, Distribution::width
+         * This is a utility routine calling the Distribution::mode and
          * and Distribution::support routines for all parameters of the Distribution and filling
          * the result into the parameters \c mode, \c width and \c support
          */
-        void fillModeWidthSupport(theta::ParValues & mode, theta::ParValues & width,
-                std::map<theta::ParId, std::pair<double, double> > & support, const theta::Distribution & d);
+        void fillModeSupport(theta::ParValues & mode, std::map<theta::ParId, std::pair<double, double> > & support, const theta::Distribution & d);
     }
     
 }

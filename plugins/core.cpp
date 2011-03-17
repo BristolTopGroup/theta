@@ -109,9 +109,6 @@ const std::pair<double,double> & log_normal::support(const theta::ParId & p) con
     return support_;
 }
 
-double log_normal::width(const theta::ParId &) const{
-    return sqrt((exp(sigma * sigma) - 1)*exp(2*mu + sigma*sigma));
-}
 
 void log_normal::mode(theta::ParValues & result) const{
     result.set(*(par_ids.begin()), exp(mu - sigma*sigma));
@@ -154,9 +151,6 @@ const std::pair<double, double> & delta_distribution::support(const theta::ParId
     return it->second;
 }
 
-double delta_distribution::width(const theta::ParId &) const{
-    return 0.0;
-}
 
 /* START flat_distribution */
 
@@ -169,20 +163,10 @@ flat_distribution::flat_distribution(const theta::plugin::Configuration & cfg){
         double low = ranges[pid].first = s["range"][0].get_double_or_inf();
         double high = ranges[pid].second = s["range"][1].get_double_or_inf();
         if(low > high) throw ConfigurationException("invalid range");
-        if(s.exists("width")){
-            widths.set(pid, s["width"]);
-        }
-        else{
-            if(not std::isinf(high-low))
-                widths.set(pid, 0.1 * (high - low));
-            //otherwise: not set and width(...) will throw ...
-        }
         modes.set(pid, 0.5 * (high + low));
         if(s.exists("fix-sample-value")){
             fix_sample_values.set(pid, s["fix-sample-value"]);
             modes.set(pid, fix_sample_values.get(pid));
-            if(not widths.contains(pid) && fix_sample_values.get(pid) > 0.0)
-                widths.set(pid, fix_sample_values.get(pid)*0.1);
         }
     }
 }
@@ -226,10 +210,6 @@ const std::pair<double, double> & flat_distribution::support(const theta::ParId&
     std::map<theta::ParId, std::pair<double, double> >::const_iterator it=ranges.find(p);
     if(it==ranges.end()) throw InvalidArgumentException("flat_distribution::support: parameter not found");
     return it->second;
-}
-
-double flat_distribution::width(const theta::ParId & p) const{
-    return widths.get(p); //throws NotFoundException if not set
 }
 
 
@@ -364,27 +344,6 @@ gauss::gauss(const Configuration & cfg){
     inverse_cov.invert_cholesky();
 }
 
-double gauss::width(const ParId & p)const{
-    size_t i=0;
-    for(vector<ParId>::const_iterator v=v_par_ids.begin(); v!=v_par_ids.end(); ++v, ++i){
-        if(*v == p)break;
-    }
-    const pair<double, double> & range = ranges[i];
-    double min_result = range.second - range.first;
-    if(min_result == 0.0) return 0.0;
-
-    // in the sampling procedure, sqrt_cov * vector is returned. Now, the
-    // width of the marginal distribution of component i of the result vector is given by
-    //   max_v   (sqrt_cov * v)[i]
-    // where the maximum is taken over all vectors of unit length, v.
-    // This maximum is the same as:
-    double result = 0;
-    for(size_t j=0; j<=i; j++){
-        result = std::max(result, fabs(sqrt_cov(i,j)));
-    }
-    return result;
-}
-
 const std::pair<double, double> & gauss::support(const ParId & p)const{
     size_t i=0;
     for(vector<ParId>::const_iterator v=v_par_ids.begin(); v!=v_par_ids.end(); ++v, ++i){
@@ -453,10 +412,6 @@ gauss1d::gauss1d(const Configuration & cfg){
    if(range.second < mu || mu < range.first){
       throw ConfigurationException("given range does not include mean");
    }
-}
-
-double gauss1d::width(const ParId & p)const{
-    return min(sigma, range.second - range.first);
 }
 
 const std::pair<double, double> & gauss1d::support(const ParId & p)const{
@@ -555,12 +510,6 @@ const std::pair<double, double> & product_distribution::support(const ParId & p)
     map<ParId, size_t>::const_iterator it = parid_to_index.find(p);
     if(it==parid_to_index.end()) throw InvalidArgumentException("product_distribution::support: invalid ParId");
     return distributions[it->second].support(p);
-}
-
-double product_distribution::width(const ParId & p) const{
-    map<ParId, size_t>::const_iterator it = parid_to_index.find(p);
-    if(it==parid_to_index.end()) throw InvalidArgumentException("product_distribution::width: invalid ParId");
-    return distributions[it->second].width(p);
 }
 
 model_source::model_source(const theta::plugin::Configuration & cfg): DataSource(cfg), RandomConsumer(cfg, getName()), save_nll(false), dice_poisson(true),

@@ -116,14 +116,13 @@ void metropolisHastings(const nlltype & nllikelihood, resulttype &res, Random & 
  * estimate is stable.
  *
  * \param rnd is the random number generator to use
- * \param nll is the negative log-posterior to evaluate
+ * \param model is the Model to use to get the asimov data from
  * \param[out] startvalues will contain the suggested startvalues. The contents when calling this function will be ignored.
  */
-Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> & startvalues, const boost::shared_ptr<VarIdManager> & vm);
-
 Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & startvalues,
                     const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,
                     const boost::shared_ptr<VarIdManager> & vm);
+//Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> & startvalues, const boost::shared_ptr<VarIdManager> & vm);
    
 /** \brief Calculate the cholesky decomposition, but allow zero eigenvalues.
  *

@@ -1,4 +1,5 @@
 #include "plugins/mle.hpp"
+#include "plugins/asimov_likelihood_widths.hpp"
 #include "interface/plugin.hpp"
 #include "interface/run.hpp"
 #include "interface/minimizer.hpp"
@@ -28,7 +29,8 @@ void mle::produce(theta::Run & run, const theta::Data & data, const theta::Model
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     if(not start_step_ranges_init){
         const Distribution & d = nll->get_parameter_distribution();
-        DistributionUtils::fillModeWidthSupport(start, step, ranges, d);
+        DistributionUtils::fillModeSupport(start, ranges, d);
+        step.set(asimov_likelihood_widths(model, override_parameter_distribution));
         start_step_ranges_init = true;
     }
     MinimizationResult minres = minimizer->minimize(*nll, start, step, ranges);

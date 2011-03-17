@@ -49,7 +49,7 @@ void deltanll_intervals::produce(theta::Run & run, const theta::Data & data, con
             }
             f_x_high = nll_r(x_high);
             if(f_x_high > 0){
-                table->set_column(upper_columns[i], secant(x_low, x_high, x_acurracy, f_x_low, f_x_high, nll_r));
+                table->set_column(upper_columns[i], secant(x_low, x_high, x_acurracy, f_x_low, f_x_high, deltanll_levels[i]/1000, nll_r));
                 break;
             }
             else if(f_x_high==0.0 || x_high == range.second){
@@ -78,7 +78,7 @@ void deltanll_intervals::produce(theta::Run & run, const theta::Data & data, con
             }
             f_x_low = nll_r(x_low);
             if(f_x_low > 0){
-                table->set_column(lower_columns[i], secant(x_low, x_high, x_acurracy, f_x_low, f_x_high, nll_r));
+                table->set_column(lower_columns[i], secant(x_low, x_high, x_acurracy, f_x_low, f_x_high, deltanll_levels[i] / 1000, nll_r));
                 break;
             }
             else if(f_x_low==0.0 || x_low == range.first){

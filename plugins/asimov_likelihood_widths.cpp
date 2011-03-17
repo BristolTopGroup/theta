@@ -66,8 +66,7 @@ theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boos
                low_is_fl0 = true;
             }
             else{
-               //TODO: hardcoded 1e-6 is not very nice!
-               result.set(pid, fabs(pid_mode - secant(pid_mode, support.second, 1e-6, -0.5, f2, f)));
+               result.set(pid, fabs(pid_mode - secant(pid_mode, support.second, 0.0, -0.5, f2, 0.05, f)));
                continue;
             }
         }
@@ -81,7 +80,7 @@ theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boos
                high_is_fl0 = true;
             }
             else{
-               result.set(pid, fabs(pid_mode - secant(support.first, pid_mode, 1e-6, f2, -0.5, f)));
+               result.set(pid, fabs(pid_mode - secant(support.first, pid_mode, 0.0, f2, -0.5, 0.05, f)));
                continue;
             }
         }
@@ -101,7 +100,7 @@ theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boos
         bool found = false;
         for(int i=0; i<20; ++i){
             double fval = f(pid_mode + sign * step);
-            step *= std::max(step, 2.0);
+            step *= 2.0;
             if(fval > 0){
                 double xlow, xhigh, flow, fhigh;
                 xlow = pid_mode; flow = -0.5;
@@ -110,7 +109,7 @@ theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boos
                     std::swap(xlow, xhigh);
                     std::swap(flow, fhigh);
                 }
-                result.set(pid, fabs(pid_mode - secant(xlow, xhigh, 1e-6, flow, fhigh, f)));
+                result.set(pid, fabs(pid_mode - secant(xlow, xhigh, 0.0, flow, fhigh, 0.05, f)));
                 found = true;
                 break;
             }

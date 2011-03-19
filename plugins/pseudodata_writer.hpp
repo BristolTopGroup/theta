@@ -35,8 +35,8 @@
  *    data will be saved as a Histogram for each observable. If set to \c false, only
  *    the normalization of the data will be saved.
  *
- * For each observable, the result table will contain a column of the name "n_events_&lt;observable name&gt;" and -- if \c write-data
- * is true -- a column "data_&lt;observable name&gt;" with the histogram.
+ * For each observable, the result table will contain a column of the name "n_events_<observable name>" and -- if \c write-data
+ * is true -- a column "data_<observable name>" with the histogram.
  */
 class pseudodata_writer: public theta::Producer {
 public:

@@ -230,15 +230,16 @@ namespace theta {
                     return factories[i]->build(ctx);
                 }catch (Exception & ex) {
                     std::stringstream ss;
-                    ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
-                       << "', type='" << type << "': " << ex.message;
+                    ss << "Error while constructing plugin according to configuration path '" << ctx.setting.getPath()
+                       << "', (type='" << type << "'): " << ex.message;
                     ex.message = ss.str();
                     throw;
                 }
             }
             std::stringstream ss;
-            ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
-               << "': no plugin found to create type='" << type << "'";
+            ss << "Error while constructin plugin according to configuration path '" << ctx.setting.getPath()
+               << "': no plugin registered to create a plugin for type='" << type << "'. Check spelling of the "
+               "type make sure to laod all necessary plugin viathe setting 'options.plugin_files'.";
             throw ConfigurationException(ss.str());
         }
 

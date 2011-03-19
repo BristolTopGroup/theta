@@ -50,7 +50,7 @@
  *  visualization of the marginal posterior; do <b>not</b> use it to calculate any quantitative results.
  *
  * For each parameter given in the \c parameters setting, you must specify a setting group
- * of name "histo_&lt;parameter name&gt;" which has two settings:
+ * of name "histo_<parameter name>" which has two settings:
  * <ul>
  * <li>\c range is an arry of two floating point numbers defining the range of the Histogram</li>
  * <li>\c n_bins is an integer defining the number of bins of the Histogram.</li>
@@ -58,12 +58,12 @@
  *
  * For each data given, one chain with the given number of iterations is constructed
  * and the value of the parameters is filled in the histogram. The histogram is
- * written to a column "posterior_&lt;parameter name&gt;".
+ * written to a column "posterior_<parameter name>".
  *
  * Without smoothing, the runtime is proportional to \c iterations + \c burn-in. It hardly depends on the number of histograms
  * or the number of bins per histogram configued.
  *
- * \subsection Important notes about smoothing
+ * <b>Important notes about smoothing</b>
  *
  * Smoothing works by modifying the Markov Chain such that for each chain element, a whole histogram for the likelihood in the
  * parameter is calculated instead of a single point in parameter space. It is assumed that the histogram range is large enough

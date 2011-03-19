@@ -22,10 +22,11 @@
  *   parameters = ("s");  //assuming "s" was defined as parameter earlier
  *   iterations = 100000;
  *   burn-in = 100; //optional. default is iterations / 10 
+ *   smooth = true; //optional, default is false
  *
  *   histo_s = {
  *      range = [0.0, 100.0];
- *      n_bins = 1000;
+ *      n_bins = 100;
  *   };
  * };
  *
@@ -44,6 +45,10 @@
  * \c burn_in is the number of MCMC iterations to do at the beginning and throw away. See additional comments in the
  *     documentation of \link mcmc_posterior_ratio mcmc_posterior_ratio \endlink
  *
+ * \c smooth controls whether to make a smooth posterior histogram. It only works if specifying only one parameter.
+ *  Please read important notes about this below. In particular, use smoothing <b>only</b> to make the final plot for the
+ *  visualization of the marginal posterior; do <b>not</b> use it to calculate any quantitative results.
+ *
  * For each parameter given in the \c parameters setting, you must specify a setting group
  * of name "histo_&lt;parameter name&gt;" which has two settings:
  * <ul>
@@ -54,6 +59,23 @@
  * For each data given, one chain with the given number of iterations is constructed
  * and the value of the parameters is filled in the histogram. The histogram is
  * written to a column "posterior_&lt;parameter name&gt;".
+ *
+ * Without smoothing, the runtime is proportional to \c iterations + \c burn-in. It hardly depends on the number of histograms
+ * or the number of bins per histogram configued.
+ *
+ * \subsection Important notes about smoothing
+ *
+ * Smoothing works by modifying the Markov Chain such that for each chain element, a whole histogram for the likelihood in the
+ * parameter is calculated instead of a single point in parameter space. It is assumed that the histogram range is large enough
+ * to extends to the tails of the posterior. If this is not the case, the result will have a bias.
+ * Therefore, it is not recommended to use smoothed histograms for calculating any result (auch as quantiles) as the smoothing
+ * is not accurate in all cases.
+ *
+ * The smoothing method also has important consequences for the runtime: the number of likelihood
+ * evaluations per dataset without smoothing is about \c iterations  + \c burn-in, with smoothing it is about
+ * ((\c iterations + \c burn-in)* \c n_bins ). Therefore, use a relatively small number of bins if enabling smoothing.
+ * On the other hand, fewer iterations are necessary is enabling smoothing, so while you would typically use some millions
+ * of iterations without smoothing in order to get 'smooth' plots, a few ten thousand iterations might be enough if you enable smoothing.
  */
 class mcmc_posterior_histo: public theta::Producer, public theta::RandomConsumer{
 public:
@@ -83,6 +105,8 @@ private:
     std::vector<double> startvalues;
     
     boost::shared_ptr<theta::VarIdManager> vm;
+    
+    bool smooth;
 };
 
 #endif

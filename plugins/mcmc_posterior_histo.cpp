@@ -11,7 +11,9 @@ using namespace theta;
 using namespace std;
 using namespace libconfig;
 
-//the result class for the metropolisHastings routine.
+namespace{
+
+//the result class for the metropolisHastings routine, saving the histograms
 class MCMCPosteriorHistoResult{
     public:
         //ipar_ is the parameter of interest
@@ -51,6 +53,80 @@ class MCMCPosteriorHistoResult{
         vector<theta::Histogram> histos;
 };
 
+
+struct nll_smoothed{
+   nll_smoothed(const NLLikelihood & nll_, size_t ipar_, size_t nbins_, double xmin_, double xmax_): nll(nll_), ipar(ipar_), nbins(nbins_),
+      xmin(xmin_), xmax(xmax_), binwidth((xmax - xmin)/nbins), histo(nbins, xmin, xmax){
+          npar = nll.getnpar();
+          assert(ipar < npar);
+      }
+   
+   double operator()(const double * values) const {
+       vector<double> myvalues(npar);
+       copy(values, values + npar, myvalues.begin());
+       double nll_min = std::numeric_limits<double>::infinity();
+       for(size_t i=0; i<nbins; ++i){
+           double x = xmin + (i + 0.5) * binwidth;
+           myvalues[ipar] = x;
+           double nll_x = nll(&myvalues[0]);
+           histo.set(i+1, nll_x);
+           nll_min = min(nll_min, nll_x);
+       }
+       double result = 0.0;
+       for(size_t i=0; i<nbins; ++i){
+           result += exp(nll_min - histo.get(i+1));
+       }
+       return nll_min - log(result);
+   }
+   
+   size_t getnpar() const{
+       return npar;
+   }
+   
+   const NLLikelihood & nll;
+   size_t ipar, nbins, npar;
+   double xmin, xmax, binwidth;
+   
+   mutable Histogram histo;
+};
+
+// the result class for the smoothed version:
+class MCMCPosteriorHistoResultSmoothed{
+public:
+    MCMCPosteriorHistoResultSmoothed(size_t nbins, double xmin, double xmax, const nll_smoothed & nll_): npar(npar), histo(nbins, xmin, xmax),histo_tmp(nbins, xmin, xmax),
+      nll(nll_){
+       npar = nll.getnpar();
+    }
+    
+    void fill(const double * x, double nll_value, size_t n){
+        nll(x);
+        for(size_t i=1; i<=histo.get_nbins(); ++i){
+            double nll_diff = nll.histo.get(i) - nll_value;
+            histo_tmp.set(i, exp(-nll_diff));
+        }
+        histo.add_with_coeff(n / histo_tmp.get_sum_of_bincontents(), histo_tmp);
+    }
+    
+    size_t getnpar() const{
+        return npar;
+    }
+    
+    void end(){}
+    
+    const Histogram & get_histo() const{
+        return histo;
+    }
+private:
+    size_t npar;
+    Histogram histo, histo_tmp;
+    const nll_smoothed & nll;
+};
+
+
+}
+
+
+
 void mcmc_posterior_histo::produce(Run & run, const Data & data, const Model & model) {
     if(!init){
         try{
@@ -79,16 +155,25 @@ void mcmc_posterior_histo::produce(Run & run, const Data & data, const Model & m
     }
     
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
-    MCMCPosteriorHistoResult result(ipars, nll->getnpar(), nbins, lower, upper);
-    metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
+    if(!smooth){
+        MCMCPosteriorHistoResult result(ipars, nll->getnpar(), nbins, lower, upper);
+        metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
     
-    for(size_t i=0; i<parameters.size(); ++i){
-        table->set_column(columns[i], result.get_histo(i));
+        for(size_t i=0; i<parameters.size(); ++i){
+            cout << i << ": " << result.get_histo(i).get_sum_of_bincontents() << endl;
+            table->set_column(columns[i], result.get_histo(i));
+        }
+    }
+    else{
+        nll_smoothed nll_s(*nll, ipars[0], nbins[0], lower[0], upper[0]);
+        MCMCPosteriorHistoResultSmoothed result(nbins[0], lower[0], upper[0], nll_s);
+        metropolisHastings(nll_s, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
+        table->set_column(columns[0], result.get_histo());
     }
 }
 
 mcmc_posterior_histo::mcmc_posterior_histo(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()),
-        init(false){
+        init(false), smooth(false){
     SettingWrapper s = cfg.setting;
     vm = cfg.vm;
     size_t n = s["parameters"].size();
@@ -108,9 +193,16 @@ mcmc_posterior_histo::mcmc_posterior_histo(const theta::plugin::Configuration & 
     else{
         burn_in = iterations / 10;
     }
+    if(s.exists("smooth")){
+        smooth = s["smooth"];
+        if(smooth && parameters.size()!=1){
+            throw ConfigurationException("enabling 'smooth' is only supported if making the histogram in only one parameter!");
+        }
+    }
     for(size_t i=0; i<parameters.size(); ++i){
         columns.push_back(table->add_column(*this, "posterior_" + parameter_names[i], Table::typeHisto));
     }
 }
 
 REGISTER_PLUGIN(mcmc_posterior_histo)
+

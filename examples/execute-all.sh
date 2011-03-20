@@ -35,7 +35,6 @@ exec_theta examples/gaussoverflat-mcmc.cfg
 exec_theta examples/gaussoverflat-mcmc_histo.cfg
 exec_theta examples/gaussoverflat-mcmc_quantiles.cfg
 exec_theta examples/gaussoverflat-mle.cfg
-exec_theta examples/gaussoverflat-mle-constrain.cfg
 exec_theta examples/gaussoverflat-nll_scan.cfg
 exec_theta examples/gaussoverflat-rootfile.cfg
 exec_theta examples/gaussoverflat-writer.cfg

@@ -41,18 +41,18 @@ Column::~Column(){}
 
 /* ProductsTable */
 ProductsTable::ProductsTable(std::auto_ptr<Table> & table_): table(table_){
-    c_runid = table->add_column("runid", Table::typeInt);
-    c_eventid = table->add_column("eventid", Table::typeInt);
+    c_runid = table->add_column("runid", typeInt);
+    c_eventid = table->add_column("eventid", typeInt);
 }
 
-std::auto_ptr<Column> ProductsTable::add_column(const theta::plugin::ProductsTableWriter & tw, const std::string & column_name, const Table::data_type & type){
-    std::string new_name = tw.getName() + "__" + column_name;
+std::auto_ptr<Column> ProductsTable::declare_product(const ProductsSource & source, const std::string & column_name, const data_type & type){
+    std::string new_name = source.getName() + "__" + column_name;
     return table->add_column(new_name, type);
 }
 
-void ProductsTable::add_row(const Run & run){
-    table->set_column(*c_runid, run.get_runid());
-    table->set_column(*c_eventid, run.get_eventid());
+void ProductsTable::add_row(int runid, int eventid){
+    table->set_column(*c_runid, runid);
+    table->set_column(*c_eventid, eventid);
     table->add_row();
 }
 
@@ -61,11 +61,11 @@ LogTable::LogTable(std::auto_ptr<Table> & table_): level(info), table(table_){
    for(int i=0; i<4; ++i){
        n_messages[i]=0;
    }
-   c_runid = table->add_column("runid", Table::typeInt);
-   c_eventid = table->add_column("eventid", Table::typeInt);
-   c_severity = table->add_column("severity", Table::typeInt);
-   c_message = table->add_column("message", Table::typeString);
-   c_time = table->add_column("time", Table::typeDouble);
+   c_runid = table->add_column("runid", typeInt);
+   c_eventid = table->add_column("eventid", typeInt);
+   c_severity = table->add_column("severity", typeInt);
+   c_message = table->add_column("message", typeString);
+   c_time = table->add_column("time", typeDouble);
 }
 
 const int* LogTable::get_n_messages() const{
@@ -81,10 +81,10 @@ LogTable::e_severity LogTable::get_loglevel() const{
     return level;
 }
 
-void LogTable::really_append(const Run & run, e_severity s, const string & message) {
+void LogTable::really_append(int runid, int eventid, e_severity s, const string & message) {
     n_messages[s]++;
-    table->set_column(*c_runid, run.get_runid());
-    table->set_column(*c_eventid, run.get_eventid());
+    table->set_column(*c_runid, runid);
+    table->set_column(*c_eventid, eventid);
     table->set_column(*c_severity, s);
     table->set_column(*c_message, message);
     using namespace boost::posix_time;
@@ -98,13 +98,13 @@ void LogTable::really_append(const Run & run, e_severity s, const string & messa
 
 //RndInfoTable
 RndInfoTable::RndInfoTable(std::auto_ptr<Table> & table_): table(table_){
-    c_runid = table->add_column("runid", Table::typeInt);
-    c_name = table->add_column("name", Table::typeString);
-    c_seed = table->add_column("seed", Table::typeInt);
+    c_runid = table->add_column("runid", typeInt);
+    c_name = table->add_column("name", typeString);
+    c_seed = table->add_column("seed", typeInt);
 }
 
-void RndInfoTable::append(const Run & run, const string & name, int seed){
-    table->set_column(*c_runid, run.get_runid());
+void RndInfoTable::append(int runid, const string & name, int seed){
+    table->set_column(*c_runid, runid);
     table->set_column(*c_name, name);
     table->set_column(*c_seed, seed);
     table->add_row();

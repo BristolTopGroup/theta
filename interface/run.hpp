@@ -142,7 +142,7 @@ public:
  *
  * The RndInfoTable and ProductsTable are stored via the PropertyMap interface as "default" instances.
  */
-class Run: public PropertyMap{
+class Run{
 public:
 
    /** \brief Register progress listener.
@@ -158,16 +158,6 @@ public:
      * all the producers on it, using the configured model.
      */
     void run();
-
-    /** \brief Get current run id */
-    int get_runid() const{
-        return runid;
-    }
-
-    /** \brief Get current event id */
-    int get_eventid() const{
-        return eventid;
-    }
     
     /** \brief Initialize the members using the supplied configuration
      */
@@ -180,7 +170,7 @@ private:
      * Should be called by derived classes before pseudo data generation.
      */
     void log_event_start() {
-        logtable->append(*this, LogTable::info, "start");
+        logtable->append(runid, eventid, LogTable::info, "start");
     }
     
     /** \brief Make an informational log entry to indicate the end of a pseudo experiment.
@@ -188,7 +178,7 @@ private:
      * Should be called by derived classes after all producers have been run.
      */
     void log_event_end() {
-        logtable->append(*this, LogTable::info, "end");
+        logtable->append(runid, eventid, LogTable::info, "end");
     }
 
     boost::shared_ptr<VarIdManager> vm;
@@ -217,3 +207,4 @@ private:
 }
 
 #endif
+

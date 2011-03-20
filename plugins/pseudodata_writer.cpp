@@ -13,9 +13,9 @@ void pseudodata_writer::produce(Run & run, const Data & data, const Model & mode
     for(size_t i=0; i<observables.size(); ++i){
         const Histogram & h = data[observables[i]];
         double n_event = h.get_sum_of_bincontents();
-        table->set_column(n_events_columns[i], n_event);
+        products_sink->set_product(n_events_columns[i], n_event);
         if(write_data){
-            table->set_column(data_columns[i], h);
+            products_sink->set_product(data_columns[i], h);
         }
     }
 }
@@ -28,9 +28,9 @@ pseudodata_writer::pseudodata_writer(const theta::plugin::Configuration & cfg): 
     }
     write_data = cfg.setting["write-data"];
     for(size_t i=0; i<observables.size(); ++i){
-        n_events_columns.push_back(table->add_column(*this, "n_events_" + vm->getName(observables[i]), Table::typeDouble));
+        n_events_columns.push_back(products_sink->declare_product(*this, "n_events_" + vm->getName(observables[i]), theta::typeDouble));
         if(write_data)
-            data_columns.push_back(table->add_column(*this, "data_" + vm->getName(observables[i]), Table::typeHisto));
+            data_columns.push_back(products_sink->declare_product(*this, "data_" + vm->getName(observables[i]), theta::typeHisto));
     }
 }
 

@@ -6,33 +6,6 @@ using namespace std;
 
 int theta::plugin::plugin_build_depth=0;
 
-namespace{
-bool nameOk(const std::string & name){
-    if(name=="") return false;
-    for(size_t i=0; i<name.size(); ++i){
-        char c = name[i];
-        if((c >= 'A') && (c <= 'Z')) continue;
-        if((c >= 'a') && (c <= 'z')) continue;
-        if((c >= '0') && (c <= '9')) continue;
-        if(c=='_') continue;
-        return false;
-    }
-    return true;
-}
-
-}
-
-ProductsTableWriter::~ProductsTableWriter(){}
-
-ProductsTableWriter::ProductsTableWriter(const Configuration & cfg){
-    type = static_cast<string>(cfg.setting["type"]);
-    name = static_cast<string>(cfg.setting["name"]);
-    if(not nameOk(name)){
-        throw InvalidArgumentException("name '" + name + "' is not a valid name for building column names. ");
-    }
-    table = cfg.run->get<ProductsTable>();
-}
-
 void PluginLoader::execute(const Configuration & cfg) {
     SettingWrapper files = cfg.setting["plugin_files"];
     size_t n = files.size();

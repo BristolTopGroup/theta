@@ -120,7 +120,7 @@ boost::shared_ptr<Run> build_run(string cfg_filename, const string & theta_dir, 
         }
         
         SettingWrapper root(cfg.getRoot(), cfg.getRoot(), rec);
-        Configuration config(vm, root, run, theta_dir);
+        Configuration config(vm, root, theta_dir);
         
         //process options:
         Configuration cfg_options(config, config.setting["options"]);
@@ -130,7 +130,6 @@ boost::shared_ptr<Run> build_run(string cfg_filename, const string & theta_dir, 
         VarIdManagerUtils::apply_settings(config);
         //build run:
         run.reset(new Run());
-        config.run = run;
         run->init(Configuration(config, root["main"]));
         init_complete = true;
     }

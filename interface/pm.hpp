@@ -1,8 +1,15 @@
+#ifndef PM_HPP
+#define PM_HPP
+
 #include <boost/shared_ptr.hpp>
 #include <boost/any.hpp>
 #include <map>
 #include <string>
 #include <typeinfo>
+
+#include <sstream>
+
+#include "interface/exception.hpp"
 
 /** \brief container to save shared pointers of arbitrary type indexed by an arbitratry string and type
  *
@@ -49,7 +56,11 @@ template<typename T>
 boost::shared_ptr<T> PropertyMap::get(const std::string & instance_name) const {
     nametype nt(instance_name, typeid(T));
     std::map<nametype, boost::any>::const_iterator it=instances.find(nt);
-    if(it==instances.end())throw std::exception();
+    if(it==instances.end()){
+        std::stringstream ss;
+        ss << "PropertyMap: instance with name '" << instance_name << "' with type " << typeid(T).name() << " not found";
+        throw theta::NotFoundException(ss.str());
+    }
     return boost::any_cast<boost::shared_ptr<T> >(it->second);
 }
 
@@ -65,4 +76,6 @@ void PropertyMap::set(const std::string & instance_name, const boost::shared_ptr
     if(value.get()) instances[nt] = value;
     else instances.erase(nt);
 }
+
+#endif
 

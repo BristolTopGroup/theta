@@ -30,9 +30,9 @@ void deltanll_hypotest::produce(theta::Run & run, const theta::Data & data, cons
     minres = minimizer->minimize(*nll, b_only_mode, b_only_width, b_only_support);
     double nll_b = minres.fval;
     
-    table->set_column(*c_nll_sb, nll_sb);
-    table->set_column(*c_nll_b, nll_b);
-    table->set_column(*c_nll_diff, nll_b - nll_sb);
+    products_sink->set_product(*c_nll_sb, nll_sb);
+    products_sink->set_product(*c_nll_b, nll_b);
+    products_sink->set_product(*c_nll_diff, nll_b - nll_sb);
 }
 
 
@@ -47,9 +47,10 @@ deltanll_hypotest::deltanll_hypotest(const theta::plugin::Configuration & cfg):
     if(not (b_only_mode.getParameters()==s_plus_b_mode.getParameters())){
         throw ConfigurationException("parameters of the distributions 'signal-plus-background' and 'background-only' do not match");
     }
-    c_nll_b = table->add_column(*this, "nll_b", Table::typeDouble);
-    c_nll_sb = table->add_column(*this, "nll_sb", Table::typeDouble);
-    c_nll_diff = table->add_column(*this, "nll_diff", Table::typeDouble);
+    c_nll_b = products_sink->declare_product(*this, "nll_b", theta::typeDouble);
+    c_nll_sb = products_sink->declare_product(*this, "nll_sb", theta::typeDouble);
+    c_nll_diff = products_sink->declare_product(*this, "nll_diff", theta::typeDouble);
 }
 
 REGISTER_PLUGIN(deltanll_hypotest)
+

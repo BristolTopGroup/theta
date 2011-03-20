@@ -160,15 +160,14 @@ void mcmc_posterior_histo::produce(Run & run, const Data & data, const Model & m
         metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
     
         for(size_t i=0; i<parameters.size(); ++i){
-            cout << i << ": " << result.get_histo(i).get_sum_of_bincontents() << endl;
-            table->set_column(columns[i], result.get_histo(i));
+            products_sink->set_product(columns[i], result.get_histo(i));
         }
     }
     else{
         nll_smoothed nll_s(*nll, ipars[0], nbins[0], lower[0], upper[0]);
         MCMCPosteriorHistoResultSmoothed result(nbins[0], lower[0], upper[0], nll_s);
         metropolisHastings(nll_s, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
-        table->set_column(columns[0], result.get_histo());
+        products_sink->set_product(columns[0], result.get_histo());
     }
 }
 
@@ -200,7 +199,7 @@ mcmc_posterior_histo::mcmc_posterior_histo(const theta::plugin::Configuration & 
         }
     }
     for(size_t i=0; i<parameters.size(); ++i){
-        columns.push_back(table->add_column(*this, "posterior_" + parameter_names[i], Table::typeHisto));
+        columns.push_back(products_sink->declare_product(*this, "posterior_" + parameter_names[i], theta::typeHisto));
     }
 }
 

@@ -13,6 +13,8 @@ namespace theta{
     class HistogramFunction;
     class Minimizer;
     class Producer;
+    class ProductsSource;
+    class ProductsSource;
     class Distribution;
     
     //database.hpp
@@ -20,10 +22,9 @@ namespace theta{
     class Table;
     class Column;
     class ProductsTable;
-    
+        
     namespace plugin{
           class Configuration;
-          class ProductsTableWriter;
     }
     class Random;
     class Run;

@@ -5,17 +5,14 @@
 #include "interface/variables.hpp"
 #include "interface/plugin.hpp"
 #include "interface/distribution.hpp" 
-
-#include "interface/histogram-function.hpp"
+#include "interface/histogram.hpp"
+#include "interface/producer.hpp"
 
 #include <vector>
 #include <string>
 #include <limits>
 #include <set>
 #include <map>
-
-#include <boost/ptr_container/ptr_vector.hpp>
-#include <boost/ptr_container/ptr_map.hpp>
 
 namespace theta {
     
@@ -149,7 +146,7 @@ namespace theta {
      * DataSource classes are used as part of a run, which, for each pseuso
      * experiment, calls the DataSource::fill function to get the pseudo data.
      */
-    class DataSource: public theta::plugin::ProductsTableWriter{
+    class DataSource: public ProductsSource{
     public:
         
         /// Define this as the base_type for derived classes; required for the plugin system
@@ -174,7 +171,7 @@ namespace theta {
         
     protected:
         /// proxy to ProductsTableWriter constructor for derived classes
-        DataSource(const theta::plugin::Configuration & cfg): theta::plugin::ProductsTableWriter(cfg){}
+        DataSource(const theta::plugin::Configuration & cfg): ProductsSource(cfg){}
     };
     
 

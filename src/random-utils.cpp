@@ -34,9 +34,8 @@ RandomConsumer::RandomConsumer(const theta::plugin::Configuration & cfg, const s
    }
    rnd_gen.reset(new Random(rnd_source.release()));
    rnd_gen->set_seed(seed);
-   if(cfg.run){
-      cfg.run->get<RndInfoTable>()->append(*cfg.run, name, seed);
-   }
+   int runid = *(cfg.pm->get<int>("runid"));
+   cfg.pm->get<RndInfoTable>()->append(runid, name, seed);
 }
 
 void theta::randomize_poisson(Histogram & h, Random & rnd){

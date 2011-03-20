@@ -31,8 +31,8 @@
  *
  * If the file already exists, it is overwritten silently.
  *
- * The types Table::typeDouble, Table::typeInt and Table::typeString are translated directly
- * to their SQL counterparts \c DOUBLE, \c INT(4) and \c TEXT, respectively. For Table::typeHisto,
+ * The types theta::typeDouble, theta::typeInt and theta::typeString are translated directly
+ * to their SQL counterparts \c DOUBLE, \c INT(4) and \c TEXT, respectively. For theta::typeHisto,
  * an SQL BLOB is saved which contains the lower and upper border of the histogram and the raw histogram data,
  * including underflow and overflow bin (see theta::Histogram::getData).
  */
@@ -93,7 +93,7 @@ private:
         // destructor; creates the table if empty
         virtual ~sqlite_table();
         
-        virtual std::auto_ptr<theta::Column> add_column(const std::string & name, const data_type & type);
+        virtual std::auto_ptr<theta::Column> add_column(const std::string & name, const theta::data_type & type);
         virtual void set_autoinc_column(const std::string & name);
         
         virtual void set_column(const theta::Column & c, double d);

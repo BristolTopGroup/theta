@@ -2,6 +2,7 @@
 #define PLUGIN_HPP
 
 #include "interface/decls.hpp"
+#include "interface/pm.hpp"
 #include "interface/exception.hpp"
 #include "interface/cfg-utils.hpp"
 
@@ -19,37 +20,6 @@ namespace theta {
      */
     namespace plugin {
 
-        /** \brief Abstract class for all plugins writing to the "products" table
-         *
-         * Any plugin which writes to the "products" table must derive from this base class.
-         * Currently, the DataSource and the Producer derive from this class.
-         */
-        class ProductsTableWriter{
-        public:
-        
-            /// Declare Destrutor virtual as we will probably have polymorphic access to derived classes
-            virtual ~ProductsTableWriter();
-            
-            /// Returns the name of this instance, as set in the configuration file via name="...";
-            std::string getName() const{
-                return name;
-            }
-            
-            /// Returns the type of this instance, as given in the configuration file via type="...";
-            std::string getType() const{
-                return type;
-            }
-        
-        protected:
-            ProductsTableWriter(const Configuration & cfg);
-            
-            /// The table instance to be used for writing    
-            boost::shared_ptr<ProductsTable> table;
-            
-        private:
-            std::string type, name;
-        };
-
         /** \brief A container class which is used to construct conrete types managed by the plugin system
          *
          * An instance of this class is passed to the constructor of classes managed by the plugin system.
@@ -64,8 +34,8 @@ namespace theta {
             /// Information about all currently known parameters and observables
             boost::shared_ptr<VarIdManager> vm;
             
-            /// The current Run object. Might be empty.
-            boost::shared_ptr<Run> run;
+            /// A property map giving access to a RndInfoTable and a ProductsTable. Might be empty.
+            boost::shared_ptr<PropertyMap> pm;
             
             /// The setting in the configuration file from which to build the instance
             SettingWrapper setting;
@@ -77,15 +47,14 @@ namespace theta {
             
             /** \brief Construct Configuration by specifying all data members
              */
-            Configuration(const boost::shared_ptr<VarIdManager> & vm_, const SettingWrapper & setting_,
-               const boost::shared_ptr<Run> & run_ = boost::shared_ptr<Run>(), const std::string & theta_dir_ = "."):
-                theta_dir(theta_dir_), vm(vm_), run(run_), setting(setting_){}
+            Configuration(const boost::shared_ptr<VarIdManager> & vm_, const SettingWrapper & setting_, const std::string & theta_dir_ = "."):
+                theta_dir(theta_dir_), vm(vm_), pm(new PropertyMap()), setting(setting_){}
 
             /** \brief Copy elements from another Configuration, but replace Configuration::setting
              *
              * Copy all from \c cfg but \c cfg.setting which is replaced by \c setting_.
              */
-            Configuration(const Configuration & cfg, const SettingWrapper & setting_): theta_dir(cfg.theta_dir), vm(cfg.vm), run(cfg.run),
+            Configuration(const Configuration & cfg, const SettingWrapper & setting_): theta_dir(cfg.theta_dir), vm(cfg.vm), pm(cfg.pm),
                 setting(setting_){}
 
         };        

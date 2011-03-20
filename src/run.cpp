@@ -32,7 +32,7 @@ void Run::set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
 void Run::run(){
     //log the start of the run:
     eventid = 0;
-    logtable->append(*this, LogTable::info, "run start");
+    logtable->append(runid, eventid, LogTable::info, "run start");
    
     Data data;
     //main event loop:
@@ -53,7 +53,7 @@ void Run::run(){
                 error = true;
                 std::stringstream ss;
                 ss << "Producer '" << producers[j].getName() << "' failed: " << ex.message << ".";
-                logtable->append(*this, LogTable::error, ss.str());
+                logtable->append(runid, eventid, LogTable::error, ss.str());
             }
             catch(FatalException & f){
                 stringstream ss;
@@ -64,14 +64,14 @@ void Run::run(){
         }
         //only add a row if no error ocurred to prevent NULL values and similar things ...
         if(!error){
-            products_table->add_row(*this);
+            products_table->add_row(runid, eventid);
         }
         log_event_end();
         if(progress_listener) progress_listener->progress(eventid, n_event);
     }
     
     eventid = 0; // to indicate in the log table that this is an "event-wide" entry
-    logtable->append(*this, LogTable::info, "run end");
+    logtable->append(runid, eventid, LogTable::info, "run end");
     if(log_report){
         const int* n_messages = logtable->get_n_messages();
         LogTable::e_severity s = logtable->get_loglevel();
@@ -104,12 +104,15 @@ void Run::init(const plugin::Configuration & cfg){
     
     std::auto_ptr<Table> rndinfo_table_underlying = db->create_table("rndinfo");
     rndinfo_table.reset(new RndInfoTable(rndinfo_table_underlying));
-    set("default", rndinfo_table);
+    cfg.pm->set("default", rndinfo_table);
     
     std::auto_ptr<Table> products_table_underlying = db->create_table("products");
     products_table.reset(new ProductsTable(products_table_underlying));
-    set("default", products_table);
+    cfg.pm->set<ProductsSink>("default", products_table);
     
+    boost::shared_ptr<int> ptr_runid(new int(runid));
+    cfg.pm->set("runid", ptr_runid);
+        
     //2. model and data_source
     model = plugin::PluginManager<Model>::instance().build(plugin::Configuration(cfg, s["model"]));
     data_source = plugin::PluginManager<DataSource>::instance().build(plugin::Configuration(cfg, s["data_source"]));

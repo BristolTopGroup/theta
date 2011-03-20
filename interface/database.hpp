@@ -9,6 +9,8 @@
 
 #include "interface/decls.hpp"
 #include "interface/plugin.hpp"
+#include "interface/data_type.hpp"
+#include "interface/producer.hpp"
 
 namespace theta {
 
@@ -73,12 +75,6 @@ protected:
  */
 class Table: private boost::noncopyable {
 public:
-
-    /** \brief Data types of columns
-     *
-     * These data types are the supported types for columns in a table.
-     */
-    enum data_type { typeDouble, typeInt, typeString, typeHisto };
 
     /// destructor; creates the table if empty
     virtual ~Table();
@@ -151,7 +147,7 @@ public:
  *
  * Per \link theta::Run Run \endlink, there is exactly one ProductsTable. Products are produced by
  * <ul>
- *   <li>Producer instances to save the result of a statistical computation</li>
+ *   <li>Producer instances to save the (per-event) result of their computation</li>
  *   <li>DataSource to save some per-event information about data production</li>
  * </ul>
  *
@@ -165,24 +161,24 @@ public:
  * The actual write is done by the \link Run \endlink instance; the Producer / DataSource must not
  * call add_row directly.
  */
-class ProductsTable: private boost::noncopyable{
+class ProductsTable: public ProductsSink {
 public:
         //@{
         /** \brief Forwards to Table::set_column
          */
-        virtual void set_column(const Column & c, double d){
+        virtual void set_product(const Column & c, double d){
             table->set_column(c, d);
         }
         
-        virtual void set_column(const Column & c, int i){
+        virtual void set_product(const Column & c, int i){
             table->set_column(c, i);
         }
         
-        virtual void set_column(const Column & c, const std::string & s){
+        virtual void set_product(const Column & c, const std::string & s){
             table->set_column(c, s);
         }
         
-        virtual void set_column(const Column & c, const theta::Histogram & histo){
+        virtual void set_product(const Column & c, const theta::Histogram & histo){
             table->set_column(c, histo);
         }
         
@@ -198,9 +194,9 @@ public:
          *   tw.getName() + "__" + column_name
          * \endcode
          */
-        std::auto_ptr<Column> add_column(const theta::plugin::ProductsTableWriter & tw, const std::string & column_name, const Table::data_type & type);
+        virtual std::auto_ptr<Column> declare_product(const theta::ProductsSource & source, const std::string & product_name, const data_type & type);
         
-        /** \brief Construct a new EventTable based on the given table
+        /** \brief Construct a new ProductsTable based on the given table
          *
          * Ownership of object held by table will be transferred.
          */
@@ -209,10 +205,8 @@ public:
         /** \brief Add a row to the table, given the current run
          *
          * This is called by theta::Run after a producer has executed.
-         *
-         * \c run will be used to fill the \c runid and \c eventid columns.
          */
-        void add_row(const theta::Run & run);
+        void add_row(int runid, int eventid);
         
 private:
     std::auto_ptr<Table> table;
@@ -285,15 +279,16 @@ public:
     
     /** \brief Append message to log table, if severity is larger than currently configured level
      * 
-     * \param run The Run instance to ask for the current runid and eventid
-     * \param s The severity level of the log message
-     * \param message The log message, in human-readable english
+     *
+     * \c s is the severity level of the log message
+     *
+     * \c message is the message, in human-readable english
      */
-    void append(const theta::Run & run, e_severity s, const std::string & message){
+    void append(int runid, int eventid, e_severity s, const std::string & message){
         //define inline as hint to the compiler; keep this function as short as possible to
         // encourage the compiler actually inlining it and to have high performance benefits in
         // case the user disables logging.
-        if(s <= level) really_append(run, s, message);
+        if(s <= level) really_append(runid, eventid, s, message);
     }
     
     /** \brief Returns the number of messages
@@ -306,7 +301,7 @@ public:
 private:
 
     /// really append the log message. Called from append() in case severity is large enough
-    void really_append(const theta::Run & run, e_severity s, const std::string & message);
+    void really_append(int runid, int eventid, e_severity s, const std::string & message);
     e_severity level;
     int n_messages[4];
     std::auto_ptr<Column> c_runid, c_eventid, c_severity, c_message, c_time;
@@ -335,11 +330,11 @@ public:
 
     /** \brief append an entry to the RndInfoTable
      *
-     * \c run is the current Run
+     * \c runid is the current runid
      * \c name is the name of the module of the seed, according to \link theta::ProductsTableWriter ProductsTableWriter \endlink . <br />
      * \c seed is the seed of the random number generator used for this module
      */
-    void append(const theta::Run & run, const std::string & name, int seed);
+    void append(int runid, const std::string & name, int seed);
 private:
     std::auto_ptr<Column> c_runid, c_name, c_seed;
     std::auto_ptr<Table> table;
@@ -348,3 +343,4 @@ private:
 }
 
 #endif
+

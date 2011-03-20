@@ -34,10 +34,10 @@ void mle::produce(theta::Run & run, const theta::Data & data, const theta::Model
         start_step_ranges_init = true;
     }
     MinimizationResult minres = minimizer->minimize(*nll, start, step, ranges);
-    table->set_column(*c_nll, minres.fval);
+    products_sink->set_product(*c_nll, minres.fval);
     for(size_t i=0; i<save_ids.size(); ++i){
-        table->set_column(parameter_columns[i], minres.values.get(save_ids[i]));
-        table->set_column(error_columns[i], 0.5 * (minres.errors_plus.get(save_ids[i]) + minres.errors_minus.get(save_ids[i])) );
+        products_sink->set_product(parameter_columns[i], minres.values.get(save_ids[i]));
+        products_sink->set_product(error_columns[i], 0.5 * (minres.errors_plus.get(save_ids[i]) + minres.errors_minus.get(save_ids[i])) );
     }
     if(write_covariance){
        const size_t N = save_ids.size();
@@ -50,7 +50,7 @@ void mle::produce(theta::Run & run, const theta::Data & data, const theta::Model
                h.set(i*N + j + 1, minres.covariance(index_i,index_j));
            }
        }
-       table->set_column(*c_covariance, h);
+       products_sink->set_product(*c_covariance, h);
     }
     if(write_ks_ts){
         ObsIds obs = data.getObservables();
@@ -68,7 +68,7 @@ void mle::produce(theta::Run & run, const theta::Data & data, const theta::Model
                 ks_ts = max(ks_ts, fabs(sum_d - sum_p));
             }
         }
-        table->set_column(*c_ks_ts, ks_ts);
+        products_sink->set_product(*c_ks_ts, ks_ts);
     }
     if(write_bh_ts){
         ObsIds obs = data.getObservables();
@@ -85,7 +85,7 @@ void mle::produce(theta::Run & run, const theta::Data & data, const theta::Model
                 bh_ts = max(bh_ts, bump);
             }
         }
-        table->set_column(*c_bh_ts, bh_ts);
+        products_sink->set_product(*c_bh_ts, bh_ts);
     }
 }
 
@@ -108,20 +108,21 @@ mle::mle(const theta::plugin::Configuration & cfg): Producer(cfg), start_step_ra
         bh_ts_obsid.reset(new ObsId(cfg.vm->getObsId(s["bh"])));
         write_bh_ts = true;
     }
-    c_nll = table->add_column(*this, "nll", Table::typeDouble);
+    c_nll = products_sink->declare_product(*this, "nll", theta::typeDouble);
     for(size_t i=0; i<save_ids.size(); ++i){
-        parameter_columns.push_back(table->add_column(*this, parameter_names[i], Table::typeDouble));
-        error_columns.push_back(table->add_column(*this, parameter_names[i] + "_error", Table::typeDouble));
+        parameter_columns.push_back(products_sink->declare_product(*this, parameter_names[i], theta::typeDouble));
+        error_columns.push_back(products_sink->declare_product(*this, parameter_names[i] + "_error", theta::typeDouble));
     }
     if(write_covariance){
-       c_covariance = table->add_column(*this, "covariance", Table::typeHisto);
+       c_covariance = products_sink->declare_product(*this, "covariance", theta::typeHisto);
     }
     if(write_ks_ts){
-       c_ks_ts = table->add_column(*this, "ks_ts", Table::typeDouble);
+       c_ks_ts = products_sink->declare_product(*this, "ks_ts", theta::typeDouble);
     }
     if(write_bh_ts){
-       c_bh_ts = table->add_column(*this, "bh_ts", Table::typeDouble);
+       c_bh_ts = products_sink->declare_product(*this, "bh_ts", theta::typeDouble);
     }
 }
 
 REGISTER_PLUGIN(mle)
+

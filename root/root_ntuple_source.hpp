@@ -28,7 +28,7 @@
  *
  * For more realistic studies, you have to draw many different background processes from trees. While this is possible by filling one large tree with the correct
  * event weight, it is recommended to use one \c root_ntuple_source per background and use the \link add_sources\endlink plugin for main.data_source. This facilitates
- * studies such as increasing one background which can then be done by adjkusting the 'factor' setting (see below) in the according root_ntuple_source.
+ * studies such as increasing one background which can then be done by adjusting the 'factor' setting (see below) in the according root_ntuple_source.
  *
  * Configuration is done via a setting like
  * \code
@@ -49,10 +49,10 @@
  *        };
  *    };
  *    //optional settings:
- *    treename = "my_events"; // default is "" which uses the TTree in the file
- *    mean_nevents = 147.7; // default: sum of relative weights according top thebweight branch
- *    factor = 0.9; // default: 1.0
- *    relweight_branchname = "weight"; //default is to use 1.0 for all events
+ *    treename = "my_events"; // default is "" which uses the top-level TTree in the file
+ *    mean_nevents = 147.7;   // default: sum of relweights from the relweight_branch
+ *    factor = 0.9;           // default: 1.0
+ *    relweight_branchname = "weight"; //default is to use relweight = 1.0 for all events
  *    rnd_gen = {
  *       seed = 123;
  *    };
@@ -83,14 +83,19 @@
  *    reproduce the exact same pseudo dataset in which case you can force the usage of a certain seed.
  *
  * Given the above configuration, the module loads all observable and weight values from all events in the tree into memory,
- * and calculates the total weight W_tot of the "nominal" sample (i.e., the one given in the 'filename' setting).
+ * and calculates the total weight W_tot by adding the weights from the relweight branch. If no relweight_branchname is given,
+ * 1.0 is used for each weight, hende W_tot is the number of events in the file in this case. If mean_nevents is not specified, it
+ * is set to W_tot.
  *
  * To generate a pseudo dataset, each event i  is included with probability  w_i / W_tot * mean_nevents * factor where w_i is the event weight according
  * to the weight branch and 'mean_nevents' and 'factor' as given in the configuration.
  * From these included events, the pseudo data histograms are filled only if the observable values are within the histogram range.
  *
- * The above procedure will not work correctly if the above probability is larger than 1 for any event. If this may happen,
- * i.e., if any event weight w_i is such that w_i / W_tot * mean_nevents > 1, this be be reported as error during the time of construction.
+ * The above procedure will not work correctly if the above probability is larger than 1 for any event. Therefore,
+ * if any event weight w_i is such that w_i / W_tot * mean_nevents * factor > 1, this is reported as error during the time of construction.
+ *
+ * For the common case that the relative weights are the same for all events, the number of events follow a binomial distribution around mean_nevents. This
+ * agrees with a Poisson around mean_nevents in the limit of infinite (unweights) events.
  */
 class root_ntuple_source: public theta::DataSource, public theta::RandomConsumer {
 public:

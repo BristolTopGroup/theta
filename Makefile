@@ -2,7 +2,7 @@
 DIRS = src libconfig liblbfgs plugins root bin test
 
 all:
-	@for d in $(DIRS); do ( [ -d $$d ] && $(MAKE) -C $$d ) || true; done
+	@for d in $(DIRS); do $(MAKE) -C $$d || break; done
 
 clean:
 	@for d in $(DIRS); do ( [ -d $$d ] && $(MAKE) -C $$d clean ) || true; done

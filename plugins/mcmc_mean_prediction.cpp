@@ -117,9 +117,9 @@ void mcmc_mean_prediction::produce(Run & run, const Data & data, const Model & m
     for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it, ++i){
         Histogram mean, width;
         result.get_mean_width(mean, width, *it);
-        table->set_column(c_mean[i], mean);
-        table->set_column(c_width[i], width);
-        table->set_column(c_best[i], result.get_best(*it));
+        products_sink->set_product(c_mean[i], mean);
+        products_sink->set_product(c_width[i], width);
+        products_sink->set_product(c_best[i], result.get_best(*it));
     }
 }
 
@@ -144,9 +144,9 @@ mcmc_mean_prediction::mcmc_mean_prediction(const theta::plugin::Configuration & 
     }
     
     for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
-        c_mean.push_back(table->add_column(*this, vm->getName(*it) + "_mean", Table::typeHisto));
-        c_width.push_back(table->add_column(*this, vm->getName(*it) + "_width", Table::typeHisto));
-        c_best.push_back(table->add_column(*this, vm->getName(*it) + "_best", Table::typeHisto));
+        c_mean.push_back(products_sink->declare_product(*this, vm->getName(*it) + "_mean", theta::typeHisto));
+        c_width.push_back(products_sink->declare_product(*this, vm->getName(*it) + "_width", theta::typeHisto));
+        c_best.push_back(products_sink->declare_product(*this, vm->getName(*it) + "_best", theta::typeHisto));
     }
 }
 

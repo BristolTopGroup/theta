@@ -549,10 +549,10 @@ model_source::model_source(const theta::plugin::Configuration & cfg): DataSource
     }
     //define the table:
     for(ParIds::const_iterator p_it=par_ids.begin(); p_it!=par_ids.end(); ++p_it){
-        parameter_columns.push_back(table->add_column(*this, cfg.vm->getName(*p_it), Table::typeDouble));
+        parameter_columns.push_back(products_sink->declare_product(*this, cfg.vm->getName(*p_it), theta::typeDouble));
     }
     if(save_nll){
-        c_nll = table->add_column(*this, "nll", Table::typeDouble);
+        c_nll = products_sink->declare_product(*this, "nll", theta::typeDouble);
     }
 }
 
@@ -569,7 +569,7 @@ void model_source::fill(Data & dat, Run & run){
     }
     size_t i=0;
     for(ParIds::const_iterator p_it=par_ids.begin(); p_it!=par_ids.end(); ++p_it, ++i){
-        table->set_column(parameter_columns[i], values.get(*p_it));
+        products_sink->set_product(parameter_columns[i], values.get(*p_it));
     }
     
     //2. get model prediction
@@ -592,7 +592,7 @@ void model_source::fill(Data & dat, Run & run){
     if(save_nll){
        std::auto_ptr<NLLikelihood> nll = model->getNLLikelihood(dat);
        values.set(parameters_for_nll);
-       table->set_column(*c_nll, (*nll)(values));
+       products_sink->set_product(*c_nll, (*nll)(values));
     }
     
 

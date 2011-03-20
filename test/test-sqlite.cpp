@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(largefile){
    Configuration cfg = cc.get();
    std::auto_ptr<Database> db = PluginManager<Database>::instance().build(cfg);
    std::auto_ptr<Table> table = db->create_table("test_table");
-   std::auto_ptr<Column> c = table->add_column("col1", Table::typeHisto);
+   std::auto_ptr<Column> c = table->add_column("col1", theta::typeHisto);
    Histogram h(1000, 0.0, 1.0);
    for(size_t i=0; i<=1001; ++i){
      h.set(i, i+1);

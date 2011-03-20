@@ -80,7 +80,7 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
     metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
     
     for(size_t i=0; i<quantiles.size(); ++i){
-        table->set_column(columns[i], result.get_quantile(quantiles[i]));
+        products_sink->set_product(columns[i], result.get_quantile(quantiles[i]));
     }
 }
 
@@ -110,7 +110,7 @@ mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Produc
     for(size_t i=0; i<quantiles.size(); ++i){
         stringstream ss;
         ss << "quant" << setw(5) << setfill('0') << static_cast<int>(quantiles[i] * 10000 + 0.5);
-        columns.push_back(table->add_column(*this, ss.str(), Table::typeDouble));
+        columns.push_back(products_sink->declare_product(*this, ss.str(), theta::typeDouble));
     }
 }
 

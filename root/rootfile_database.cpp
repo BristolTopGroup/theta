@@ -103,22 +103,22 @@ std::auto_ptr<Column> rootfile_database::rootfile_table::add_column(const std::s
     bool make_branch = false;
     if(save_all_columns || save_columns.find(name)!=save_columns.end()) make_branch = true;
     switch(type){
-        case Table::typeDouble:
+        case theta::typeDouble:
             result.reset(new rootfile_column_double(name));
             if(make_branch)
                 tree->Branch(name.c_str(), &static_cast<rootfile_column_double*>(result.get())->d, "data/D");
             break;
-        case Table::typeInt:
+        case theta::typeInt:
             result.reset(new rootfile_column_int(name));
             if(make_branch)
                tree->Branch(name.c_str(), &static_cast<rootfile_column_int*>(result.get())->i, "data/I");
             break;
-        case Table::typeString:
+        case theta::typeString:
             result.reset(new rootfile_column_string(name));
             if(make_branch)
                tree->Branch(name.c_str(), "TString", &static_cast<rootfile_column_string*>(result.get())->s);
             break;
-        case Table::typeHisto:
+        case theta::typeHisto:
             result.reset(new rootfile_column_histo(name));
             if(make_branch)
                tree->Branch(name.c_str(), "TH1D", &static_cast<rootfile_column_histo*>(result.get())->h);
@@ -128,7 +128,7 @@ std::auto_ptr<Column> rootfile_database::rootfile_table::add_column(const std::s
 }
 
 void rootfile_database::rootfile_table::set_autoinc_column(const std::string & s){
-    std::auto_ptr<Column> col = add_column(s, Table::typeInt);
+    std::auto_ptr<Column> col = add_column(s, theta::typeInt);
     autoinc_column.reset(static_cast<rootfile_column_int*>(col.release()));
 }
 

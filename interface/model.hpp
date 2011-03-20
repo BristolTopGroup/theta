@@ -5,6 +5,7 @@
 #include "interface/variables.hpp"
 #include "interface/plugin.hpp"
 #include "interface/phys.hpp"
+#include "interface/histogram-function.hpp"
 
 #include <vector>
 #include <string>

@@ -22,7 +22,7 @@ void nll_scan::produce(Run & run, const Data & data, const Model & model) {
         start_step_ranges_init = true;
     }
     MinimizationResult minres = minimizer->minimize(*nll, m_start, m_step, m_ranges);
-    table->set_column(*c_maxl, minres.values.get(pid));
+    products_sink->set_product(*c_maxl, minres.values.get(pid));
     ReducedNLL nll_r(*nll, pid, minres.values, re_minimize ? minimizer.get() : 0, m_start, m_step, m_ranges);
     nll_r.set_offset_nll(minres.fval);
     
@@ -31,7 +31,7 @@ void nll_scan::produce(Run & run, const Data & data, const Model & model) {
         double x = start + i * step;
         result.set(i, nll_r(x));
     }
-    table->set_column(*c_nll, result);
+    products_sink->set_product(*c_nll, result);
 }
 
 nll_scan::nll_scan(const theta::plugin::Configuration & cfg): Producer(cfg), pid(cfg.vm->getParId(cfg.setting["parameter"])),
@@ -52,8 +52,8 @@ nll_scan::nll_scan(const theta::plugin::Configuration & cfg): Producer(cfg), pid
         throw ConfigurationException("nll_scan: start < stop must hold");
     }
     step = (stop - start) / n_steps;
-    c_nll = table->add_column(*this, "nll", Table::typeHisto);
-    c_maxl = table->add_column(*this, "maxl", Table::typeDouble);
+    c_nll = products_sink->declare_product(*this, "nll", theta::typeHisto);
+    c_maxl = products_sink->declare_product(*this, "maxl", theta::typeDouble);
 }
 
 REGISTER_PLUGIN(nll_scan)

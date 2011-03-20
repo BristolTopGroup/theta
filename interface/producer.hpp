@@ -10,8 +10,36 @@
 
 #include <boost/ptr_container/ptr_vector.hpp>
 #include "interface/plugin.hpp"
+#include "interface/data_type.hpp"
 
 namespace theta {
+
+/** \brief Container for the by-event products to be used by ProductsSources
+ *
+ * Abstract base class which takes products from a ProductsSource.
+ */
+class ProductsSink: private boost::noncopyable{
+public:
+    virtual std::auto_ptr<Column> declare_product(const ProductsSource & source, const std::string & product_name, const data_type & type) = 0;
+    virtual void set_product(const Column & c, double d) = 0;
+    virtual void set_product(const Column & c, int i) = 0;
+    virtual void set_product(const Column & c, const std::string & s) = 0;
+    virtual void set_product(const Column & c, const Histogram & h) = 0;
+};
+
+
+/** \brief Base class for all classes writing products to a ProductsSink
+ */
+class ProductsSource{
+public:
+    const std::string & getName()const{
+        return name;
+    }
+protected:
+    ProductsSource(const plugin::Configuration & cfg);
+    std::string name;
+    boost::shared_ptr<ProductsSink> products_sink;
+};
 
 /** \brief The abstract base class for all statistical methods or other objects creating per-event data
  *
@@ -24,7 +52,7 @@ namespace theta {
  * of the ones from the model. The latter is a Function to add to the negative log-likelihood such as external
  * constraints or priors which cannot be expressed as parameter distributions.
  */
-class Producer: public theta::plugin::ProductsTableWriter{
+class Producer: public ProductsSource{
 public:
     /// Define us as the base_type for derived classes; required for the plugin system
     typedef Producer base_type;
@@ -67,3 +95,4 @@ protected:
 }
 
 #endif
+

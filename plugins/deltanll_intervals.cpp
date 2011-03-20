@@ -25,7 +25,7 @@ void deltanll_intervals::produce(theta::Run & run, const theta::Data & data, con
     }
     MinimizationResult minres = minimizer->minimize(*nll, start, step, ranges);
     const double value_at_minimum = minres.values.get(pid);
-    table->set_column(*c_maxl, value_at_minimum);
+    products_sink->set_product(*c_maxl, value_at_minimum);
     ReducedNLL nll_r(*nll, pid, minres.values, re_minimize ? minimizer.get() : 0, start, step, ranges);
     const pair<double, double> & range = ranges[pid];
     for(size_t i=0; i < deltanll_levels.size(); ++i){
@@ -49,11 +49,11 @@ void deltanll_intervals::produce(theta::Run & run, const theta::Data & data, con
             }
             f_x_high = nll_r(x_high);
             if(f_x_high > 0){
-                table->set_column(upper_columns[i], secant(x_low, x_high, x_acurracy, f_x_low, f_x_high, deltanll_levels[i]/1000, nll_r));
+                products_sink->set_product(upper_columns[i], secant(x_low, x_high, x_acurracy, f_x_low, f_x_high, deltanll_levels[i]/1000, nll_r));
                 break;
             }
             else if(f_x_high==0.0 || x_high == range.second){
-                table->set_column(upper_columns[i], x_high);
+                products_sink->set_product(upper_columns[i], x_high);
                 break;
             }
             else{
@@ -78,11 +78,11 @@ void deltanll_intervals::produce(theta::Run & run, const theta::Data & data, con
             }
             f_x_low = nll_r(x_low);
             if(f_x_low > 0){
-                table->set_column(lower_columns[i], secant(x_low, x_high, x_acurracy, f_x_low, f_x_high, deltanll_levels[i] / 1000, nll_r));
+                products_sink->set_product(lower_columns[i], secant(x_low, x_high, x_acurracy, f_x_low, f_x_high, deltanll_levels[i] / 1000, nll_r));
                 break;
             }
             else if(f_x_low==0.0 || x_low == range.first){
-                table->set_column(lower_columns[i], x_low);
+                products_sink->set_product(lower_columns[i], x_low);
                 break;
             }
             else{
@@ -118,15 +118,16 @@ deltanll_intervals::deltanll_intervals(const theta::plugin::Configuration & cfg)
         deltanll_levels[i] = utils::phi_inverse((1+clevels[i])/2);
         deltanll_levels[i] *= deltanll_levels[i]*0.5;
     }
-    c_maxl = table->add_column(*this, "maxl", Table::typeDouble);
+    c_maxl = products_sink->declare_product(*this, "maxl", theta::typeDouble);
     for(size_t i=0; i<clevels.size(); ++i){
         stringstream ss;
         ss << "lower" << setw(5) << setfill('0') << static_cast<int>(clevels[i] * 10000 + 0.5);
-        lower_columns.push_back(table->add_column(*this, ss.str(), Table::typeDouble));
+        lower_columns.push_back(products_sink->declare_product(*this, ss.str(), theta::typeDouble));
         ss.str("");
         ss << "upper" << setw(5) << setfill('0') << static_cast<int>(clevels[i] * 10000 + 0.5);
-        upper_columns.push_back(table->add_column(*this, ss.str(), Table::typeDouble));
+        upper_columns.push_back(products_sink->declare_product(*this, ss.str(), theta::typeDouble));
     }
 }
 
 REGISTER_PLUGIN(deltanll_intervals)
+

@@ -1,5 +1,6 @@
 #include "interface/random-utils.hpp"
-#include "interface/run.hpp"
+#include "interface/histogram.hpp"
+#include "interface/database.hpp"
 #include <boost/date_time/local_time/local_time.hpp>
 
 using namespace theta;

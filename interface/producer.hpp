@@ -29,13 +29,21 @@ public:
 
 
 /** \brief Base class for all classes writing products to a ProductsSink
+ *
+ * products_sink is filled via Configuration cfg.pm.
+ *
+ * Each ProductsSource has a name in order to identify
+ * the products in case of multiple same producers. This name
+ * is set explicitely in the configuration file via the 'name' setting.
  */
 class ProductsSource{
 public:
+    /// Get the name as configured via the configuration file
     const std::string & getName()const{
         return name;
     }
 protected:
+    /// To be used by derived classes, to fill name and products_sink
     ProductsSource(const plugin::Configuration & cfg);
     std::string name;
     boost::shared_ptr<ProductsSink> products_sink;
@@ -64,14 +72,15 @@ public:
     
     /** \brief Run a statistical algorithm on the data and model and write out the results
      *
-     * The result should be written to \c table by calling ProducerTable::set_column on
-     * columns previously defined in define_table.
+     * The result should be written to \c products_sink by calling ProductsSink::set_product on
+     * product columns previously defined via ProductsSink::decalre_product in the constructor.
      *
      * Derived classes may assume that all calls are done with the same \c model.
      *
-     * In case of an error, the method should through an Exception.
+     * In case of an error, the method should through a class derived from \link theta::Exception \endlink
+     * or \link theta::FatalException \endlink.
      */
-    virtual void produce(Run & run, const Data & data, const Model & model) = 0;
+    virtual void produce(const Data & data, const Model & model) = 0;
         
 protected:
     /** \brief Construct from a Configuration instance

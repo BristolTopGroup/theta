@@ -208,7 +208,7 @@ namespace theta {
             std::stringstream ss;
             ss << "Error while constructin plugin according to configuration path '" << ctx.setting.getPath()
                << "': no plugin registered to create a plugin for type='" << type << "'. Check spelling of the "
-               "type make sure to laod all necessary plugin viathe setting 'options.plugin_files'.";
+               "type and make sure to load all necessary plugin via the setting 'options.plugin_files'.";
             throw ConfigurationException(ss.str());
         }
 

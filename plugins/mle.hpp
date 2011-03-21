@@ -54,10 +54,7 @@ public:
     
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     mle(const theta::plugin::Configuration & cfg);
-    
-    /** \brief Run the method and write out results
-     */
-    virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
+    virtual void produce(const theta::Data & data, const theta::Model & model);
     
 private:
     std::auto_ptr<theta::Minimizer> minimizer;

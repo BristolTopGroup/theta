@@ -1,7 +1,7 @@
 #include "plugins/mcmc_mean_prediction.hpp"
 #include "plugins/mcmc.hpp"
 #include "interface/plugin.hpp"
-#include "interface/run.hpp"
+#include "interface/model.hpp"
 #include "interface/histogram.hpp"
 #include "interface/distribution.hpp"
 
@@ -92,7 +92,7 @@ class MCMCMeanPredictionResult{
 };
 
 
-void mcmc_mean_prediction::produce(Run & run, const Data & data, const Model & model) {
+void mcmc_mean_prediction::produce(const Data & data, const Model & model) {
     if(!init){
         try{
             //get the covariance for average data:

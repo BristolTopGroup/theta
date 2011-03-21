@@ -1,7 +1,7 @@
 #include "plugins/mcmc_quantiles.hpp"
 #include "plugins/mcmc.hpp"
 #include "interface/plugin.hpp"
-#include "interface/run.hpp"
+#include "interface/model.hpp"
 #include "interface/histogram.hpp"
 #include "interface/distribution.hpp"
 
@@ -51,7 +51,7 @@ class MCMCPosteriorQuantilesResult{
         vector<double> par_values;
 };
 
-void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) {
+void mcmc_quantiles::produce(const Data & data, const Model & model) {
     if(!init){
         try{
             sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, vm);

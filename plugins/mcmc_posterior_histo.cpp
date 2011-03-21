@@ -1,7 +1,7 @@
 #include "plugins/mcmc_posterior_histo.hpp"
 #include "plugins/mcmc.hpp"
 #include "interface/plugin.hpp"
-#include "interface/run.hpp"
+#include "interface/model.hpp"
 #include "interface/histogram.hpp"
 #include "interface/distribution.hpp"
 
@@ -127,7 +127,7 @@ private:
 
 
 
-void mcmc_posterior_histo::produce(Run & run, const Data & data, const Model & model) {
+void mcmc_posterior_histo::produce(const Data & data, const Model & model) {
     if(!init){
         try{
             //get the covariance for average data:

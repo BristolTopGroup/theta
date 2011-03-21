@@ -4,7 +4,6 @@
 #include <boost/date_time/local_time/local_time.hpp>
 
 #include "interface/database.hpp"
-#include "interface/run.hpp"
 #include "interface/histogram.hpp"
 
 using namespace std;
@@ -34,7 +33,8 @@ void Database::check_name(const string & column_name) {
         throw DatabaseException(ss.str());
     }
 }
-
+// place destructors here, not in header. Otherwise some gcc versions are missing the vtable which is placed
+// in the module defining the first non-inline function ...
 Table::~Table(){}
 
 Column::~Column(){}

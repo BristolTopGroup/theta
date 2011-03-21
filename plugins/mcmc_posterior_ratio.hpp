@@ -59,9 +59,7 @@ class mcmc_posterior_ratio: public theta::Producer, public theta::RandomConsumer
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     mcmc_posterior_ratio(const theta::plugin::Configuration & ctx);
-    
-    /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
-    virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
+    virtual void produce(const theta::Data & data, const theta::Model & model);
     
 private:
     //whether sqrt_cov* and startvalues* have been initialized:

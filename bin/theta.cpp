@@ -1,8 +1,9 @@
-#include "interface/run.hpp"
 #include "interface/cfg-utils.hpp"
 #include "interface/plugin.hpp"
 #include "interface/histogram.hpp"
 #include "interface/variables-utils.hpp"
+#include "interface/variables.hpp"
+#include "interface/main.hpp"
 
 #include "libconfig/libconfig.h++"
 
@@ -87,10 +88,10 @@ string get_theta_dir(char** argv){
 }
 
 
-boost::shared_ptr<Run> build_run(string cfg_filename, const string & theta_dir, bool nowarn){
+boost::shared_ptr<Main> build_main(string cfg_filename, const string & theta_dir, bool nowarn){
     Config cfg;
     boost::shared_ptr<SettingUsageRecorder> rec(new SettingUsageRecorder());
-    boost::shared_ptr<Run> run;
+    boost::shared_ptr<Main> main;
     boost::shared_ptr<VarIdManager> vm(new VarIdManager);
     bool init_complete = false;
     try {
@@ -129,8 +130,7 @@ boost::shared_ptr<Run> build_run(string cfg_filename, const string & theta_dir, 
         //fill VarIdManager:
         VarIdManagerUtils::apply_settings(config);
         //build run:
-        run.reset(new Run());
-        run->init(Configuration(config, root["main"]));
+        main = PluginManager<Main>::instance().build(Configuration(config, root["main"]));
         init_complete = true;
     }
     catch (SettingNotFoundException & ex) {
@@ -143,8 +143,8 @@ boost::shared_ptr<Run> build_run(string cfg_filename, const string & theta_dir, 
         cerr << "Error: " << e.message << endl;
     }
     if(not init_complete){
-        run.reset();
-        return run;
+        main.reset();
+        return main;
     }
     
     if(not nowarn){
@@ -158,7 +158,7 @@ boost::shared_ptr<Run> build_run(string cfg_filename, const string & theta_dir, 
             cout << "Comment out these settings to get rid of this message." << endl;
         }
     }
-    return run;
+    return main;
 }
 
 
@@ -214,17 +214,17 @@ int main(int argc, char** argv) {
             if(!quiet and cfg_filenames.size() > 1){
                 cout << "processing file " << (i+1) << " of " << cfg_filenames.size() << ", " << cfg_filenames[i] << endl;
             }
-            boost::shared_ptr<Run> run = build_run(cfg_filenames[i], theta_dir, nowarn);
-            if(!run) return 1;
+            boost::shared_ptr<Main> main = build_main(cfg_filenames[i], theta_dir, nowarn);
+            if(!main) return 1;
             if(not quiet){
                 boost::shared_ptr<ProgressListener> l(new MyProgressListener());
-                run->set_progress_listener(l);
+                main->set_progress_listener(l);
             }
 
             //install signal handler now, not much earlier. Otherwise, plugin loading in build_run()
             // might change it ...
             install_sigint_handler();
-            run->run();
+            main->run();
             if(stop_execution) break;
         }
     }

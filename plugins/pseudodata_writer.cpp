@@ -1,6 +1,5 @@
 #include "plugins/pseudodata_writer.hpp"
 #include "interface/plugin.hpp"
-#include "interface/run.hpp"
 #include "interface/phys.hpp"
 #include "interface/histogram.hpp"
 #include <sstream>
@@ -9,7 +8,7 @@ using namespace theta;
 using namespace std;
 using namespace libconfig;
 
-void pseudodata_writer::produce(Run & run, const Data & data, const Model & model) {
+void pseudodata_writer::produce(const Data & data, const Model & model) {
     for(size_t i=0; i<observables.size(); ++i){
         const Histogram & h = data[observables[i]];
         double n_event = h.get_sum_of_bincontents();

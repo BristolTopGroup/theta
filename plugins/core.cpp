@@ -1,7 +1,7 @@
 #include "core.hpp"
 #include "plugins/interpolating-histogram.hpp"
 #include "interface/random.hpp"
-#include "interface/run.hpp"
+#include "interface/model.hpp"
 
 #include <iostream>
 #include <boost/scoped_array.hpp>

@@ -71,10 +71,7 @@ public:
 
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     deltanll_intervals(const theta::plugin::Configuration & cfg);
-
-    /** \brief Run the method with Data and model and write out the estimated intervals to the result columns
-     */
-    virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
+    virtual void produce(const theta::Data & data, const theta::Model & model);
     
 private:
     //boost::shared_ptr<theta::VarIdManager> vm;

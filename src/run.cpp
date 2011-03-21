@@ -1,33 +1,14 @@
 #include "interface/run.hpp"
 #include "interface/histogram.hpp"
+#include "interface/phys.hpp"
+#include "interface/model.hpp"
 
-#include <signal.h>
 #include <iomanip>
 
 
 using namespace theta;
 using namespace std;
 
-bool theta::stop_execution = false;
-
-static void sigint_handler(int sig){
-   if(stop_execution){
-      throw ExitException("user insisted with several SIGINT");
-   }
-   stop_execution = true;
-}
-
-void theta::install_sigint_handler(){
-    struct sigaction siga;
-    memset(&siga, 0, sizeof(struct sigaction));
-    siga.sa_handler = sigint_handler;
-    sigemptyset(&siga.sa_mask);
-    sigaction(SIGINT, &siga, 0);
-}
-
-void Run::set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
-    progress_listener = l;
-}
 
 void Run::run(){
     //log the start of the run:
@@ -44,11 +25,11 @@ void Run::run(){
         catch(DataSource::DataUnavailable &){
             break;
         }
-        log_event_start();
+        logtable->append(runid, eventid, LogTable::info, "start");
         bool error = false;
         for (size_t j = 0; j < producers.size(); j++) {
             try {
-                producers[j].produce(*this, data, *model);
+                producers[j].produce(data, *model);
             } catch (Exception & ex) {
                 error = true;
                 std::stringstream ss;
@@ -66,7 +47,7 @@ void Run::run(){
         if(!error){
             products_table->add_row(runid, eventid);
         }
-        log_event_end();
+        logtable->append(runid, eventid, LogTable::info, "end");
         if(progress_listener) progress_listener->progress(eventid, n_event);
     }
     
@@ -86,7 +67,7 @@ void Run::run(){
     }
 }
 
-void Run::init(const plugin::Configuration & cfg){
+Run::Run(const plugin::Configuration & cfg){
     SettingWrapper s = cfg.setting;
     
     //0. set default values for members:
@@ -140,10 +121,11 @@ void Run::init(const plugin::Configuration & cfg){
     //4. producers:
     size_t n_p = s["producers"].size();
     if (n_p == 0)
-        throw ConfigurationException("no producers in run specified!");
+        throw ConfigurationException("no producers specified!");
     for (size_t i = 0; i < n_p; i++) {
-        SettingWrapper producer_setting = s["producers"][i];
-        std::auto_ptr<Producer> p = plugin::PluginManager<Producer>::instance().build(plugin::Configuration(cfg, producer_setting));
-        producers.push_back(p);
+         producers.push_back(plugin::PluginManager<Producer>::instance().build(plugin::Configuration(cfg, s["producers"][i])));
     }
 }
+
+REGISTER_PLUGIN_DEFAULT(Run)
+

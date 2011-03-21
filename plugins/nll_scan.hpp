@@ -53,10 +53,7 @@ public:
 
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     nll_scan(const theta::plugin::Configuration & cfg);
-
-    /** \brief Scan the reduced negative-log likelihood function and write out the result  to the database
-     */
-    virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
+    virtual void produce(const theta::Data & data, const theta::Model & model);
     
 private:
     //boost::shared_ptr<theta::VarIdManager> vm;

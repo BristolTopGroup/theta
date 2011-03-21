@@ -61,9 +61,7 @@ class deltanll_hypotest: public theta::Producer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     deltanll_hypotest(const theta::plugin::Configuration & cfg);
-    
-    /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
-    virtual void produce(theta::Run & run, const theta::Data &, const theta::Model&);
+    virtual void produce(const theta::Data &, const theta::Model&);
     
 private:    
     boost::shared_ptr<theta::Distribution> s_plus_b;

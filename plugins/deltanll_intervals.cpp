@@ -3,7 +3,6 @@
 #include "plugins/secant.hpp"
 #include "plugins/asimov_likelihood_widths.hpp"
 #include "interface/plugin.hpp"
-#include "interface/run.hpp"
 #include "interface/minimizer.hpp"
 #include "interface/histogram.hpp"
 #include "interface/distribution.hpp"
@@ -15,7 +14,7 @@ using namespace theta;
 using namespace std;
 using namespace libconfig;
 
-void deltanll_intervals::produce(theta::Run & run, const theta::Data & data, const theta::Model & model) {
+void deltanll_intervals::produce(const theta::Data & data, const theta::Model & model) {
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     if(not start_step_ranges_init){
         const Distribution & d = nll->get_parameter_distribution();

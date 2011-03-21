@@ -2,7 +2,6 @@
 #define PM_HPP
 
 #include <boost/shared_ptr.hpp>
-#include <boost/any.hpp>
 #include <map>
 #include <string>
 #include <typeinfo>
@@ -39,6 +38,8 @@ public:
    
    template<typename T>
    bool exists(const std::string & instance_name) const;
+   
+   virtual ~PropertyMap(){}
 private:
    struct nametype{
        std::string name;
@@ -48,20 +49,20 @@ private:
            return (name < rhs.name) || (name == rhs.name && type.before(rhs.type));
        }
    };
-   std::map<nametype, boost::any> instances;
+   std::map<nametype, boost::shared_ptr<void> > instances;
 };
 
 
 template<typename T>
 boost::shared_ptr<T> PropertyMap::get(const std::string & instance_name) const {
     nametype nt(instance_name, typeid(T));
-    std::map<nametype, boost::any>::const_iterator it=instances.find(nt);
+    std::map<nametype, boost::shared_ptr<void> >::const_iterator it=instances.find(nt);
     if(it==instances.end()){
         std::stringstream ss;
         ss << "PropertyMap: instance with name '" << instance_name << "' with type " << typeid(T).name() << " not found";
         throw theta::NotFoundException(ss.str());
     }
-    return boost::any_cast<boost::shared_ptr<T> >(it->second);
+    return boost::static_pointer_cast<T>(it->second);
 }
 
 template<typename T>

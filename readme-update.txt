@@ -8,7 +8,7 @@ from June 2010 to trunk:
   On the other hand, it is possible to specify more than one configuration file at once. In this case, they will be executed sequentially
   almost as if one would call theta for each of them.
   "almost" because there is one exception: the plugin files (configured via options.plugin_files) are not re-loaded between
-  the runs for the configuration files.
+  the runs for the configuration files. This will usually make no difference at all.
 * the plugin 'model_source_norandom' has been dropped. Instead, use the 'model_source' plugin, set 'dice_poisson' to false
   and use delta distributions as 'override-parameter-distribution'.
 * there used to be one global random number generator, configured via the (optional) setting 'main.seed'. Now,

@@ -25,6 +25,7 @@ public:
     virtual void set_product(const Column & c, int i) = 0;
     virtual void set_product(const Column & c, const std::string & s) = 0;
     virtual void set_product(const Column & c, const Histogram & h) = 0;
+    virtual ~ProductsSink(){}
 };
 
 

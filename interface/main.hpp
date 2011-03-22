@@ -43,6 +43,9 @@ public:
     * It is not guaranteed that total remains constant or that done increases.
     */
     virtual void progress(int done, int total) = 0;
+    
+    /// Make destructor virtual as we have polymorphic access
+    virtual ~ProgressListener(){}
 };
 
 

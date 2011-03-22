@@ -18,6 +18,8 @@ namespace theta {
 /// abstract base class for pseudo random number generators
 class RandomSource{
     friend class Random;
+    public:
+        virtual ~RandomSource(){}
     protected:
         /** \brief Fill the buffer with full 32 bit pseudorandom numbers.
          */

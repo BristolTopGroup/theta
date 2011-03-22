@@ -81,6 +81,8 @@ namespace theta {
              
              /// the type of the object this factory is responsible for; it corresponds to the type="..." configuration file setting
              virtual std::string get_typename() = 0;
+             
+             virtual ~factory(){}
          protected:
              /// register this factory at the correct PluginManager
              void reg(){

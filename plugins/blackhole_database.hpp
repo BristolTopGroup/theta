@@ -4,7 +4,6 @@
 #include "interface/decls.hpp"
 #include "interface/database.hpp"
 
-#include <sqlite3.h>
 #include <memory>
 #include <string>
 

@@ -25,26 +25,40 @@ else
    endif
 endif
 
+ifneq ($(OPTIONS_BOOSTDIR),)
+   BOOST_INCLUDE := -I$(OPTIONS_BOOSTDIR)/include
+   BOOST_LIBS := -L$(OPTIONS_BOOSTDIR)/libs
 # if available, use dependencies from CMSSW:
-ifneq ($(shell which scram || echo -n A),A)
-   scram = $(shell cd $$CMSSW_BASE; scram tool tag $(1) $(2))
-   BOOST_INCLUDE := -I$(call scram,boost,INCLUDE)
-   BOOST_LIBLIST := $(call scram,boost,LIB) $(call scram,boost_filesystem,LIB) $(call scram,boost_program_options,LIB) $(call scram,boost_regex,LIB)
-   BOOST_LIBS := -L$(call scram,boost,LIBDIR) $(patsubst %,-l%,$(BOOST_LIBLIST))
-   SQLITE_LIBLIST := $(call scram,sqlite,LIB)
-   SQLITE_LIBS := $(patsubst %,-l%,$(SQLITE_LIBLIST)) -L$(call scram,sqlite,LIBDIR)
-   SQLITE_INCLUDE := -I$(call scram,sqlite,INCLUDE)
-# otherwise: assume dependencies are installed system-wide and no paths have to be set explicitely:
 else
-   BOOST_INCLUDE:=
-   SQLITE_INCLUDE:=
-   SQLITE_LIBS := -lsqlite3
-   #on some systems, boost libraries have a "-mt" suffix. This is a dirty hack. If you know better, tell me:
-   BS:=
-   ifeq ($(shell test -e /usr/lib/libboost_system-mt.so && echo -n A),A)
-      BS:=-mt
+   ifneq ($(shell which scram || echo -n A),A)
+      scram = $(shell cd $$CMSSW_BASE; scram tool tag $(1) $(2))
+      BOOST_INCLUDE := -I$(call scram,boost,INCLUDE)
+      BOOST_LIBLIST := $(call scram,boost,LIB) $(call scram,boost_filesystem,LIB) $(call scram,boost_program_options,LIB) $(call scram,boost_regex,LIB)
+      BOOST_LIBS := -L$(call scram,boost,LIBDIR) $(patsubst %,-l%,$(BOOST_LIBLIST))
+   # otherwise: assume dependencies are installed system-wide and no paths have to be set explicitely:
+   else
+      BOOST_INCLUDE:=
+      #on some systems, boost libraries have a "-mt" suffix. This is a dirty hack. If you know better, tell me:
+      BS:=
+      ifeq ($(shell test -e /usr/lib/libboost_system-mt.so && echo -n A),A)
+         BS:=-mt
+      endif
+      BOOST_LIBS := -lboost_filesystem$(BS) -lboost_regex$(BS) -lboost_program_options$(BS) -lboost_thread$(BS) -lboost_system$(BS) -lboost_serialization$(BS)
    endif
-   BOOST_LIBS := -lboost_filesystem$(BS) -lboost_regex$(BS) -lboost_program_options$(BS) -lboost_thread$(BS) -lboost_system$(BS) -lboost_serialization$(BS)
+endif
+
+ifneq ($(OPTIONS_SQLITEDIR),)
+   SQLITE_LIBS := -lsqlite3 -L$(OPTIONS_SQLITEDIR)
+   SQLITE_INCLUDE := -I$(OPTIONS_SQLITEDIR)/include
+else
+   ifneq ($(shell which scram || echo -n A),A)
+      SQLITE_LIBLIST := $(call scram,sqlite,LIB)
+      SQLITE_LIBS := $(patsubst %,-l%,$(SQLITE_LIBLIST)) -L$(call scram,sqlite,LIBDIR)
+      SQLITE_INCLUDE := -I$(call scram,sqlite,INCLUDE)
+   else
+      SQLITE_INCLUDE:=
+      SQLITE_LIBS := -lsqlite3
+   endif
 endif
 
 

@@ -10,6 +10,11 @@ OPTIONS_BUILD_TESTS := yes
 # whether or not to use the log function from crlibm (which is faster than the standard log)
 OPTIONS_USE_CRLIBM := yes
 
+# if you installed boost or sqlite not system-wide but in a special location, set the installation
+# directory here. It is assumed that "include" and "lib" subdirectories exist there:
+#OPTIONS_SQLITEDIR:=/wlcg/sw/cms/experimental/slc5_ia32_gcc434/external/sqlite/3.6.10
+#OPTIONS_BOOSTDIR:=/wlcg/sw/boost/current
+
 OPTIONS_CFLAGS := -I/usr/local/include
 OPTIONS_LDFLAGS := -L/usr/local/lib
 

@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(getset){
         m.set(i, a);
     }
 
-    BOOST_CHECK(m.get_sum_of_bincontents()==sum);
+    BOOST_CHECK(utils::close_to_relative(m.get_sum_of_bincontents(),sum));
 
     for(size_t i=0; i<=nbins; i++){
         volatile double a = sqrt(i+0.0);
@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(getset){
     content += 1.7;
     BOOST_CHECK(content==m.get(1));
     sum += 1.7;
-    BOOST_CHECK(sum==m.get_sum_of_bincontents());
+    BOOST_CHECK(utils::close_to_relative(m.get_sum_of_bincontents(),sum));
 
     //fill in underflow:
     content = m.get(0);
@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE(getset){
     content += delta;
     BOOST_CHECK(content==m.get(0));
     sum += delta;
-    BOOST_CHECK(sum==m.get_sum_of_bincontents());
+    BOOST_CHECK(utils::close_to_relative(m.get_sum_of_bincontents(),sum));
 
     //fill in overflow:
     content = m.get(nbins+1);
@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE(getset){
     content += delta;
     BOOST_CHECK(content==m.get(nbins+1));
     sum += delta;
-    BOOST_CHECK(sum==m.get_sum_of_bincontents());
+    BOOST_CHECK(utils::close_to_relative(m.get_sum_of_bincontents(),sum));
 }
 
 //test +=

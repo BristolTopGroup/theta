@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(tl){
     }
     double ref = template_nllikelihood_reference(data, pred, N);
     double res = template_nllikelihood(data, pred, N);
-    BOOST_CHECK(utils::close_to_relative(ref, res));
+    BOOST_CHECK(utils::close_to(ref, res, 1.0));
     
     //check that inf is returned if pred is 0.0:
     pred[N/2] = 0.0;

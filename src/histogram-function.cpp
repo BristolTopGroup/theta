@@ -31,7 +31,7 @@ double HistogramFunctionUtils::read_normalize_to(const SettingWrapper & s){
       double norm = 1.0;
       if(size > 0){
           for(size_t i=0; i<size; ++i){
-              norm *= (double)s["normalize_to"][i];
+              norm *= static_cast<double>(s["normalize_to"][i]);
           }
       }
       else{

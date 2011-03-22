@@ -61,7 +61,7 @@ vector<string> get_column_names(sqlite3 * db, const string & table, const string
     sqlite3_stmt * statement = sqlite3_prepare(db, ss.str().c_str());
     int ret;  
     while((ret=sqlite3_step(statement))==SQLITE_ROW){
-        result.push_back((const char*)sqlite3_column_text(statement, 1));
+        result.push_back(reinterpret_cast<const char*>(sqlite3_column_text(statement, 1)));
     }
     sqlite3_finalize(statement);
     if(ret!=SQLITE_DONE){
@@ -80,7 +80,7 @@ vector<string> get_tables(sqlite3 * db, const string & database = ""){
     sqlite3_stmt * statement = sqlite3_prepare(db, ss.str().c_str());
     int ret;  
     while((ret=sqlite3_step(statement))==SQLITE_ROW){
-        result.push_back((const char*)sqlite3_column_text(statement, 0));
+        result.push_back(reinterpret_cast<const char*>(sqlite3_column_text(statement, 0)));
     }
     sqlite3_finalize(statement);
     if(ret!=SQLITE_DONE){

@@ -14,6 +14,9 @@ deps := $(patsubst %.cpp,.bin/%.d,$(sources)) .bin/histos.d .bin/db2root.d
 
 include ../Makefile.rules
 
+# just use -Wall here, do not warn about old-stryle casts, etc. Otherwise, we will be swamped by warnings
+# from root.
+WFLAGSCPP := -Wall
 EXTRA_COMPILE := $(shell root-config --cflags)
 EXTRA_LINK_SO := $(shell root-config --libs) -lMinuit2 $(shell root-config --ldflags)
 EXTRA_LINK_EXE := $(EXTRA_LINK_SO)

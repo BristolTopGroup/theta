@@ -27,7 +27,7 @@ endif
 
 ifneq ($(OPTIONS_BOOSTDIR),)
    BOOST_INCLUDE := -I$(OPTIONS_BOOSTDIR)/include
-   BOOST_LIBS := -L$(OPTIONS_BOOSTDIR)/libs
+   BOOST_LIBS := -L$(OPTIONS_BOOSTDIR)/lib
 # if available, use dependencies from CMSSW:
 else
    ifneq ($(shell which scram || echo -n A),A)
@@ -48,7 +48,7 @@ else
 endif
 
 ifneq ($(OPTIONS_SQLITEDIR),)
-   SQLITE_LIBS := -lsqlite3 -L$(OPTIONS_SQLITEDIR)
+   SQLITE_LIBS := -lsqlite3 -L$(OPTIONS_SQLITEDIR)/lib
    SQLITE_INCLUDE := -I$(OPTIONS_SQLITEDIR)/include
 else
    ifneq ($(shell which scram || echo -n A),A)
@@ -101,19 +101,22 @@ EXTRA_COMPILE :=
 EXTRA_LINK_EXE :=
 EXTRA_LINK_SO :=
 
+WFLAGSCPP := -Wall -Wctor-dtor-privacy -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -Wsign-promo
+WFLAGSC := -Wall
+
 #lazy evaluation of compile and link command to allow subdirectory-Makefiles to override the value of EXTRA_* ...
-COMPILE = echo creating $@; $(CXX) $(DEFINES) $(OPTIONS_CFLAGS) -g -c -Wall -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
+COMPILE = echo creating $@; $(CXX) $(DEFINES) $(OPTIONS_CFLAGS) -g -c -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
 LINK_EXE = echo linking $@; $(CXX) $(OPTIONS_LDFLAGS) -Wl,-R,'$$ORIGIN/../lib' -rdynamic -L../lib $(LDL) -ltheta -lconfig $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
 LINK_SO = echo linking $@; $(CXX) $(OPTIONS_LDFLAGS) -Wl,-R,'$$ORIGIN/../lib' -shared -rdynamic $(EXTRA_LINK_SO)
 
 .bin/%.o: %.cpp
-	@$(COMPILE) -o $@ $<
+	@$(COMPILE) $(WFLAGSCPP) -o $@ $<
 
 .bin/%.o: %.cxx
-	@$(COMPILE) -o $@ $<
+	@$(COMPILE) $(WFLAGSCPP) -o $@ $<
 
 .bin/%.o: %.c
-	@$(COMPILE) -x c -o $@ $<
+	@$(COMPILE) $(WFLAGSC) -x c -o $@ $<
 
 
 .bin/%.d: %.cpp

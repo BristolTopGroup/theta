@@ -6,6 +6,9 @@ deps := $(patsubst %.o,%.d,$(objects))
 
 include ../Makefile.rules
 
+#use fewer warning here:
+WFLAGSCPP := -Wall
+
 all: ../lib/libconfig.so
 
 ../lib/libconfig.so: $(objects)

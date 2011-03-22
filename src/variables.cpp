@@ -159,7 +159,7 @@ void VarIdManagerUtils::apply_settings(plugin::Configuration & ctx){
         double min = s["observables"][i]["range"][0].get_double_or_inf();
         double max = s["observables"][i]["range"][1].get_double_or_inf();
         unsigned int nbins = s["observables"][i]["nbins"];
-        ctx.vm->createObsId(obs_name, (size_t) nbins, min, max);
+        ctx.vm->createObsId(obs_name, static_cast<size_t>(nbins), min, max);
     }
     //get parameters:
     size_t npar = s["parameters"].size();

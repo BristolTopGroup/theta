@@ -81,9 +81,8 @@ const Setting & SettingWrapper::resolve_link(const Setting & setting, const Sett
 
 SettingWrapper::SettingWrapper(const libconfig::Setting & s, const libconfig::Setting & root,
                              const boost::shared_ptr<SettingUsageRecorder> & recorder):
-           rootsetting(root), rec(recorder), setting(resolve_link(s, rootsetting, rec)) {
+           rootsetting(root), rec(recorder), setting(resolve_link(s, rootsetting, rec)), setting_name("<noname>"){
     const char * name = s.getName();
     if(name) setting_name = name;
-    else setting_name = "<noname>";
 }
 

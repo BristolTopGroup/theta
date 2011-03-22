@@ -20,10 +20,10 @@ namespace{
       const size_t nbins_orig = nbins;
       //always allocate an even number of bins:
       if(nbins_orig % 2) ++nbins;
-      //for the add_fast routine, which ight use SSE optimizations, we need this alignment. And
+      //for the add_fast routine, which might use SSE optimizations, we need this alignment. And
       // while we at it, we should make sure double is as expected:
       BOOST_STATIC_ASSERT(sizeof(double)==8);
-      int err = posix_memalign((void**)(&result), 16, sizeof(double) * (nbins + 2));
+      int err = posix_memalign(reinterpret_cast<void**>(&result), 16, sizeof(double) * (nbins + 2));
       if(err!=0){
         throw std::bad_alloc();
       }

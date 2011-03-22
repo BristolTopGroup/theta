@@ -187,6 +187,20 @@ void merge(const string & file1, const string & file2){
     sqlite3_close(db);
 }
 
+
+namespace{
+    //note: these functions are useful to have compatibility
+    // with both V2 and V3 of boost::filesystem
+    // as in V2, path::filename returns a string whereas in
+    // V3, path::filename returns a path.
+    std::string to_string(const std::string & s){
+        return s;
+    }
+    std::string to_string(const fs::path & p){
+        return p.string();
+    }
+}
+
 /** searches path non-recursively for files matching pattern and fills the found files in \c files (prefixed with \c path).
  */
 void find_files(const string & path, const string & pattern, vector<string> & files){
@@ -198,11 +212,11 @@ void find_files(const string & path, const string & pattern, vector<string> & fi
   fs::directory_iterator end_itr;
   boost::regex pattern_regex(pattern);
   for (fs::directory_iterator itr(path); itr != end_itr; ++itr ) {
-      if(boost::regex_search(itr->leaf(), pattern_regex)) {
+      if(boost::regex_search(to_string(itr->path().filename()), pattern_regex)) {
           stringstream ss;
           ss << path;
           if(path[path.size()-1]!='/') ss << "/";
-          ss << itr->leaf();
+          ss << to_string(itr->path().filename());
           files.push_back(ss.str());
     }
   }

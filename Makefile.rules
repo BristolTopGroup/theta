@@ -25,12 +25,17 @@ else
    endif
 endif
 
+ifeq ($(shell which scram && echo -n A),A)
+HAVE_SCRAM:=yes
+endif
+
+
 ifneq ($(OPTIONS_BOOSTDIR),)
    BOOST_INCLUDE := -I$(OPTIONS_BOOSTDIR)/include
-   BOOST_LIBS := -L$(OPTIONS_BOOSTDIR)/lib
+   BOOST_LIBS := -L$(OPTIONS_BOOSTDIR)/lib -lboost_system -lboost_filesystem -lboost_regex -lboost_program_options
 # if available, use dependencies from CMSSW:
 else
-   ifneq ($(shell which scram || echo -n A),A)
+   ifeq ($(HAVE_SCRAM),yes)
       scram = $(shell cd $$CMSSW_BASE; scram tool tag $(1) $(2))
       BOOST_INCLUDE := -I$(call scram,boost,INCLUDE)
       BOOST_LIBLIST := $(call scram,boost,LIB) $(call scram,boost_filesystem,LIB) $(call scram,boost_program_options,LIB) $(call scram,boost_regex,LIB)
@@ -51,7 +56,7 @@ ifneq ($(OPTIONS_SQLITEDIR),)
    SQLITE_LIBS := -lsqlite3 -L$(OPTIONS_SQLITEDIR)/lib
    SQLITE_INCLUDE := -I$(OPTIONS_SQLITEDIR)/include
 else
-   ifneq ($(shell which scram || echo -n A),A)
+   ifeq ($(HAVE_SCRAM),yes)
       SQLITE_LIBLIST := $(call scram,sqlite,LIB)
       SQLITE_LIBS := $(patsubst %,-l%,$(SQLITE_LIBLIST)) -L$(call scram,sqlite,LIBDIR)
       SQLITE_INCLUDE := -I$(call scram,sqlite,INCLUDE)
@@ -101,7 +106,7 @@ EXTRA_COMPILE :=
 EXTRA_LINK_EXE :=
 EXTRA_LINK_SO :=
 
-WFLAGSCPP := -Wall -Wctor-dtor-privacy -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -Wsign-promo
+WFLAGSCPP := -Wall -Wctor-dtor-privacy -Wnon-virtual-dtor -Woverloaded-virtual -Wsign-promo
 WFLAGSC := -Wall
 
 #lazy evaluation of compile and link command to allow subdirectory-Makefiles to override the value of EXTRA_* ...

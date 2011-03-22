@@ -88,6 +88,20 @@ string get_theta_dir(char** argv){
 }
 
 
+namespace{
+    //note: these functions are useful to have compatibility
+    // with both V2 and V3 of boost::filesystem
+    // as in V2, path::filename returns a string whereas in
+    // V3, path::filename returns a path.
+    std::string to_string(const std::string & s){
+        return s;
+    }
+    std::string to_string(const fs::path & p){
+        return p.string();
+    }
+}
+
+
 boost::shared_ptr<Main> build_main(string cfg_filename, const string & theta_dir, bool nowarn){
     Config cfg;
     boost::shared_ptr<SettingUsageRecorder> rec(new SettingUsageRecorder());
@@ -103,7 +117,7 @@ boost::shared_ptr<Main> build_main(string cfg_filename, const string & theta_dir
                  if(fs::path(cfg_filename).has_parent_path()){
                     fs::current_path(fs::path(cfg_filename).parent_path());
                  }
-                 cfg_filename = fs::path(cfg_filename).filename();
+                 cfg_filename = to_string(fs::path(cfg_filename).filename());
             }
             catch(fs::filesystem_error & ex){
                  throw FileIOException();

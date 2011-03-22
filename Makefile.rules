@@ -25,7 +25,7 @@ else
    endif
 endif
 
-ifeq ($(shell which scram > /dev/null && echo -n A),A)
+ifneq ($(shell echo -n $$CMSSW_BASE),)
    HAVE_SCRAM:=yes
 endif
 

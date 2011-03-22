@@ -25,10 +25,9 @@ else
    endif
 endif
 
-ifeq ($(shell which scram && echo -n A),A)
-HAVE_SCRAM:=yes
+ifeq ($(shell which scram > /dev/null && echo -n A),A)
+   HAVE_SCRAM:=yes
 endif
-
 
 ifneq ($(OPTIONS_BOOSTDIR),)
    BOOST_INCLUDE := -I$(OPTIONS_BOOSTDIR)/include

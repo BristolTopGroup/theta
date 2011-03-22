@@ -176,6 +176,9 @@
  *   can use root's MINUIT implementation.</li>
  * </ol>
  *
+ * These dependencies are enough to get %theta itself work. There are additional dependencies for test and plotting scripts, namely
+ * python, including python-sqlite, numpy, scipy and matplotlib.
+ *
  * The recommended way to compile %theta is to use cross-platform make, <a href="http://www.cmake.org/">CMake</a>.
  * In order not to overwrite the hand-written Makefiles included in %theta, do an "out-of-source" build withing another directory, e.g. "build":
  * <pre>
@@ -185,10 +188,10 @@
  *  make
  * </pre>
  *
- * It is also possible to compile %theta using Makefiles. However, note that these are simple, hand-written Makefiles
- * which do not work on all platforms correctly.
+ * It is also possible to compile %theta using Makefiles. However, note that these are quite simple Makefiles
+ * which do not work on all platforms.
  *
- * \subsection Build options
+ * \subsection build_options Build options
  *
  * There are several build-time options. Usually, you do not have to change the default settings.
  *
@@ -238,6 +241,20 @@
  *
  * <tt>CMSSW_3_8_4</tt> is an example, you can pick another version. It is recommended to pick a recent one, and -- if you can -- a 64-bit version.
  * Reports about failing builds (and of course, patches for these), are always welcome.
+ *
+ * \section platforms Supported Platforms / Libraries
+ *
+ * %theta should work with any recent linux distribution. In some cases, it is necessary to manually install
+ * boost or sqlite, adapt "Makefile.options" to make the installation path known to %theta and set the
+ * LD_LIBRARY_PATH environment variable.
+ *
+ * It is regularly tested with
+ * <ul>
+ *   <li>Ubuntu Lucid (10.04), with boost and sqlite libraries shipped, and root 5.28.00.</li>
+ *   <li>Scientific Linux CERN (SLC) 5.5. In this case, SLC-shipped version of boost is too old (1.33.1, released in 2006).
+ *     Either setup CMSSW to use root/boost/sqlite from there (tested with CMSSW_3_8_7 on slc5_ia32_gcc434) or install boost, root and
+ *     and sqlite manually.</li>
+ * </ul>
  */
 
 /**

@@ -2,6 +2,7 @@
 #include "interface/histogram.hpp"
 #include "interface/phys.hpp"
 #include "interface/model.hpp"
+#include "interface/redirect_stdio.hpp"
 
 #include <iomanip>
 
@@ -56,14 +57,14 @@ void Run::run(){
     if(log_report){
         const int* n_messages = logtable->get_n_messages();
         LogTable::e_severity s = logtable->get_loglevel();
-        cout << endl << endl << "Log report:" << endl;
-        cout << "  errors:   " << setw(6) << n_messages[0] << endl;
+        theta::cout << endl << endl << "Log report:" << endl;
+        theta::cout << "  errors:   " << setw(6) << n_messages[0] << endl;
         if(s > 0)
-            cout << "  warnings: " << setw(6) << n_messages[1] << endl;
+            theta::cout << "  warnings: " << setw(6) << n_messages[1] << endl;
         if(s > 1)
-            cout << "  infos:    " << setw(6) << n_messages[2] << endl;
+            theta::cout << "  infos:    " << setw(6) << n_messages[2] << endl;
         if(s > 2)
-            cout << "  debug:    " << setw(6) << n_messages[3] << endl;
+            theta::cout << "  debug:    " << setw(6) << n_messages[3] << endl;
     }
 }
 

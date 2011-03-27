@@ -35,6 +35,7 @@ endif()
 
 
 if(NOT generic)
+  enable_language(ASM-ATT)
   if(NOT "${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64" OR NOT CMAKE_ASM-ATT_COMPILER_WORKS)
       message(STATUS "non-optimized platform / assembler not working; enabling 'generic' option")
       set(generic ON)
@@ -49,7 +50,7 @@ else()
    enable_language(ASM-ATT)
 endif()
 
-find_package(Boost COMPONENTS regex program_options filesystem system)
+find_package(Boost COMPONENTS regex program_options filesystem system iostreams)
 
 if(NOT Boost_FOUND)
    message(SEND_ERROR "boost not found")

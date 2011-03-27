@@ -148,28 +148,23 @@ void ParValues::fail_get(const ParId & pid) const{
 
 void VarIdManagerUtils::apply_settings(plugin::Configuration & ctx){
     SettingWrapper s = ctx.setting;
-    size_t nobs = s["observables"].size();
-    if (nobs == 0){
-        stringstream ss;
-        ss << "No observables defined in " << s["observables"].getPath();
-        throw ConfigurationException(ss.str());
+    if(s.exists("observables")){
+        size_t nobs = s["observables"].size();
+        for (size_t i = 0; i < nobs; ++i) {
+            string obs_name = s["observables"][i].getName();
+            double min = s["observables"][i]["range"][0].get_double_or_inf();
+            double max = s["observables"][i]["range"][1].get_double_or_inf();
+            unsigned int nbins = s["observables"][i]["nbins"];
+            ctx.vm->createObsId(obs_name, static_cast<size_t>(nbins), min, max);
+        }
     }
-    for (size_t i = 0; i < nobs; i++) {
-        string obs_name = s["observables"][i].getName();
-        double min = s["observables"][i]["range"][0].get_double_or_inf();
-        double max = s["observables"][i]["range"][1].get_double_or_inf();
-        unsigned int nbins = s["observables"][i]["nbins"];
-        ctx.vm->createObsId(obs_name, static_cast<size_t>(nbins), min, max);
-    }
-    //get parameters:
-    size_t npar = s["parameters"].size();
-    if (npar == 0){
-        stringstream ss;
-        ss << "No parameters defined in " << s["parameters"].getPath();
-        throw ConfigurationException(ss.str());
-    }
-    for (size_t i = 0; i < npar; i++) {
-        string par_name = s["parameters"][i];
-        ctx.vm->createParId(par_name);
+    if(s.exists("parameters")){
+        //get parameters:
+        size_t npar = s["parameters"].size();
+        for (size_t i = 0; i < npar; i++) {
+            string par_name = s["parameters"][i];
+            ctx.vm->createParId(par_name);
+        }
     }
 }
+

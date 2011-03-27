@@ -31,14 +31,14 @@ endif
 
 ifneq ($(OPTIONS_BOOSTDIR),)
    BOOST_INCLUDE := -I$(OPTIONS_BOOSTDIR)/include
-   BOOST_LIBS := -L$(OPTIONS_BOOSTDIR)/lib -lboost_system -lboost_filesystem -lboost_regex -lboost_program_options
+   BOOST_LIBS := -L$(OPTIONS_BOOSTDIR)/lib -lboost_system -lboost_filesystem -lboost_regex -lboost_program_options -lboost_iostreams
 # if available, use dependencies from CMSSW:
 else
    ifeq ($(HAVE_SCRAM),yes)
       scram = $(shell cd $$CMSSW_BASE; scram tool tag $(1) $(2))
       BOOST_INCLUDE := -I$(call scram,boost,INCLUDE)
       BOOST_LIBLIST := $(call scram,boost,LIB) $(call scram,boost_filesystem,LIB) $(call scram,boost_program_options,LIB) $(call scram,boost_regex,LIB)
-      BOOST_LIBS := -L$(call scram,boost,LIBDIR) $(patsubst %,-l%,$(BOOST_LIBLIST))
+      BOOST_LIBS := -L$(call scram,boost,LIBDIR) $(patsubst %,-l%,$(BOOST_LIBLIST)) -lboost_iostreams
    # otherwise: assume dependencies are installed system-wide and no paths have to be set explicitely:
    else
       BOOST_INCLUDE:=
@@ -47,7 +47,7 @@ else
       ifeq ($(shell test -e /usr/lib/libboost_system-mt.so && echo -n A),A)
          BS:=-mt
       endif
-      BOOST_LIBS := -lboost_filesystem$(BS) -lboost_regex$(BS) -lboost_program_options$(BS) -lboost_thread$(BS) -lboost_system$(BS) -lboost_serialization$(BS)
+      BOOST_LIBS := -lboost_filesystem$(BS) -lboost_regex$(BS) -lboost_program_options$(BS) -lboost_thread$(BS) -lboost_system$(BS) -lboost_iostreams$(BS)
    endif
 endif
 

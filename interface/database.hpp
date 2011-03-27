@@ -14,9 +14,80 @@
 
 namespace theta {
 
-/** \brief Abstract database class, where one or more tables can reside
+
+/** \brief Abstract class for data input
  *
- * This is an abstract class to be used via the plugin system.
+ * A database in theta is a collection of tables. Tables are identified by a unique name
+ * within the database and can contain an arbitrary number of columns (identified by name) of type double, int, string and
+ * Histogram.
+ *
+ * This is an abstract class. Concrete instances can be retrieved via the plugin system using
+ * this class a template argument to PluginManager.
+ */
+class DatabaseInput: private boost::noncopyable{
+public:
+
+    /// Required for the plugin system
+    typedef DatabaseInput base_type;
+    
+    /** \brief Iterator-like class to step through the result of a Database query
+     */
+    class ResultIterator: private boost::noncopyable{
+    public:
+        /** \brief Retrieve next row in the table
+         *
+         * If there is no next row, a subsequent call to has_data() will return false.
+         *
+         * In case of an error, a DatabaseException is thrown.
+         */
+        virtual void operator++() = 0;
+        
+        /** \brief Returns true iff this iterator points to a valid column containing data
+         *
+         * Returns false if there are no more result columns
+         */
+        virtual bool has_data() = 0;
+        
+        //@{
+        /** \brief Retrieve the column values of the current row
+         *
+         * Before calling any of these, make sure has_data() returns true.
+         *
+         * The column index argument is zero-based and refers to the column_names vector
+         * passed to DatabaseInput::query.
+         *
+         * In case of type mismatch, a DatabaseException is thrown.
+         */
+        virtual double get_double(size_t icol) = 0;
+        virtual int get_int(size_t icol) = 0;
+        virtual theta::Histogram get_histogram(size_t icol) = 0;
+        virtual std::string get_string(size_t icol) = 0;
+        //@}
+        
+        virtual ~ResultIterator(){}
+    };
+
+    /** \brief Select some columns from a table
+     *
+     * the returned ResultIterator points to the first result row (if any), i.e.,
+     * call has_data and get_* on it first to get the result of the first row and *then* ResultIterator::operator++().
+     *
+     * In case of an error, a DatabaseException is thrown.
+     */
+    virtual std::auto_ptr<ResultIterator> query(const std::string & table_name, const std::vector<std::string> & column_names) = 0;
+    virtual ~DatabaseInput(){}
+
+};
+
+
+/** \brief Abstract database class for data output
+ *
+ * A database in theta is a collection of tables. Tables are identified by a unique name
+ * within the database and can contain an arbitrary number of columns (identified by name) of type double, int, string and
+ * Histogram.
+ *
+ * This is an abstract class. Concrete instances can be retrieved via the plugin system using
+ * this class a template argument to PluginManager.
  */
 class Database: private boost::noncopyable, public boost::enable_shared_from_this<Database> {
 public:
@@ -57,7 +128,7 @@ protected:
 
 
 
-/** \brief Abstract base class for all tables stored in a Database
+/** \brief Abstract class for a table in a Database
  *
  * Tables are always constrcuted via a Datase instance. Once created, it can be used by:
  * <ol>
@@ -69,8 +140,8 @@ protected:
  *
  * After the first call of set_column or add_row, to more calls to add_column are allowed.
  *
- * To meet this specification, derived classes will defer the actual table creation in the underlying
- * model until the first call of set_column or add_row. Note that even if no rows are added via add_row,
+ * To meet this specification, derived classes will usually defer the actual table creation in the underlying
+ * implementation until the first call of set_column or add_row. Note that even if no rows are added via add_row,
  * the table must still be created.
  */
 class Table: private boost::noncopyable {

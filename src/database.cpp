@@ -10,6 +10,7 @@ using namespace std;
 using namespace theta;
 
 REGISTER_PLUGIN_BASETYPE(theta::Database);
+REGISTER_PLUGIN_BASETYPE(theta::DatabaseInput);
 
 void Database::check_name(const string & column_name) {
     if (column_name.size() == 0)

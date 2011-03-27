@@ -19,6 +19,7 @@ namespace theta{
     
     //database.hpp
     class Database;
+    class DatabaseInput;
     class Table;
     class Column;
     class ProductsTable;

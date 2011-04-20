@@ -5,8 +5,6 @@
 #include "interface/histogram.hpp"
 #include "interface/distribution.hpp"
 
-#include <sstream>
-
 using namespace theta;
 using namespace std;
 using namespace libconfig;
@@ -26,8 +24,6 @@ class MCMCPosteriorRatioResult{
             n.push_back(n_);
             n_total += n_;
         }
-        
-        void end(){}
         
         //return the negative logarithm of the average posterior
         double get_nl_average_posterior(){
@@ -67,19 +63,16 @@ void mcmc_posterior_ratio::produce(const theta::Data & data, const theta::Model 
     }
     
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
-    double nl_posterior_sb, nl_posterior_b;
-    nl_posterior_sb = NAN;
-    nl_posterior_b = NAN;
     
     //a. calculate s plus b:
     MCMCPosteriorRatioResult res_sb(nll->getnpar());
     metropolisHastings(*nll, res_sb, *rnd_gen, startvalues_sb, sqrt_cov_sb, iterations, burn_in);
-    nl_posterior_sb = res_sb.get_nl_average_posterior();
+    double nl_posterior_sb = res_sb.get_nl_average_posterior();
 
     //b. calculate b only:
     MCMCPosteriorRatioResult res_b(nll->getnpar());
     metropolisHastings(*nll, res_b, *rnd_gen, startvalues_b, sqrt_cov_b, iterations, burn_in);
-    nl_posterior_b = res_b.get_nl_average_posterior();
+    double nl_posterior_b = res_b.get_nl_average_posterior();
 
     if(std::isnan(nl_posterior_sb) || std::isnan(nl_posterior_b)){
         throw Exception("average posterior was NAN");

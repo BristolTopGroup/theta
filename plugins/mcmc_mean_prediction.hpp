@@ -1,5 +1,5 @@
-#ifndef PLUGIN_MCMC_MEAN_PREDICTION_HPP
-#define PLUGIN_MCMC_MEAN_PREDICTION_HPP
+#ifndef PLUGINS_MCMC_MEAN_PREDICTION_HPP
+#define PLUGINS_MCMC_MEAN_PREDICTION_HPP
 
 #include "interface/decls.hpp"
 #include "interface/variables.hpp"

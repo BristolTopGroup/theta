@@ -1,5 +1,5 @@
-#ifndef PLUGIN_MCMC_POSTERIOR_RATIO_HPP
-#define PLUGIN_MCMC_POSTERIOR_RATIO_HPP
+#ifndef PLUGINS_MCMC_POSTERIOR_RATIO_HPP
+#define PLUGINS_MCMC_POSTERIOR_RATIO_HPP
 
 #include "interface/decls.hpp"
 #include "interface/database.hpp"

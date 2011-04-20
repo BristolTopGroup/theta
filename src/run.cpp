@@ -26,6 +26,10 @@ void Run::run(){
         catch(DataSource::DataUnavailable &){
             break;
         }
+        catch(theta::Exception & ex){
+           ex.message += " (in Run::run while throwing toy data)";
+           throw;
+        }
         logtable->append(runid, eventid, LogTable::info, "start");
         bool error = false;
         for (size_t j = 0; j < producers.size(); j++) {

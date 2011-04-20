@@ -18,8 +18,7 @@
 using namespace std;
 
 namespace theta{
-    
-    
+
 void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
     size_t npar_reduced = cov.getRows();
     size_t npar = npar_reduced;
@@ -68,65 +67,6 @@ void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
     }
 }
 
-/*
-Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> & startvalues,
-                    const boost::shared_ptr<VarIdManager> & vm){
-    const size_t n = nll.getnpar();
-    const size_t max_passes = 20;
-    const size_t iterations = 8000;
-    Matrix sqrt_cov(n, n);
-    Matrix cov(n, n);
-    startvalues.resize(n);
-    //a first estimate of the matrix: use the step width determination of the
-    // minimizer:
-    ParIds par_ids = nll.getParameters();
-    assert(par_ids.size() == n); //should hold by construction of NLLikelihood::getnpar()
-    size_t k=0;
-    int n_fixed_parameters = 0;
-    const Distribution & dist = nll.get_parameter_distribution();
-    ParValues pv_start;
-    dist.mode(pv_start);
-    ParIds fixed_pars;
-    for(ParIds::const_iterator it = par_ids.begin(); it!=par_ids.end(); ++it, ++k){
-        double width = dist.width(*it) * 2.38 / sqrt(n);
-        startvalues[k] = pv_start.get(*it);
-        if(width==0.0){
-            ++n_fixed_parameters;
-            fixed_pars.insert(*it);
-            
-        }
-        cov(k, k) = width*width;
-    }
-    assert(k==n);
-    get_cholesky(cov, sqrt_cov, static_cast<int>(n) - n_fixed_parameters);
-    
-    vector<double> jump_rates;
-    jump_rates.reserve(max_passes);
-    Result res(n);
-    for (size_t i = 0; i < max_passes; i++) {
-        res.reset();
-        metropolisHastings(nll, res, rnd, startvalues, sqrt_cov, iterations, iterations/10);
-        startvalues = res.getMeans();
-        cov = res.getCov();
-        get_cholesky(cov, sqrt_cov, static_cast<int>(n) - n_fixed_parameters);
-        double previous_jump_rate = jump_rates.size()?jump_rates.back():2.0;
-        double jump_rate;
-        jump_rates.push_back(jump_rate = static_cast<double>(res.getCountDifferent()) / res.getCount());
-        //if jump rate looks reasonable and did not change too much in the last iteration: break:
-        if(jump_rate > 0.1 and jump_rate < 0.5 and fabs((previous_jump_rate - jump_rate) / jump_rate) < 0.05) break;
-        //TODO: more diagnostics(?) startvalues should not change too much, covariance should not change too much. However,
-        // what's a good measure of equality here? Relative difference of eigenvalues and angular distance between the eigenvectors?
-    }
-    if(jump_rates.size()==max_passes){
-        stringstream ss;
-        ss << "get_sqrt_cov: covariance estimate did not really converge; jump rates were: ";
-        for(size_t i=0; i<max_passes; ++i){
-            ss << jump_rates[i] << "; ";
-        }
-        throw Exception(ss.str());
-    }
-    return sqrt_cov;
-} */
 
 Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & startvalues,
                     const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,

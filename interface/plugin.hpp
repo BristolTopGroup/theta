@@ -202,7 +202,7 @@ namespace theta {
                 }catch (Exception & ex) {
                     std::stringstream ss;
                     ss << "Error while constructing plugin according to configuration path '" << ctx.setting.getPath()
-                       << "', (type='" << type << "'): " << ex.message;
+                       << "' (type='" << type << "'): " << ex.message;
                     ex.message = ss.str();
                     throw;
                 }

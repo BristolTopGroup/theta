@@ -16,12 +16,6 @@ void Result::reset() {
     count = count_different_points = 0;
 }
 
-Result::~Result() {
-}
-
-void Result::end() {
-}
-
 void Result::fill(const double * p, double nll, size_t weight){
     //factor for the covariance ...
     double factor = count * 1.0 / (count + 1);

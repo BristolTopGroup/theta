@@ -57,8 +57,6 @@ class MCMCMeanPredictionResult{
             }
         }
 
-        void end(){}
-        
         void get_mean_width(Histogram & mean, Histogram & width, const ObsId & oid) const{
            const Histogram & h_sum = sum[oid];
            const Histogram & h_squaresum = squaresum[oid];
@@ -98,10 +96,6 @@ void mcmc_mean_prediction::produce(const Data & data, const Model & model) {
             //get the covariance for average data:
             sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, vm);
             init = true;
-        }
-        catch(NotFoundException & ex){
-            ex.message = "initialization failed: " + ex.message + " (did you specify widths for all unbound parameters?)";
-            throw FatalException(ex);
         }
         catch(Exception & ex){
             ex.message = "initialization failed: " + ex.message;

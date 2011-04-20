@@ -93,29 +93,40 @@ theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boos
         //Now, one of the interval ends has to be infinite, otherwise we would not be here.
         //Scan in that direction:
         assert(std::isinf(support.first) || std::isinf(support.second));
-        const double sign = std::isinf(support.first) ? -1.0 : +1.0;
-        // as step size, try the parameter value, if it is not zero:
-        double step = pid_mode;
-        if(step==0) step = 1.0;
         bool found = false;
-        for(int i=0; i<20; ++i){
-            double fval = f(pid_mode + sign * step);
-            step *= 2.0;
-            if(fval > 0){
-                double xlow, xhigh, flow, fhigh;
-                xlow = pid_mode; flow = -0.5;
-                xhigh = pid_mode + sign * step; fhigh = fval;
-                if(sign < 0){
-                    std::swap(xlow, xhigh);
-                    std::swap(flow, fhigh);
+        for(double sign = -1.0; sign <= 1.001; sign+=2.0){
+            if(!std::isinf(support.first) && sign < 0) continue;
+            if(!std::isinf(support.second) && sign > 0) continue;
+            // as step size, try the parameter value, if it is not zero:
+            double step = fabs(pid_mode);
+            if(step==0) step = 1.0;
+            for(int i=0; i<1000; ++i){
+                double fval = f(pid_mode + sign * step);
+                if(isinf(fval)){
+                    step /= 1.5;
+                    continue;
                 }
-                result.set(pid, fabs(pid_mode - secant(xlow, xhigh, 0.0, flow, fhigh, 0.05, f)));
-                found = true;
-                break;
+                step *= 2.0;
+                if(fval > 0){
+                    double xlow, xhigh, flow, fhigh;
+                    xlow = pid_mode; flow = -0.5;
+                    xhigh = pid_mode + sign * step; fhigh = fval;
+                    if(sign < 0){
+                        std::swap(xlow, xhigh);
+                        std::swap(flow, fhigh);
+                    }
+                    assert(xlow <= xhigh);
+                    result.set(pid, fabs(pid_mode - secant(xlow, xhigh, 0.0, flow, fhigh, 0.05, f)));
+                    found = true;
+                    break;
+                }
             }
+            if(found) break;
         }
         if(found) continue;
-        throw Exception("asimov_likelihood_widths: could not find width.");
+        stringstream ss;
+        ss << "asimov_likelihood_widths: could not find width for parameter " << pid;
+        throw Exception(ss.str());
     }
     return result;
 }

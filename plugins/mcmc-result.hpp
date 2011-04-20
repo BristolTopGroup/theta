@@ -1,5 +1,5 @@
-#ifndef RESULT_H
-#define RESULT_H
+#ifndef PLUGINS_MCMC_RESULT_HPP
+#define PLUGINS_MCMC_RESULT_HPP
 
 #include <algorithm>
 #include <vector>
@@ -14,16 +14,16 @@ namespace theta {
      */
     class Result {
     protected:
-        /// number of parameters of the likelihood function
+        // number of parameters of the likelihood function
         size_t npar;
         
-        /// number of total points in the chain (including rejected proposal points)
+        // number of total points in the chain (including rejected proposal points)
         size_t count;
         
-        /// number of different points in the chain, i.e., not counting rejected proposal points
+        // number of different points in the chain, i.e., not counting rejected proposal points
         size_t count_different_points;
         
-        /// sliding mean of the parameter values in the chain
+        // sliding mean of the parameter values in the chain
         std::vector<double> means;
         
         // sliding covariance times count
@@ -34,13 +34,10 @@ namespace theta {
         Result(size_t npar);
         
         /// Declare destructor virtual to allow polymorphic access to derived classes
-        virtual ~Result();
+        virtual ~Result(){}
         
         /// Reset everything to collect data from a new chain
         void reset();
-        
-        /// Called by metropolisHastings at the end of a chain, here a no-op
-        void end();
         
         /** \brief fill a new chain point with the given parameter values, nll value and weight
          *
@@ -60,7 +57,7 @@ namespace theta {
         /// Returns the number of different point in the chain, i.e., not including rejected proposals
         size_t getCountDifferent() const;
         
-        // Returns the mean of the parameter values in the chain
+        /// Returns the mean of the parameter values in the chain
         std::vector<double> getMeans() const;
         
         /// Returns the covariance matrix of the parameter values in the chain

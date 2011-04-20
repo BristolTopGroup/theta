@@ -1,7 +1,8 @@
 #ifndef REDIRECT_STDIO_HPP
 #define REDIRECT_STDIO_HPP
 
-
+// the code was written and tested with boost 1.42. FOr later boost versions, this line is necessary:
+#define BOOST_IOSTREAMS_USE_DEPRECATED
 
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
@@ -14,7 +15,7 @@ namespace theta{
  * or error messages while opening files, in short, errors which are checked for anyway and just add noise
  * and confusion.
  *
- * To shut them up, the a call to redict_stdio will:
+ * To shut them up, a call to redict_stdio will:
  * <ul>
  *   <li>Duplicate the current stdout / stderr to file descriptors used by theta::cout and theta::cerr. The only possibility to write 
  *       to stdout / stderr always is through theta::cerr and theta::cout.</li>

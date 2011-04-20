@@ -1,5 +1,5 @@
-#ifndef THETA_MCMC_HPP
-#define THETA_MCMC_HPP
+#ifndef PLUGINS_MCMC_HPP
+#define PLUGINS_MCMC_HPP
 
 #include "interface/matrix.hpp"
 #include "interface/exception.hpp"
@@ -24,7 +24,6 @@ namespace theta {
  *       chain has <tt>n</tt> points at parameter values <tt>x</tt> and negative logarithm value of <tt>nll</tt>. What
  *       the result object does with this information is not of our concern here. Typically, it will either save the complete
  *       chain or fill the x values into a histogram</li>
- *   <li><tt>void end()</tt> is called after the chain is complete. Any cleanup necessary can be done here.
  * </ul>
  * @param rand is the random number generator to use to compute the next candidate point of the chain.
  *   It has to implement the <tt>double gauss()</tt> and <tt>double uniform()</tt>
@@ -101,10 +100,8 @@ void metropolisHastings(const nlltype & nllikelihood, resulttype &res, Random & 
         }
     }
     res.fill(x.get(), nll, weight);
-    res.end();
 }
-    
-    
+
 /** \brief estimate the square root (cholesky decomposition) of the covariance matrix of the likelihood function
  *
  * The method will start a Markov chain at the given startvalues with the \c iterations iterations.
@@ -119,8 +116,7 @@ void metropolisHastings(const nlltype & nllikelihood, resulttype &res, Random & 
 Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & startvalues,
                     const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,
                     const boost::shared_ptr<VarIdManager> & vm);
-//Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> & startvalues, const boost::shared_ptr<VarIdManager> & vm);
-   
+
 /** \brief Calculate the cholesky decomposition, but allow zero eigenvalues.
  *
  *
@@ -133,7 +129,6 @@ Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & st
  * is negative, no check will be done.
  */
 void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced = -1);
-
 
 }
 

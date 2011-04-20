@@ -30,8 +30,6 @@ class MCMCPosteriorQuantilesResult{
                par_values.push_back(x[ipar]);
             }
         }
-
-        void end(){}
         
         //return the quantile q
         double get_quantile(double q){
@@ -62,12 +60,7 @@ void mcmc_quantiles::produce(const Data & data, const Model & model) {
                 if(*it == par_id) break;
             }
             //now ipar has the correct value ...
-            
             init = true;
-        }
-        catch(NotFoundException & ex){
-            ex.message = "initialization failed: " + ex.message + " (did you specify widths for all unbound parameters?)";
-            throw FatalException(ex);
         }
         catch(Exception & ex){
             ex.message = "initialization failed: " + ex.message;
@@ -115,3 +108,4 @@ mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Produc
 }
 
 REGISTER_PLUGIN(mcmc_quantiles)
+

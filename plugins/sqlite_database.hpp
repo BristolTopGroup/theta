@@ -130,6 +130,7 @@ private:
         };
         
         class sqlite_autoinc_column: public theta::Column{
+        public:
             virtual ~sqlite_autoinc_column(){}
         };
     };

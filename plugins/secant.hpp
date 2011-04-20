@@ -3,6 +3,10 @@
 
 #include "interface/exception.hpp"
 
+
+#include <iomanip>
+using namespace std;
+
 /** \brief The secant method to find the root of a one-dimensional function
  *
  * \param x_low The lower end of the start interval
@@ -18,14 +22,18 @@
  *
  * Note that the function values at x_low and x_high must have different sign. Otherwise,
  * an InvalidArgumentException will be thrown.
+ * All x and function values mus be finite.
  */
 template<typename T>
 double secant(double x_low, double x_high, double x_accuracy, double f_x_low, double f_x_high, double f_accuracy, const T & function){
+    assert(isfinite(x_low) && isfinite(x_high));
     assert(x_low <= x_high);
+    assert(isfinite(f_x_low) && isfinite(f_x_high));
     if(f_x_low * f_x_high >= 0) throw theta::InvalidArgumentException("secant: function values have the same sign!");
-    
-    const double old_interval_length = x_high - x_low;
-    
+    if(fabs(f_x_low) <= f_accuracy) return x_low;
+    if(fabs(f_x_high) <= f_accuracy) return x_high;
+
+    const double old_interval_length = x_high - x_low;    
     //calculate intersection point for secant method:
     double x_intersect = x_low - (x_high - x_low) / (f_x_high - f_x_low) * f_x_low;
     assert(x_intersect >= x_low);
@@ -33,8 +41,6 @@ double secant(double x_low, double x_high, double x_accuracy, double f_x_low, do
     if(old_interval_length < x_accuracy){
         return x_intersect;
     }
-    if(fabs(f_x_low) < f_accuracy) return x_low;
-    if(fabs(f_x_high) < f_accuracy) return x_high;
     double f_x_intersect = function(x_intersect);
     double f_mult = f_x_low * f_x_intersect;
     //fall back to bisection if the new interval would not be much smaller:

@@ -32,6 +32,7 @@ public:
     ~sqlite_database_in();
     
     virtual std::auto_ptr<ResultIterator> query(const std::string & table_name, const std::vector<std::string> & column_names);
+    virtual size_t n_rows(const std::string & table_name);
     
 private:
    class SqliteResultIterator: public DatabaseInput::ResultIterator{
@@ -40,9 +41,7 @@ private:
        sqlite3_stmt * statement;
        bool has_data_;
    public:
-       SqliteResultIterator(sqlite3_stmt * st, sqlite3 * db_): db(db_), statement(st){
-           operator++();
-       }
+       SqliteResultIterator(sqlite3_stmt * st, sqlite3 * db_);
        ~SqliteResultIterator(){
            sqlite3_finalize(statement);
        }

@@ -26,7 +26,7 @@
  *
  * \c filename is the filename of the sqlite3 output file. It is a path relative to the path where theta is invoked
  *
- * \c products_data is a list of column names to save. The default is to save all columns which can
+ * \c products_data is a list of column names to save in the 'products' table. The default is to save all columns which can
  *    be configured by setting it to "*". Note that the 'runid' and 'eventid' columns will always be saved.
  *
  * If the file already exists, it is overwritten silently.

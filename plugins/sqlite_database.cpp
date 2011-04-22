@@ -13,6 +13,13 @@ using namespace theta;
 sqlite_database::sqlite_database(const plugin::Configuration & cfg) :
     db(0), transaction_active(false), save_all_products(true){
     std::string filename = cfg.setting["filename"];
+    //note: optimize is not documented on purpose: the default should be perfectly Ok for an average user, as
+    // we do not rely on any SQL integrity on crash anyway: we use one large transaction, so crashing
+    // it in the middle will not help at all ...
+    bool optimize = true;
+    if(cfg.setting.exists("optimize")){
+        optimize = cfg.setting["optimize"];
+    }
     if(cfg.setting.exists("products_data")){
       try{
          string s = cfg.setting["products_data"];
@@ -46,6 +53,10 @@ sqlite_database::sqlite_database(const plugin::Configuration & cfg) :
         stringstream ss;
         ss << "sqlite_database constructor failed (filename=\"" << filename << "\") with SQLITE code " << res;
         error(ss.str());//throws.
+    }
+    if(optimize){
+        exec("PRAGMA journal_mode=OFF");
+        exec("PRAGMA synchronous=OFF");
     }
     beginTransaction();
 }
@@ -81,14 +92,14 @@ sqlite_database::~sqlite_database() {
 
 void sqlite_database::beginTransaction() {
     if(!transaction_active){
-        exec("BEGIN;");
+        exec("BEGIN");
         transaction_active = true;
     }
 }
 
 void sqlite_database::endTransaction() {
     if (transaction_active)
-        exec("END;");
+        exec("END");
     transaction_active = false;
 }
 
@@ -126,7 +137,7 @@ sqlite3_stmt* sqlite_database::prepare(const string & sql) {
 
 void sqlite_database::error(const string & functionName) {
     stringstream ss;
-    ss << "Error in function " << functionName << ": Database said '" << sqlite3_errmsg(db) << "'";
+    ss << "in function " << functionName << ": sqlite said '" << sqlite3_errmsg(db) << "'";
     throw DatabaseException(ss.str());
 }
 
@@ -160,7 +171,7 @@ std::auto_ptr<Column> sqlite_database::sqlite_table::add_column(const std::strin
         case typeString: column_definitions << "TEXT"; break;
         case typeHisto: column_definitions << "BLOB"; break;
         default:
-            throw InvalidArgumentException("Table::add_column: invalid type parameter given.");
+            throw InvalidArgumentException("sqlite_table::add_column: invalid type parameter given.");
     };
     if(ss_insert_statement.str().size() > 0)
         ss_insert_statement << ", ";
@@ -175,16 +186,14 @@ void sqlite_database::sqlite_table::set_autoinc_column(const std::string & name)
          throw InvalidArgumentException("sqlite_database::add_column: tried to add more than one Column of type typeAutoIncrement");
     if(column_definitions.str().size() > 0)
         column_definitions << ", ";
-    column_definitions << "'" << name << "' ";
+    column_definitions << "'" << name << "' INTEGER PRIMARY KEY AUTOINCREMENT";
     have_autoinc = true;
-    column_definitions << "INTEGER PRIMARY KEY AUTOINCREMENT";
 }
 
 
 void sqlite_database::sqlite_table::create_table(){
     stringstream ss;
-    string col_def = column_definitions.str();
-    ss << "CREATE TABLE '" << name << "' (" << col_def << ");";
+    ss << "CREATE TABLE '" << name << "' (" << column_definitions.str() << ");";
     db->exec(ss.str());
     
     ss.str("");

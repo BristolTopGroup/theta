@@ -79,6 +79,39 @@ std::auto_ptr<DatabaseInput::ResultIterator> sqlite_database_in::query(const std
    return std::auto_ptr<ResultIterator>(new SqliteResultIterator(statement, db));
 }
 
+size_t sqlite_database_in::n_rows(const std::string & table_name){
+    size_t result = 0;
+    stringstream q;
+    q << "select count(*) from \"" << table_name << "\"";
+    for(size_t j=1; j<n_files; ++j){
+        q << " union all count(*) from file" << j << ".\"" << table_name << "\"";
+     }
+     sqlite3_stmt * statement = 0;
+     int ret = sqlite3_prepare_v2(db, q.str().c_str(), q.str().size() + 1, &statement, 0);
+     if(ret!=0){
+        if(statement!=0){
+            sqlite3_finalize(statement);
+        }
+        stringstream error_ss;
+        error_ss << "Could not compile SQL statement " << q.str() << "; sqlite said " << sqlite3_errmsg(db);
+        throw DatabaseException(error_ss.str());
+     }
+     while((ret = sqlite3_step(statement)) == SQLITE_ROW){
+         result += sqlite3_column_int(statement, 0);
+     }
+     sqlite3_finalize(statement);
+     if(ret!=SQLITE_DONE){
+        throw DatabaseException("n_rows: error while stepping through result");
+     }
+     return result;
+}
+
+
+
+sqlite_database_in::SqliteResultIterator::SqliteResultIterator(sqlite3_stmt * st, sqlite3 * db_): db(db_), statement(st){
+    operator++();
+}
+
 
 void sqlite_database_in::SqliteResultIterator::operator++(){
     int res = sqlite3_step(statement);

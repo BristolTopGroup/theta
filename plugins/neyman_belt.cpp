@@ -15,6 +15,9 @@
 #include <boost/bimap/bimap.hpp>
 #include <boost/bimap/multiset_of.hpp>
 
+#include <boost/tuple/tuple.hpp>
+#include <boost/tuple/tuple_comparison.hpp>
+
 using namespace std;
 using namespace boost::bimaps;
 using namespace libconfig;
@@ -57,7 +60,15 @@ public:
 struct tto{
    double truth, ts, ordering;
 
-   tto(double truth_, double ts_, double ordering_=0): truth(truth_), ts(ts_), ordering(ordering_){}
+//t_input_data is a bimap between
+// (ts values) <-> (ordering values)
+// both can contain the same value multiple time, i.e., both are non-unique.
+//
+//As even the pair (ts value, ordering value) might not be unique, use unconstrained_set_of_relation 
+// as relation view.
+//
+// The ordered view on (ts value) is useful for constructing the ts interval.
+// The ordered view on (ordering values) is useful to find the interval seed in the interval construction.
 
    struct truth_ts_ordering{
       bool operator()(const tto & left, const tto & right) const{
@@ -65,116 +76,78 @@ struct tto{
       }
    };
 
-   struct truth_o_ordering{
-      bool operator()(const tto & left, const tto & right) const{
-          return (left.truth < right.truth) || (left.truth==right.truth && left.ordering < right.ordering);
-      }
-   };
-};
+//typedef bimap<multiset_of<double>, multiset_of<double>, unconstrained_set_of_relation > t_input_data;
 
-// information of a toy ensemble required for neyman construction. Basically
-// a set of tto objects. However, provides views on these ttos both sorted
-// by ts value and sorted by odering value, for a given truth value.
-class tto_ensemble{
-public:
-    enum sortflag{ sorted_by_ts, sorted_by_ordering };
-
-    typedef vector<tto>::const_iterator const_tto_iterator;
-    typedef std::pair<const_tto_iterator, const_tto_iterator> tto_range;
-
-    void reserve(size_t n){
-        ttos__truth_ts_sorted.reserve(n);
-        ttos__truth_o_sorted.reserve(n);
-    }
-    void add(const tto & t);
-    size_t size(){
-       return ttos__truth_ts_sorted.size();
-    }
-    tto_range get_ttos(double truth_value, const sortflag s);
-    set<double> get_truth_values();
-
-    void swap(tto_ensemble & rhs){
-        std::swap(sorted, rhs.sorted);
-        std::swap(ttos__truth_ts_sorted, rhs.ttos__truth_ts_sorted);
-        std::swap(ttos__truth_o_sorted, rhs.ttos__truth_o_sorted);
-        std::swap(truth_partitions, rhs.truth_partitions);
-    }
-    
+/*class t_input_data{
 private:
-   void sort();
-   bool sorted;
 
-   // sort() sorts / fills all of the following objects:
-   vector<tto> ttos__truth_ts_sorted;
-   vector<tto> ttos__truth_o_sorted;
-   map<double, size_t> truth_partitions;
+std::multimap<double, double> left_instance;
+std::multimap<double, double> right_instance;
+
+public:
+typedef multimap<double, double> left_map;
+typedef multimap<double, double> right_map;
+
+void swap(t_input_data & rhs){
+    std::swap(left_instance, rhs.left_instance);
+    std::swap(right_instance, rhs.right_instance);
+}
+
+const left_map & left() const{
+    return left_instance;
+}
+
+const right_map & right() const{
+    return right_instance;
+}
+
+void insert(double left_value, double right_value){
+    left_instance.insert(left_map::value_type(left_value, right_value));
+    right_instance.insert(right_map::value_type(right_value, left_value));
+}
+
 };
+*/
+
+
+class t_input_data{
+private:
+typedef bimap<multiset_of<double>, multiset_of<double>, unconstrained_set_of_relation > t_instance;
+t_instance instance;
+
+
+public:
+typedef t_instance::left_map left_map;
+typedef t_instance::right_map right_map;
+
+void swap(t_input_data & rhs){
+    std::swap(instance, rhs.instance);
+}
+
+const left_map & left() const{
+    return instance.left;
+}
+
+const right_map & right() const{
+    return instance.right;
+}
+
+void insert(double left_value, double right_value){
+    instance.left.insert(left_map::value_type(left_value, right_value));
+}
+
+};
+
 
 namespace std{
-   template<>
-   void swap(tto_ensemble & left, tto_ensemble & right){
-       left.swap(right);
-   }
+
+template<>
+void swap(t_input_data & lhs, t_input_data & rhs){
+    lhs.swap(rhs);
 }
 
-
-void tto_ensemble::sort(){
-    if(sorted) return;
-    truth_partitions.clear();
-    if(ttos__truth_ts_sorted.size()==0) return;
-    assert(ttos__truth_ts_sorted.size() == ttos__truth_o_sorted.size());
-    std::sort(ttos__truth_ts_sorted.begin(), ttos__truth_ts_sorted.end(), tto::truth_ts_ordering());
-    std::sort(ttos__truth_o_sorted.begin(), ttos__truth_o_sorted.end(), tto::truth_o_ordering());
-    truth_partitions.clear();
-    size_t index = 0;
-    double last_truth = ttos__truth_ts_sorted[0].truth - 1;
-    for(vector<tto>::const_iterator it = ttos__truth_ts_sorted.begin(); it!=ttos__truth_ts_sorted.end(); ++it, ++index){
-        const double truth = it->truth;
-        assert(ttos__truth_o_sorted[index].truth == truth);
-        if(truth != last_truth){
-            truth_partitions[truth] = index;
-            last_truth = truth;
-        }
-    }
-    sorted = true;
 }
 
-void tto_ensemble::add(const tto & t){
-    sorted = false;
-    ttos__truth_ts_sorted.push_back(t);
-    ttos__truth_o_sorted.push_back(t);
-}
-
-set<double> tto_ensemble::get_truth_values(){
-    sort();
-    set<double> result;
-    for(map<double, size_t>::const_iterator it=truth_partitions.begin(); it!=truth_partitions.end(); ++it){
-        result.insert(it->first);
-    }
-    return result;
-}
-
-
-tto_ensemble::tto_range tto_ensemble::get_ttos(double truth_value, const sortflag s){
-    sort();
-    // get indices:
-    map<double, size_t>::const_iterator it1 = truth_partitions.lower_bound(truth_value);
-    map<double, size_t>::const_iterator it2 = truth_partitions.upper_bound(truth_value);
-    if(it1==truth_partitions.end() || it1->first != truth_value){
-        throw NotFoundException("tto_ensemble::get_ttos: unknown truth_value");
-    }
-    size_t index1 = it1->second;
-    size_t index2 = (it2==truth_partitions.end()) ? ttos__truth_o_sorted.size() : it2->second;
-
-    //return iterators to the appropriate vector:
-    switch(s){
-        case sorted_by_ts:
-            return tto_range(ttos__truth_ts_sorted.begin() + index1, ttos__truth_ts_sorted.begin() + index2);
-        case sorted_by_ordering:
-            return tto_range(ttos__truth_o_sorted.begin() + index1, ttos__truth_o_sorted.begin() + index2);
-    }
-    throw InvalidArgumentException("invalid sortflag in tto_ensemble::get_ttos");
-}
 
 
 /** \brief Neyman belt construction
@@ -316,22 +289,18 @@ struct t_interval_coverage{
     pair<double, double> interval;
     double coverage;
 };
-
-t_interval_coverage construct_interval(const tto_ensemble::tto_range & tto_range_o_sorted,
-    const tto_ensemble::tto_range & tto_range_ts_sorted,
-    double cl, double ts_interval0_min, double ts_interval1_min){
-    const size_t n_total = distance(tto_range_o_sorted.first, tto_range_o_sorted.second);
-    assert(distance(tto_range_o_sorted.first, tto_range_o_sorted.second) == distance(tto_range_ts_sorted.first, tto_range_ts_sorted.second));
-    const size_t n_target = static_cast<size_t>(cl * n_total);
+t_interval_coverage construct_interval(const t_input_data & input_data, double cl, double ts_interval0_min, double ts_interval1_min){
+    const size_t n_target = static_cast<size_t>(cl * input_data.left().size());
     //take the ts value corresponding to the lowest ordering value which respects the restrictions as starting point for the interval:
     pair<double, double> result;
-    tto_ensemble::const_tto_iterator it_seed = tto_range_o_sorted.first;
-    while(it_seed->ts < ts_interval0_min && it_seed != tto_range_o_sorted.second){
+    t_input_data::right_map::const_iterator it_seed = input_data.right().begin();
+    while(it_seed->second < ts_interval0_min && it_seed != input_data.right().end()){
         ++it_seed;
     }
-    if(it_seed == tto_range_o_sorted.second){
-        it_seed = tto_range_o_sorted.first;
-        result.first = result.second = it_seed->ts;
+    if(it_seed==input_data.right().end()){
+       //no seed found which fulfils the requirements.
+       it_seed = input_data.right().begin();
+       result.first = result.second = it_seed->second;
     }
     else{
        result.first = result.second = it_seed->ts;
@@ -344,26 +313,24 @@ t_interval_coverage construct_interval(const tto_ensemble::tto_range & tto_range
     // add ajacent toys directly left of or right of the result interval, preferring the value according to the ordering.
     // Repeat until coverage is reached.
     // Interval contains the values in [it_min, it_max), i.e., excludes where it_max points to; in particular,
-    //   it_max might point beyond some input container.
-    tto_ensemble::const_tto_iterator it_min = lower_bound(tto_range_ts_sorted.first,
-                            tto_range_ts_sorted.second, tto(tto_range_o_sorted.first->truth, result.first), tto::truth_ts_ordering());
-    tto_ensemble::const_tto_iterator it_max = upper_bound(tto_range_ts_sorted.first,
-                            tto_range_ts_sorted.second, tto(tto_range_o_sorted.first->truth, result.second), tto::truth_ts_ordering());
+    //   it_max might point to the input_data.left.end().
+    t_input_data::left_map::const_iterator it_min = input_data.left().lower_bound(result.first);
+    t_input_data::left_map::const_iterator it_max = input_data.left().upper_bound(result.second);
     size_t n = distance(it_min, it_max);
     assert(n > 0);
     const double nan = numeric_limits<double>::quiet_NaN();
     while(n < n_target){
         double order_value_left = nan, order_value_right = nan;
         double ts_value_left = nan, ts_value_right = nan;
-        if(it_min != tto_range_ts_sorted.first){
-            tto_ensemble::const_tto_iterator it_left = it_min;
+        if(it_min != input_data.left().begin()){
+            t_input_data::left_map::const_iterator it_left = it_min;
             --it_left;
             order_value_left = it_left->ordering;
             ts_value_left = it_left->ts;
         }
-        if(it_max != tto_range_ts_sorted.second){
-            order_value_right = it_max->ordering;
-            ts_value_right = it_max->ts;
+        if(it_max != input_data.left().end()){
+            order_value_right = it_max->second;
+            ts_value_right = it_max->first;
         }
         bool left = false, right = false;
         if(isnan(order_value_right)){
@@ -386,8 +353,8 @@ t_interval_coverage construct_interval(const tto_ensemble::tto_range & tto_range
         //A.3.a. Add points with same / very similar ts value of the one just added
         double ilen = result.second - result.first;
         if(left){
-            while(it_min != tto_range_ts_sorted.first){
-                tto_ensemble::const_tto_iterator it_left = it_min;
+            while(it_min != input_data.left().begin()){
+                t_input_data::left_map::const_iterator it_left = it_min;
                 --it_left;
                 if(fabs(it_left->ts - ts_value_left) <= ilen * 0.001){
                     --it_min; ++n;
@@ -397,17 +364,33 @@ t_interval_coverage construct_interval(const tto_ensemble::tto_range & tto_range
             }
         }
         if(right){
-            while(it_max != tto_range_ts_sorted.second && fabs(it_max->ts - ts_value_right) <= ilen * 0.001){
-                result.second = it_max->ts;
+            while(it_max != input_data.left().end() && fabs(it_max->first - ts_value_right) <= ilen * 0.001){
+                result.second = it_max->first;
                 ++it_max; ++n;
             }
         }
     }
     t_interval_coverage res;
     res.interval = result;
-    res.coverage = n * 1.0 / n_total;
+    res.coverage = n * 1.0 / input_data.left().size();
     return res;
 }
+
+
+
+class truth_ts_ordering_data{
+public:
+    class ts_o_iterator{
+    public:
+        void operator++();
+        
+    };
+
+    // get an iterator for the given truth value
+    ts_o_iterator get_ts_ordered(double truth);
+    o_ts_iterator get_o_ordered(double truth);
+    
+};
 
 
 
@@ -418,39 +401,53 @@ void get_input(tto_ensemble & result, DatabaseInput & db, const string & truth_c
    vector<string> colnames;
    colnames.push_back(truth_column);
    colnames.push_back(ts_column);
+   size_t n = db.n_rows("products");
+   cout << "rows in products: " << n << endl;
+   using boost::tuple;
    std::auto_ptr<DatabaseInput::ResultIterator> it = db.query("products", colnames);
+   std::vector<tuple<double, double, double> > rows(n);
+   
+   double ordering = 0;
    size_t i = 0;
    while(it->has_data()){
-       ++i;
        double truth = it->get_double(0);
        double ts = it->get_double(1);
-       result.add(tto(truth, ts));
+       //result[truth].insert(ts, ordering);
+       rows[i] = boost::make_tuple(truth, ts, ordering);
        ++(*it);
+       ++i;
    }
+   std::sort(rows.begin(), rows.end());
+   cout << "get_input: read " << i << " rows" << endl;
+   return result;
 }
 
-
-void add_ordering_lu(tto_ensemble & inp, const std::string & ordering_rule){
-    double o_diff = 1;
-    if(ordering_rule == "upper") o_diff = -1;
-    set<double> truth_values = inp.get_truth_values();
-    tto_ensemble new_ensemble;
-    for(set<double>::const_iterator it=truth_values.begin(); it!=truth_values.end(); ++it){
-        double o = 0;
-        tto_ensemble::tto_range r = inp.get_ttos(*it, tto_ensemble::sorted_by_ts);
-        for(tto_ensemble::const_tto_iterator it2=r.first; it2!=r.second; ++it2){
-            new_ensemble.add(tto(*it, it2->ts, o));
-            o += o_diff;
-        }
-    }
-    swap(inp, new_ensemble);
+void add_ordering_lu(map<double, t_input_data> & inp, const std::string & ordering_rule){
+     double o_diff = 1;
+     if(ordering_rule == "upper") o_diff = -1;
+     for(map<double, t_input_data>::iterator it=inp.begin(); it!=inp.end(); ++it){
+         t_input_data & input_data = it->second;
+         t_input_data new_input_data;
+         double o = 0;
+         t_input_data::left_map::const_iterator it_begin = input_data.left().begin();
+         t_input_data::left_map::const_iterator it_end = input_data.left().end();
+         for(t_input_data::left_map::const_iterator it=it_begin; it!=it_end; ++it){
+             new_input_data.insert(it->first, o); 
+             o += o_diff;
+         }
+         swap(input_data, new_input_data);
+     }
 }
 
-void add_ordering_central(tto_ensemble & inp){
-    set<double> truth_values = inp.get_truth_values();
-    tto_ensemble new_ensemble;
-    for(set<double>::const_iterator it=truth_values.begin(); it!=truth_values.end(); ++it){
-        const double truth = *it;
+void add_ordering_central(map<double, t_input_data> & inp){
+    for(map<double, t_input_data>::iterator it=inp.begin(); it!=inp.end(); ++it){
+        t_input_data & input_data = it->second;
+        t_input_data new_input_data;
+        t_input_data::left_map::const_iterator it_begin = input_data.left().begin();
+        t_input_data::left_map::const_iterator it_end = input_data.left().end();
+        t_input_data::left_map::const_iterator it_left = it_begin;
+        advance(it_left, input_data.left().size() / 2);
+        t_input_data::left_map::const_iterator it_right = it_left;
         double o = 0;
         tto_ensemble::tto_range r = inp.get_ttos(truth, tto_ensemble::sorted_by_ts);
         tto_ensemble::const_tto_iterator it_left = r.first;
@@ -459,10 +456,10 @@ void add_ordering_central(tto_ensemble & inp){
         while(it_left!=r.first || it_right!=r.second){
             if(it_left!=r.first){
                 --it_left;
-                new_ensemble.add(tto(truth, it_left->ts, o++));
+                new_input_data.insert(it_left->first, o++);
             }
-            if(it_right!=r.second){
-                new_ensemble.add(tto(truth, it_right->ts, o++));
+            if(it_right!=it_end){
+                new_input_data.insert(it_right->first, o++);
                 ++it_right;
             }
         }
@@ -470,39 +467,42 @@ void add_ordering_central(tto_ensemble & inp){
     swap(inp, new_ensemble);
 }
 
-
-void add_ordering_central_shortest(tto_ensemble & inp){
-    set<double> truth_values = inp.get_truth_values();
-    tto_ensemble new_ensemble;
-    for(set<double>::const_iterator it=truth_values.begin(); it!=truth_values.end(); ++it){
-        const double truth = *it;
+void add_ordering_central_shortest(map<double, t_input_data> & inp){
+    for(map<double, t_input_data>::iterator it=inp.begin(); it!=inp.end(); ++it){
+        t_input_data & input_data = it->second;
+        t_input_data new_input_data;
+        t_input_data::left_map::const_iterator it_begin = input_data.left().begin();
+        t_input_data::left_map::const_iterator it_end = input_data.left().end();
+        t_input_data::left_map::const_iterator it_left = it_begin;
+        advance(it_left, input_data.left().size() / 2);
+        t_input_data::left_map::const_iterator it_right = it_left;
+        //it_right points one after the last inserted element (i.e., to the next to be inserted).
+        // it_left points to the last inserted element.
         double o = 0;
-        tto_ensemble::tto_range r = inp.get_ttos(truth, tto_ensemble::sorted_by_ts);
-        tto_ensemble::const_tto_iterator it_left = r.first;
-        advance(it_left, distance(r.first, r.second) / 2);
-        tto_ensemble::const_tto_iterator it_right = it_left;
-        const double ts0 = it_left->ts;
-        while(it_left!=r.first || it_right!=r.second){
-           if(it_left!=r.first && it_right!=r.second){
-                tto_ensemble::const_tto_iterator it_left_next = it_left;
+        new_input_data.insert(it_right->first, o++);
+        double ts0 = it_right->first;
+        ++it_right;
+        while(it_left!=it_begin || it_right!=it_end){
+            if(it_left!=it_begin && it_right!=it_end){
+                t_input_data::left_map::const_iterator it_left_next = it_left;
                 --it_left_next;
                 double next_ts_left = it_left_next->ts;
                 double next_ts_right = it_right->ts;
                 if(fabs(next_ts_left - ts0) < fabs(next_ts_right - ts0)){
                     --it_left;
-                    new_ensemble.add(tto(truth, it_left->ts, o++));
+                    new_input_data.insert(it_left->first, o++);
                 }
                 else{
-                     new_ensemble.add(tto(truth, it_right->ts, o++));
+                     new_input_data.insert(it_right->first, o++);
                     ++it_right;
                 }
             }
             else if(it_left!=r.first){
                 --it_left;
-                new_ensemble.add(tto(truth, it_left->ts, o++));
+                new_input_data.insert(it_left->first, o++);
             }
-            else {
-                new_ensemble.add(tto(truth, it_right->ts, o++));
+            else if(it_right!=it_end){
+                new_input_data.insert(it_right->first, o++);
                 ++it_right;
             }
         }
@@ -558,22 +558,17 @@ void neyman_belt::add_ordering_fclike(tto_ensemble & ttos){
     }
     //now go through all truth values again and use truth_to__ts_to_ordering
     // to interpolate / extrapolate ...
-    tto_ensemble new_ensemble;
-    new_ensemble.reserve(ttos.size());
-    for(set<double>::const_iterator truth_it=truth_values.begin(); truth_it!=truth_values.end(); ++truth_it){
-        const double truth = *truth_it;
-        cout << "starting interpolation for truth " << truth << endl;
-        cout << "getting range for interpolation" << endl;
-        tto_ensemble::tto_range r_interpolation = ensemble_for_interpolation.get_ttos(truth, tto_ensemble::sorted_by_ts);
-        cout << "getting range" << endl;
-        tto_ensemble::tto_range tto_range = ttos.get_ttos(truth, tto_ensemble::sorted_by_ts);
-        assert(distance(tto_range.first, tto_range.second) >= 2);
-        tto_ensemble::const_tto_iterator it1 = r_interpolation.first;
-        tto_ensemble::const_tto_iterator it2 = r_interpolation.first;
-        ++it2;
-        
-        for(tto_ensemble::const_tto_iterator i=tto_range.first; i!=tto_range.second; ++i){
-            const double ts = i->ts;
+    int c = 0;
+    for(map<double, t_input_data>::iterator it=inp.begin(); it!=inp.end(); ++it, ++c){
+        if(progress_listener) progress_listener->progress(N + c, truth_values.size() + N);
+        //t_input data is    ts (left) -> ordering (right)
+        t_input_data & input_data = it->second;
+        t_input_data new_input_data;
+        const double truth = it->first;
+        const map<double, double> & ts_to_ordering = truth_to__ts_to_ordering[truth];
+        assert(ts_to_ordering.size() >= 2);
+        for(t_input_data::left_map::const_iterator i=input_data.left().begin(); i!=input_data.left().end(); ++i){
+            const double ts = i->first;
             //find ordering value from ts_to_ordering by linear interpolation:
             while(ts > it2->ts && it2!=r_interpolation.second){
                 it1 = it2;
@@ -584,7 +579,7 @@ void neyman_belt::add_ordering_fclike(tto_ensemble & ttos){
             const double ordering_low = it1->ordering;
             const double ordering_high = it2->ordering;
             double ordering = ordering_low + (ts - ts_low) * (ordering_high - ordering_low) / (ts_high - ts_low);
-            new_ensemble.add(tto(truth, ts, ordering));
+            new_input_data.insert(ts, ordering);
         }
         progress();
     }
@@ -642,13 +637,10 @@ neyman_belt::neyman_belt(const plugin::Configuration & cfg): force_increasing_be
 }
 
 void neyman_belt::run(){
-    tto_ensemble ttos;
-    get_input(ttos, *toy_database, truth_column, ts_column);
-    set<double> truth_values = ttos.get_truth_values();
-    truth_range.first = *truth_values.begin();
-    truth_range.second = *truth_values.rbegin();
-    progress_total = truth_values.size() * cls.size();
-    cout << "ordering" << endl;
+    cout << "reading input" << endl;
+    map<double, t_input_data> inp = get_input(*toy_database, truth_column, ts_column);
+    throw ExitException("time test ...");
+    cout << "calculating ordering" << endl;
     if(ordering_rule=="lower" || ordering_rule=="upper"){
         add_ordering_lu(ttos, ordering_rule);
     }

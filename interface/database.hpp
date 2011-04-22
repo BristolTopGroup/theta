@@ -75,6 +75,10 @@ public:
      * In case of an error, a DatabaseException is thrown.
      */
     virtual std::auto_ptr<ResultIterator> query(const std::string & table_name, const std::vector<std::string> & column_names) = 0;
+    
+    /** \brief Get the number of rows for a certain table
+     */
+    virtual size_t n_rows(const std::string & table_name) = 0;
     virtual ~DatabaseInput(){}
 
 };

@@ -1,0 +1,143 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+execfile("../lib.py")
+
+import scipy.linalg
+import scipy.stats
+import numpy
+
+class polygon(object):
+    def  __init__(self):
+        object.__init__(self)
+        self.points = []
+
+    # note that the first and last point are implicitely the same; you do not need
+    # to do that explicitely.
+    def add_point(self, point):
+        self.points.append(point)
+
+    # s1 and s2 are both points (x,y).
+    # returns: a list of points where the given line segment intersects
+    # if extend_to_infinity is True, (x1,y1) -- (x2, y2) is not treated as a finite line
+    # segment but as a line extending to infinity (in both directions):
+    def get_intersections(self, s1, s2, extend_to_infinity = False):
+        result = []
+        for i in range(len(self.points)):
+            p1 = self.points[i]
+            p2 = self.points[(i + 1) % len(self.points)]
+            # intersect line segment p1 -- p2 with line segment s1 -- s2
+            # by solving
+            # p1 + t * (p2 - p1) = s1 + u * (s2 - s1)    (*)
+            # for t and u. The solution is only accepted if t is in [0, 1].
+            # Unless extend_to_infinity is true, u also has to be in [0, 1].
+            # writing down the two components of (*) yields
+            # (p2x - p1x) * t + (s1x - s2x) * u = s1x - p1x
+            # (p2y - p1y) * t + (s1y - s2y) * u = s1y - p1y
+            try:
+                (t, u) = scipy.linalg.solve([[p2[0] - p1[0], s1[0] - s2[0]], [p2[1] - p1[1], s1[1] - s2[1]]], [s1[0] - p1[0], s1[1] - p1[1]])
+                if t > 1 or t < 0: continue
+                if not extend_to_infinity and (s > 1 or t < 0): continue
+                result.append((p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1])))
+            except scipy.linalg.LinAlgError: pass
+        return result
+
+
+def mypoisson(n, mu):
+    if mu==0:
+        if n==0: return 1.0
+        else: return 0.0
+    else: return scipy.stats.poisson.pmf(n, mu)
+
+
+# construct a feldman-cousins band for a fixed background b
+# and unknown signal mu.
+# mu_points is an array of values to be used for the scanning.
+#
+# the result is a dictionary
+#  mu  ->  interval
+# where for each true value mu, the interval of n_obs is given.
+def fc_band(b, mu_points, cl = 0.6827):
+    R = lambda n, mu: mypoisson(n, mu + b) / mypoisson(n, max(n-b, 0) + b)
+    result = []
+    for mu in mu_points:
+        #print mu
+        # look for the n which maximizes R:
+        n_rmax = int(mu + b + 0.5)
+        r_lower = R(n_rmax, mu)
+        while n_rmax > 0 and R(n_rmax - 1, mu) > r_lower:
+            n_rmax -= 1
+            r_lower = R(n_rmax, mu)
+        while R(n_rmax + 1, mu) > r_lower:
+            n_rmax += 1
+            r_lower = R(n_rmax, mu)
+        #print "found best n: %d" % n_rmax
+        p = scipy.stats.poisson.pmf(n_rmax, mu + b)
+        # subsequently add points with smaller and larger n to the interval,
+        # preferring larger R values:
+        n_next_lower = n_rmax - 1
+        n_next_upper = n_rmax + 1
+        while p < cl:
+            if n_next_lower >= 0:
+                r_upper = R(n_next_upper, mu)
+                r_lower = R(n_next_lower, mu)
+                if r_upper > r_lower:
+                    p += scipy.stats.poisson.pmf(n_next_upper, mu + b)
+                    n_next_upper += 1
+                else:
+                    p += scipy.stats.poisson.pmf(n_next_lower, mu + b)
+                    n_next_lower -= 1
+            else:
+                p += scipy.stats.poisson.pmf(n_next_upper, mu + b)
+                n_next_upper += 1
+        result.append((mu, n_next_lower + 1, n_next_upper - 1))
+    return result
+
+
+# return a list of three-tuples(truth value, lower ts interval end, upper ts ionterval end), ordered by the truth value
+def theta_band(filename):
+    result = []
+    for line in file(filename):
+        if line.startswith('#'): continue
+        truth, ts_lower, ts_upper, coverage = map(lambda x: float(x), line.split())
+        result.append((truth, ts_lower, ts_upper))
+    return result
+
+def print_intervals(intervals):
+    for truth, lower, upper in intervals:
+        print truth, lower, upper
+
+
+for mu in (3.0,):
+    execute_checked("sed \"s/__MU__/%.5f/g\" neymancounting-fixedbkg.cfg.tpl > neymancounting-fixedbkg.cfg" % mu)
+    execute_checked("sed \"s/__MU__/%.5f/g\" neymancounting-fixedbkg-ordering.cfg.tpl > neymancounting-fixedbkg-ordering.cfg" % mu)
+    #print "executing theta for ordering"
+    #exec_theta("neymancounting-fixedbkg-ordering.cfg", quiet = False)
+    #print "executing theta"
+    #exec_theta("neymancounting-fixedbkg.cfg", quiet = False)
+    print "doing neyman construction"
+    exec_theta("--redirect-io=false neymancounting-evaluate-fclike.cfg", quiet=False)
+    # the belt is a polygon in the (truth, ts)-plane:
+    #band = polygon()
+    #upper_points = []
+    #intervals = theta_band("neymancounting-lrsorted-band.txt")
+    #intervals = fc_band(mu, numpy.arange(0, 10, 0.01))
+    #print_intervals(intervals)
+    sys.exit(0)
+
+    for truth, ts_lower, ts_upper in intervals:
+        ilen = ts_upper - ts_lower
+        if ilen==0: ilen = 1
+        ts_lower -= 0.001 * ilen
+        ts_upper += 0.001 * ilen
+        upper_points.append((truth, ts_upper))
+        band.add_point((truth, ts_lower))
+    for p in reversed(upper_points): band.add_point(p)
+    # evaluate band construction for some points:
+    print mu
+    for n_obs in range(10):
+        intersections = band.get_intersections((0, n_obs), (1, n_obs), True)
+        intersections_x = sorted([x for (x,y) in intersections])
+        print n_obs, intersections_x 
+
+

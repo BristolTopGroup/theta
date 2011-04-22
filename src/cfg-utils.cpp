@@ -1,7 +1,7 @@
 #include "interface/cfg-utils.hpp"
-#include "interface/histogram-function.hpp"
-
+#include "interface/exception.hpp"
 #include <sstream>
+#include <limits>
 
 using namespace std;
 using namespace libconfig;
@@ -15,17 +15,20 @@ void SettingUsageRecorder::get_unused(std::vector<std::string> & unused, const l
     int n = aggregate_setting.getLength();
     for(int i=0; i<n; ++i){
         std::string path = aggregate_setting[i].getPath();
+        bool a_unused = false;
         if(used_paths.find(path) == used_paths.end()){
             unused.push_back(path);
+            a_unused = true;
         }
-        if(aggregate_setting[i].isAggregate()){
+        //don't descend if already aggregate was reported as unused ...
+        if(aggregate_setting[i].isAggregate() && !a_unused){
             get_unused(unused, aggregate_setting[i]);
         }
     }
 }
 
 double SettingWrapper::get_double_or_inf() const {
-    rec.markAsUsed(setting);
+    rec->markAsUsed(setting);
     if(setting.getType()==Setting::TypeFloat) return setting;
     string infstring = setting;
     if(infstring == "inf" || infstring == "+inf") return numeric_limits<double>::infinity();
@@ -35,62 +38,7 @@ double SettingWrapper::get_double_or_inf() const {
     throw InvalidArgumentException(error.str());
 }
 
-std::string SettingWrapper::value_to_string(int indent) const{
-    /*char * buffer;
-    size_t size;
-    FILE * f = open_memstream(&buffer, &size);
-    setting.write(f);
-    fclose(f);
-    std::string result = buffer;
-    free(buffer);
-    return result;*/
-    libconfig::Setting::Type type = setting.getType();
-    stringstream ss, ss_i, ss_im1;
-    for(int j=0; j<=indent; ++j){
-       ss_i << "  ";
-       if(j>0) ss_im1 << "  ";
-    }
-    string s_i = ss_i.str();
-    string s_im1 = ss_im1.str();
-    switch(type){
-        case libconfig::Setting::TypeString:
-                ss << "\"" << static_cast<const char*>(setting) << "\""; break;
-        case libconfig::Setting::TypeInt:
-        case libconfig::Setting::TypeInt64:
-            ss << (int)setting; break;
-        case libconfig::Setting::TypeFloat:
-            ss << scientific << setprecision(18) << (double)setting; break;
-        case libconfig::Setting::TypeBoolean:
-            ss << static_cast<bool>(setting)?"true":"false"; break;
-        case libconfig::Setting::TypeArray:
-            ss << "[";
-            for(size_t i=0; i<size(); ++i){
-                ss << (i==0?"":", ") << ((*this)[i]).value_to_string(indent+1);
-            }
-            ss << "]";
-            break;
-        case libconfig::Setting::TypeList:
-            ss << "(";
-            for(size_t i=0; i<size(); ++i){
-                ss << (i==0?"":", ") << ((*this)[i]).value_to_string(indent+1);
-            }
-            ss << ")";
-            break;
-        case libconfig::Setting::TypeGroup:
-            ss << "{";
-            for(size_t i=0; i<size(); ++i){
-                ss << endl << s_i << setting[i].getName() << " = " << ((*this)[i]).value_to_string(indent+1) << ";";
-            }
-            ss << endl << s_im1 << "}";
-            break;
-        default:
-            cerr << "internal error: unknown type in SettingWrapper::value_to_string" << endl;
-            throw FatalException("SettingWrapper::value_to_string: unknown SettingType");
-    }
-    return ss.str();
-}
-
-const Setting & SettingWrapper::resolve_link(const Setting & setting, const Setting & root, SettingUsageRecorder & rec){
+const Setting & SettingWrapper::resolve_link(const Setting & setting, const Setting & root, const boost::shared_ptr<SettingUsageRecorder> & rec){
     try{
         std::string next_path;
         //hard-code maximum redirection level of 10:
@@ -117,7 +65,7 @@ const Setting & SettingWrapper::resolve_link(const Setting & setting, const Sett
             link.erase(0, 1);
             next_path = link;
             //mark any intermediate link as used:
-            rec.markAsUsed(s);
+            rec->markAsUsed(s);
         }
     }
     catch(Exception & ex){
@@ -132,6 +80,9 @@ const Setting & SettingWrapper::resolve_link(const Setting & setting, const Sett
 }
 
 SettingWrapper::SettingWrapper(const libconfig::Setting & s, const libconfig::Setting & root,
-                             SettingUsageRecorder & recorder):
-           rootsetting(root), rec(recorder), setting(resolve_link(s, rootsetting, rec)){
+                             const boost::shared_ptr<SettingUsageRecorder> & recorder):
+           rootsetting(root), rec(recorder), setting(resolve_link(s, rootsetting, rec)), setting_name("<noname>"){
+    const char * name = s.getName();
+    if(name) setting_name = name;
 }
+

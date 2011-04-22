@@ -1,11 +1,12 @@
-#ifndef PLUGIN_MCMC_POSTERIOR_RATIO_HPP
-#define PLUGIN_MCMC_POSTERIOR_RATIO_HPP
+#ifndef PLUGINS_MCMC_POSTERIOR_RATIO_HPP
+#define PLUGINS_MCMC_POSTERIOR_RATIO_HPP
 
 #include "interface/decls.hpp"
-
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
+#include "interface/random-utils.hpp"
 #include "interface/matrix.hpp"
+
 #include <string>
 
 /** \brief A producer to create test statistics based on the ratio of the posterior in case of signal search.
@@ -20,6 +21,7 @@
  * \code
  * hypotest = {
  *   type = "mcmc_posterior_ratio";
+ *   name = "ratio";
  *   background-only-distribution = "@bkg-only-dist";
  *   signal-plus-background-distribution = "@default-dist";
  *   iterations = 10000;
@@ -28,6 +30,9 @@
  * \endcode
  *
  * \c type is always "mcmc_posterior_ratio" to select this producer.
+ *
+ * \c name is a name chosen by the user used to construct unique column names in the result table (this name and two underscores are
+ *   prepended to the column names explained below).
  *
  * \c background-only-distribution and \c signal-plus-background-distribution deinfe the Distribution instances to use for the
  *   two MCMC integrations.
@@ -50,22 +55,18 @@
  * The negative logarithm of the found average values of the likelihood (which takes the role of a posterior here) are
  * saved in the \c nl_posterior_sb and \c nl_posterior_b columns of the result table.
  */
-class mcmc_posterior_ratio: public theta::Producer{
+class mcmc_posterior_ratio: public theta::Producer, public theta::RandomConsumer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     mcmc_posterior_ratio(const theta::plugin::Configuration & ctx);
+    virtual void produce(const theta::Data & data, const theta::Model & model);
     
-    /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
-    virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
-    
-    /// Define the table columns of the result table, nl_posterior_sb and nl_posterior_b
-    virtual void define_table();
 private:
     //whether sqrt_cov* and startvalues* have been initialized:
     bool init;
     
-    std::auto_ptr<theta::Distribution> s_plus_b;
-    std::auto_ptr<theta::Distribution> b_only;
+    boost::shared_ptr<theta::Distribution> s_plus_b;
+    boost::shared_ptr<theta::Distribution> b_only;
     
     unsigned int iterations;
     unsigned int burn_in;
@@ -76,7 +77,9 @@ private:
     theta::Matrix sqrt_cov_b;
     std::vector<double> startvalues_b;
     
-    theta::EventTable::column c_nl_posterior_sb, c_nl_posterior_b;
+    std::auto_ptr<theta::Column> c_nl_posterior_sb, c_nl_posterior_b;
+    
+    boost::shared_ptr<theta::VarIdManager> vm;
 };
 
 #endif

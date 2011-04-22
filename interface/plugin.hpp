@@ -2,11 +2,13 @@
 #define PLUGIN_HPP
 
 #include "interface/decls.hpp"
+#include "interface/pm.hpp"
 #include "interface/exception.hpp"
 #include "interface/cfg-utils.hpp"
 
 #include <boost/utility.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <sstream>
 #include <iostream>
@@ -17,95 +19,6 @@ namespace theta {
     /** \brief Namespace for all plugin-related classes.
      */
     namespace plugin {
-        
-        /** \brief The abstract base class for all plugin types
-         *
-         * It is common to all classes which can be implemented as plugin to have
-         * (through the configuration) a "name" and a "type". This common aspect is
-         * implemented with this class.
-         */
-        class PluginType{
-        public:
-
-            /** \brief Returns the name of the instance, as given in the configuration file
-             *
-             * If a "name" setting exists, it will be used as name. Otherwise,
-             * the name of the configuration setting group is used.
-             */
-            std::string get_name() const{
-                return name;
-            }
-            
-            /** \brief Returns the type, as set in the configuration file, for this instance
-             *
-             */
-            std::string get_type() const{
-                return type;
-            }
-            
-            /** \brief Return the setting group required to reconstruct this object
-             *
-             * The default implementation returns the setting group given in the constructor
-             * in c.setting where the "name" setting is always set to the name.
-             */
-            std::string get_setting() const{
-                return setting;
-            }
-             
-        protected:
-            /** \brief Construct, filling name and type from the supplied Configuration
-             */
-            PluginType(const Configuration & c);
-            
-            /** \brief Provide default constructor for derived classes
-             *
-             * In order to allow construction outside of the plugin system (i.e., without
-             * a Configuration instance), this default constructor is provided for derived classes.
-             */
-            PluginType(){}
-            
-            /** \brief The setting returned by get_setting
-             *
-             * Should be set up in the constructor of derived classes which wish to change
-             * the default behaviour.
-             */
-            std::string setting;
-
-        private:
-            std::string name;
-            std::string type;
-        };
-        
-        /** \brief Abstract base class for all PluginTypes writing to an EventTable
-         *
-         * PluginTypes making use of the EventTable class should derive from this class.
-         */
-        class EventTableWriter{
-            
-        public:
-        
-            /** \brief Set the table where the results should be written to
-            *
-            * This is called during the setup phase of a theta::Run. It is called just before
-            * define_table, which does the producer-specific table definition.
-            */
-            void set_table(const boost::shared_ptr<theta::EventTable> & table_){
-                table = table_;
-            }
-        
-            /** \brief Define the columns of the result table
-            *
-            * This method is implemented by derived classes. It should call table->add_column for
-            * each column it wants to fill in the produce method.
-            *
-            * Implementations may assume that the table pointer is valid upon invocation of this method.
-            */
-            virtual void define_table() = 0;
-        
-        protected:
-            /// The table instance to be used for writing    
-            boost::shared_ptr<EventTable> table;
-        };
 
         /** \brief A container class which is used to construct conrete types managed by the plugin system
          *
@@ -115,23 +28,33 @@ namespace theta {
          * for which this plugin class should be created.
          */
         class Configuration{
+        private:
+           const std::string theta_dir;
         public:
             /// Information about all currently known parameters and observables
             boost::shared_ptr<VarIdManager> vm;
             
+            /// A property map giving access to a RndInfoTable and a ProductsTable. Might be empty.
+            boost::shared_ptr<PropertyMap> pm;
+            
             /// The setting in the configuration file from which to build the instance
             SettingWrapper setting;
             
+            /// Replaces the string "$THETA_DIR" by the theta directory; to be used by plugins resolving filenames
+            std::string replace_theta_dir(const std::string & path) const {
+                return boost::algorithm::replace_all_copy(path, "$THETA_DIR", theta_dir);
+            }
+            
             /** \brief Construct Configuration by specifying all data members
              */
-            Configuration(const boost::shared_ptr<VarIdManager> & vm_, const SettingWrapper & setting_): vm(vm_),
-                setting(setting_){}
+            Configuration(const boost::shared_ptr<VarIdManager> & vm_, const SettingWrapper & setting_, const std::string & theta_dir_ = "."):
+                theta_dir(theta_dir_), vm(vm_), pm(new PropertyMap()), setting(setting_){}
 
             /** \brief Copy elements from another Configuration, but replace Configuration::setting
              *
              * Copy all from \c cfg but \c cfg.setting which is replaced by \c setting_.
              */
-            Configuration(const Configuration & cfg, const SettingWrapper & setting_): vm(cfg.vm),
+            Configuration(const Configuration & cfg, const SettingWrapper & setting_): theta_dir(cfg.theta_dir), vm(cfg.vm), pm(cfg.pm),
                 setting(setting_){}
 
         };        
@@ -158,10 +81,12 @@ namespace theta {
              
              /// the type of the object this factory is responsible for; it corresponds to the type="..." configuration file setting
              virtual std::string get_typename() = 0;
+             
+             virtual ~factory(){}
          protected:
              /// register this factory at the correct PluginManager
              void reg(){
-                 PluginManager<base_type>::register_factory(this);
+                 PluginManager<base_type>::instance().register_factory(this);
              }
          };
 
@@ -173,12 +98,29 @@ namespace theta {
          */
          #define REGISTER_PLUGIN_NAME(type,name) namespace { class CONCAT(factory,__LINE__): public theta::plugin::factory<type::base_type>{ \
          public:\
-         virtual std::auto_ptr<type::base_type> build(const theta::plugin::Configuration & cfg){return auto_ptr<type::base_type>(new type(cfg)); }\
+         virtual std::auto_ptr<type::base_type> build(const theta::plugin::Configuration & cfg){return std::auto_ptr<type::base_type>(new type(cfg)); }\
          virtual std::string get_typename(){ return #name ;}\
          CONCAT(factory,__LINE__)(){reg();}\
          }; CONCAT(factory,__LINE__) CONCAT(factory_instance,__LINE__);}
          
          #define REGISTER_PLUGIN(type) REGISTER_PLUGIN_NAME(type, type)
+         #define REGISTER_PLUGIN_DEFAULT(type) REGISTER_PLUGIN_NAME(type, default)
+         
+         //we need to make explicit template instantiations of the PluginManager registry,
+         // otherwise, the central registry associated to the PluginManager does not work reliably.
+         // This can happen if theta core does not instantiate the PluginManager class itself but some plugin does.
+         // The exact reason however is unknown ...
+         #define REGISTER_PLUGIN_BASETYPE(type) template class theta::plugin::PluginManager<type>
+
+        // to prevent endless recursion within PluginManager::build, use a depth counter:
+        extern int plugin_build_depth;
+
+       //to increase the plugin_build_depth in an exception-safe manner, use the build_depth_sentinel,
+       // which automatically decreses depth count at destrution:
+       struct plugin_build_depth_sentinel{
+           plugin_build_depth_sentinel(){ ++plugin_build_depth; }
+           ~plugin_build_depth_sentinel(){  --plugin_build_depth; }
+       };
 
         /** \brief Central registry class for plugins.
          *
@@ -195,19 +137,26 @@ namespace theta {
          * call any method of this class at the same time.
          */
         template<typename product_type>
-        class PluginManager : private boost::noncopyable {
+        class PluginManager: private boost::noncopyable {
         public:
+
+            /** \brief Get the (static) instance of the PluginManager
+             */
+            static PluginManager & instance(){
+                 static PluginManager i;
+                 return i;
+            }
 
             /** \brief Use the registered factories to build an instance from a configuration settings block.
              *
              * This will go through all registered factories of that C++-type and
              * find the factory responsible by using the "type=..." setting in ctx.setting.
              */
-            static std::auto_ptr<product_type> build(const Configuration & cfg);
+            std::auto_ptr<product_type> build(const Configuration & cfg);
 
             /** \brief get all currently registered types.
              */
-            static std::vector<std::string> get_registered_types();
+            std::vector<std::string> get_registered_types();
         private:
             typedef typename product_type::base_type base_type;
             typedef factory<base_type> factory_type;
@@ -220,14 +169,13 @@ namespace theta {
              *
              * Used by the REGISTER_PLUGIN macro. Not for direct call.
              */
-            static void register_factory(factory_type * new_factory);
-            static std::vector<factory_type*> factories;
-            PluginManager() {}
+            void register_factory(factory_type * new_factory);
+            std::vector<factory_type*> factories;
+            //prevent instance construction from "outside" by making constructor private:
+            PluginManager(){}
+            
         };
         
-        template<typename product_type>
-        std::vector<typename PluginManager<product_type>::factory_type*> PluginManager<product_type>::factories;
-
         template<typename product_type>
         std::vector<std::string> PluginManager<product_type>::get_registered_types() {
             std::vector<std::string> names;
@@ -240,26 +188,29 @@ namespace theta {
 
         template<typename product_type>
         std::auto_ptr<product_type> PluginManager<product_type>::build(const Configuration & ctx){
-            std::string type = "<unspecified>";
+            plugin_build_depth_sentinel b;
+            if(plugin_build_depth > 10){
+                throw FatalException("PluginManager::build: detected too deep plugin building");
+            }
+            std::string type;
+            if(!ctx.setting.exists("type")) type = "default";
+            else type = static_cast<std::string>(ctx.setting["type"]);
             for (size_t i = 0; i < factories.size(); ++i) {
+                if (factories[i]->get_typename() != type) continue;
                 try {
-                    //as the access to setting["type"] might throw, also write it into the
-                    // try block ...
-                    type = std::string(ctx.setting["type"]);
-                    if (factories[i]->get_typename() == type) {
-                        return factories[i]->build(ctx);
-                    }
+                    return factories[i]->build(ctx);
                 }catch (Exception & ex) {
                     std::stringstream ss;
-                    ss << "PluginManager<" << typeid(product_type).name() << ">::build, configuration path '" << ctx.setting.getPath()
-                       << "', type='" << type << "' error while building from plugin: " << ex.message;
+                    ss << "Error while constructing plugin according to configuration path '" << ctx.setting.getPath()
+                       << "' (type='" << type << "'): " << ex.message;
                     ex.message = ss.str();
                     throw;
                 }
             }
             std::stringstream ss;
-            ss << "PluginManager::build<" << typeid(product_type).name() << ">, configuration path '" << ctx.setting.getPath()
-               << "': no plugin found to create type='" << type << "'";
+            ss << "Error while constructin plugin according to configuration path '" << ctx.setting.getPath()
+               << "': no plugin registered to create a plugin for type='" << type << "'. Check spelling of the "
+               "type and make sure to load all necessary plugin via the setting 'options.plugin_files'.";
             throw ConfigurationException(ss.str());
         }
 
@@ -272,7 +223,6 @@ namespace theta {
                     throw InvalidArgumentException(ss.str());
                 }
             }
-            //append plugins to the end of the list:
             factories.push_back(new_factory);
         }
 
@@ -281,21 +231,14 @@ namespace theta {
         class PluginLoader {
         public:
 
-            /** \brief Run the loader according to the setting cfg.setting
+            /** \brief Run the loader according to the configuration file setting
              *
-             * cfg.sertting must contain the "filenames" setting, a list of strings with paths of .so files.
-             * Optionally, it may contain a boolean "verbose" which controls the verbosity level of
-             * the plugin loader.
+             * The shared-object files in the \c plugins_files setting are loaded. This
+             * setting must be a list of strings of the filenames of the .so files.
              */
             static void execute(const theta::plugin::Configuration & cfg);
 
-            /** \brief print a list of all currently available plugins to standard out, grouped by type
-             *
-             * This is mainly for debugging.
-             */
-            static void print_plugins();
-
-            /** \brief load a plugin file
+            /** \brief load a single plugin file
              *
              * The given shared object file will be loaded which will trigger the plugin registration of all plugins
              * defined via the REGISTER_PLUGIN macro automagically.

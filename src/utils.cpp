@@ -3,7 +3,13 @@
 #include <cmath>
 #include <limits>
 
+#include <boost/math/special_functions/gamma.hpp>
+
 namespace theta{ namespace utils{
+
+double lngamma(double x){
+    return boost::math::lgamma(x);
+}
 
 /** The inverse Error function in form of the inverse
  * of the cumulative distribution function phi of the 

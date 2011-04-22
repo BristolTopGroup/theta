@@ -1,21 +1,41 @@
+include ../Makefile.options
+
+ifeq ($(OPTIONS_BUILD_TESTS),yes)
+
+# build test*.cpp as binary test:
+testsources := $(wildcard test*.cpp utils.cpp)
+testobjects := $(patsubst %.cpp,.bin/%.o,$(testsources))
+
+# build test*.cxx as .so; will be loaded as plugin by tests:
+libtestsources := $(wildcard test*.cxx)
+libtestobjects := $(patsubst %.cxx,.bin/%.o,$(libtestsources))
+
+# build the plugins again for direct linking:
+#plugin_directlink_sources = $(wildcard ../plugins/*.cpp)
+#plugin_directlink_objects = $(patsubst ../plugins/%.cpp,.bin/%.o,$(plugin_directlink_sources))
+
+deps := $(patsubst %.o,%.d,$(libtestobjects) $(testobjects))
+
 include ../Makefile.rules
 
-sources = $(wildcard *.cpp)
-objects = $(patsubst %.cpp,%.o,$(sources))
+all: ../bin/test ../lib/liblibtest.so
 
-plg_sources = $(wildcard *.cxx)
-plg_objects = $(patsubst %.cxx,%.o,$(plg_sources))
-
-EXTRA_LINK_EXE = -lboost_unit_test_framework$(BS)
-
-all: test test-ex.so
-
-test-ex.so: $(plg_objects)
-	$(LINK_SO) -o $@ $+
-
-test: $(objects)
+../bin/test: $(testobjects)
 	@$(LINK_EXE) -o $@ $+
 
+../lib/liblibtest.so: $(libtestobjects)
+	@$(LINK_SO) -o $@ $+
+
+else
+
+all:
+	@echo -e \\nNOTE: not building tests as this was switched off in Makefile.options\\n
+
+deps:=
+include ../Makefile.rules
+
+endif
+
 clean-subdir:
-	@rm -f test-ex.so test
+	@rm -f ../bin/test ../lib/liblibtest.so
 

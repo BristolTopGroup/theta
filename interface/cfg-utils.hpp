@@ -1,13 +1,13 @@
 #ifndef CFG_UTILS_HPP
-#define	CFG_UTILS_HPP
+#define CFG_UTILS_HPP
 
 #include "libconfig/libconfig.h++"
-#include "interface/exception.hpp"
 
 #include <string>
 #include <set>
 #include <vector>
-#include <sstream>
+
+#include <boost/shared_ptr.hpp>
 
 
 namespace theta{
@@ -63,10 +63,13 @@ namespace theta{
      */
     class SettingWrapper{
         const libconfig::Setting & rootsetting;
-        mutable SettingUsageRecorder & rec;
+        boost::shared_ptr<SettingUsageRecorder> rec;
         const libconfig::Setting & setting;
+        //the original name of the seting. Does not need to be setting.getName(), if 
+        // setting was found by resolving a link
+        std::string setting_name;
         
-        static const libconfig::Setting & resolve_link(const libconfig::Setting & setting, const libconfig::Setting & root, SettingUsageRecorder & rec);
+        static const libconfig::Setting & resolve_link(const libconfig::Setting & setting, const libconfig::Setting & root, const boost::shared_ptr<SettingUsageRecorder> & rec);
     public:
             //@{
             /** \brief Convert the current setting to the given type
@@ -74,27 +77,27 @@ namespace theta{
              * If the setting has not the correct type, a SettingTypeException will be thrown.
              */
             operator bool() const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return setting;
             }
             
             operator std::string() const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return setting;
             }
             
             operator int() const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return setting;
             }
             
             operator unsigned int() const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return setting;
             }            
             
             operator double() const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return setting;
             }
             //@}
@@ -105,7 +108,7 @@ namespace theta{
              * as libconfig::Setting::getLength()
              */
             size_t size() const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return setting.getLength();
             }
             
@@ -114,7 +117,7 @@ namespace theta{
              * same as libconfig::Setting::operator[](int)
              */
             SettingWrapper operator[](int i) const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return SettingWrapper(setting[i], rootsetting, rec);
             }
             
@@ -125,7 +128,7 @@ namespace theta{
              */
             //@{
             SettingWrapper operator[](const std::string & name) const{
-                rec.markAsUsed(setting);
+                rec->markAsUsed(setting);
                 return SettingWrapper(setting[name], rootsetting, rec);
             }
             
@@ -137,24 +140,6 @@ namespace theta{
                 return operator[](std::string(name));
             }
             //@}
-            
-            /** \brief Returns the string representation of the setting value, suitable for parsing
-             *
-             * This returns the setting value, i.e., the right hand side of a "=" statement
-             * in a setting. Thus, in
-             * \code
-             *   val1 = 1.0;
-             *   val2 = "string2";
-             *   val3 = ("a", "b", "c");
-             *   val4 = {s1 = 2; s3 = 4;};
-             * \endcode
-             * only the right hand side of the "=" sign will be contained in the string. This
-             * includes opening and closing braces ("(", ")", "{", "}") but excludes semicolons at the end
-             * of a setting.
-             *
-             * Will resolve all links and substitute the contents.
-             */
-            std::string value_to_string(int indent=0) const;
             
            /** \brief Return a double, but allow the special strings "inf", "-inf" for infinity
             *
@@ -177,9 +162,7 @@ namespace theta{
              * the special string "&lt;noname&gt;" is returned.
              */
             std::string getName() const{
-                const char * cname = setting.getName();
-                if(cname) return cname;
-                else return "<noname>";
+                return setting_name;
             }
             
             /** \brief Returns the configuration file path of the current setting
@@ -188,6 +171,14 @@ namespace theta{
              */
             std::string getPath() const{
                 return setting.getPath();
+            }
+            
+            /** \brief Returns the type of the setting
+             *
+             * See libconfig documentation for details.
+             */
+            libconfig::Setting::Type getType() const{
+                return setting.getType();
             }
             
             /** \brief Construct a SettingWrapper from a Setting, the root Setting and a setting recorder
@@ -200,7 +191,7 @@ namespace theta{
              * \c s is the Setting which to be wrapped, i.e., the access and casting methods of SettingWrapper will
              *    forward these requests to \c s.
              */
-            SettingWrapper(const libconfig::Setting & s, const libconfig::Setting & root, SettingUsageRecorder & recorder);
+            SettingWrapper(const libconfig::Setting & s, const libconfig::Setting & root, const boost::shared_ptr<SettingUsageRecorder> & recorder);
     };
 }
 

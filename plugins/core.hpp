@@ -7,6 +7,7 @@
 #include "interface/distribution.hpp"
 #include "interface/matrix.hpp"
 #include "interface/database.hpp"
+#include "interface/random-utils.hpp"
 
 /** \brief A polynomial distribution where coefficients do not depend on any parameters
  *
@@ -98,7 +99,6 @@ public:
     virtual double evalNL(const theta::ParValues & values) const;
     virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
     virtual const std::pair<double, double> & support(const theta::ParId&) const;
-    virtual double width(const theta::ParId &) const;
     //@}
 private:
     double mu, sigma;
@@ -143,7 +143,6 @@ public:
     virtual double evalNL(const theta::ParValues & values) const;
     virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
     virtual const std::pair<double, double> & support(const theta::ParId&) const;
-    virtual double width(const theta::ParId &) const;
     //@}
 private:
     theta::ParValues values;
@@ -167,7 +166,6 @@ private:
  *   
  *   b = {
  *     range = (0.0, 5.0);
- *     width = 2.0; //optional for finite range
  *     fix-sample-value = 2.0; //optional for finite range
  *   };
  * };
@@ -181,17 +179,12 @@ private:
  *     The special strings "inf" and "-inf" are allowed here.</li>
  *   <li>An optional \c fix-sample-value setting which will be used by the sample routine. In case of finite
  *     intervals, the default is to sample from a flat distribution on this interval. For infinite intervals,
- *     an exception will be thrown upon call of Distributiuon::sample</li>     
- *   <li>an optional \c width setting which will be used as starting step size for various algorithms
- *       (including markov chains and minimization). It should be set to a value of the same order of
- *       magnitude as the expected error of the likelihood function in this parameter. For finite intervals,
- *       the default used is 10% of the interval length. For infinite intervals with a non-zero
- *       \c fix-parameter-value setting, 10% of the absolute value is used. Otherwise, an exception will be thrown
- *       upon the call of flat_distribution::width().</li>
+ *     an exception will be thrown upon call of Distributiuon::sample</li>
  * </ul>
  */
 class flat_distribution: public theta::Distribution{
 public:
+    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     flat_distribution(const theta::plugin::Configuration & cfg);
     //@{
     /** \brief Implementation of the pure methods of theta::Distribution
@@ -205,17 +198,15 @@ public:
     virtual double evalNL(const theta::ParValues & values) const;
     virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
     virtual const std::pair<double, double> & support(const theta::ParId&) const;
-    virtual double width(const theta::ParId &) const;
     //@}
     
 private:
     theta::ParValues fix_sample_values;
     theta::ParValues modes;
-    theta::ParValues widths;
     std::map<theta::ParId, std::pair<double, double> > ranges;
 };
 
-/** \brief A truncated normal distribution in one or more dimensions
+/** \brief A (possibly truncated) normal distribution in one or more dimensions
  *
  * A rectangular-truncated normal distribution.
  *
@@ -271,7 +262,6 @@ class gauss: public theta::Distribution{
         virtual double evalNL(const theta::ParValues & values) const;
         virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
         virtual const std::pair<double, double> & support(const theta::ParId&) const;
-        virtual double width(const theta::ParId &) const;
         //@}
     private:
         std::vector<theta::ParId> v_par_ids;
@@ -281,10 +271,60 @@ class gauss: public theta::Distribution{
         std::vector<std::pair<double, double> > ranges;
 };
 
-/** \brief A function which multiplies all its parameters
+/** \brief A one-dimensional gauss-distribution
  *
- * For example, defining a Function to depend on ParId p0 and ParId p1,
- * operator(values) will always return values.get(p0)*values.get(p1).
+ * It does the same as \link gauss gauss \endlink in the one-dimensional case, but is faster.
+ *
+ * It is cponfigured via a setting group like
+ * \code
+ * { 
+ *  type = "gauss1d";
+ *  parameter = "p0";
+ *  range = (0.0, 5.0);
+ *  mean = 2.0;
+ *  width = 0.5;
+ * };
+ * \endcode
+ *
+ * \c parameter specifies the parameter the normal distribution depends on
+ *
+ * \c range is a list of doubles (or the special strings "inf", "-inf") specifying the truncation range.
+ *
+ * \c mean is a floating point value specifying the mean value of the distribution, \c width is its standard deviation.
+ *
+ */
+class gauss1d: public theta::Distribution{
+   public:
+        /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
+        gauss1d(const theta::plugin::Configuration & cfg);
+
+        //@{
+        /** \brief Implementation of the pure methods of theta::Distribution
+         *
+         * See documentation of theta::Distribution.
+         */
+        virtual void sample(theta::ParValues & result, theta::Random & rnd) const;
+        virtual void mode(theta::ParValues & result) const;
+        virtual double evalNL(const theta::ParValues & values) const;
+        virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
+        virtual const std::pair<double, double> & support(const theta::ParId&) const;
+        //@}
+    private:
+        double mu;
+        double sigma;
+        std::pair<double, double> range;
+};
+
+/** \brief A function which multiplies a number of parameters
+ *
+ * Example configuration:
+ * \code
+ * {
+ *   type = "mult";
+ *   parameters = ("p1", "p2");
+ * }
+ * \endcode
+ * This will make a Function object which returns p1 * p2.
  */
 class mult: public theta::Function{
 public:
@@ -333,7 +373,6 @@ public:
     virtual double evalNL(const theta::ParValues & values) const;
     virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
     virtual const std::pair<double, double> & support(const theta::ParId & p) const;
-    virtual double width(const theta::ParId & p) const;
     //@}
 
 private:
@@ -347,11 +386,14 @@ private:
  *
  * Configured via a setting group like
  * \code
- * {
+ * source = {
  *   type = "model_source";
  *   model = "@some-model-path";
+ *   dice_poisson = false; // optional; default is true
+ *   dice_template_uncertainties = false; // optional; default is true
  *   override-parameter-distribution = "@some-dist"; // optional
- *   save-nll = "distribution-from-override"; //optional, default is ""
+ *   parameters-for-nll = { p1 = 0.0; p2 = 1.0; p3 = "diced_value"; }; //optional; assuming p1, p2, p3 are parameters
+ *   rnd_gen = { seed = 123; }; // optional
  * };
  * \endcode
  *
@@ -359,34 +401,44 @@ private:
  *
  * \c model specifies the model to use for data creation
  *
- * \c override-parameter-distribution is an optional setting overriding the default behavior for parameter values, see below. It
- *     has to provide (at least) all the model parameters.
+ * \c dice_poisson controls whether the pseudo data this plugin provides dices a poisson around the model prediction in each bin
+ *   or just returns the model prediction directly; see below for details.
  *
- * \c save-nll is a string with allowed values "" (empty string), "distribution-from-override" and "distribution-from-model".
- *     Ifnot the empty string (""), the negative-log-likelihood of the sampled pseudo data will be saved to the event
- *     table for each call to fill() by constructing and evaluating the appropriate NLLikelihood.
+ * \c dice_template_uncertainties controls whether there will be a random smearing of the templates within their uncertainties prior to sampling pseudo data;
+ *    see below for details.
+ *
+ * \c override-parameter-distribution is an optional setting overriding the distribution from which parameter values are drawn, see below. It
+ *     has to provide exactly the same parameters as the model.
+ *
+ * \c parameters-for-nll defines the parameter values used for saving the value of the negative log-likelihood. They are
+ *     either given directly as floating point, or the special string "diced_value". Each parameter of the model
+ *     must be specified here. If not given, the negative log-likelihood will not be saved.
+ *
+ * \c rnd_gen defined the random number generator to use. The default is to construct a \link theta::Random Random \endlink class
+ *    with a empty setting group which will use defaults documented there.
  *
  * For each call of fill
  * <ol>
- *   <li>parameter values are sampled from the parameter distribution. If the setting \c override-parameter-distribution
- *       is given, it will be used for this step. Otherwise, the parameter distribution specified in the model will be used.</li>
- *   <li>the parameter values from the previous step are used in a call to call Model::samplePseudoData </li>
- *   <li>if \c save-nll is not the empty string (""), the likelihood function is built for the Data sampled
- *      in the previous step and evaluated at the parameters used sampled in step 1. As parameter distribution in the
- *      NLLikelihood instance, either the distribution from the model (if save-nll = "distribution-from-model") or the
- *      distribution specified in "override-parameter-distribution" (if save-nll = "distribution-from-override") is used.</li>
+ *   <li>parameter values are sampled from the parameter distribution of the model. If the setting \c override-parameter-distribution
+ *       is given, it will be used for this step instead.</li>
+ *   <li>the parameter values from the previous step are used to calculate the Model prediction. If \c dice_template_uncertainties is true,
+ *      this will be done using the method HistogramFunction::getRandomFluctuation instead of the evaluation operator of \link theta::HistogramFunction HistogramFunction\endlink.
+ *      What this means exactly depends on the HistogramFunction instances used; see their documentation of \c getRandomFlucutation method for details.</li>
+ *   <li>if \c dice_poisson is \c true, a Poisson random number is drawn for each bin around the mean of the prediciton from the previous step. Otherwise,
+ *      the bin contents from the model prediction are used as pseudo data directly (somtimes called "Asimov data").</li>
+ *   <li>if \c parameters-for-nll is given, the likelihood function is built for the Data sampled
+ *      in the previous step and evaluated at the given parameter values.</li>
  * </ol>
  *
- * If \c save-nll is "distribution-from-override", \c override-parameter-distribution must be set.
+ * \c model_source will create a column in the event table for each model parameter and save the values used to sample the pseudo
+ * data. If \c parameters-for-nll is given, a column "nll" will be created where the value of the negative log-likelihood is saved.
  *
- * It is guaranteed that the method Distribution::sample is called exactly once per call to model_source::fill.
- * This can be used to specify a Distribution in the "override-parameter-distribution" setting which scans
- * some parameters (and only dices some others).
- * 
- * model_source will create a column in the event table for each model parameter and save the values used to sample the pseudo
- * data there. If save-nll is non-empty, a column "nll" will be created where the values will be saved.
+ * The \c parameters-for-nll setting can be used to contruct Feldman-Cousins intervals which uses the likelihood ratio as
+ * ordering principle. One of the likelihood values uses the true value of the parameter of interest and is calculated here in \c model_source.
+ * The other likelihood value can be calculated used the \link mle mle \endlink producer which saves the nll value at the
+ * minimum of the negative log-likelihood.
  */
-class model_source: public theta::DataSource{
+class model_source: public theta::DataSource, public theta::RandomConsumer {
 public:
 
     /// Construct from a Configuration; required by the plugin system
@@ -399,21 +451,20 @@ public:
      */
     virtual void fill(theta::Data & dat, theta::Run & run);
     
-    virtual void define_table();
-
 private:
-    enum e_save_nll{ nosave, distribution_from_model, distribution_from_override };
-
-    e_save_nll save_nll;
+    theta::ParValues parameters_for_nll;
     
-    theta::EventTable::column c_nll;
+    bool save_nll;
+    std::auto_ptr<theta::Column> c_nll;
     
     theta::ParIds par_ids;
-    std::vector<std::string> parameter_names;
-    std::vector<theta::EventTable::column> parameter_columns;
+    boost::ptr_vector<theta::Column> parameter_columns;
     
     std::auto_ptr<theta::Model> model;
     std::auto_ptr<theta::Distribution> override_parameter_distribution;
+    
+    bool dice_poisson;
+    bool dice_template_uncertainties;
 
 };
 

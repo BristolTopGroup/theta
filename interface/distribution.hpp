@@ -3,6 +3,7 @@
 
 #include "interface/decls.hpp"
 #include "interface/variables.hpp"
+#include "interface/plugin.hpp"
 
 namespace theta{
 
@@ -44,9 +45,14 @@ namespace theta{
         /** \brief Provides the mode (most probable values)
          *
          * All parameters returned by getParameters() are set to their most
-         * probable value. It is guaranteed to lie within the support.
+         * probable value.
          *
-         * This is useful as start value for minimizations or markov chains.
+         * Derived classes must ensure that if calling evalNL with all parameter values
+         * set to their mode as returned by this function has a non-zero probability
+         * (i.e., a non-infinite evalNL result).
+         *
+         * This function is mainly used to select valid start values for
+         * algorithms like minimizations or markov chains.
          */
         virtual void mode(ParValues & result) const = 0;
 
@@ -81,30 +87,14 @@ namespace theta{
          *
          * This is mainly used to set constraints for that parameter in a minimization procedure.
          *
-         * If \c p is not in getParameters(), the result is undefined (i.e., derived one-dimensional classes
+         * If \c p is not in getParameters(), the behaviour is undefined (i.e., derived one-dimensional classes
          *  need not check whether p is the correct ParId).
          */
         virtual const std::pair<double, double> & support(const ParId & p) const = 0;
 
-        /** \brief The width of the distribution in the given parameter
-         *
-         * This value is used as initial step size for parameter p in a
-         * minimization process or for step sizes in Markov Chains. It should
-         * correspond to the standard deviation of the distribution in this parameter.
-         * If the standard deviation is not defined, it should be set to a heuristic, finite
-         * value.
-         *
-         * It must zero if and only if the parameter is to be considered as fixed (i.e., in case of
-         * a delta distribution).
-         *
-         * If \c p is not in getParameters(), the result is undefined (i.e., derived one-dimensional classes
-         * need not check whether p is the correct ParId).
-         */
-        virtual double width(const ParId & p) const = 0;
-
         /** \brief Get the parameters this Distribution depends on and provides values for
          */
-        ParIds getParameters() const{
+        const ParIds & getParameters() const{
             return par_ids;
         }
         
@@ -114,18 +104,18 @@ namespace theta{
         ParIds par_ids;
     };
     
+    /// \brief namespace for free functions closely related to the \link Distribution Distribution\endlink class
     namespace DistributionUtils{
         
-        /** \brief Fill mode, width and support from a Distribution instance
+        /** \brief Fill mode and and support from a Distribution instance
          *
-         * This is a utility routine calling the Distribution::mode, Distribution::width
+         * This is a utility routine calling the Distribution::mode and
          * and Distribution::support routines for all parameters of the Distribution and filling
          * the result into the parameters \c mode, \c width and \c support
          */
-        void fillModeWidthSupport(theta::ParValues & mode, theta::ParValues & width,
-                std::map<theta::ParId, std::pair<double, double> > & support, const theta::Distribution & d);
+        void fillModeSupport(theta::ParValues & mode, std::map<theta::ParId, std::pair<double, double> > & support, const theta::Distribution & d);
     }
-
+    
 }
 
 #endif

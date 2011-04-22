@@ -14,6 +14,7 @@
  * \code
  * {
  *  type = "nll_scan";
+ *  name = "nll";
  *  parameter = "p0";
  *  minimizer = "@myminimizer";
  *  parameter-values = {start = 0.0; stop = 1.0; n-steps = 101;};
@@ -25,6 +26,9 @@
  * \endcode
  *
  * \c type has always to be "nll_scan" in order to use this producer
+ *
+ * \c name is a name chosen by the user used to construct unique column names in the result table (this name and two underscores are
+ *   prepended to the column names explained below).
  *
  * \c parameter is the name of the parameter for which the interval shall be calculated.
  *
@@ -39,8 +43,8 @@
  * For the definition of the reduced likelihood function, see \ref deltanll_intervals, including the meaning of the
  * \c re-minimize parameter.
  *
- * The negative logarithm of the reduced likelihood function at the given \c parameter-values is written to a blob
- * column called "nll".
+ * The negative logarithm of the reduced likelihood function at the given \c parameter-values is written as a 
+ * theta::Histogram column called "nll".
  *
  * The parameter value at the global minimum will be written to a column "maxl".
  */
@@ -49,16 +53,8 @@ public:
 
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     nll_scan(const theta::plugin::Configuration & cfg);
-
-    /** \brief Scan the reduced negative-log likelihood function and write out the result  to the database
-     */
-    virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
+    virtual void produce(const theta::Data & data, const theta::Model & model);
     
-    /** \brief Define the table columns
-     *
-     * Called by theta::Run::run as part of the setup. It defined the columns as described in the class documentation.
-     */
-    void define_table();
 private:
     //boost::shared_ptr<theta::VarIdManager> vm;
     theta::ParId pid;
@@ -72,11 +68,9 @@ private:
     theta::ParValues m_start, m_step;
     std::map<theta::ParId, std::pair<double, double> > m_ranges;
     
-    //save the result here:
-    std::vector<double> result;
 
     //table columns:
-    theta::EventTable::column c_nll, c_maxl;
+    std::auto_ptr<theta::Column> c_nll, c_maxl;
 };
 
 #endif

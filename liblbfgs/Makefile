@@ -1,6 +1,7 @@
-include ../Makefile.rules
+objects := .bin/lbfgs.o
+deps := .bin/lbfgs.d
 
-objects = lbfgs.o
+include ../Makefile.rules
 
 all: ../lib/liblbfgs.so
 

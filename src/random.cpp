@@ -111,7 +111,7 @@ const double Random::wtab[128] = {
 };
 
 
-double Random::gauss_zig(double sigma) throw(){
+double Random::gauss_zig(double sigma) {
     long int j;
     int i;
     int sign;
@@ -149,7 +149,7 @@ double Random::gauss_zig(double sigma) throw(){
     return sign * sigma * x;
 }
 
-unsigned int Random::poisson_root(double mean)throw() {
+unsigned int Random::poisson_root(double mean) {
     unsigned int n;
     if (mean <= 0) return 0;
     if (mean < 25) {
@@ -185,7 +185,7 @@ unsigned int Random::poisson_root(double mean)throw() {
     }
 }
 
-unsigned int Random::get_uniform_int(unsigned int n) throw() {
+unsigned int Random::get_uniform_int(unsigned int n) {
     unsigned int k;
     unsigned int scale = 0xFFFFFFFF / n;
     do {
@@ -210,7 +210,7 @@ void RandomSourceTaus::set_seed(unsigned int s) {
     fill(buffer);
 }
 
-void RandomSourceTaus::fill(vector<unsigned int> & buffer) throw(){
+void RandomSourceTaus::fill(vector<unsigned int> & buffer) {
     const vector<unsigned int>::iterator end = buffer.end();
     for(vector<unsigned int>::iterator it=buffer.begin(); it!=end; ++it){
         s1 = ((s1 & 0xFFFFFFFE) << 12) ^ (((s1 << 13)^s1) >> 19);
@@ -234,7 +234,7 @@ RandomSourceMersenneTwister::RandomSourceMersenneTwister(): mti(N){
     set_seed(5489U);
 }
 
-void RandomSourceMersenneTwister::fill(vector<unsigned int> & buffer) throw(){
+void RandomSourceMersenneTwister::fill(vector<unsigned int> & buffer) {
     unsigned int y;
     const vector<unsigned int>::iterator end = buffer.end();
     for(vector<unsigned int>::iterator it=buffer.begin(); it!=end; ++it){

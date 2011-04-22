@@ -1,7 +1,7 @@
 #include "core.hpp"
 #include "plugins/interpolating-histogram.hpp"
 #include "interface/random.hpp"
-#include "interface/run.hpp"
+#include "interface/model.hpp"
 
 #include <iostream>
 #include <boost/scoped_array.hpp>
@@ -36,7 +36,7 @@ fixed_poly::fixed_poly(const Configuration & ctx){
         }
         h.set(i, value);
     }
-    double norm_to = s["normalize_to"];
+    double norm_to = HistogramFunctionUtils::read_normalize_to(ctx.setting);
     double norm;
     if ((norm = h.get_sum_of_bincontents()) == 0.0) {
         throw ConfigurationException("Histogram specification is zero (can't normalize)");
@@ -58,7 +58,7 @@ fixed_gauss::fixed_gauss(const Configuration & ctx){
         double d = (h.get_bincenter(i) - mean) / width;
         h.set(i, exp(-0.5 * d * d));
     }
-    double norm_to = s["normalize_to"];
+    double norm_to = HistogramFunctionUtils::read_normalize_to(ctx.setting);
     double norm;
     if ((norm = h.get_sum_of_bincontents()) == 0.0) {
         throw ConfigurationException("Histogram specification is zero (can't normalize)");
@@ -109,9 +109,6 @@ const std::pair<double,double> & log_normal::support(const theta::ParId & p) con
     return support_;
 }
 
-double log_normal::width(const theta::ParId &) const{
-    return sqrt((exp(sigma * sigma) - 1)*exp(2*mu + sigma*sigma));
-}
 
 void log_normal::mode(theta::ParValues & result) const{
     result.set(*(par_ids.begin()), exp(mu - sigma*sigma));
@@ -126,7 +123,7 @@ delta_distribution::delta_distribution(const theta::plugin::Configuration & cfg)
         values.set(pid, val);
         supports[pid].second = supports[pid].first = val;
     }
-    par_ids = values.getAllParIds();
+    par_ids = values.getParameters();
 }
 
 void delta_distribution::sample(theta::ParValues & result, theta::Random &) const{
@@ -154,9 +151,6 @@ const std::pair<double, double> & delta_distribution::support(const theta::ParId
     return it->second;
 }
 
-double delta_distribution::width(const theta::ParId &) const{
-    return 0.0;
-}
 
 /* START flat_distribution */
 
@@ -169,20 +163,10 @@ flat_distribution::flat_distribution(const theta::plugin::Configuration & cfg){
         double low = ranges[pid].first = s["range"][0].get_double_or_inf();
         double high = ranges[pid].second = s["range"][1].get_double_or_inf();
         if(low > high) throw ConfigurationException("invalid range");
-        if(s.exists("width")){
-            widths.set(pid, s["width"]);
-        }
-        else{
-            if(not std::isinf(high-low))
-                widths.set(pid, 0.1 * (high - low));
-            //otherwise: not set and width(...) will throw ...
-        }
         modes.set(pid, 0.5 * (high + low));
         if(s.exists("fix-sample-value")){
             fix_sample_values.set(pid, s["fix-sample-value"]);
             modes.set(pid, fix_sample_values.get(pid));
-            if(not widths.contains(pid) && fix_sample_values.get(pid) > 0.0)
-                widths.set(pid, fix_sample_values.get(pid)*0.1);
         }
     }
 }
@@ -226,10 +210,6 @@ const std::pair<double, double> & flat_distribution::support(const theta::ParId&
     std::map<theta::ParId, std::pair<double, double> >::const_iterator it=ranges.find(p);
     if(it==ranges.end()) throw InvalidArgumentException("flat_distribution::support: parameter not found");
     return it->second;
-}
-
-double flat_distribution::width(const theta::ParId & p) const{
-    return widths.get(p); //throws NotFoundException if not set
 }
 
 
@@ -339,7 +319,7 @@ gauss::gauss(const Configuration & cfg){
                ss << "While building gauss distribution defined at path " << cfg.setting.getPath() << ": expected one or more 'parameters'.";
                throw ConfigurationException(ss.str());
            }
-           if(cfg.setting["ranges"].size()!=n || cfg.setting["mu"].size()!=n || cfg.setting["covariance"].size()!=n){
+           if(cfg.setting["ranges"].size()!=n || cfg.setting["mean"].size()!=n || cfg.setting["covariance"].size()!=n){
                throw ConfigurationException("gauss: length of ranges, mu, covariance mismatch!");
            }
            mu.resize(n);
@@ -348,8 +328,8 @@ gauss::gauss(const Configuration & cfg){
            for(size_t i=0; i<n; i++){
                v_par_ids.push_back(cfg.vm->getParId(cfg.setting["parameters"][i]));
                mu[i] = cfg.setting["mean"][i];
-               ranges[i].first = cfg.setting["ranges"][i][0];
-               ranges[i].second = cfg.setting["ranges"][i][1];
+               ranges[i].first = cfg.setting["ranges"][i][0].get_double_or_inf();
+               ranges[i].second = cfg.setting["ranges"][i][1].get_double_or_inf();
                for(size_t j=0; j<n; j++){
                    cov(i,j) = cfg.setting["covariance"][i][j];
                }
@@ -362,27 +342,6 @@ gauss::gauss(const Configuration & cfg){
     inverse_cov = cov;
     sqrt_cov.cholesky_decomposition(); //throws MathException if not possible
     inverse_cov.invert_cholesky();
-}
-
-double gauss::width(const ParId & p)const{
-    size_t i=0;
-    for(vector<ParId>::const_iterator v=v_par_ids.begin(); v!=v_par_ids.end(); ++v, ++i){
-        if(*v == p)break;
-    }
-    const pair<double, double> & range = ranges[i];
-    double min_result = range.second - range.first;
-    if(min_result = 0.0) return 0.0;
-
-    // in the sampling procedure, sqrt_cov * vector is returned. Now, the
-    // width of the marginal distribution of component i of the result vector is given by
-    //   max_v   (sqrt_cov * v)[i]
-    // where the maximum is taken over all vectors of unit length, v.
-    // This maximum is the same as:
-    double result = 0;
-    for(size_t j=0; j<=i; j++){
-        result = std::max(result, fabs(sqrt_cov(i,j)));
-    }
-    return result;
 }
 
 const std::pair<double, double> & gauss::support(const ParId & p)const{
@@ -400,8 +359,72 @@ void gauss::mode(theta::ParValues & result) const{
     }
 }
 
+/* START gauss1d */
+void gauss1d::sample(ParValues & result, Random & rnd) const{
+    if(range.first==range.second){
+        result.set(*par_ids.begin(), range.first);
+        return;
+    }
+    for(size_t rep=0; rep <=100000; ++rep){
+         double value = rnd.gauss(sigma) + mu;
+         if(value >= range.first && value <= range.second){
+             result.set(*par_ids.begin(), value);
+             return;
+         }
+    }
+    throw Exception("gauss1d::sample: too many iterations necessary to fulfill configured range");
+}
 
-mult::mult(const Configuration & cfg): Function(cfg){
+double gauss1d::evalNL(const ParValues & values) const{
+    double value = values.get(*par_ids.begin());
+    if(value > range.second || value < range.first){
+        return std::numeric_limits<double>::infinity();
+    }
+    double delta = (value - mu) / sigma;
+    return 0.5 * delta * delta;
+}
+
+double gauss1d::evalNL_withDerivatives(const ParValues & values, ParValues & derivatives) const{
+    const ParId & pid = *par_ids.begin();
+    double value = values.get(pid);
+    if(value > range.second || value < range.first){
+        derivatives.set(pid, 0.0);
+        return std::numeric_limits<double>::infinity();
+    }
+    double delta = (value - mu) / sigma;
+    derivatives.set(pid, delta / sigma);
+    return 0.5 * delta * delta;
+}
+
+gauss1d::gauss1d(const Configuration & cfg){
+   string par_name = cfg.setting["parameter"];
+   par_ids.insert(cfg.vm->getParId(par_name));
+   mu = cfg.setting["mean"];
+   sigma = cfg.setting["width"];
+   if(sigma <= 0){
+      throw ConfigurationException("invalid 'width' given (must be > 0)");
+   }
+   range.first = cfg.setting["range"][0].get_double_or_inf();
+   range.second = cfg.setting["range"][1].get_double_or_inf();
+   if(range.second < range.first){
+      throw ConfigurationException("empty 'range' given");
+   }
+   if(range.second < mu || mu < range.first){
+      throw ConfigurationException("given range does not include mean");
+   }
+}
+
+const std::pair<double, double> & gauss1d::support(const ParId & p)const{
+    if(p!=*par_ids.begin()) throw InvalidArgumentException("gauss1d::support(): invalid parameter");
+    return range;
+}
+
+void gauss1d::mode(theta::ParValues & result) const{
+    result.set(*par_ids.begin(), mu);
+}
+
+
+mult::mult(const Configuration & cfg){
     size_t n = cfg.setting["parameters"].size();
     if(n==0){
         throw ConfigurationException("mult: 'parameters' empty (or not a list)!");
@@ -436,7 +459,7 @@ void product_distribution::add_distributions(const Configuration & cfg, const th
             add_distributions(cfg, dist_setting["distributions"], depth-1);
         }
         else{
-            distributions.push_back(PluginManager<Distribution>::build(Configuration(cfg, dist_setting)));
+            distributions.push_back(PluginManager<Distribution>::instance().build(Configuration(cfg, dist_setting)));
             ParIds new_pids = distributions.back().getParameters();
             par_ids.insert(new_pids.begin(), new_pids.end());
             for(ParIds::const_iterator it=new_pids.begin(); it!=new_pids.end(); ++it){
@@ -489,72 +512,95 @@ const std::pair<double, double> & product_distribution::support(const ParId & p)
     return distributions[it->second].support(p);
 }
 
-double product_distribution::width(const ParId & p) const{
-    map<ParId, size_t>::const_iterator it = parid_to_index.find(p);
-    if(it==parid_to_index.end()) throw InvalidArgumentException("product_distribution::width: invalid ParId");
-    return distributions[it->second].width(p);
-}
-
-void model_source::define_table(){
-    for(size_t i=0; i< parameter_names.size(); ++i){
-        parameter_columns.push_back(table->add_column(*this, parameter_names[i], EventTable::typeDouble));
-    }
-    if(save_nll!=nosave){
-        c_nll = table->add_column(*this, "nll", EventTable::typeDouble);
-    }
-}
-
-model_source::model_source(const theta::plugin::Configuration & cfg): save_nll(nosave), DataSource(cfg){
-    model = ModelFactory::buildModel(Configuration(cfg, cfg.setting["model"]));
-    obs_ids = model->getObservables();
+model_source::model_source(const theta::plugin::Configuration & cfg): DataSource(cfg), RandomConsumer(cfg, getName()), save_nll(false), dice_poisson(true),
+  dice_template_uncertainties(true){
+    model = PluginManager<Model>::instance().build(Configuration(cfg, cfg.setting["model"]));
     par_ids = model->getParameters();
-    for(ParIds::const_iterator p_it=par_ids.begin(); p_it!=par_ids.end(); ++p_it){
-        parameter_names.push_back(cfg.vm->getName(*p_it));
-    }
     if(cfg.setting.exists("override-parameter-distribution")){
-        override_parameter_distribution = PluginManager<Distribution>::build(Configuration(cfg, cfg.setting["override-parameter-distribution"]));
+        override_parameter_distribution = PluginManager<Distribution>::instance().build(Configuration(cfg, cfg.setting["override-parameter-distribution"]));
     }
-    if(cfg.setting.exists("save-nll")){
-        string s_save_nll = cfg.setting["save-nll"];
-        if(s_save_nll == "distribution-from-model"){
-            save_nll = distribution_from_model;
-        }
-        else if (s_save_nll == "distribution-from-override"){
-            save_nll = distribution_from_override;
-            if(override_parameter_distribution.get()==0){
-                throw ConfigurationException("model_source: save-nll set to \"distribution from override\", but no \"override-parameter-distribution\" specified!");
+    if(cfg.setting.exists("dice_poisson")){
+        dice_poisson = cfg.setting["dice_poisson"];
+    }
+    if(cfg.setting.exists("dice_template_uncertainties")){
+        dice_template_uncertainties = cfg.setting["dice_template_uncertainties"];
+    }
+    if(cfg.setting.exists("parameters-for-nll")){
+        save_nll = true;
+        const size_t n = cfg.setting["parameters-for-nll"].size();
+        ParIds pids_for_nll;
+        for(size_t i=0; i<n; ++i){
+            string pname = cfg.setting["parameters-for-nll"][i].getName();
+            ParId pid = cfg.vm->getParId(pname);
+            pids_for_nll.insert(pid);
+            try{
+                double value = cfg.setting["parameters-for-nll"][i];
+                parameters_for_nll.set(pid, value);
+            }catch(SettingTypeException &){
+               string s_value = cfg.setting["parameters-for-nll"][i];
+               if(s_value != "diced_value"){
+                   throw ConfigurationException("illegal value given in parameters-for-nll for parameter " + pname);
+               }
             }
         }
-        else if(s_save_nll == ""){
-            throw ConfigurationException("model_source: invalid setting save-nll specified (allowed "
-                     "values are \"\", \"distribution-from-model\" and \"distribution-from-override\")");
+        if(!(pids_for_nll==par_ids)){
+            throw ConfigurationException("parameters-for-nll does not specify exactly the model parameters");
         }
+    }
+    //define the table:
+    for(ParIds::const_iterator p_it=par_ids.begin(); p_it!=par_ids.end(); ++p_it){
+        parameter_columns.push_back(products_sink->declare_product(*this, cfg.vm->getName(*p_it), theta::typeDouble));
+    }
+    if(save_nll){
+        c_nll = products_sink->declare_product(*this, "nll", theta::typeDouble);
     }
 }
 
 void model_source::fill(Data & dat, Run & run){
-    Random & rnd = run.get_random();
+    dat.reset();
+    Random & rnd = *rnd_gen;
     ParValues values;
+    //1. sample parameter values
     if(override_parameter_distribution.get()){
         override_parameter_distribution->sample(values, rnd);
     }
     else{
         model->get_parameter_distribution().sample(values, rnd);
     }
-    model->samplePseudoData(dat, rnd, values);
     size_t i=0;
     for(ParIds::const_iterator p_it=par_ids.begin(); p_it!=par_ids.end(); ++p_it, ++i){
-        table->set_column(parameter_columns[i], values.get(*p_it));
+        products_sink->set_product(parameter_columns[i], values.get(*p_it));
     }
     
-    if(save_nll==nosave) return;
-    NLLikelihood nll = model->getNLLikelihood(dat);
-    if(save_nll==distribution_from_override) nll.set_override_distribution(override_parameter_distribution.get());
-    table->set_column(c_nll, nll(values));
+    //2. get model prediction
+    if(dice_template_uncertainties){
+       model->get_prediction_randomized(rnd, dat, values);
+    }
+    else{
+       model->get_prediction(dat, values);
+    }
+    
+    //3. (maybe) sample poisson
+    if(dice_poisson){
+        ObsIds observables = dat.getObservables();
+        for (ObsIds::const_iterator it = observables.begin(); it != observables.end(); it++) {
+             randomize_poisson(dat[*it], rnd);
+        }
+    }
+    
+    //4. calculate nll value
+    if(save_nll){
+       std::auto_ptr<NLLikelihood> nll = model->getNLLikelihood(dat);
+       values.set(parameters_for_nll);
+       products_sink->set_product(*c_nll, (*nll)(values));
+    }
+    
+
 }
 
 
 REGISTER_PLUGIN(gauss)
+REGISTER_PLUGIN(gauss1d)
 REGISTER_PLUGIN(log_normal)
 REGISTER_PLUGIN(flat_distribution)
 REGISTER_PLUGIN(delta_distribution)

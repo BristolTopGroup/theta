@@ -2,10 +2,9 @@
 #define PLUGIN_DELTANLL_HYPOTEST_HPP
 
 #include "interface/decls.hpp"
-
-//#include "interface/plugin.hpp"
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
+#include "interface/variables.hpp"
 
 #include <string>
 
@@ -40,8 +39,10 @@
  *   
  * Note that the setting "override-parameter-distribution" is not allowed for this producer.
  *
- * The result table will contain the columns "nll_sb" and "nll_b", which contain the found value of the negative log-likelihood
- * for the "signal-plus-background" and "background-only" hypotheses, respectively.
+ * The result table will contain the columns "nll_sb" and "nll_b", and "nll_diff"
+ * which contain the found value of the negative log-likelihood
+ * for the "signal-plus-background" and "background-only" hypotheses, and the difference
+ * of these two, nll_b - nll_sb, respectively.
  *
  * For a typical application, the "signal-plus-background-distribution" setting is the same as in the model,
  * whereas the "background-only-distribution" setting group includes a delta_distributions which fixes
@@ -51,7 +52,7 @@
  * inequality can only come from roundoff errors in the minimization process or from the
  * minimizer not finding the correct minimum.
  *
- * If the number of observed events is large, \code 2 * sqrt(nll_b - nll_sb) \endcode will be a good estimate of
+ * If the number of observed events is large, \code sqrt(2 * (nll_b - nll_sb)) \endcode will be a good estimate of
  * the significance (in sigma) with which the "background only" null-hypothesis "background-only" can be rejected.
  * Even if the asymptotic property is not fulfilled, this quantity can still be used as test statistic for the
  * hypothesis test which has the "background-only" case as null hypothesis.
@@ -60,16 +61,11 @@ class deltanll_hypotest: public theta::Producer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     deltanll_hypotest(const theta::plugin::Configuration & cfg);
-    
-    /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
-    virtual void produce(theta::Run & run, const theta::Data &, const theta::Model&);
-    
-    /// Define the table columns "nll_sb" and "nll_b" in the result table
-    virtual void define_table();
+    virtual void produce(const theta::Data &, const theta::Model&);
     
 private:    
-    std::auto_ptr<theta::Distribution> s_plus_b;
-    std::auto_ptr<theta::Distribution> b_only;
+    boost::shared_ptr<theta::Distribution> s_plus_b;
+    boost::shared_ptr<theta::Distribution> b_only;
     
     bool init;
     
@@ -79,7 +75,7 @@ private:
     
     std::auto_ptr<theta::Minimizer> minimizer;
     
-    theta::EventTable::column c_nll_b, c_nll_sb;
+    std::auto_ptr<theta::Column> c_nll_b, c_nll_sb, c_nll_diff;
 };
 
 #endif

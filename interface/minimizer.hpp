@@ -73,7 +73,7 @@ namespace theta{
      *
      * The possible settings are documented at derived classes.
      */
-    class Minimizer: public theta::plugin::PluginType{
+    class Minimizer{
     public:
         
         /// Define us as the base_type for derived classes; required for the plugin system
@@ -106,8 +106,9 @@ namespace theta{
         double tolerance;
 
         /// Construct Minimizer from a Configuration instance, setting the VarIdManager vm
-        Minimizer(const theta::plugin::Configuration & cfg): PluginType(cfg), vm(cfg.vm){}
+        Minimizer(const theta::plugin::Configuration & cfg): vm(cfg.vm){}
     };
+    
 }
 
 #endif

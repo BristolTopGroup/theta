@@ -66,18 +66,6 @@ BOOST_AUTO_TEST_CASE(par_exceptions){
     all_ids.insert(par1);
     all_ids.insert(v.par0);
     BOOST_REQUIRE(all_ids == v.vm.getAllParIds());
-    
-    //request invalid parid:
-    ParId pid;
-    ex = false;
-    try{
-        v.vm.getName(pid);
-    }
-    catch(NotFoundException &){
-        ex = true;
-    }
-    BOOST_CHECK(ex);
-    BOOST_REQUIRE(all_ids == v.vm.getAllParIds());
 }
 
 BOOST_AUTO_TEST_CASE(basic_obs){

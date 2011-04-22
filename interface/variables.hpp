@@ -7,10 +7,11 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <ostream>
 
+#include "interface/decls.hpp"
 #include "interface/exception.hpp"
 #include "interface/utils.hpp"
-#include "interface/decls.hpp"
 
 #include <boost/utility.hpp>
 
@@ -32,7 +33,10 @@ namespace theta {
     class VarId{
     friend class VarIdManager;
     friend class ParValues;
-    friend std::ostream & theta::operator<<(std::ostream & out, const ParIds & pids);
+    friend class Data;
+    friend std::ostream & operator<<(std::ostream & out, const VarId & vid){
+        return out << vid.id;
+    }
     public:
         //@{
         /** \brief Implements the order and equality semantics.
@@ -50,10 +54,10 @@ namespace theta {
         
         /** Creates in invalid VarId which evaluates to false
          */
-        VarId(): id(-1){}
+        //VarId(): id(-1){}
     private:
-        int id;
-        VarId(int i): id(i){}
+        size_t id;
+        explicit VarId(size_t i): id(i){}
     };
     
     // An alternative to tag structs would be using common inheritance from
@@ -109,13 +113,21 @@ namespace theta {
             return vars.end();
         }
 
-        /** \brief Insert a new id.
+        /** \brief Insert a new id
          *
          * \param id The id object to insert. 
          * \return \c true, if an insertion actually took place and \c false if the id was already contained. 
          */
         bool insert(const id_type & id) {
             return vars.insert(id).second;
+        }
+        
+        /** \brief Erase a previously inserted id
+         *
+         * \param id The id object to erase.
+         */
+        void erase(const id_type & id) {
+            vars.erase(id);
         }
         
         /** \brief Insert new ids.
@@ -163,7 +175,7 @@ namespace theta {
          *
          * Two VarIds are the same if and only if the set of contained VarId s is the same.
          */
-        bool operator==(const VarIds<id_type> & rhs) {
+        bool operator==(const VarIds<id_type> & rhs) const{
             return vars == rhs.vars;
         }
 
@@ -261,15 +273,15 @@ namespace theta {
 
     private:
         //ParIds:
-        std::map<ParId, std::string> pid_to_name;
-        std::map<std::string, ParId> name_to_pid;
-        int next_pid_id;
+        std::map<size_t, std::string> pid_to_name;
+        std::map<std::string, size_t> name_to_pid;
+        size_t next_pid_id;
         //ObsIds:
-        std::map<ObsId, std::string> oid_to_name;
-        std::map<std::string, ObsId> name_to_oid;
-        std::map<ObsId, std::pair<double, double> > oid_to_range;
-        std::map<ObsId, size_t> oid_to_nbins;
-        int next_oid_id;
+        std::map<size_t, std::string> oid_to_name;
+        std::map<std::string, size_t> name_to_oid;
+        std::map<size_t, std::pair<double, double> > oid_to_range;
+        std::map<size_t, size_t> oid_to_nbins;
+        size_t next_oid_id;
     };
 
     /** \brief A mapping-like class storing parameter values.
@@ -282,17 +294,42 @@ namespace theta {
      * For the latter, ParIds and ObsIds objects are used.
      */
     class ParValues {
+    private:
+        void fail_get(const ParId & pid) const;
     public:
         /** \brief Default constructor which creates an empty container.
         */
         ParValues():values(10, NAN){}
         
-        /** Constructor for \c VarValues which will hold values of \c vm.
+        /** \brief Constructor optimized for parameter information from \c vm.
          *
          * This is semantically equivalent to the default constructor. Using this
-         * constructor makes possible some optimizations.
+         * constructor makes possible some optimizations based on the total number of
+         * parameters.
          */
-        ParValues(const VarIdManager & vm): values(vm.next_pid_id, NAN){}
+        explicit ParValues(const VarIdManager & vm): values(vm.next_pid_id, NAN){}
+        
+        /** \brief Constructor initializing the values according to an array of doubles
+         *
+         * The resulting ParValues instance is initialized with the given data
+         * by iterating over par_ids and using the value at that position from data.
+         * This is the convention to convert array data to ParValues used in theta.
+         *
+         * Assumed that data contains (at least) par_ids.size() values. Otherwise,
+         * behaviour is undefined.
+         */
+        ParValues(const double * data, const ParIds & par_ids){
+           //to reallocate only once, find the maximum id:
+           size_t s = 1;
+           for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it){
+               s = std::max<size_t>(s, it->id + 1);
+           }
+           values.resize(s, NAN);
+           size_t i = 0;
+           for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it, ++i){
+               values[it->id] = data[i];
+           }
+        }
         
         /** \brief Set a value.
          *
@@ -308,8 +345,8 @@ namespace theta {
          * \param val The new value for the parameter.
          */
         ParValues & set(const ParId & pid, double val){
-            const int id = pid.id;
-            if(id >= (int)values.size()){
+            const size_t id = pid.id;
+            if(id >= values.size()){
                 values.resize(id+1, NAN);
             }
             values[id] = val;
@@ -339,8 +376,8 @@ namespace theta {
          * \param delta The value to add to the parameter. 
          */
         void addTo(const ParId & pid, double delta){
-            const int id = pid.id;
-            if(id >= (int)values.size() || isnan(values[id])){
+            const size_t id = pid.id;
+            if(id >= values.size() || std::isnan(values[id])){
                 throw NotFoundException("ParValues::addTo: given ParId not found.");
             }
             values[id] += delta;
@@ -354,12 +391,11 @@ namespace theta {
          *  \return The current value for the parameter \c pid.
          */
         double get(const ParId & pid) const{
-            double result;
-            const int id = pid.id;
-            if(id >= (int)values.size() || isnan(result = values[id])){
-                std::stringstream ss;
-                ss << "ParValues::get: given VarId " << id << " not found";
-                throw NotFoundException(ss.str());
+            double result = 0.0;
+            const size_t id = pid.id;
+            if(id >= values.size() || std::isnan(result = values[id])){
+                //do failure outside this function to keep this function small to increase inlining probability
+                fail_get(pid);
             }
             return result;
         }
@@ -367,13 +403,13 @@ namespace theta {
         /** \brief Returns whether \c pid is contained in this VarVariables.
          */
         bool contains(const ParId & pid) const{
-            const int id = pid.id;
-            return id < (int)values.size() and not isnan(values[id]);
+            const size_t id = pid.id;
+            return id < values.size() && !std::isnan(values[id]);
         }
 
         /** \brief Return all \c ParIds of the variables in this \c VarValues.
          */
-        ParIds getAllParIds() const;
+        ParIds getParameters() const;
 
     private:
         //Make private an do not implement, because usually, one should not replace

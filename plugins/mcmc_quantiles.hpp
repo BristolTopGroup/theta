@@ -1,10 +1,11 @@
-#ifndef PLUGIN_MCMC_QUANTILES_HPP
-#define PLUGIN_MCMC_QUANTILES_HPP
+#ifndef PLUGINS_MCMC_QUANTILES_HPP
+#define PLUGINS_MCMC_QUANTILES_HPP
 
 #include "interface/decls.hpp"
-
+#include "interface/variables.hpp"
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
+#include "interface/random-utils.hpp"
 #include "interface/matrix.hpp"
 
 #include <string>
@@ -47,22 +48,15 @@
  * will be "quant" + 10000 * quantile, written with leading zeros. For example, if the quantile is 0.5,
  * the column name will be "quant05000", if the 99.9% quantile is requested (i.e., 0.999), the name will be "quant09990".
  */
-class mcmc_quantiles: public theta::Producer{
+class mcmc_quantiles: public theta::Producer, public theta::RandomConsumer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     mcmc_quantiles(const theta::plugin::Configuration & ctx);
-    
-    /// run the statistical method using \c data and \c model to construct the likelihood function and write out the result.
-    virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
-    
-    /// Define the table columns
-    virtual void define_table();
+    virtual void produce(const theta::Data & data, const theta::Model & model);
     
 private:
     //whether sqrt_cov* and startvalues* have been initialized:
     bool init;
-    //if initialization failed, do not attempt to initialize again ...
-    bool init_failed;
     
     //the requested quantiles:
     std::vector<double> quantiles;
@@ -72,7 +66,7 @@ private:
     boost::shared_ptr<theta::VarIdManager> vm;
     
     //result columns: one per requested quantile:
-    std::vector<theta::EventTable::column> columns;
+    boost::ptr_vector<theta::Column> columns;
     
     //MCMC parameters:
     unsigned int iterations;

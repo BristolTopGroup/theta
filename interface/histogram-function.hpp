@@ -2,8 +2,9 @@
 #define HISTOGRAM_FUNCTION_HPP
 
 #include "interface/decls.hpp"
-#include "interface/variables.hpp"
 #include "interface/histogram.hpp"
+#include "interface/plugin.hpp"
+#include "interface/variables.hpp"
 
 namespace theta {
 
@@ -58,17 +59,27 @@ namespace theta {
 
         /** \brief Returns the parameters which this HistogramFunction depends on.
          */
-        virtual ParIds getParameters() const = 0;
-        
-        /** \brief Returns whether a derivative w.r.t. pid could be !=0.
-         * 
-         * Same as getParameters().contains(pid).
+        const ParIds & getParameters() const{
+            return par_ids;
+        }
+
+        /** \brief Get a Histogram of the dimensions (nbins, xmin, xmax) also returned by the evaluation operator
+         *
+         * The content of the returned Histogram does not matter.
+         *
+         * This function is used as part of the setup to make sure that the Histogram dimensions match; to save
+         * time, it is not usually not used during usual likelihood evaluation, etc.
          */
-        virtual bool dependsOn(const ParId & pid) const = 0;
-        
+        virtual Histogram get_histogram_dimensions() const = 0;
+
         /// Declare the destructor virtual as there will be polymorphic access to derived classes
         virtual ~HistogramFunction(){}
+        
+    protected:
+        /// To be filled by derived classes:
+        ParIds par_ids;
     };
+    
 
     /** \brief A simple HistogramFunction which always returns the same Histogram, independent of any parameters.
      *
@@ -91,17 +102,10 @@ namespace theta {
         virtual const Histogram & operator()(const ParValues & values) const{
             return h;
         }
-
-        /** \brief Returns the empty parameter set as it does not depend on any parameters.
-         */
-        virtual ParIds getParameters() const{
-            return ParIds();//empty set.
-        }
-
-        /** \brief Always returns false, as the Histogram is constant and does not depend on any parameters.
-         */
-        virtual bool dependsOn(const ParId &) const{
-            return false;
+        
+        /// Return a Histogram of the same dimenions as the one returned by operator()
+        virtual Histogram get_histogram_dimensions() const{
+            return h;
         }
 
     protected:
@@ -125,8 +129,8 @@ namespace theta {
 
     /** \brief A constant HistogramFunction, including bin-by-bin fluctuation for pseudodata generation.
      * 
-     * Similar to ConstantHistogramFunction, but includes bin-by-bin gaussian errors as uncertainty.
-     * are not correlated).
+     * Similar to ConstantHistogramFunction, but includes bin-by-bin gaussian errors as uncertainty which
+     * are assumed to be uncorrelated.
      */
     class ConstantHistogramFunctionError: public HistogramFunction{
     public:
@@ -170,17 +174,10 @@ namespace theta {
          * bin entries, so the density of a truncated gaussian is continous for *everywhere*.
          */
         virtual const Histogram & getRandomFluctuation(Random & rnd, const ParValues & values) const;
-
-        /** \brief Returns the empty parameter set as it does not depend on any parameters.
-         */
-        virtual ParIds getParameters() const{
-            return ParIds();//empty set.
-        }
-
-        /** \brief Always returns false, as this HistogramFunction is constant and does not depend on any parameters.
-         */
-        virtual bool dependsOn(const ParId &) const{
-            return false;
+        
+        /// Return a Histogram of the same dimenions as the one returned by operator()
+        virtual Histogram get_histogram_dimensions() const{
+            return h;
         }
 
     protected:
@@ -190,11 +187,10 @@ namespace theta {
          * be returned by operator() and the error Histogram used by getRandomFlutuation(). As documented
          * in ConstantHistogramFunctionError::ConstantHistogramFunctionError, the \c error Histogram
          * contains bin-by-bin relative errors which are assumed to be independent.
-         */        
+         */
         void set_histos(const Histogram & histo, const Histogram & error){
             h = histo;
             err = error;
-            
             h.check_compatibility(error);//throws if not compatible
             h.set(0,0);
             h.set(h.get_nbins()+1,0);
@@ -204,6 +200,7 @@ namespace theta {
                 if(error.get(i)<0.0) throw InvalidArgumentException("ConstantHistogramFunctionError: error histogram contains negative entries");
             }
         }
+
         /** \brief Default constructor to be used by derived classes
          */
         ConstantHistogramFunctionError(){}
@@ -213,6 +210,15 @@ namespace theta {
         Histogram err;
         mutable Histogram fluc; // the fluctuated Histogram returned by getFluctuatedHistogram
     };
+    
+    namespace HistogramFunctionUtils{
+        /** \brief Read the normalize_to setting
+         *
+         * parese the normalize_to setting, which can either be a double, or an array/list of doubles which are
+         * then multiplied.
+         */
+        double read_normalize_to(const theta::SettingWrapper & s);
+    }
 
 }
 

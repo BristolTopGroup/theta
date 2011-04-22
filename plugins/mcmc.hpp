@@ -1,5 +1,5 @@
-#ifndef THETA_MCMC_HPP
-#define THETA_MCMC_HPP
+#ifndef PLUGINS_MCMC_HPP
+#define PLUGINS_MCMC_HPP
 
 #include "interface/matrix.hpp"
 #include "interface/exception.hpp"
@@ -24,7 +24,6 @@ namespace theta {
  *       chain has <tt>n</tt> points at parameter values <tt>x</tt> and negative logarithm value of <tt>nll</tt>. What
  *       the result object does with this information is not of our concern here. Typically, it will either save the complete
  *       chain or fill the x values into a histogram</li>
- *   <li><tt>void end()</tt> is called after the chain is complete. Any cleanup necessary can be done here.
  * </ul>
  * @param rand is the random number generator to use to compute the next candidate point of the chain.
  *   It has to implement the <tt>double gauss()</tt> and <tt>double uniform()</tt>
@@ -43,10 +42,10 @@ void metropolisHastings(const nlltype & nllikelihood, resulttype &res, Random & 
         const std::vector<double> & startvalues, const Matrix & sqrt_cov, size_t iterations, size_t burn_in) {    
     const size_t npar = startvalues.size();
     if(npar != sqrt_cov.getRows() || npar!=sqrt_cov.getCols() || npar!=nllikelihood.getnpar() || npar!=res.getnpar())
-    throw InvalidArgumentException("metropolisHastings: dimension/size of arguments mismatch!");
+    throw InvalidArgumentException("metropolisHastings: dimension/size of arguments mismatch");
     size_t npar_reduced = npar;
     for(size_t i=0; i<npar; i++){
-    if(sqrt_cov(i,i)==0) npar_reduced--;
+        if(sqrt_cov(i,i)==0) --npar_reduced;
     }
     double factor = 2.38 / sqrt(npar_reduced);
 
@@ -65,9 +64,6 @@ void metropolisHastings(const nlltype & nllikelihood, resulttype &res, Random & 
     boost::scoped_array<double> x_new(new double[npar]);
     boost::scoped_array<double> dx(new double[npar]);
     
-    /*double * x = new double[npar];
-    double * x_new = new double[npar];
-    double * dx = new double[npar];*/
     //set the starting point:
     std::copy(startvalues.begin(), startvalues.end(), &x[0]);
     double nll = nllikelihood(x.get());
@@ -104,11 +100,9 @@ void metropolisHastings(const nlltype & nllikelihood, resulttype &res, Random & 
         }
     }
     res.fill(x.get(), nll, weight);
-    res.end();
 }
-    
-    
-/** \brief estimate the square root (cholesky decomposition) of the covariance matrix of the lieklihood function
+
+/** \brief estimate the square root (cholesky decomposition) of the covariance matrix of the likelihood function
  *
  * The method will start a Markov chain at the given startvalues with the \c iterations iterations.
  * The found covariance matrix is used in a next pass where the Markov chain jumping rules
@@ -116,11 +110,13 @@ void metropolisHastings(const nlltype & nllikelihood, resulttype &res, Random & 
  * estimate is stable.
  *
  * \param rnd is the random number generator to use
- * \param nll is the negative log-posterior to evaluate
+ * \param model is the Model to use to get the asimov data from
  * \param[out] startvalues will contain the suggested startvalues. The contents when calling this function will be ignored.
  */
-Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> & startvalues);
-   
+Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & startvalues,
+                    const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,
+                    const boost::shared_ptr<VarIdManager> & vm);
+
 /** \brief Calculate the cholesky decomposition, but allow zero eigenvalues.
  *
  *
@@ -133,7 +129,6 @@ Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> 
  * is negative, no check will be done.
  */
 void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced = -1);
-
 
 }
 

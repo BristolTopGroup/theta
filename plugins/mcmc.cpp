@@ -1,7 +1,9 @@
 #include "plugins/mcmc.hpp"
 #include "plugins/mcmc-result.hpp"
+#include "plugins/asimov_likelihood_widths.hpp"
 #include "interface/utils.hpp"
 #include "interface/distribution.hpp"
+#include "interface/model.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -9,6 +11,7 @@
 #include <limits>
 
 #include <iostream>
+#include <iomanip>
 #include <cstdio>
 #include <sstream>
 
@@ -31,7 +34,7 @@ void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
             npar_reduced--;
     }
     if(npar_reduced==0){
-       throw InvalidArgumentException("get_cholesky: number of reduced dimensions is zero (all parameters fixed?)");
+        throw InvalidArgumentException("get_cholesky: number of reduced dimensions is zero (all parameters fixed?)");
     }
     if(expect_reduced > 0 && static_cast<size_t>(expect_reduced)!=npar_reduced){
         throw InvalidArgumentException("get_cholesky: number of reduced dimensions not as expected");
@@ -65,32 +68,43 @@ void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
 }
 
 
-Matrix get_sqrt_cov(Random & rnd, const NLLikelihood & nll, std::vector<double> & startvalues){
-    const size_t n = nll.getnpar();
+Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & startvalues,
+                    const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,
+                    const boost::shared_ptr<VarIdManager> & vm){
     const size_t max_passes = 20;
     const size_t iterations = 8000;
+    const size_t n = model.getParameters().size();
     Matrix sqrt_cov(n, n);
     Matrix cov(n, n);
     startvalues.resize(n);
-    //a first estimate of the matrix: use the step width determination of the
-    // minimizer:
-    ParIds par_ids = nll.getParameters();
-    assert(par_ids.size() == n); //should hold by construction of NLLikelihood::getnpar(), but who knows ...
+    
+    ParValues widths = asimov_likelihood_widths(model, override_parameter_distribution);
+    
+    ParIds par_ids = model.getParameters();
     size_t k=0;
     int n_fixed_parameters = 0;
-    const Distribution & dist = nll.get_parameter_distribution();
+    
+    const Distribution & dist = override_parameter_distribution.get()? *override_parameter_distribution : model.get_parameter_distribution();
     ParValues pv_start;
     dist.mode(pv_start);
+    Data asimov_data;
+    model.get_prediction(asimov_data, pv_start);
+    ParIds fixed_pars;
     for(ParIds::const_iterator it = par_ids.begin(); it!=par_ids.end(); ++it, ++k){
-        double width = dist.width(*it) * 2.38 / sqrt(n);
+        double width = widths.get(*it) * 2.38 / sqrt(n);
         startvalues[k] = pv_start.get(*it);
         if(width==0.0){
             ++n_fixed_parameters;
+            fixed_pars.insert(*it);
         }
         cov(k, k) = width*width;
     }
+    assert(k==n);
     get_cholesky(cov, sqrt_cov, static_cast<int>(n) - n_fixed_parameters);
     
+    std::auto_ptr<NLLikelihood> p_nll = model.getNLLikelihood(asimov_data);
+    p_nll->set_override_distribution(override_parameter_distribution);
+    NLLikelihood & nll = *p_nll;
     vector<double> jump_rates;
     jump_rates.reserve(max_passes);
     Result res(n);

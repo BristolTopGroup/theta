@@ -54,9 +54,9 @@ sqlite3* sqlite3_open(const string & fname){
     return db;
 }
 
-void create_histo(const string & infile, const string & query, TDirectory * cd, const string & name, int nbins, double xmin, double xmax){
+void create_histo_from_doublequery(const string & infile, const string & query, TDirectory * cd, const string & name, int nbins, double xmin, double xmax){
     cd->cd();
-    TH1F* histo = new TH1F(name.c_str(), name.c_str(), nbins, xmin, xmax);
+    TH1D* histo = new TH1D(name.c_str(), name.c_str(), nbins, xmin, xmax);
     histo->SetDirectory(cd);
     sqlite3 * db = sqlite3_open(infile);
     sqlite3_stmt* st = sqlite3_prepare(db, query.c_str());
@@ -68,7 +68,42 @@ void create_histo(const string & infile, const string & query, TDirectory * cd, 
     if(res!=SQLITE_DONE){
         sqlite3_finalize(st);
         stringstream ss;
-        ss << "Error in do_main: stepping through results returned " << res;
+        ss << "Error in create_histo: stepping through results returned " << res;
+        throw ss.str();
+    }
+    sqlite3_finalize(st);//ignore error
+    sqlite3_close(db);//ignore error
+}
+
+void create_histos_from_histoquery(const string & infile, const string & query, TDirectory * cd, const string & name){
+    cd->cd();
+    sqlite3 * db = sqlite3_open(infile);
+    sqlite3_stmt* st = sqlite3_prepare(db, query.c_str());
+    int res;
+    int counter = 0;
+    while(SQLITE_ROW == (res=sqlite3_step(st))){
+        const double * data = static_cast<const double*>(sqlite3_column_blob(st, 0));
+        
+        //the blob holds nbins + 4 doubles: xmin, xmax, underflow, histgramdata (nbin doubles), overflow
+        int nbins = sqlite3_column_bytes(st, 0) / sizeof(double) - 4;
+        
+        double xmin = data[0];
+        double xmax = data[1];
+        stringstream ss_name;
+        ss_name << name << counter++;
+        
+        //copy the data to the histogram:
+        TH1F* histo = new TH1F(ss_name.str().c_str(), ss_name.str().c_str(), nbins, xmin, xmax);
+        histo->SetDirectory(cd);
+        //histo memory is owned by cd.
+        for(int i=0; i<=nbins+1; ++i){
+            histo->SetBinContent(i, data[i+2]);
+        }
+    }
+    if(res!=SQLITE_DONE){
+        sqlite3_finalize(st);
+        stringstream ss;
+        ss << "Error in create_histo: stepping through results returned " << res;
         throw ss.str();
     }
     sqlite3_finalize(st);//ignore error
@@ -90,12 +125,18 @@ int main(int argc, char** argv){
         for(int i=0; i<n; ++i){
             if(root[i].getType() != Setting::TypeGroup) continue;
             string histo_name = root[i].getName();
-            int nbins = root[i]["nbins"];
-            double xmin = root[i]["range"][0];
-            double xmax = root[i]["range"][1];
-            string query = root[i]["query"];
             string infile = root[i]["file"];
-            create_histo(infile, query, &file, histo_name, nbins, xmin, xmax);
+            if(root[i].exists("histo_query")){
+                string histo_query = root[i]["histo_query"];
+                create_histos_from_histoquery(infile, histo_query, &file, histo_name);
+            }
+            else{
+                int nbins = root[i]["nbins"];
+                double xmin = root[i]["range"][0];
+                double xmax = root[i]["range"][1];
+                string query = root[i]["query"];
+                create_histo_from_doublequery(infile, query, &file, histo_name, nbins, xmin, xmax);
+            }
         }
         file.Write();
         file.Close();

@@ -29,7 +29,7 @@ for Theta in (5.0, 10000.0):
         intervals_expected = reduce(lambda x, y: x+y, map(lambda c: interval_delta_nll(n_events, c), confidence), ())
         for i in range(4):
             error=abs(intervals_expected[i] - row[i+1]) / float(Theta)
-            if error > 0.0001: fail("Theta = %s: n_events= %f; %d; expected %f, got %f" % (Theta, n_events, i, intervals_expected[i], row[i+1]) )
+            if error > 0.001: fail("Theta = %s: n_events= %f; %d; expected %f, got %f" % (Theta, n_events, i, intervals_expected[i], row[i+1]) )
         #do additional checks in the asymptotic case:
         if Theta == "10000.0":
             factors = (1, 1, 4, 4)

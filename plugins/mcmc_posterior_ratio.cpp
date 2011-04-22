@@ -1,12 +1,9 @@
 #include "plugins/mcmc_posterior_ratio.hpp"
 #include "plugins/mcmc.hpp"
 #include "interface/plugin.hpp"
-#include "interface/run.hpp"
-#include "interface/minimizer.hpp"
+#include "interface/model.hpp"
 #include "interface/histogram.hpp"
 #include "interface/distribution.hpp"
-
-#include <sstream>
 
 using namespace theta;
 using namespace std;
@@ -27,8 +24,6 @@ class MCMCPosteriorRatioResult{
             n.push_back(n_);
             n_total += n_;
         }
-        
-        void end(){}
         
         //return the negative logarithm of the average posterior
         double get_nl_average_posterior(){
@@ -55,33 +50,11 @@ class MCMCPosteriorRatioResult{
         size_t n_total;
 };
 
-void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, const theta::Model & model) {
+void mcmc_posterior_ratio::produce(const theta::Data & data, const theta::Model & model) {
     if(!init){
         try{
-            //1. for signal plus background
-            ObsIds observables = model.getObservables();
-            
-            ParValues s_plus_b_values;
-            s_plus_b->mode(s_plus_b_values);
-            Data d;
-            for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
-                model.get_prediction(d[*it], s_plus_b_values, *it);
-            }
-            
-            NLLikelihood nll_sb = model.getNLLikelihood(d);
-            nll_sb.set_override_distribution(s_plus_b.get());
-            sqrt_cov_sb = get_sqrt_cov(run.get_random(), nll_sb, startvalues_sb);
-        
-            //2. for background only
-            ParValues b_only_values;
-            b_only->mode(b_only_values);
-            for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
-                model.get_prediction(d[*it], b_only_values, *it);
-            }
-            NLLikelihood nll_b = model.getNLLikelihood(d);
-            nll_b.set_override_distribution(b_only.get());
-            sqrt_cov_b = get_sqrt_cov(run.get_random(), nll_b, startvalues_b);
-            
+            sqrt_cov_sb = get_sqrt_cov2(*rnd_gen, model, startvalues_sb, s_plus_b, vm);
+            sqrt_cov_b = get_sqrt_cov2(*rnd_gen, model, startvalues_b, b_only, vm);
             init = true;
         }catch(Exception & ex){
             ex.message = "initialization failed: " + ex.message;
@@ -89,39 +62,31 @@ void mcmc_posterior_ratio::produce(theta::Run & run, const theta::Data & data, c
         }
     }
     
-    NLLikelihood nll = get_nllikelihood(data, model);
-    double nl_posterior_sb, nl_posterior_b;
-    nl_posterior_sb = NAN;
-    nl_posterior_b = NAN;
+    std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     
     //a. calculate s plus b:
-    MCMCPosteriorRatioResult res_sb(nll.getnpar());
-    metropolisHastings(nll, res_sb, run.get_random(), startvalues_sb, sqrt_cov_sb, iterations, burn_in);
-    nl_posterior_sb = res_sb.get_nl_average_posterior();
+    MCMCPosteriorRatioResult res_sb(nll->getnpar());
+    metropolisHastings(*nll, res_sb, *rnd_gen, startvalues_sb, sqrt_cov_sb, iterations, burn_in);
+    double nl_posterior_sb = res_sb.get_nl_average_posterior();
 
     //b. calculate b only:
-    MCMCPosteriorRatioResult res_b(nll.getnpar());
-    metropolisHastings(nll, res_b, run.get_random(), startvalues_b, sqrt_cov_b, iterations, burn_in);
-    nl_posterior_b = res_b.get_nl_average_posterior();
+    MCMCPosteriorRatioResult res_b(nll->getnpar());
+    metropolisHastings(*nll, res_b, *rnd_gen, startvalues_b, sqrt_cov_b, iterations, burn_in);
+    double nl_posterior_b = res_b.get_nl_average_posterior();
 
     if(std::isnan(nl_posterior_sb) || std::isnan(nl_posterior_b)){
         throw Exception("average posterior was NAN");
     }
-    table->set_column(c_nl_posterior_sb, nl_posterior_sb);
-    table->set_column(c_nl_posterior_b, nl_posterior_b);
+    products_sink->set_product(*c_nl_posterior_sb, nl_posterior_sb);
+    products_sink->set_product(*c_nl_posterior_b, nl_posterior_b);
 }
 
-
-void mcmc_posterior_ratio::define_table(){
-    c_nl_posterior_sb = table->add_column(*this, "nl_posterior_sb", EventTable::typeDouble);
-    c_nl_posterior_b =  table->add_column(*this, "nl_posterior_b",  EventTable::typeDouble);
-}
-
-mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), init(false){
+mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()), init(false){
     SettingWrapper s = cfg.setting;
+    vm = cfg.vm;
     
-    s_plus_b = theta::plugin::PluginManager<Distribution>::build(theta::plugin::Configuration(cfg, s["signal-plus-background-distribution"]));
-    b_only = theta::plugin::PluginManager<Distribution>::build(theta::plugin::Configuration(cfg, s["background-only-distribution"]));    
+    s_plus_b = theta::plugin::PluginManager<Distribution>::instance().build(theta::plugin::Configuration(cfg, s["signal-plus-background-distribution"]));
+    b_only = theta::plugin::PluginManager<Distribution>::instance().build(theta::plugin::Configuration(cfg, s["background-only-distribution"]));    
     
     iterations = s["iterations"];
     if(s.exists("burn-in")){
@@ -130,6 +95,8 @@ mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & 
     else{
         burn_in = iterations / 10;
     }
+    c_nl_posterior_sb = products_sink->declare_product(*this, "nl_posterior_sb", theta::typeDouble);
+    c_nl_posterior_b =  products_sink->declare_product(*this, "nl_posterior_b",  theta::typeDouble);
 }
 
 REGISTER_PLUGIN(mcmc_posterior_ratio)

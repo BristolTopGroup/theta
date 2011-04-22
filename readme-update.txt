@@ -1,3 +1,63 @@
+This file summarizes changes relevant to users, i.e., changes in config file
+convention and output. It does not cover internal changes.
+
+
+from June 2010 to trunk:
+------------------------
+* the command line of theta changed: the name of the "main" setting cannot be specifiec any more, it is always "main".
+  On the other hand, it is possible to specify more than one configuration file at once. In this case, they will be executed sequentially
+  almost as if one would call theta for each of them.
+  "almost" because there is one exception: the plugin files (configured via options.plugin_files) are not re-loaded between
+  the runs for the configuration files. This will usually make no difference at all.
+* the plugin 'model_source_norandom' has been dropped. Instead, use the 'model_source' plugin, set 'dice_poisson' to false
+  and use delta distributions as 'override-parameter-distribution'.
+* there used to be one global random number generator, configured via the (optional) setting 'main.seed'. Now,
+  every plugin requiring random numbers has its own generator. With this approach, it is now
+  possible to reproduce the exact same pseudo-data by using the same random seed in main.data_source. In earlier
+  releases, a perfect pseudo-data reproduction would only work if using producers which do not consume random numbers.
+
+  There are no required changes to the configuration files.
+  It is recommended to drop 'main.seed' to avoid the warning about it being unused.
+  To set the seed explicitely for plugins which use random numbers, you can add a setting 'rnd_gen' like this:
+  rnd_gen = {
+      seed = 123; // default of -1 means: use seed based on current (sub-second precision) time.
+  };
+  This affects the 'model_source', and the mcmc producers.
+* The RndInfoTable schema has changed: it now contains seeds used for each module (instead of one per Run)
+* The ProducerInfoTable has been dropped; it did not contain much useful information and was hardly used
+* 'data-source' setting is not supported any more; use 'data_source'
+      
+
+from April 2010 to June 2010:
+-----------------------------
+* instead of the
+  plugins = {
+      files = ("some-so-file", "some-other-so-file");
+  };
+  setting group, you now have to use
+  options = {
+     plugin_files = ("some-so-file", "some-other-so-file");
+  };
+  The reason is that also other global options are supported now within this "options" setting group; although
+  the only one so far is the n_threads parameter.
+* you have to use a line
+   name = "...";
+  for each producer and for the data_source. This name will be used to construct a column name in
+  the products table of the output.
+* the run in the config file (main = {...}) now has "output_database" setting which specifies the
+  database to which write the results. To emulate the behaviour, replace the
+       result-file = "<filename>";
+  setting by:
+    output_database = {
+        type = "sqlite_database";
+        filename = "SigAndBkg.db";
+    };
+* instead of "data-source" in the run, one can now also use "data_source", with underscore, to avoid some problems
+  with hyphens in column names.
+
+
+from Feb 2010 to April 2010:
+----------------------------
 1. globally defined "parameters" setting is now only a list of names
 2. what used to be "ranges" and "default" in the "parameters" setting is now at the model or producer level:
   a parameter-distribution setting in the model MUST be defined ) which contains

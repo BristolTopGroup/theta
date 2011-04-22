@@ -71,16 +71,8 @@ public:
 
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     deltanll_intervals(const theta::plugin::Configuration & cfg);
-
-    /** \brief Run the method with Data and model and write out the estimated intervals to the result columns
-     */
-    virtual void produce(theta::Run & run, const theta::Data & data, const theta::Model & model);
+    virtual void produce(const theta::Data & data, const theta::Model & model);
     
-    /** \brief Define the table columns
-     *
-     * Called by theta::Run::run as part of the setup. It defined the columns as described in the class documentation.
-     */
-    void define_table();
 private:
     //boost::shared_ptr<theta::VarIdManager> vm;
     theta::ParId pid;
@@ -96,9 +88,9 @@ private:
     std::map<theta::ParId, std::pair<double, double> > ranges;
 
     //table columns:
-    std::vector<theta::EventTable::column> lower_columns;
-    std::vector<theta::EventTable::column> upper_columns;
-    theta::EventTable::column c_maxl;
+    boost::ptr_vector<theta::Column> lower_columns;
+    boost::ptr_vector<theta::Column> upper_columns;
+    std::auto_ptr<theta::Column> c_maxl;
 };
 
 #endif

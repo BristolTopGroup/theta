@@ -1,5 +1,8 @@
 #include "interface/histogram-function.hpp"
 #include "interface/random.hpp"
+#include "interface/cfg-utils.hpp"
+
+REGISTER_PLUGIN_BASETYPE(theta::HistogramFunction);
 
 using namespace theta;
 
@@ -21,5 +24,19 @@ const Histogram &  ConstantHistogramFunctionError::getRandomFluctuation(Random &
         }
     }
     return fluc;
+}
+
+double HistogramFunctionUtils::read_normalize_to(const SettingWrapper & s){
+    size_t size = s["normalize_to"].size();
+      double norm = 1.0;
+      if(size > 0){
+          for(size_t i=0; i<size; ++i){
+              norm *= static_cast<double>(s["normalize_to"][i]);
+          }
+      }
+      else{
+          norm = s["normalize_to"];
+      }
+      return norm;
 }
 

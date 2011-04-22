@@ -77,48 +77,13 @@ extern int libconfig_yyparse(void *scanner, struct parse_context *ctx,
 
 static void __config_locale_override()
 {
-#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32__)) \
-  && ! defined(__MINGW32__)
-
-  _configthreadlocale(_ENABLE_PER_THREAD_LOCALE);
-  setlocale(LC_NUMERIC, "C");
-
-#elif defined(__APPLE__)
-
-  locale_t loc = newlocale(LC_NUMERIC_MASK, "C", NULL);
-  uselocale(loc);
-
-#elif ((defined HAVE_NEWLOCALE) && (defined HAVE_USELOCALE))
-
-  locale_t loc = newlocale(LC_NUMERIC, "C", NULL);
-  uselocale(loc);
-
-#else
-
-#warning "No way to modify calling thread's locale!"
-
-#endif
 }
 
 /* ------------------------------------------------------------------------- */
 
 static void __config_locale_restore()
 {
-#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32__)) \
-  && ! defined(__MINGW32__)
 
-    _configthreadlocale(_DISABLE_PER_THREAD_LOCALE);
-
-#elif ((defined HAVE_USELOCALE) && (defined HAVE_FREELOCALE))
-
-  locale_t loc = uselocale(LC_GLOBAL_LOCALE);
-  freelocale(loc);
-
-#else
-
-#warning "No way to modify calling thread's locale!"
-
-#endif
 }
 
 /* ------------------------------------------------------------------------- */

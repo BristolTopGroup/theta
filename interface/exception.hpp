@@ -41,6 +41,7 @@ public:
    NotFoundException(const std::string & message);
 };
 
+
 /** \brief Thrown during configuration file processing.
  */
 class ConfigurationException: public Exception{
@@ -99,6 +100,7 @@ public:
  */
 class FatalException{
 public:
+    std::string message;
        
     /** \brief Construct from a "usual" Exception
      * 
@@ -108,6 +110,19 @@ public:
     
     /// Construct directly from an error message
     explicit FatalException(const std::string & message);
+};
+
+/** \brief Thrown in case an immediate exit of the main program is requested. 
+ *
+ * As this exception is caught at a different place, it is not part of the usual Exception
+ * hierarchy.
+ */
+class ExitException {
+public:
+   std::string message;
+
+   /// Constructor taking a message intended for the user which will be written to Exception::message
+   ExitException(const std::string & message_): message(message_){}
 };
 
 }

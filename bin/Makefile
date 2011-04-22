@@ -1,11 +1,16 @@
+include ../Makefile.options
+
+deps := .bin/merge.d .bin/theta.d
+
 include ../Makefile.rules
 
 all: merge theta
 
-merge: merge.o
+
+merge: .bin/merge.o
 	@$(LINK_EXE) -o $@ $<
 
-theta: theta.o
+theta: .bin/theta.o
 	@$(LINK_EXE) -o $@ $<
 
 clean-subdir:

@@ -7,11 +7,8 @@
 
 /** \brief A HistogramFunction which interpolates a "zero" Histogram and several "distorted" Histograms as generic method to treat systematic uncertainties.
  *
- * The configuration block is something like (mass is some observable previously defined.
- * s, delta1, delta2 are parameters):
+ * The configuration is done via:
  * \code
- * mass = {
- *   coefficients = ("s");
  *   histogram = {
  *      type = "interpolating_histo";
  *      parameters = ("delta1", "delta2");
@@ -21,21 +18,13 @@
  *      delta2-plus-histogram = { / * fixed-histogram-specification * / };
  *      delta2-minus-histogram = { / * fixed-histogram-specification * / };
  *   };
- * };
  * \endcode
  * Here, <tt>fixed-histogram-specification</tt> is a Histogram Setting block that returns a Histogram
- * which does not depend on any parameters. That is, any Histogram of type="fixed_*" (if the naming convention
- * is obeyed).
+ * which does not depend on any parameters.
  *
- * A histogram \c h0 is interpolated by parameters p_i specified in varids such that
- *  -# if all p_i = 0, the original Histogram h0 is returned
- *  -# for p_j = 1 for fixed j and p_i=0 for all i!=j, the Histogram hplus[j] is returned
- *  -# same with other sign: for p_j=-1 and all other p_i=0, hminus[j] is returned.
- *  -# for all other values, the histogram contents are interpolated binwise: the bin value of bin k is calculated
- *    with (hplus[i][k]/h0[k])^fabs(p_i) * (hminus[j][k]/h0[k])^fabs(p_j), where hplus[i][k] is bin k of hplus[i]. It was assumed
- *    that p_i > 0 and p_j &lt; 0. You can verify that 1., 2. and 3. are fulfilled with this formula.
- *
- * It is not allowed to use the same parameter as interpolating parameter twice.
+ * Bin k of the returned histogram is calculated by multiplying the content of the nominal
+ * histogram with either (hplus[i][k]/h0[k])^fabs(p_i) or with (hminus[i][k]/h0[k])^fabs(p_i),
+ * where hplus[i][k] is bin k of hplus[i]. Which formula is used depends on the sign of the parameter p_i.
  */
 class interpolating_histo : public theta::HistogramFunction {
 public:
@@ -49,11 +38,11 @@ public:
      */
     virtual const theta::Histogram & operator()(const theta::ParValues & values) const;
 
-    virtual theta::ParIds getParameters() const;
-
-    virtual bool dependsOn(const theta::ParId & pid) const {
-        return std::find(vid.begin(), vid.end(), pid) != vid.end();
+    /// Return a Histogram of the same dimenions as the one returned by operator()
+    virtual theta::Histogram get_histogram_dimensions() const{
+        return h0;
     }
+
 
     virtual const theta::Histogram & gradient(const theta::ParValues & values, const theta::ParId & pid) const;
 private:

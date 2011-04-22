@@ -2,127 +2,150 @@
 #define DATABASE_HPP
 
 #include <string>
-#include <sstream>
-#include <iostream>
-#include <stdlib.h>
+#include <memory>
 
-#include <sqlite3.h>
 #include <boost/utility.hpp>
+#include <boost/enable_shared_from_this.hpp>
 
 #include "interface/decls.hpp"
-#include "interface/variables.hpp"
-#include "interface/exception.hpp"
+#include "interface/plugin.hpp"
+#include "interface/data_type.hpp"
+#include "interface/producer.hpp"
 
 namespace theta {
 
-/** \brief Used as abstraction to a database file, where one or more tables can reside
- * 
- * There is a one-to-one correspondence between a file on the file system and a Database instance.
- */
-class Database: private boost::noncopyable {
-    /** Table objects make use of the private methods \c exec, \c error, and \c prepare.
-     * They also act as proxy class for derived table objects.
-     */
-    friend class Table;
-public:
-    
-    /** Creates a database in a file specified by \c filename.
-     *  If the file alread exists, it is deleted and newly created.
-     *  
-     *  In case of error, a \c theta::DatabaseException is thrown.
-     *  
-     *  \param filename The associated file name on the file system.
-     *  \param autostart_transaction If set to \c true, start a SQL Transaction immidiately.
-     */
-    explicit Database(const std::string & filename, bool autostart_transaction=true);
-    
-    /** Closes the underlying database file just as \c close() would. However,
-     * does not throw any exception. Rather, it prints an error message to \c cerr
-     * in case of an error.
-     * */
-    ~Database();
-    
-    /** Commit any active transaction and close the attached database file.
-     * 
-     * Throws a theta::DatabaseException in case of an error. 
-     * */
-    void close();
-        
-private:
-    /** Execute the sql string \c query.
-     */
-    void exec(const std::string & query);
-    
-    /** Prepare the sql statement \c query.
-     */
-    sqlite3_stmt* prepare(const std::string & query);
-    
-    /** Start a Transaction. In case of an error, a DatabaseException is thrown.
-     */
-    void beginTransaction();
-    
-    /** End a transaction previously started with \c beginTransaction. Calling
-     *  endTransaction without a call to beginTransaction is valid (it is a no-op).
-     * */
-    void endTransaction();    
 
-    /** Throw a DatabaseException using the last database error message.
-     * 
-     * This method is intended for Table objects which want to propagate
-     * an error via Exceptions in a consistent manner.
-     * 
-     * \param functionName: name of the function (in a \c Table object) in which the database error ocurred.
+/** \brief Abstract class for data input
+ *
+ * A database in theta is a collection of tables. Tables are identified by a unique name
+ * within the database and can contain an arbitrary number of columns (identified by name) of type double, int, string and
+ * Histogram.
+ *
+ * This is an abstract class. Concrete instances can be retrieved via the plugin system using
+ * this class a template argument to PluginManager.
+ */
+class DatabaseInput: private boost::noncopyable{
+public:
+
+    /// Required for the plugin system
+    typedef DatabaseInput base_type;
+    
+    /** \brief Iterator-like class to step through the result of a Database query
      */
-    void error(const std::string & functionName);
-    sqlite3* db;
-    bool transaction_active;
+    class ResultIterator: private boost::noncopyable{
+    public:
+        /** \brief Retrieve next row in the table
+         *
+         * If there is no next row, a subsequent call to has_data() will return false.
+         *
+         * In case of an error, a DatabaseException is thrown.
+         */
+        virtual void operator++() = 0;
+        
+        /** \brief Returns true iff this iterator points to a valid column containing data
+         *
+         * Returns false if there are no more result columns
+         */
+        virtual bool has_data() = 0;
+        
+        //@{
+        /** \brief Retrieve the column values of the current row
+         *
+         * Before calling any of these, make sure has_data() returns true.
+         *
+         * The column index argument is zero-based and refers to the column_names vector
+         * passed to DatabaseInput::query.
+         *
+         * In case of type mismatch, a DatabaseException is thrown.
+         */
+        virtual double get_double(size_t icol) = 0;
+        virtual int get_int(size_t icol) = 0;
+        virtual theta::Histogram get_histogram(size_t icol) = 0;
+        virtual std::string get_string(size_t icol) = 0;
+        //@}
+        
+        virtual ~ResultIterator(){}
+    };
+
+    /** \brief Select some columns from a table
+     *
+     * the returned ResultIterator points to the first result row (if any), i.e.,
+     * call has_data and get_* on it first to get the result of the first row and *then* ResultIterator::operator++().
+     *
+     * In case of an error, a DatabaseException is thrown.
+     */
+    virtual std::auto_ptr<ResultIterator> query(const std::string & table_name, const std::vector<std::string> & column_names) = 0;
+    virtual ~DatabaseInput(){}
+
 };
 
 
-/** \brief Abstract base class for all tables stored in a Database.
+/** \brief Abstract database class for data output
  *
- * Writing information to the output database is done via subclasses of Table.
- * Producers always write their result in an instance of ProducerTable.
+ * A database in theta is a collection of tables. Tables are identified by a unique name
+ * within the database and can contain an arbitrary number of columns (identified by name) of type double, int, string and
+ * Histogram.
  *
- * A derived class uses this class by:
+ * This is an abstract class. Concrete instances can be retrieved via the plugin system using
+ * this class a template argument to PluginManager.
+ */
+class Database: private boost::noncopyable, public boost::enable_shared_from_this<Database> {
+public:
+    
+    /// Required for the plugin system
+    typedef Database base_type;
+
+    /** \brief Virtual Destructor
+     *
+     * Virtual, as polymrophic access to derived classes will happen.
+     *
+     * Should do any cleanup work (like closing the database file for file-based databases,
+     * closing the network connection for network-based, etc.).
+     */
+    virtual ~Database(){}
+    
+    
+    /** \brief Create a new table instance within this database
+     *
+     * Table names must start with a letter and otherwise consist only of letters,
+     * digits and underscores. Throws an InvalidArgumentException if the name does not meet the requirements.
+     *
+     * The returned Table can be used only as long as this Database instance is not destroyed.
+     * Using Tables created from a destroyed Database yields undefined behaviour.
+     */
+    virtual std::auto_ptr<Table> create_table(const std::string & table_name) = 0;
+
+protected:
+    
+    /** \brief Checks the table name requirements
+     *
+     * Derived classes can call this at the beginning of their implementation of create_table
+     * in order to meet the specification: this method will throw an InvalidArgumentException
+     * if \c name violates the specification.
+     */
+    void check_name(const std::string & table_name);
+};
+
+
+
+/** \brief Abstract class for a table in a Database
+ *
+ * Tables are always constrcuted via a Datase instance. Once created, it can be used by:
  * <ol>
  *   <li>calling add_column one or more times at initialization and saving the result
  *       in some data member of the derived class</li>
  *   <li>To write out a row, call the set_column methods on all defined columns,
  *       followed by a call to add_row</li>
  * </ol>
+ *
+ * After the first call of set_column or add_row, to more calls to add_column are allowed.
+ *
+ * To meet this specification, derived classes will usually defer the actual table creation in the underlying
+ * implementation until the first call of set_column or add_row. Note that even if no rows are added via add_row,
+ * the table must still be created.
  */
 class Table: private boost::noncopyable {
-    /** \brief Validate table (or column) names.
-     *
-     * Throws a theta::DatabaseException if the name
-     * is not considered a valid name for a table or column.
-     *
-     * Valid names start with a letter and are only composed of
-     * <pre>
-     * A-Za-z0-9_-
-     * </pre>
-     * only. This is (almost) the same as the name of Settings accepted by libconfig.
-     */
-    static void checkName(const std::string & name);
-
-protected:
-
-    /** \brief Data types of columns
-     *
-     * These data types are the supported types for columns in a table.
-     */
-    enum data_type { typeDouble, typeInt, typeString, typeBlob };
-
-    /** \brief the columns type to use for set_column and add_column
-     *
-     * For now, we just use an integer, starting from 1. It will be passed to
-     * the sqlite_bind-functions.
-     */
-    typedef int column;
-
-    /// constructor setting the table name.
-    Table(const std::string & name, const boost::shared_ptr<Database> & db);
+public:
 
     /// destructor; creates the table if empty
     virtual ~Table();
@@ -132,26 +155,35 @@ protected:
      * The column will have name \c name and a data type scpecified by \c type.
      *
      * The result can be used as first argument to the set_column() methods. Other than saving it
-     * and using it there, you should not do anything with it.
+     * and using it in \c set_column, you should not do anything with it.
      *
      * This method should only be called at the beginning, after the construction of the object and
      * before using it to actually write any data. If this method is called after a call
      * to either set_column or add_row, an IllegalStateException will be thrown.
      */
-    column add_column(const std::string & name, const data_type & type);
+    virtual std::auto_ptr<Column> add_column(const std::string & name, const data_type & type) = 0;
+    
+    /** \brief Set an autoincrement column to this table
+     *
+     * Can be called at most once per table, i.e., a table can have at most one
+     * autoinc column. If called more than once, an InvalidArgumentException is thrown.
+     *
+     * It is only valid to call this method if it is valid to call add_column.
+     */
+    virtual void set_autoinc_column(const std::string & name) = 0;
     
     //@{
     /** \brief Set column contents
      *
-     * The first argument is a column as returned by add_column.
+     * The first argument must be a column as returned by add_column.
      *
      * After setting all columns, add_row() has to be called to actually write
      * a row to the result table.
      */
-    void set_column(const column & c, double d);
-    void set_column(const column & c, int i);
-    void set_column(const column & c, const std::string & s);
-    void set_column(const column & c, const void * data, size_t nbytes);
+    virtual void set_column(const Column & c, double d) = 0;
+    virtual void set_column(const Column & c, int i) = 0;
+    virtual void set_column(const Column & c, const std::string & s) = 0;
+    virtual void set_column(const Column & c, const theta::Histogram & histo) = 0;
     //@}
     
     
@@ -159,98 +191,125 @@ protected:
      *
      * This uses the column values previously set with the set_column methods.
      * If set_column was not called for all columns in the table, the contents of these columns
-     * will be NULL.
+     * will have a NULL-like value which depends on the particular implementation.
+     *
+     * If the table has an autoinc_column, i.e., if set_autoinc_column has been called,
+     * the added id is returned. Otherwise, the result will always be 0.
      */
-    void add_row();
-
-private:
-    std::string name;
-    std::stringstream column_definitions; // use by the add_column method
-    bool table_created;
-    sqlite3_stmt * insert_statement; // associated memory is managed by Database object, which calls finalize on it ...
-    column next_column; // next free column to return by add_column
+    virtual int add_row() = 0;
+protected:
+    //the tables always hold a shared ptr to the database to prevent
+    // the database being destroyed earlier than all its tables (!)
     boost::shared_ptr<Database> db;
-    
-    void create_table();
+    Table(const boost::shared_ptr<Database> & db_): db(db_){}
+private:
+    Table(); //not implemented
 };
 
-/** \brief A Table class to store per-event information
+/** \brief Base class for columns managed by Tables
+ */
+class Column{
+public:
+    virtual ~Column() = 0;
+};
+
+
+/** \brief A Table to store products, i.e., per-event output
  *
- * Per \link run Run \endlink, there is exactly one EventTable. The main usages are
+ * Per \link theta::Run Run \endlink, there is exactly one ProductsTable. Products are produced by
  * <ul>
- *   <li>by Producer to save the result</li>
- *   </li>by DataSource to save some per-event information about data production</li>
+ *   <li>Producer instances to save the (per-event) result of their computation</li>
+ *   <li>DataSource to save some per-event information about data production</li>
  * </ul>
  *
- * Clients define their columns by calling add_column repeatedly at initilization time.
- * The actual column name written to the SQL table is &lt;plugin name&gt;__&lt;column name&gt;.
+ * An ProductsTable will have an integer column named "runid" and an integer column named "eventid". Additionally,
+ * any columns defined by the Producer or DataSource, with column names as described in ProductsTable::add_column.
  *
- * The actual write is done by the \link Run \endlink instance; the PluginType should
- * not call this method.
+ * Clients use ProductsTable very similarly to a Table. Differences are (i) the
+ * signature of the add_column method which takes an additional \c name argument and (ii)
+ * the add_row column, which takes a Run instance as argument here.
+ *
+ * The actual write is done by the \link Run \endlink instance; the Producer / DataSource must not
+ * call add_row directly.
  */
-class EventTable: private Table{
-    public:
+class ProductsTable: public ProductsSink {
+public:
         //@{
-        /** \brief Make some protected definitions from Table public
+        /** \brief Forwards to Table::set_column
          */
-        using Table::typeDouble;
-        using Table::typeInt;
-        using Table::typeString;
-        using Table::typeBlob;
-        using Table::column;
-        using Table::set_column;
+        virtual void set_product(const Column & c, double d){
+            table->set_column(c, d);
+        }
+        
+        virtual void set_product(const Column & c, int i){
+            table->set_column(c, i);
+        }
+        
+        virtual void set_product(const Column & c, const std::string & s){
+            table->set_column(c, s);
+        }
+        
+        virtual void set_product(const Column & c, const theta::Histogram & histo){
+            table->set_column(c, histo);
+        }
+        
         //@}
         
         /** \brief Add a column to this table
          *
-         * Similar to Table::add_column, but expects an instance of PluginType.
-         * The column name will be
-         *\code
-         * p.get_name() + "__" + name
-         *\endcode
+         * Similar to Table::add_column, but expects an additional name of the caller. The caller class
+         * must derive from ProducerTableWriter and pass themselves as first argument.
+         *
+         * The actual column name used in the table will be
+         * \code
+         *   tw.getName() + "__" + column_name
+         * \endcode
          */
-        column add_column(const theta::plugin::PluginType & p, const std::string & name, const data_type & type);
+        virtual std::auto_ptr<Column> declare_product(const theta::ProductsSource & source, const std::string & product_name, const data_type & type);
         
-        /** \brief Construct a new producer table with a given name
+        /** \brief Construct a new ProductsTable based on the given table
+         *
+         * Ownership of object held by table will be transferred.
          */
-        EventTable(const std::string & name, const boost::shared_ptr<Database> & db);
+        ProductsTable(std::auto_ptr<Table> & table);
         
         /** \brief Add a row to the table, given the current run
          *
          * This is called by theta::Run after a producer has executed.
-         *
-         * \c run will be used to fill the \c runid and \c eventid columns.
          */
-        void add_row(const theta::Run & run);
+        void add_row(int runid, int eventid);
         
-    private:
-        column c_runid, c_eventid;
+private:
+    std::auto_ptr<Table> table;
+    std::auto_ptr<Column> c_runid, c_eventid;
 };
+
+
 
 /** \brief Table to store all logging information
  *
- * The corresponding SQL table has following fields:
+ * The corresponding table has following columns:
  * <ol>
- * <li>runid INTEGER(4)</li>
- * <li>eventid INTEGER(4)</li>
- * <li>severity INTEGER(4)</li>
- * <li>message TEXT</li>
- * <li>time DOUBLE</li>
+ * <li>runid (typeInt)</li>
+ * <li>eventid (typeInt)</li>
+ * <li>severity (typeInt)</li>
+ * <li>message (typeString)</li>
+ * <li>time (typeDouble)</li>
  * </ol>
  * 
  * \c runid and \c eventid are the run and event id, respectively, the log entry
  * is associated to. \c eventid is set to 0, if no particular event (but the run as a whole)
  * is referred to.
  * 
- * \c severity is one level from e_severity. See there for a description of the meaning
+ * \c severity is one level from LogTable::e_severity. See there for a description of the meaning
  * of these levels.
  * 
  * \c message is the human-readable log message.
  * 
- * \c time is the number of seconds since the unix epoch (1970-01-01 UTC), but
+ * \c time is the number of seconds since the unix epoch (1970-01-01 UTC),
  *    with sub-second accuracy.
  **/
-class LogTable: public Table {
+class LogTable: private boost::noncopyable {
 public:
     /** \brief Severity levels for log messages
      * 
@@ -268,14 +327,13 @@ public:
         error = 0, warning, info, debug
     };
     
-    /** \brief Construct a new table in Database \c db with name \c name.
+    /** \brief Construct a new logTable based on the given Table
      *
      * The default loglevel is warning.
      *
-     * \param name The name of the table. Has to pass Table::checkName()
-     * \param db The Database to create the table in
+     * Ownership of table will be transferred.
      */
-    LogTable(const std::string & name, const boost::shared_ptr<Database> & db);
+    LogTable(std::auto_ptr<Table> & table);
     
     /** \brief Set the current log level.
      *
@@ -292,15 +350,16 @@ public:
     
     /** \brief Append message to log table, if severity is larger than currently configured level
      * 
-     * \param run The Run instance to ask for the current runid and eventid
-     * \param s The severity level of the log message
-     * \param message The log message, in human-readable english
+     *
+     * \c s is the severity level of the log message
+     *
+     * \c message is the message, in human-readable english
      */
-    void append(const theta::Run & run, e_severity s, const std::string & message){
+    void append(int runid, int eventid, e_severity s, const std::string & message){
         //define inline as hint to the compiler; keep this function as short as possible to
         // encourage the compiler actually inlining it and to have high performance benefits in
         // case the user disables logging.
-        if(s <= level) really_append(run, s, message);
+        if(s <= level) really_append(runid, eventid, s, message);
     }
     
     /** \brief Returns the number of messages
@@ -313,110 +372,46 @@ public:
 private:
 
     /// really append the log message. Called from append() in case severity is large enough
-    void really_append(const theta::Run & run, e_severity s, const std::string & message);
+    void really_append(int runid, int eventid, e_severity s, const std::string & message);
     e_severity level;
     int n_messages[4];
-    column c_runid, c_eventid, c_severity, c_message, c_time;
+    std::auto_ptr<Column> c_runid, c_eventid, c_severity, c_message, c_time;
+    std::auto_ptr<Table> table;
 };
 
 
-/** \brief Table to store information about all producers
+/** \brief Table to store information about the random number seeds.
  *
- * This table object is used by an instance of \link theta::Run Run \endlink.
- * 
- * The corresponding SQL table has following fields:
+ * There is a one-to-one relationship between this class and \link theta::Run Run \endlink, i.e.,
+ * to each RndInfoTable instance, there is one Run instance and vice versa.
+ *
+ * The corresponding table has following columns:
  * <ol>
- * <li>\c ind \c INTEGER(4): the index (starting from 0) for this producer in the current run configuration,
- *   i.e. the index it appeared in the producers = ("...") list in the configuration. </li>
- * <li>\c type \c TEXT: the type setting used to configure this producer, as given in the type="..."  setting for this producer</li> 
- * <li>\c name \c TEXT: the name of the producer, as defined in the setting (via the setting name).</li>
- * <li>\c info \c TEXT: a info field defined by the producer; see Producer::get_comment()</li> 
+ * <li>runid (typeInt): the run id the entry refers to.</li>
+ * <li>seed (typeInt): the seed of the random number generator used in the run.</li>
  * </ol>
- *
- * This table is the only table without a "runid" entry as its contents information is not run-dependent
- * and each database file only contains information with consistent producers.
  */
-class ProducerInfoTable: public Table {
+class RndInfoTable: private boost::noncopyable {
 public:
-    /** \brief Construct a new producer table in with name \c name.
+    /** \brief Construct with an underlying Table
      *
-     * See Table::Table.
+     * Ownership of table will be transferred.
      */
-    ProducerInfoTable(const std::string & name, const boost::shared_ptr<Database> & db);
-    
-    /** \brief Append an entry to the ProducerInfoTable.
-     * 
-     * \param index The index for this producer in the current run configuration
-     * \param p_name The name of the producer
-     * \param p_type The right hand side of the type="..."; setting used to configure this producer
-     * \param info The information of the producer (result of Producer::get_information())
-     */
-    void append(int index, const std::string & p_name, const std::string & p_type, const std::string & info);
-
-private:
-    column c_ind, c_type, c_name, c_info;
-};
-
-/** \brief Table to store per-run information about the random number seed.
- *
- * This table object is used by an instance of \link theta::Run Run \endlink.
- *
- * The corresponding SQL table has following fields:
- * <ol>
- * <li>\c runid \c INTEGER(4): the run id the entry refers to.</li>
- * <li>\c seed \c INTEGER(4): the seed of the random number generator used in the run.</li>
- * </ol>
- */
-class RndInfoTable: public Table {
-public:
-    /** \brief Construct a new RndInfoTable with name \c name.
-     */
-    RndInfoTable(const std::string & name_, const boost::shared_ptr<Database> & db);
+    RndInfoTable(std::auto_ptr<Table> & table);
 
     /** \brief append an entry to the RndInfoTable
      *
-     * \param run is the current Run. It is used to query the current runid
-     * \param seed is the seed to save in the table
+     * \c runid is the current runid
+     * \c name is the name of the module of the seed, according to \link theta::ProductsTableWriter ProductsTableWriter \endlink . <br />
+     * \c seed is the seed of the random number generator used for this module
      */
-    void append(const theta::Run & run, int seed);
+    void append(int runid, const std::string & name, int seed);
 private:
-    column c_runid, c_seed;
-};
-
-/** \brief Table to store per-event information about which parameter values have been used to create pseudo data
- *
- * This table object is used by an instance of \link theta::Run Run \endlink.
- *
- * The corresponding SQL table has following fields:
- * <ol>
- * <li>\c runid \c INTEGER(4): the run id the entry refers to.</li>
- * <li>\c eventid \c INTEGER(4): the event id the entry refers to.</li>
- * <li>for each parameter a column &lt;param_name&gt; DOUBLE with the parameter value used.</li>
- * </ol>
- */
-class ParamTable: public Table {
-public:
-  /** \brief Append a new entry to the table
-   *
-   * \param run is the current Run. It is used to query the current runid and eventid
-   * \param values contain the parameter values to write to the table.
-   */
-  void append(const theta::Run & run, const theta::ParValues & values);
-
-  /** \brief Construct a ParamTable
-   *
-   * \param name is the table name in the database
-   * \param db is the Database instance to create the table in
-   * \param vm is used to query the parameter names, which are used as column names
-   * \param ids the parameter ids which to write in the table (usually all from the pseudodata Model)
-   */
-  ParamTable(const std::string & name, const boost::shared_ptr<Database> & db, const theta::VarIdManager & vm, const theta::ParIds & ids);
-private:
-    theta::ParIds par_ids;
-    column c_runid, c_eventid;
-    std::vector<column> columns;
+    std::auto_ptr<Column> c_runid, c_name, c_seed;
+    std::auto_ptr<Table> table;
 };
 
 }
 
 #endif
+

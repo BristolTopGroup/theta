@@ -1,24 +1,16 @@
 #include "plugins/mcmc_quantiles.hpp"
 #include "plugins/mcmc.hpp"
 #include "interface/plugin.hpp"
-#include "interface/run.hpp"
-//#include "interface/minimizer.hpp"
+#include "interface/model.hpp"
 #include "interface/histogram.hpp"
 #include "interface/distribution.hpp"
 
 #include <sstream>
+#include <iomanip>
 
 using namespace theta;
 using namespace std;
 using namespace libconfig;
-
-void mcmc_quantiles::define_table(){
-    for(size_t i=0; i<quantiles.size(); ++i){
-        stringstream ss;
-        ss << "quant" << setw(5) << setfill('0') << static_cast<int>(quantiles[i] * 10000 + 0.5);
-        columns.push_back(table->add_column(*this, ss.str(), EventTable::typeDouble));
-    }
-}
 
 //the result class for the metropolisHastings routine.
 class MCMCPosteriorQuantilesResult{
@@ -38,8 +30,6 @@ class MCMCPosteriorQuantilesResult{
                par_values.push_back(x[ipar]);
             }
         }
-
-        void end(){}
         
         //return the quantile q
         double get_quantile(double q){
@@ -59,33 +49,18 @@ class MCMCPosteriorQuantilesResult{
         vector<double> par_values;
 };
 
-void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) {
+void mcmc_quantiles::produce(const Data & data, const Model & model) {
     if(!init){
         try{
-            //get the covariance for average data:
-            ParValues values;
-            model.get_parameter_distribution().mode(values);
-            ObsIds observables = model.getObservables();
-            Data d;
-            for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
-                model.get_prediction(d[*it], values, *it);
-            }
-            NLLikelihood nll = get_nllikelihood(d, model);
-            sqrt_cov = get_sqrt_cov(run.get_random(), nll, startvalues);
-            
+            sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, vm);
             //find the number of the parameter of interest:
-            ParIds nll_pars = nll.getParameters();
+            ParIds model_pars = model.getParameters();
             ipar=0;
-            for(ParIds::const_iterator it=nll_pars.begin(); it!=nll_pars.end(); ++it, ++ipar){
+            for(ParIds::const_iterator it=model_pars.begin(); it!=model_pars.end(); ++it, ++ipar){
                 if(*it == par_id) break;
             }
             //now ipar has the correct value ...
-            
             init = true;
-        }
-        catch(NotFoundException & ex){
-            ex.message = "initialization failed: " + ex.message + " (did you specify widths for all unbound parameters?)";
-            throw FatalException(ex);
         }
         catch(Exception & ex){
             ex.message = "initialization failed: " + ex.message;
@@ -93,21 +68,20 @@ void mcmc_quantiles::produce(Run & run, const Data & data, const Model & model) 
         }
     }
     
-    NLLikelihood nll = get_nllikelihood(data, model);
-    MCMCPosteriorQuantilesResult result(nll.getnpar(), ipar, iterations);
-    metropolisHastings(nll, result, run.get_random(), startvalues, sqrt_cov, iterations, burn_in);
+    std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
+    MCMCPosteriorQuantilesResult result(nll->getnpar(), ipar, iterations);
+    metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
     
     for(size_t i=0; i<quantiles.size(); ++i){
-        table->set_column(columns[i], result.get_quantile(quantiles[i]));
+        products_sink->set_product(columns[i], result.get_quantile(quantiles[i]));
     }
 }
 
-mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Producer(cfg),
-        init(false), init_failed(false){
+mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()),
+   init(false), par_id(cfg.vm->getParId(cfg.setting["parameter"])){
     vm = cfg.vm;
     SettingWrapper s = cfg.setting;
     string parameter = s["parameter"];
-    par_id = vm->getParId(parameter);
     size_t n = s["quantiles"].size();
     if(n==0){
         throw ConfigurationException("mcmc_quantiles: list of requested quantiles is empty");
@@ -126,6 +100,12 @@ mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Produc
     else{
         burn_in = iterations / 10;
     }
+    for(size_t i=0; i<quantiles.size(); ++i){
+        stringstream ss;
+        ss << "quant" << setw(5) << setfill('0') << static_cast<int>(quantiles[i] * 10000 + 0.5);
+        columns.push_back(products_sink->declare_product(*this, ss.str(), theta::typeDouble));
+    }
 }
 
 REGISTER_PLUGIN(mcmc_quantiles)
+

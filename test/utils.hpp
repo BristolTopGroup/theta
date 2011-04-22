@@ -7,6 +7,9 @@
 
 void load_core_plugins();
 
+//returns false if loading root plugins was not successful
+bool load_root_plugins();
+
 class ConfigCreator{
 public:
     
@@ -22,8 +25,7 @@ private:
     libconfig::Config config;
     int dummy;
     
-    
-    theta::SettingUsageRecorder rec;
+    boost::shared_ptr<theta::SettingUsageRecorder> rec;
     theta::plugin::Configuration cfg;
 };
 

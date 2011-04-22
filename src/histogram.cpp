@@ -3,50 +3,80 @@
 #include "interface/exception.hpp"
 #include "interface/utils.hpp"
 
-//for memcpy and alike:
-#include <cstring>
 #include <cmath>
+#include <sstream>
 #include <limits>
+#include <new>
 
 using namespace theta;
 
-Histogram::Histogram(size_t b, double x_min, double x_max) :
-sum_of_bincontents(0.0), nbins(b), xmin(x_min), xmax(x_max) {
+namespace{
+   int n_allocs = 0;
+   int n_frees = 0;
+
+   double * allocate_histodata(size_t nbins){
+      ++n_allocs;
+      double * result = 0;
+      const size_t nbins_orig = nbins;
+      //always allocate an even number of bins:
+      if(nbins_orig % 2) ++nbins;
+      //for the add_fast routine, which might use SSE optimizations, we need this alignment. And
+      // while we at it, we should make sure double is as expected:
+      BOOST_STATIC_ASSERT(sizeof(double)==8);
+      int err = posix_memalign(reinterpret_cast<void**>(&result), 16, sizeof(double) * (nbins + 2));
+      if(err!=0){
+        throw std::bad_alloc();
+      }
+      //set the extra allocated double to zero to make sure no time-consuming garbage is there ...
+      if(nbins_orig % 2) result[nbins + 1] = 0.0;
+      return result;
+   }
+   
+   void free_histodata(double * histodata){
+      ++n_frees;
+      free(histodata);
+   }
+}
+
+void get_allocs_frees(int & n_alls, int & n_frs){
+    n_alls = n_allocs;
+    n_frs = n_frees;
+}
+
+
+Histogram::Histogram(size_t b, double x_min, double x_max) : histodata(0), nbins(b), xmin(x_min), xmax(x_max) {
     if(xmin >= xmax) throw InvalidArgumentException("Histogram: xmin >= xmax not allowed");
-    histodata = new double[nbins + 2];
-    memset(histodata, 0, sizeof (double) *(nbins + 2));
+    histodata = allocate_histodata(nbins);
+    reset();
 }
 
 Histogram::Histogram(const Histogram& rhs) {
     initFromHisto(rhs);
 }
 
-Histogram & Histogram::operator=(const Histogram & rhs) {
-    if (&rhs == this) return *this;
+void Histogram::operator=(const Histogram & rhs) {
+    if (&rhs == this) return;
     if (nbins != rhs.nbins || xmin != rhs.xmin || xmax != rhs.xmax) {
-        delete[] histodata;
+        free_histodata(histodata);
         initFromHisto(rhs);
     } else {
         memcpy(histodata, rhs.histodata, sizeof (double) *(nbins + 2));
-        sum_of_bincontents = rhs.sum_of_bincontents;
     }
-    return *this;
 }
 
 Histogram::~Histogram() {
-    delete[] histodata;
+    free_histodata(histodata);
 }
 
 void Histogram::reset(size_t b, double x_min, double x_max) {
-    sum_of_bincontents = 0.0;
     //only re-allocate if there where changes.
-    if (b != 0 && (b != nbins || x_min != xmin || x_max != xmax)) {
+    if (b > 0 && (b != nbins || x_min != xmin || x_max != xmax)) {
         nbins = b;
         xmin = x_min;
         xmax = x_max;
         if(xmin >= xmax) throw InvalidArgumentException("Histogram: xmin >= xmax not allowed");
-        delete[] histodata;
-        histodata = new double[nbins + 2];
+        free_histodata(histodata);
+        histodata = allocate_histodata(nbins);
     }
     memset(histodata, 0, sizeof (double) *(nbins + 2));
 }
@@ -60,35 +90,22 @@ void Histogram::reset_to_1(){
 void Histogram::multiply_with_ratio_exponented(const Histogram & nominator, const Histogram & denominator, double exponent){
    check_compatibility(nominator);
    check_compatibility(denominator);
-   const double * __restrict n_data = nominator.histodata;
-   const double * __restrict d_data = denominator.histodata;
+   const double * n_data = nominator.histodata;
+   const double * d_data = denominator.histodata;
    double s = 0.0;
    for(size_t i=0; i<=nbins+1; i++){
       if(d_data[i]>0.0)
          histodata[i] *= pow(n_data[i] / d_data[i], exponent);
       s += histodata[i];
    }
-   sum_of_bincontents = s;
-}
-
-void Histogram::add_with_coeff(double coeff, const Histogram & other){
-    check_compatibility(other);
-    const double * __restrict data = other.histodata;
-    for(size_t i=0; i<=nbins+1; i++){
-        histodata[i] += coeff * data[i];
-    }
-    sum_of_bincontents += coeff * other.sum_of_bincontents;
 }
 
 void Histogram::initFromHisto(const Histogram & h) {
     nbins = h.nbins;
     xmin = h.xmin;
     xmax = h.xmax;
-    sum_of_bincontents = h.sum_of_bincontents;
-    histodata = new double[nbins + 2];
-    if (h.histodata != 0) {
-        memcpy(histodata, h.histodata, sizeof (double) *(nbins + 2));
-    }
+    histodata = allocate_histodata(nbins);
+    memcpy(histodata, h.histodata, sizeof (double) *(nbins + 2));
 }
 
 void Histogram::fill(double xvalue, double weight) {
@@ -98,86 +115,23 @@ void Histogram::fill(double xvalue, double weight) {
     if (static_cast<size_t> (bin) > nbins + 1)
         bin = nbins + 1;
     histodata[bin] += weight;
-    sum_of_bincontents += weight;
 }
 
-void Histogram::check_compatibility(const Histogram & h) const {
-    if (nbins != h.nbins) throw InvalidArgumentException("Histogram:check_compatibility: number of bins mismatch");
-    double binwidth = (xmax - xmin) / nbins;
-    if (!utils::close_to(h.xmax, xmax, binwidth) || !utils::close_to(h.xmin, xmin, binwidth))
-        throw InvalidArgumentException("Histogram borders mismatch (too much).");
-}
-
-Histogram & Histogram::operator+=(const Histogram & h) {
-    if(&h == this){
-        this->operator*=(2.0);
-        return *this;
+void Histogram::fail_check_compatibility(const Histogram & h) const {
+    if (nbins != h.nbins || xmin!=h.xmin || xmax != h.xmax){
+        std::stringstream s;
+        s <<  "Histogram::check_compatibility: Histograms are not compatible (nbins, xmin, xmax) are: "
+              " (" << nbins << ", " << xmin << ", " << xmax << ") and "
+              " (" << h.nbins << ", " << h.xmin << ", " << h.xmax << ")";
+        throw InvalidArgumentException(s.str());
     }
-    check_compatibility(h);
-    const double * __restrict hdata = h.histodata;
-    for (size_t i = 0; i <= nbins + 1; i++) {
-        histodata[i] += hdata[i];
-    }
-    sum_of_bincontents += h.sum_of_bincontents;
-    return *this;
 }
 
-Histogram & Histogram::operator*=(const Histogram & h) {
+void Histogram::operator*=(const Histogram & h) {
     check_compatibility(h);
     const double * hdata = h.histodata;
-    sum_of_bincontents = 0.0;
-    for (size_t i = 0; i <= nbins + 1; i++) {
+    for (size_t i = 0; i <= nbins + 1; ++i) {
         histodata[i] *= hdata[i];
-        sum_of_bincontents += histodata[i];
-    }
-    return *this;
-}
-
-
-Histogram & Histogram::operator*=(double a) {
-    for (size_t i = 0; i <= nbins + 1; i++) {
-        histodata[i] *= a;
-    }
-    sum_of_bincontents *= a;
-    return *this;
-}
-
-/*TODO: the complexity is not optimal: it is O(N*log(N) + M) for a sample size N and M bins. Also, space requirement is N*sizeof(double).
-* Maybe it would be better to use a simple N*M algo.
-* It would also be possible to do it in N*log(M), or maybe O(M + sqrt(N))
-*
-* If use_poisson is true, a O(M) complexity algorithm is used.
-*/
-void Histogram::fill_with_pseudodata(Histogram & m, Random & rnd, double mu, bool use_poisson) const{
-    m.reset(nbins, xmin, xmax);
-    if(mu<0) mu = sum_of_bincontents;
-    if(!use_poisson){
-        const size_t N = static_cast<size_t>(mu+0.5);
-        std::vector<double> r(N);
-        for(size_t i=0; i<N; i++){
-            r[i] = rnd.uniform();
-        }
-        std::sort(r.begin(), r.end());
-        //normalized integral up to and including bin:
-        double integral = 0;
-        //next r to probe:
-        size_t next_r = 0;
-        for(size_t bin=0; bin<=nbins+1; bin++){
-            integral += histodata[bin]/sum_of_bincontents;
-            size_t n=0;
-            while(next_r < N && r[next_r] <= integral){
-                n++;
-                next_r++;
-            }
-            m.set(bin, n);
-        }
-    }
-    else{//use_poisson.
-        double factor = mu/sum_of_bincontents;
-        for(size_t bin=0; bin<=nbins+1; bin++){
-            size_t n = rnd.poisson(factor * histodata[bin]);
-            m.set(bin, n);
-        }
     }
 }
 

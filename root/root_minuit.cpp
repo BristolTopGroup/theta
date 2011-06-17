@@ -1,4 +1,5 @@
 #include "root/root_minuit.hpp"
+#include "interface/redirect_stdio.hpp"
 
 using namespace theta;
 using namespace theta::plugin;
@@ -28,12 +29,12 @@ public:
         }
         double result = f(x);
         if(isinf(result)){
-           cerr << "Error in function to minimize: result is infinity!" << endl;
+           theta::cerr << "Error in function to minimize: result is infinity. Parameter values: " << endl;
            for(size_t i=0; i<ndim; ++i){
-             cerr << x[i] << " ";
+               theta::cerr << x[i] << " ";
            }
-           cerr << endl;
-           throw FatalException("inf");
+           theta::cerr << endl;
+           throw MinimizationException("function to minimize was infinity during minimization");
         }
         return result;
     }

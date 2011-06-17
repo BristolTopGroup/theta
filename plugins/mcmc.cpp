@@ -4,6 +4,7 @@
 #include "interface/utils.hpp"
 #include "interface/distribution.hpp"
 #include "interface/model.hpp"
+#include "interface/redirect_stdio.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -67,11 +68,25 @@ void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
     }
 }
 
+bool jump_rates_converged(const vector<double> & jump_rates){
+    if(jump_rates.size() < 2) return false;
+    const size_t n = jump_rates.size();
+    double last_rate = jump_rates[n-1];
+    double nlast_rate = jump_rates[n-2];
+    if(last_rate < 0.05) return false;
+    if(last_rate > 0.5) return false;
+    //if jump rate looks reasonable and did not change too much in the last iterations: break:
+    if(fabs((nlast_rate - last_rate) / max(last_rate, nlast_rate)) < 0.10) return true;
+    //TODO: otherwise, it could still have converged well enough, but it is difficult to have a very good
+    // criterion here ...
+    return false;
+}
+
 
 Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & startvalues,
                     const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,
                     const boost::shared_ptr<VarIdManager> & vm){
-    const size_t max_passes = 20;
+    const size_t max_passes = 50;
     const size_t iterations = 8000;
     const size_t n = model.getParameters().size();
     Matrix sqrt_cov(n, n);
@@ -114,21 +129,14 @@ Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & st
         startvalues = res.getMeans();
         cov = res.getCov();
         get_cholesky(cov, sqrt_cov, static_cast<int>(n) - n_fixed_parameters);
-        double previous_jump_rate = jump_rates.size()?jump_rates.back():2.0;
-        double jump_rate;
-        jump_rates.push_back(jump_rate = static_cast<double>(res.getCountDifferent()) / res.getCount());
-        //if jump rate looks reasonable and did not change too much in the last iteration: break:
-        if(jump_rate > 0.1 and jump_rate < 0.5 and fabs((previous_jump_rate - jump_rate) / jump_rate) < 0.05) break;
-        //TODO: more diagnostics(?) startvalues should not change too much, covariance should not change too much. However,
-        // what's a good measure of equality here? Relative difference of eigenvalues and angular distance between the eigenvectors?
+        jump_rates.push_back(static_cast<double>(res.getCountDifferent()) / res.getCount());
+        if(jump_rates_converged(jump_rates)) break;
     }
     if(jump_rates.size()==max_passes){
-        stringstream ss;
-        ss << "get_sqrt_cov: covariance estimate did not really converge; jump rates were: ";
+        theta::cout << "WARNING in get_sqrt_cov: covariance estimate did not really converge; jump rates were: ";
         for(size_t i=0; i<max_passes; ++i){
-            ss << jump_rates[i] << "; ";
+            theta::cout << jump_rates[i] << "; ";
         }
-        throw Exception(ss.str());
     }
     return sqrt_cov;
 }

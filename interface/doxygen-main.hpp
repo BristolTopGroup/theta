@@ -240,6 +240,7 @@
  * </pre>
  *
  * <tt>CMSSW_3_8_4</tt> is an example, you can pick another version. It is recommended to pick a recent one, and -- if you can -- a 64-bit version.
+ *
  * Reports about failing builds (and of course, patches for these), are always welcome.
  *
  * \section platforms Supported Platforms / Libraries
@@ -248,9 +249,14 @@
  * boost or sqlite, adapt "Makefile.options" to make the installation path known to %theta and set the
  * LD_LIBRARY_PATH environment variable.
  *
+ * Successful builds on Mac OS X have been reported, last time 20th April 2011.
+ * However, I cannot guarantee future versions will work as I do not
+ * have a test setup for this architecture.
+ *
  * It is regularly tested with
  * <ul>
- *   <li>Ubuntu Lucid (10.04), with boost and sqlite libraries shipped, and root 5.28.00.</li>
+ *   <li>Ubuntu Lucid (10.04), which comes with boost 1.42. The root version used is 5.28.00.</li>
+ *   <li>same as before, but with a more recent boost (1.46.1)</li>
  *   <li>Scientific Linux CERN (SLC) 5.5. In this case, SLC-shipped version of boost is too old (1.33.1, released in 2006).
  *     Either setup CMSSW to use root/boost/sqlite from there (tested with CMSSW_3_8_7 on slc5_ia32_gcc434) or install boost, root and
  *     and sqlite manually.</li>

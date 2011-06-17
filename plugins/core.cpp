@@ -451,7 +451,6 @@ double mult::operator()(const ParValues & v) const{
 
 void product_distribution::add_distributions(const Configuration & cfg, const theta::SettingWrapper & s, int depth){
     if(depth==0) throw ConfigurationException("product_distribution: nesting too deep while trying to resolve distributions");
-    if(s.size()==0) throw ConfigurationException("product_distribution: setting list \"distributions\" is empty");
     for(size_t i=0; i<s.size(); ++i){
         SettingWrapper dist_setting = s[i];
         string dist_setting_type = dist_setting["type"]; 

@@ -1,7 +1,9 @@
 #include "interface/random-utils.hpp"
 #include "interface/histogram.hpp"
 #include "interface/database.hpp"
+
 #include <boost/date_time/local_time/local_time.hpp>
+#include <unistd.h>
 
 using namespace theta;
 
@@ -32,6 +34,25 @@ RandomConsumer::RandomConsumer(const theta::plugin::Configuration & cfg, const s
        ptime t(microsec_clock::universal_time());
        time_duration td = t - ptime(date(1970, 1, 1));
        seed = td.total_microseconds();
+       // to avoid clashes with other RandomConsumers initialized in the same microsecond / clock resolution
+       // interval: use also the RandomConsumer's name which should be unique within one theta configuration.
+       for(size_t i=0; i<name.size(); ++i){
+           seed = seed * 33 + (int)name[i];
+       }
+       // to avoid clashes in case of batch system usage with jobs starting in the same clock resolution
+       // interval with the same configuration (=same name), also use the hostname for the seed:
+       char hname[HOST_NAME_MAX + 1];
+       gethostname(hname, HOST_NAME_MAX + 1);
+       // In case the hostname does not fit into hname, the name is truncated but no error is returned.
+       // This should not happen, as we use HOST_NAME_MAX. On the other hand, we do not check for
+       // any errors potentially returned by gethostname ...
+       hname[HOST_NAME_MAX] = '\0';
+       int c;
+       size_t i=0;
+       while((c = hname[i++])){
+           seed = seed * 33 + (int)hname[i];
+       }
+       
    }
    rnd_gen.reset(new Random(rnd_source.release()));
    rnd_gen->set_seed(seed);
@@ -42,9 +63,9 @@ RandomConsumer::RandomConsumer(const theta::plugin::Configuration & cfg, const s
 void theta::randomize_poisson(Histogram & h, Random & rnd){
     const size_t nbins = h.get_nbins();
     for(size_t bin=0; bin<=nbins+1; ++bin){
-        size_t n = rnd.poisson(h.get(bin));
-        h.set(bin, n);
+        double mu = h.get(bin);
+        if(mu > 0.){
+            h.set(bin, rnd.poisson(mu));
+        }
     }
 }
-
-

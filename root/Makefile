@@ -21,13 +21,13 @@ EXTRA_COMPILE := $(shell root-config --cflags)
 EXTRA_LINK_SO := $(shell root-config --libs) -lMinuit2 $(shell root-config --ldflags)
 EXTRA_LINK_EXE := $(EXTRA_LINK_SO)
 
-all: ../lib/root.so histos
+all: ../lib/root.so ../bin/histos
 
 ifeq ($(OPTIONS_BUILD_TESTS),yes)
 all: create_testhistos create_testtree
 endif
 
-histos: .bin/histos.o
+../bin/histos: .bin/histos.o
 	@$(LINK_EXE) -o $@ $<
 
 create_testhistos: .bin/create_testhistos.o

@@ -41,7 +41,15 @@ root_histogram::root_histogram(const Configuration & ctx){
     }
     if(ctx.setting.exists("normalize_to")){
        double norm = HistogramFunctionUtils::read_normalize_to(ctx.setting);
-       histo->Scale(norm / histo->Integral());
+       double histo_integral = histo->Integral();
+       if(histo_integral==0){
+           if(norm!=0){
+               throw ConfigurationException("specified non-zero 'normalize_to' setting but original Histogram's integral is zero");
+           }
+       }
+       else{
+           histo->Scale(norm / histo_integral);
+       }
     }
 
     Histogram h, h_error;

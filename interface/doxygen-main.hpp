@@ -463,7 +463,8 @@
  * to construct an object the corresponding type. The string given in the "type=..." setting is the C++ class
  * name used. The configuration is documented in the respective class documentation.
  *
- * To find out about the available plugins, look at the class hierarchy (link above in the main menu). The
+ * To find out about the available plugins, look at the <a href="hierarchy.html">class hierarchy</a>
+ * (use "Classes", then "Class Hierarchy" in the above menu). The
  * abstract base classes the plugins are derived from are:
  * <ul>
  * <li>\link theta::HistogramFunction HistogramFunction\endlink: used in the "histogram=..."-setting in the observables

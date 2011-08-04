@@ -156,12 +156,11 @@ private:
  * 
  * Configuration is done via a setting group like
  * \code
- * {
+ * distribution = {
  *   type = "flat_distribution";
  *   s = {
  *      range = (0.0, "inf");
- *      width = 1.0; //optional, but should be specified for infinite range
- *      fix-sample-value = 7.0; //optional, but should be specified for infinite range
+ *      fix-sample-value = 7.0; // must be given here, as the range is infinite
  *   };
  *   
  *   b = {
@@ -177,10 +176,13 @@ private:
  * <ul>
  *   <li>a \c range setting which specifies, as a list of two doubles, the range of the variable.
  *     The special strings "inf" and "-inf" are allowed here.</li>
- *   <li>An optional \c fix-sample-value setting which will be used by the sample routine. In case of finite
- *     intervals, the default is to sample from a flat distribution on this interval. For infinite intervals,
- *     an exception will be thrown upon call of Distributiuon::sample</li>
+ *   <li>A \c fix-sample-value setting which will be used by the sample routine. In case of finite
+ *     intervals, the default is to sample from a flat distribution on this interval. For infinite intervals, \c fix-sample-value must be given and is the
+ *     value returned when sampling from the distribution.</li>
  * </ul>
+ * Note that \c fix-sample-value is also used as the mode (=most probable value) for this parameter and as such
+ * is used as starting point for minimization, MCMC, etc. Therefore, it is advisable to set \c fix-sample-value even for
+ * finite intervals to make sure the this value makes sense. In case of finite intervals, the mode is the midpoint of the interval.
  */
 class flat_distribution: public theta::Distribution{
 public:

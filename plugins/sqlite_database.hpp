@@ -15,7 +15,7 @@
  *
  * Configured via a setting group like
  * \code
- * {
+ * output_database = {
  *   type = "sqlite_database";
  *   filename = "abc.db";
  *   products_data = ("deltanll__nll_sb"); // optional, default is '*'
@@ -41,7 +41,7 @@ public:
     
     /** \brief Constructor for the plugin system
      *
-     * See class documentation for a description of the parsed COnfiguration settings.
+     * See class documentation for a description of the Configuration settings.
      */
     sqlite_database(const theta::plugin::Configuration & cfg);
     

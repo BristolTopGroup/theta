@@ -164,6 +164,9 @@ flat_distribution::flat_distribution(const theta::plugin::Configuration & cfg){
         double high = ranges[pid].second = s["range"][1].get_double_or_inf();
         if(low > high) throw ConfigurationException("invalid range");
         modes.set(pid, 0.5 * (high + low));
+        if(std::isinf(high - low) && !s.exists("fix-sample-value")){
+            throw ConfigurationException("infinite range given for parameter '" + s.getName() + "', but no 'fix-sample-value' setting");
+        }
         if(s.exists("fix-sample-value")){
             fix_sample_values.set(pid, s["fix-sample-value"]);
             modes.set(pid, fix_sample_values.get(pid));
@@ -177,9 +180,7 @@ void flat_distribution::sample(theta::ParValues & result, theta::Random & rnd) c
         if(fix_sample_values.contains(it->first))continue;
         const double low = it->second.first;
         const double high = it->second.second;
-        if(std::isinf(high - low)){
-            throw IllegalStateException("flat_distribution::sample: infinite range and no fix-sample-value");
-        }
+        assert(!std::isinf(high - low));
         result.set(it->first, rnd.uniform()*(high-low) + low);
     }
 }

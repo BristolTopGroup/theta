@@ -53,14 +53,11 @@ public:
     virtual theta::MinimizationResult minimize(const theta::Function & f, const theta::ParValues & start,
             const theta::ParValues & step, const std::map<theta::ParId, std::pair<double, double> > & ranges);
 private:
-    void set_printlevel(int p);
-    
-    //set to NAN to use default
-    void set_tolerance(double tol);
     
     ROOT::Minuit2::EMinimizerType type;
     std::auto_ptr<ROOT::Minuit2::Minuit2Minimizer> min;
     double tolerance;
+    int printlevel;
 };
 
 #endif

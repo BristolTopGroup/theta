@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cstddef>
+#include "interface/exception.hpp"
 
 namespace theta {
 
@@ -65,6 +66,30 @@ public:
      */
     double operator()(size_t row, size_t col) const {
         return elements[cols * row + col];
+    }
+    
+    /** \brief Add other matrix to this
+     *
+     * \c other must have the same number of rows and columns. Otherwise,
+     * an InvalidArgumentException is thrown.
+     */
+    const Matrix & operator+=(const Matrix & other){
+        if(rows!=other.rows || cols!=other.cols) throw InvalidArgumentException("Matrix::operator+= called for matrices of different dimensions");
+        for(size_t i=0; i<elements.size(); ++i){
+            elements[i] += other.elements[i];
+        }
+        return *this;
+    }
+    
+    /** \brief Add two matrices
+     *
+     * \c other must have the same number of rows and columns. Otherwise,
+     * an InvalidArgumentException is thrown.
+     */
+    Matrix operator+(const Matrix & other) const{
+        Matrix result(*this);
+        result += other;
+        return result;
     }
 
     /** \brief The number of rows.

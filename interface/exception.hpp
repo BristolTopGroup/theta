@@ -33,15 +33,6 @@ protected:
     mutable std::string whatstring;
 };
 
-/** \brief Thrown in case of a request for a non-existing member in a conatiner-like structure is made. 
- */
-class NotFoundException: public Exception{
-public:
-    /// Constructor taking a message intended for the user which will be written to Exception::message
-   NotFoundException(const std::string & message);
-};
-
-
 /** \brief Thrown during configuration file processing.
  */
 class ConfigurationException: public Exception{
@@ -50,12 +41,12 @@ public:
     ConfigurationException(const std::string & msg);
 };
 
-/** \brief Thrown if a method is called which depends on a particular state of object which is not fulfilled
- */  
-class IllegalStateException: public Exception{
+/** \brief Thrown in case of a request for a non-existing member in a conatiner-like structure is made. 
+ */
+class NotFoundException: public Exception{
 public:
     /// Constructor taking a message intended for the user which will be written to Exception::message
-    IllegalStateException(const std::string & msg=""): Exception(msg){}
+   NotFoundException(const std::string & message);
 };
 
 /** \brief Thrown in case of invalid mathematical constructs like domain errors
@@ -64,13 +55,6 @@ class MathException: public Exception{
 public:
     /// Constructor taking a message intended for the user which will be written to Exception::message
     MathException(const std::string &);
-};
-
-/// \brief General exception to indicate that arguments passed to a function are invalid (=do not correspond to documentation)
-class InvalidArgumentException: public Exception{
-public:
-    /// Constructor taking a message intended for the user which will be written to Exception::message
-    InvalidArgumentException(const std::string &);
 };
 
 /// \brief Thrown in case of database errors.
@@ -90,10 +74,11 @@ public:
     MinimizationException(const std::string & s): Exception(s){}
 };
 
-/** \brief Exception class to indicate serious error
+/** \brief Exception class to indicate an internal error
  * 
  * An exception of this kind should usually not be caught: it indicates a serious error
- * which prevents further execution.
+ * which prevents further execution, such as violation of pre / postconditions, i.e., logic errors
+ * which could be prevented by proper programming.
  * 
  * In order to prevent catching FatalException in a catch(Exception &) statement, FatalException is not part
  * of the usual exception hierarchy of theta.
@@ -111,6 +96,14 @@ public:
     /// Construct directly from an error message
     explicit FatalException(const std::string & message);
 };
+
+/// \brief General exception to indicate that arguments passed to a function are invalid (=do not correspond to documentation)
+class InvalidArgumentException: public FatalException{
+public:
+    /// Constructor taking a message intended for the user which will be written to Exception::message
+    InvalidArgumentException(const std::string &);
+};
+
 
 /** \brief Thrown in case an immediate exit of the main program is requested. 
  *

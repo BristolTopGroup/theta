@@ -2,7 +2,7 @@
 
 using namespace theta;
 
-InvalidArgumentException::InvalidArgumentException(const std::string & m) : Exception(m) {}
+InvalidArgumentException::InvalidArgumentException(const std::string & m) : FatalException(m) {}
 Exception::Exception(const std::string & m):message(m){}
 ConfigurationException::ConfigurationException(const std::string & msg): Exception(msg){}
 NotFoundException::NotFoundException(const std::string & msg): Exception(msg){}

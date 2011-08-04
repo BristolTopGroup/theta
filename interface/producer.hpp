@@ -46,6 +46,7 @@ public:
 protected:
     /// To be used by derived classes, to fill name and products_sink
     ProductsSource(const plugin::Configuration & cfg);
+    ProductsSource(const std::string & name_, const boost::shared_ptr<ProductsSink> & sink): name(name_), products_sink(sink){}
     std::string name;
     boost::shared_ptr<ProductsSink> products_sink;
 };

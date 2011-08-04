@@ -4,6 +4,9 @@ convention and output. It does not cover internal changes.
 
 from June 2010 to trunk:
 ------------------------
+* for flat_distribution, the 'fix-sample-value' setting must be supplied for parameters with an infinite range, so far thi setting was optional.
+  This ensures there is a "default" for each parameter (these defaults have widespread use for bootstrapping the model, as starting
+  point for minimizaiton, MCMC, etc.)
 * the command line of theta changed: the name of the "main" setting cannot be specifiec any more, it is always "main".
   On the other hand, it is possible to specify more than one configuration file at once. In this case, they will be executed sequentially
   almost as if one would call theta for each of them.
@@ -20,7 +23,7 @@ from June 2010 to trunk:
   It is recommended to drop 'main.seed' to avoid the warning about it being unused.
   To set the seed explicitely for plugins which use random numbers, you can add a setting 'rnd_gen' like this:
   rnd_gen = {
-      seed = 123; // default of -1 means: use seed based on current (sub-second precision) time.
+      seed = 123; // default of -1 means: use seed based on current (sub-second precision) time, hostname, and process id.
   };
   This affects the 'model_source', and the mcmc producers.
 * The RndInfoTable schema has changed: it now contains seeds used for each module (instead of one per Run)

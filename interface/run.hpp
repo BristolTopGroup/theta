@@ -112,9 +112,8 @@ private:
     boost::ptr_vector<Producer> producers;
     boost::shared_ptr<ProductsTable> products_table;
 
-    //the runid, eventid and the total number of events to produce:
+    //the runid, and the total number of events to produce:
     int runid;
-    int eventid;
     int n_event;
 };
 

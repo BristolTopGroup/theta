@@ -13,12 +13,12 @@ using namespace std;
 
 void Run::run(){
     //log the start of the run:
-    eventid = 0;
-    logtable->append(runid, eventid, LogTable::info, "run start");
+    //use eventid = 0 to indicate a "run-scoped" entry
+    logtable->append(runid, 0, LogTable::info, "run start");
    
     Data data;
     //main event loop:
-    for (eventid = 1; eventid <= n_event; eventid++) {
+    for (int eventid = 1; eventid <= n_event; eventid++) {
         if(stop_execution)break;
         try{
             data_source->fill(data, *this);
@@ -40,6 +40,7 @@ void Run::run(){
                 std::stringstream ss;
                 ss << "Producer '" << producers[j].getName() << "' failed: " << ex.message << ".";
                 logtable->append(runid, eventid, LogTable::error, ss.str());
+                break;
             }
             catch(FatalException & f){
                 stringstream ss;
@@ -56,8 +57,7 @@ void Run::run(){
         if(progress_listener) progress_listener->progress(eventid, n_event);
     }
     
-    eventid = 0; // to indicate in the log table that this is an "event-wide" entry
-    logtable->append(runid, eventid, LogTable::info, "run end");
+    logtable->append(runid, 0, LogTable::info, "run end");
     if(log_report){
         const int* n_messages = logtable->get_n_messages();
         LogTable::e_severity s = logtable->get_loglevel();
@@ -79,7 +79,6 @@ Run::Run(const plugin::Configuration & cfg){
     vm = cfg.vm;
     log_report = true;
     runid = 1;
-    eventid = 0;
     n_event = s["n-events"];
     
     //1. setup database and tables:

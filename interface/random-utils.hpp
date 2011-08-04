@@ -12,7 +12,7 @@ class RandomConsumer{
 protected:
    /** \brief Constructor to be used by derived classes
     *
-    * Will save the random seed in the 'rndinfo' table of the Run cfg.run, if it is set.
+    * Will save the random seed in the RndInfoTable of the cfg.pm, if this is set.
     */
    RandomConsumer(const theta::plugin::Configuration & cfg, const std::string & name);
    
@@ -36,3 +36,4 @@ void randomize_poisson(Histogram & h, Random & rnd);
 
 
 #endif
+

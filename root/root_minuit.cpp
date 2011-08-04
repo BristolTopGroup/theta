@@ -44,13 +44,7 @@ private:
     const size_t ndim;
 };
 
-void root_minuit::set_printlevel(int p){
-    min->SetPrintLevel(p);
-}
 
-void root_minuit::set_tolerance(double tol){
-    tolerance = tol;
-}
 
 MinimizationResult root_minuit::minimize(const theta::Function & f, const theta::ParValues & start,
         const theta::ParValues & steps, const std::map<theta::ParId, std::pair<double, double> > & ranges){
@@ -59,6 +53,7 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
     // when calling SetFixedVariable(...).
     //Using a "new" one every time seems very wastefull, but it seems to work ...
     min.reset(new ROOT::Minuit2::Minuit2Minimizer(type));
+    min->SetPrintLevel(printlevel);
     MinimizationResult result;
 
     //1. setup parameters, limits and initial step sizes
@@ -172,9 +167,7 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
     return result;
 }
 
-root_minuit::root_minuit(const Configuration & cfg): Minimizer(cfg), tolerance(NAN){
-       min.reset(new ROOT::Minuit2::Minuit2Minimizer(type));
-       int printlevel = 0;
+root_minuit::root_minuit(const Configuration & cfg): Minimizer(cfg), tolerance(NAN), printlevel(0){
        if(cfg.setting.exists("printlevel")){
            printlevel = cfg.setting["printlevel"];
        }
@@ -190,16 +183,13 @@ root_minuit::root_minuit(const Configuration & cfg): Minimizer(cfg), tolerance(N
        }
        else{
            stringstream s;
-           s << "RootMinuit: invalid method '" << method << "' (allowed are only 'migrad' and 'simplex')";
+           s << "invalid method '" << method << "' (allowed are only 'migrad' and 'simplex')";
            throw InvalidArgumentException(s.str());
        }       
-       double tol = NAN;
        if(cfg.setting.exists("tolerance")){
-           tol = cfg.setting["tolerance"];
+           tolerance = cfg.setting["tolerance"];
        }
-       set_printlevel(printlevel);
-       set_tolerance(tol);
    }
 
-
 REGISTER_PLUGIN(root_minuit)
+

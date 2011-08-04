@@ -97,6 +97,10 @@ namespace theta{
          */
         virtual MinimizationResult minimize(const theta::Function & f, const theta::ParValues & start,
                 const theta::ParValues & step, const std::map<theta::ParId, std::pair<double, double> > & ranges) = 0;
+                
+        const VarIdManager & get_vm() const{
+            return *vm;
+        }
 
     protected:
         /// Pointer to the relevant VarIdManager instance. Used to control parameter limits

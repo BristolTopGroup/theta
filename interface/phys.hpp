@@ -164,7 +164,7 @@ namespace theta {
          * It can throw a DataUnavailable exception if no more data is available and the
          * run should end.
          */
-        virtual void fill(Data & dat, Run & run) = 0;
+        virtual void fill(Data & dat) = 0;
         
         /// Declare destructor virtual as polymorphic access to derived classes will happen.
         virtual ~DataSource(){}

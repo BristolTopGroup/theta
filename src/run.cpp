@@ -21,7 +21,7 @@ void Run::run(){
     for (int eventid = 1; eventid <= n_event; eventid++) {
         if(stop_execution)break;
         try{
-            data_source->fill(data, *this);
+            data_source->fill(data);
         }
         catch(DataSource::DataUnavailable &){
             break;

@@ -556,7 +556,7 @@ model_source::model_source(const theta::plugin::Configuration & cfg): DataSource
     }
 }
 
-void model_source::fill(Data & dat, Run & run){
+void model_source::fill(Data & dat){
     dat.reset();
     Random & rnd = *rnd_gen;
     ParValues values;

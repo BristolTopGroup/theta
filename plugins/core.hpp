@@ -451,7 +451,7 @@ public:
      * Will only throw the DataUnavailable Exception if the parameter distribution instance
      * (i.e., either the model's instance or the override-parameter-distribution instance) throws an Exception.
      */
-    virtual void fill(theta::Data & dat, theta::Run & run);
+    virtual void fill(theta::Data & dat);
     
 private:
     theta::ParValues parameters_for_nll;

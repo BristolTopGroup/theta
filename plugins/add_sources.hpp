@@ -44,7 +44,7 @@ public:
      *
      * Will never throw the DataUnavailable Exception.
      */
-    virtual void fill(theta::Data & dat, theta::Run & run);
+    virtual void fill(theta::Data & dat);
     
 private:
     boost::ptr_vector<theta::DataSource> sources;

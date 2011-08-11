@@ -102,7 +102,7 @@ public:
     /// \brief Constructor used by the plugin system
     root_ntuple_source(const theta::plugin::Configuration & cfg);
     
-    virtual void fill(theta::Data & data_out, theta::Run & run);
+    virtual void fill(theta::Data & data_out);
     
 private:
    std::vector<theta::ObsId> observables;

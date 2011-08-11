@@ -110,7 +110,7 @@ root_ntuple_source::root_ntuple_source(const Configuration & cfg): DataSource(cf
     nominal_data.apply_factor(factor);
 }
 
-void root_ntuple_source::fill(Data & data_out, Run &){
+void root_ntuple_source::fill(Data & data_out){
     data_out.reset();
     size_t n_obs = observables.size();
     for(size_t i=0; i<n_obs; ++i){

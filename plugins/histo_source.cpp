@@ -20,7 +20,7 @@ histo_source::histo_source(const Configuration & cfg): DataSource(cfg){
     }
 }
 
-void histo_source::fill(Data & dat, Run &){
+void histo_source::fill(Data & dat){
     dat = data;
 }
 

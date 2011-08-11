@@ -18,7 +18,7 @@
  *  input_database = {
  *     type = "sqlite_database_in";
  *     filename = "in.db";
- *     //optionally: filenames = ("in1.db", "in2.db", "in3.db");
+ *     //alternatively: filenames = ("in1.db", "in2.db", "in3.db");
  *  };
  * \endcode
  *

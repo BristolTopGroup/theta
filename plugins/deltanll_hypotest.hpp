@@ -17,6 +17,7 @@
  * \code
  * hypotest = {
  *   type = "deltanll_hypotest";
+ *   name = "deltanll";
  *   minimizer = "@myminuit";
  *   background-only-distribution = "@bkg-only-dist";
  *   signal-plus-background-distribution = "@default-dist";
@@ -28,6 +29,9 @@
  * \endcode
  *
  * \c type is always "deltanll_hypotest" to select this producer.
+ *
+ * \c name is a unique producer name of your choice; it is used to construct column names in the output database. It may only contain alphanumeric
+ *    characters (no spaces, special characters, etc.).
  *
  * \c minimizer is the configuration path to a \link theta::Minimizer minimizer \endlink definition to be used
  *    for minimization of the negative-log-likelihood.

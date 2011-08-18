@@ -15,9 +15,10 @@
  * or, equvalently, the difference in the negative log-likelihood.
  *
  * Configuration is done with a settings block like:
- * <pre>
+ * \code
  * {
  *  type = "deltanll_intervals";
+ *  name = "intervals";
  *  parameter = "p0";
  *  minimizer = "@myminuit";
  *  clevels = [0.68, 0.95];
@@ -25,9 +26,12 @@
  * }
  *
  * myminuit = {...} //see the minimizer documentation.
- * </pre>
+ * \endcode
  *
  * \c type has always to be "deltanll_intervals" in order to use this producer
+ *  
+ * \c name is a unique producer name of your choice; it is used to construct column names in the output database. It may only contain alphanumeric
+ *    characters (no spaces, special characters, etc.).
  *
  * \c parameter is the name of the parameter for which the interval shall be calculated.
  *

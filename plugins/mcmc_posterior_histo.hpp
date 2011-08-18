@@ -34,8 +34,8 @@
  *
  * \c type is always "mcmc_posterior_histo" to select this producer.
  *
- * \c name is a name chosen by the user used to construct unique column names in the result table (this name and two underscores are
- *   prepended to the column names explained below).
+ * \c name is a unique producer name of your choice; it is used to construct column names in the output database. It may only contain alphanumeric
+ *    characters (no spaces, special characters, etc.).
  *
  * \c parameters is a list of parameter names you want to calculate the posterior Histograms for
  *

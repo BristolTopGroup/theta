@@ -18,6 +18,7 @@
  * \code
  * hypotest = {
  *   type = "mcmc_quantiles";
+ *   name = "quant";
  *   parameter = "s";  //assuming "s" was defined as parameter earlier
  *   quantiles = [0.025, 0.16, 0.5, 0.84, 0.975];
  *   iterations = 10000;
@@ -27,6 +28,9 @@
  * \endcode
  *
  * \c type is always "mcmc_posterior_ratio" to select this producer.
+ *
+ * \c name is a unique producer name of your choice; it is used to construct column names in the output database. It may only contain alphanumeric
+ *    characters (no spaces, special characters, etc.).
  *
  * \c parameter is the name of the parameter you want to find the quantiles for
  *

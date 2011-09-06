@@ -28,6 +28,55 @@ BOOST_AUTO_TEST_CASE(histofunction){
     }
 }
 
+BOOST_AUTO_TEST_CASE(root_histogram_range){
+    bool loaded =  load_root_plugins();
+    if(!loaded){
+       cout << "In test root_histogram_range: root plugin not loaded, not executing test" << endl;
+       return;
+    }
+    boost::shared_ptr<VarIdManager> vm(new VarIdManager);
+    ConfigCreator cc(
+            "root-histo1 = {type = \"root_histogram\"; filename=\"testhistos.root\"; histoname = \"histo1d\";};\n" // no range
+            "root-histo2 = {type = \"root_histogram\"; filename=\"testhistos.root\"; histoname = \"histo1d\"; range = (-4.0, 20.0); };\n" // full range
+            "root-histo3 = {type = \"root_histogram\"; filename=\"testhistos.root\"; histoname = \"histo1d\"; range = (-2.0, 2.0); };\n" // sub range
+            "root-histo4 = {type = \"root_histogram\"; filename=\"testhistos.root\"; histoname = \"histo1d\"; range = (-4.1, 20.1); };\n" // range excluding underflow / overflow
+            "root-histo5 = {type = \"root_histogram\"; filename=\"testhistos.root\"; histoname = \"histo1d\"; range = (-3.9, 19.9); };\n" // invalid range
+            , vm);
+    const theta::plugin::Configuration & cfg = cc.get();
+    BOOST_CHECKPOINT("building hf");
+    std::auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, cfg.setting["root-histo1"]));
+    ParValues pv;
+    Histogram h1 = (*hf)(pv);
+    BOOST_REQUIRE(h1.get_nbins()==24);
+    hf = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, cfg.setting["root-histo2"]));
+    Histogram h2 = (*hf)(pv);
+    BOOST_REQUIRE(h2.get_nbins()==24);
+    for(int i=0; i<=25; ++i){
+        BOOST_ASSERT(h1.get(i) == h2.get(i));
+    }
+    hf = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, cfg.setting["root-histo3"]));
+    Histogram h3 = (*hf)(pv);
+    BOOST_REQUIRE(h3.get_nbins()==4);
+    for(int i=1; i<=4; ++i){
+       BOOST_ASSERT(h3.get(i) == i+3.0);
+    }
+    hf = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, cfg.setting["root-histo4"]));
+    Histogram h4 = (*hf)(pv);
+    BOOST_REQUIRE(h4.get_nbins()==26);
+    for(int i=1; i<=26; ++i){
+       BOOST_ASSERT(h4.get(i) == i);
+    }
+    
+    bool except = false;
+    try{
+        hf = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, cfg.setting["root-histo5"]));
+    }
+    catch(ConfigurationException & ex){
+       except = true;
+    }
+    BOOST_ASSERT(except);
+}
+
 
 BOOST_AUTO_TEST_CASE(root_histogram){
     bool loaded =  load_root_plugins();
@@ -46,7 +95,7 @@ BOOST_AUTO_TEST_CASE(root_histogram){
     std::auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, cfg.setting["root-histo1"]));
     ParValues pv;
     Histogram h = (*hf)(pv);
-    BOOST_REQUIRE(h.get_nbins()==23);
+    BOOST_REQUIRE(h.get_nbins()==24);
     for(size_t i=1; i<=h.get_nbins(); ++i){
         BOOST_ASSERT(h.get(i)==i+1);
     }

@@ -60,9 +60,19 @@ root_histogram::root_histogram(const Configuration & ctx){
        int bin_high = histo->GetNbinsX();
        if(range_low!=-999){
           bin_low = histo->GetXaxis()->FindBin(range_low);
+          if(bin_low > 0 && range_low!=histo->GetXaxis()->GetBinLowEdge(bin_low)){
+              throw ConfigurationException("'range' setting incompatible with bin borders.");
+          }
        }
        if(range_high!=-999){
-          bin_high = histo->GetXaxis()->FindBin(range_high);
+          if(range_high > histo->GetXaxis()->GetXmax()) bin_high = histo->GetNbinsX()+1;
+          else{
+             bin_high = histo->GetXaxis()->FindBin(range_high);
+             --bin_high;
+             if(range_high!=histo->GetXaxis()->GetBinUpEdge(bin_high)){
+                 throw ConfigurationException("'range' setting incompatible with bin borders.");
+             }
+          }
        }
        int nbins = bin_high - bin_low + 1;
     

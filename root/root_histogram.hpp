@@ -38,10 +38,10 @@ using namespace std;
  *
  * If range is given, only bins within this range are copied, not the whole histogram.
  * This can also be used to explicitely include the overflow or underflow bins by specifying
- * a range which goes beyond the border of the histogram. The range will include the bin which contains the
- * lower value up to and including the bin which contains the second value of the bin. This might include
- * more bins that you originally wanted: if you have a ROOT TH1 with 10 bins from 0 to 100 and specify
- * a range (0, 50.0), the bin including the value 50.0 is included, so the actual range will be up to 60.0.
+ * a range which goes beyond the border of the histogram. If the range is within the histogram range,
+ * the range borders must coincide with bin borders. Otherwise, an exception is thrown. Note that
+ * rebinning is done before the range is applied, so make sure to specify a range which is valid after
+ * rebinning.
  *
  * Bin entries of exactly zero can be problematic if dicing pseudo data from templates with a non-zero entry (for example,
  * because dicing pseudo data from templates affected by a systematic uncertainty) while calculating

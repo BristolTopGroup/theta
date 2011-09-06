@@ -4,6 +4,11 @@ convention and output. It does not cover internal changes.
 
 from June 2010 to trunk:
 ------------------------
+* if using the 'range' setting in 'root_histogram', the range borders must coincide with bin borders,
+  unless these specify underflow / overflow.
+  [So far, any range setting was accepted and the bin range used was the one defined by the bins which contain the range border values,
+  including these border bins. This is counter-intuitive as the range for the upper bin always extends beyond teh upper range value specified
+  in the configuration file.]
 * for flat_distribution, the 'fix-sample-value' setting must be supplied for parameters with an infinite range, so far thi setting was optional.
   This ensures there is a "default" for each parameter (these defaults have widespread use for bootstrapping the model, as starting
   point for minimizaiton, MCMC, etc.)

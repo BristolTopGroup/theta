@@ -1,6 +1,6 @@
 #include "interface/random.hpp"
 #include "interface/matrix.hpp"
-#include "interface/utils.hpp"
+#include "test/utils.hpp"
 #include "interface/exception.hpp"
 
 #include <boost/test/unit_test.hpp>
@@ -13,8 +13,8 @@ BOOST_AUTO_TEST_SUITE(matrix_tests)
 BOOST_AUTO_TEST_CASE(matrix0){
    const size_t N=10;
    Matrix m(N,N);
-   BOOST_REQUIRE(m.getRows()==N);
-   BOOST_REQUIRE(m.getCols()==N);
+   BOOST_REQUIRE(m.get_n_rows()==N);
+   BOOST_REQUIRE(m.get_n_cols()==N);
    for(size_t i=0; i<N; i++){
       for(size_t j=0; j<N; j++){
          BOOST_REQUIRE(m(i,j)==0);
@@ -24,7 +24,7 @@ BOOST_AUTO_TEST_CASE(matrix0){
    BOOST_REQUIRE(m(1,0)==1.0);
    //copy constructor:
    Matrix mm(m);
-   BOOST_REQUIRE(mm.getRows()==N && mm.getCols()==N);
+   BOOST_REQUIRE(mm.get_n_rows()==N && mm.get_n_cols()==N);
    for(size_t i=0; i<N; i++){
       for(size_t j=0; j<N; j++){
          BOOST_REQUIRE(m(i,j)==mm(i,j));
@@ -36,7 +36,8 @@ BOOST_AUTO_TEST_CASE(matrix0){
 BOOST_AUTO_TEST_CASE(matrix1){
    const unsigned int N=10;
    //create a positive definite matrix n:
-   Random rnd(new RandomSourceTaus());//no setSeed to keep it the same every time ...
+   std::auto_ptr<RandomSource> rnd_src(new RandomSourceTaus());
+   Random rnd(rnd_src);//no setSeed to keep it the same every time ...
    Matrix m(N,N);
    for(size_t i=0; i<N; i++){
       for(size_t j=0; j<N;j++){
@@ -69,7 +70,7 @@ BOOST_AUTO_TEST_CASE(matrix1){
 	 for(size_t k=0; k<N; k++){
 	    n_ij += l(i,k) * lt(k,j);
 	 }
-	 BOOST_REQUIRE(utils::close_to(n_ij, n_old(i,j), 1));
+	 BOOST_REQUIRE(close_to(n_ij, n_old(i,j), 1));
       }
    }
    //test errors:
@@ -79,7 +80,7 @@ BOOST_AUTO_TEST_CASE(matrix1){
    try{
       n.cholesky_decomposition();
    }
-   catch(MathException & e){
+   catch(std::range_error & e){
       exception = true;
    }
    BOOST_REQUIRE(exception);
@@ -89,7 +90,8 @@ BOOST_AUTO_TEST_CASE(matrix1){
 BOOST_AUTO_TEST_CASE(matrix2){
    const unsigned int N=10;
    //create a positive definite matrix n (see matrix 1 test case):
-   Random rnd(new RandomSourceTaus());//no setSeed to keep it the same every time ...
+   std::auto_ptr<RandomSource> rnd_src(new RandomSourceTaus());
+   Random rnd(rnd_src);//no setSeed to keep it the same every time ...
    Matrix m(N,N);
    for(size_t i=0; i<N; i++){
       for(size_t j=0; j<N;j++){
@@ -119,8 +121,8 @@ BOOST_AUTO_TEST_CASE(matrix2){
    //test matrix for unity:
    for(size_t i=0; i<N; i++){
        for(size_t j=0; j<N; j++){
-           if(i==j) BOOST_CHECK(utils::close_to(unity(i,j), 1, 10));
-           else BOOST_CHECK(utils::close_to(unity(i,j), 0, 10));
+           if(i==j) BOOST_CHECK(close_to(unity(i,j), 1, 100));
+           else BOOST_CHECK(close_to(unity(i,j), 0, 100));
        }
    }
 }

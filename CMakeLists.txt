@@ -4,11 +4,10 @@ set(CMAKE_VERBOSE_MAKEFILE, 1)
 
 option(coverage "build for coverage tests" OFF)
 option(profile "build for profiling" OFF)
-option(optiontest "build tests" OFF)
 option(release "build release version" ON)
-option(crlibm "use the log function from crlibm" ON)
+option(amdlibm "use amdlibm instead of libm in some places" OFF)
+option(llvm "Build llvm plugins" OFF)
 option(generic "use generic implementation of funtions; not optimized, platform-specific ones" OFF)
-option(psql "use postgresql" OFF)
 
 if(coverage)
    message(STATUS "building for coverage test")
@@ -28,9 +27,11 @@ else()
    endif()
 endif()
 
-if(crlibm)
-   message(STATUS "using log from crlibm")
-   add_definitions(-DUSE_CRLIBM)
+if(amdlibm)
+   message(STATUS "using amdlibm")
+   add_definitions(-DUSE_AMDLIBM)
+   find_library(amdlibm_lib NAMES amdlibm HINTS "./lib/")
+   message("amdlibm_lib: ${amdlibm_lib}")
 endif()
 
 
@@ -41,7 +42,6 @@ if(NOT generic)
       set(generic ON)
   endif()
 endif()
-   
 
 if(generic)
    message(STATUS "using generic functions")
@@ -50,7 +50,7 @@ else()
    enable_language(ASM-ATT)
 endif()
 
-find_package(Boost COMPONENTS regex program_options filesystem system iostreams)
+find_package(Boost COMPONENTS regex program_options filesystem system iostreams thread timer)
 
 if(NOT Boost_FOUND)
    message(SEND_ERROR "boost not found")
@@ -69,8 +69,9 @@ add_subdirectory(libconfig)
 add_subdirectory(bin)
 add_subdirectory(root)
 
-if(optiontest)
-   message(STATUS "building tests")
-   add_subdirectory(test)
+if(llvm)
+   message(STATUS "including llvm")
+   add_subdirectory(llvm)
 endif()
+
 

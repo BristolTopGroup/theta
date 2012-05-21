@@ -63,12 +63,16 @@ public:
     
     /** \brief Construct a generator with \c rnd_ as underlying source
      *
-     * Note that RandomAlgos will take ownership of the memory pointed to by rnd_.
+     * Takes ownership of rnd_ memory.
      */
     //While larger buffer sizes help very much for small buffers, tests have shown that
     // choosing a buffer sizes larger than around 100 does not increase performance significantly.
-    Random(RandomSource * rnd_): rnd(rnd_), random_data(100),
+    Random(std::auto_ptr<RandomSource> & rnd_): rnd(rnd_), random_data(100),
         current(random_data.end()), end(random_data.end()){
+    }
+    
+    const RandomSource & get_source() const{
+        return *rnd;
     }
     
     /** \brief get a random number distributed according to a normal distribution with the given standard deviation

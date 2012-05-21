@@ -6,8 +6,6 @@
 #include "interface/model.hpp"
 
 #include <algorithm>
-#include <cassert>
-
 #include <limits>
 
 #include <iostream>
@@ -17,27 +15,35 @@
 
 using namespace std;
 
+namespace{
+
+bool close_to(double a, double b, double scale){
+   return fabs(a-b) / scale < 1e-15;
+}
+
+}
+
 namespace theta{
 
 void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
-    size_t npar_reduced = cov.getRows();
+    size_t npar_reduced = cov.get_n_rows();
     size_t npar = npar_reduced;
     result.reset(npar, npar);
     //get the overall "scale" of the matrix by looking at the largest diagonal element:
     double m = fabs(cov(0,0));
-    for(size_t i=0; i<cov.getRows(); i++){
+    for(size_t i=0; i<cov.get_n_rows(); i++){
         m = max(m, fabs(cov(i,i)));
     }
     bool par_has_zero_cov[npar];
     for (size_t i = 0; i < npar; i++) {
-       if((par_has_zero_cov[i] = utils::close_to(cov(i,i), 0, m)))
+       if((par_has_zero_cov[i] = close_to(cov(i,i), 0, m)))
             npar_reduced--;
     }
     if(npar_reduced==0){
-        throw InvalidArgumentException("get_cholesky: number of reduced dimensions is zero (all parameters fixed?)");
+        throw invalid_argument("get_cholesky: number of reduced dimensions is zero (all parameters fixed?)");
     }
     if(expect_reduced > 0 && static_cast<size_t>(expect_reduced)!=npar_reduced){
-        throw InvalidArgumentException("get_cholesky: number of reduced dimensions not as expected");
+        throw invalid_argument("get_cholesky: number of reduced dimensions not as expected");
     }
     //calculate cholesky decomposition    cov = L L^T    of the reduced covariance matrix:
     Matrix cov_c(npar_reduced, npar_reduced);
@@ -67,21 +73,38 @@ void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
     }
 }
 
+bool jump_rates_converged(const vector<double> & jump_rates){
+    if(jump_rates.size() < 2) return false;
+    const size_t n = jump_rates.size();
+    double last_rate = jump_rates[n-1];
+    double nlast_rate = jump_rates[n-2];
+    if(last_rate < 0.05) return false;
+    if(last_rate > 0.5) return false;
+    //if jump rate looks reasonable and did not change too much in the last iterations: break:
+    if(fabs((nlast_rate - last_rate) / max(last_rate, nlast_rate)) < 0.10) return true;
+    //TODO: otherwise, it could still have converged well enough, but it is difficult to have a very good
+    // criterion here ...
+    return false;
+}
+
 
 Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & startvalues,
                     const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,
-                    const boost::shared_ptr<VarIdManager> & vm){
-    const size_t max_passes = 20;
+                    const boost::shared_ptr<theta::Function> & additional_nll_term){
+    const size_t max_passes = 50;
     const size_t iterations = 8000;
-    const size_t n = model.getParameters().size();
+    ParIds parameters = model.get_parameters();
+    if(additional_nll_term){
+        parameters.insert_all(additional_nll_term->get_parameters());
+    }
+    const size_t n = parameters.size();
     Matrix sqrt_cov(n, n);
     Matrix cov(n, n);
     startvalues.resize(n);
     
-    ParValues widths = asimov_likelihood_widths(model, override_parameter_distribution);
+    ParValues widths = asimov_likelihood_widths(model, override_parameter_distribution, additional_nll_term);
     
-    ParIds par_ids = model.getParameters();
-    size_t k=0;
+    size_t k = 0;
     int n_fixed_parameters = 0;
     
     const Distribution & dist = override_parameter_distribution.get()? *override_parameter_distribution : model.get_parameter_distribution();
@@ -90,7 +113,7 @@ Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & st
     Data asimov_data;
     model.get_prediction(asimov_data, pv_start);
     ParIds fixed_pars;
-    for(ParIds::const_iterator it = par_ids.begin(); it!=par_ids.end(); ++it, ++k){
+    for(ParIds::const_iterator it = parameters.begin(); it!=parameters.end(); ++it, ++k){
         double width = widths.get(*it) * 2.38 / sqrt(n);
         startvalues[k] = pv_start.get(*it);
         if(width==0.0){
@@ -99,36 +122,28 @@ Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & st
         }
         cov(k, k) = width*width;
     }
-    assert(k==n);
+    theta_assert(k==n);
     get_cholesky(cov, sqrt_cov, static_cast<int>(n) - n_fixed_parameters);
     
-    std::auto_ptr<NLLikelihood> p_nll = model.getNLLikelihood(asimov_data);
+    std::auto_ptr<NLLikelihood> p_nll = model.get_nllikelihood(asimov_data);
     p_nll->set_override_distribution(override_parameter_distribution);
     NLLikelihood & nll = *p_nll;
     vector<double> jump_rates;
     jump_rates.reserve(max_passes);
-    Result res(n);
     for (size_t i = 0; i < max_passes; i++) {
-        res.reset();
+        Result res(n);
         metropolisHastings(nll, res, rnd, startvalues, sqrt_cov, iterations, iterations/10);
         startvalues = res.getMeans();
         cov = res.getCov();
         get_cholesky(cov, sqrt_cov, static_cast<int>(n) - n_fixed_parameters);
-        double previous_jump_rate = jump_rates.size()?jump_rates.back():2.0;
-        double jump_rate;
-        jump_rates.push_back(jump_rate = static_cast<double>(res.getCountDifferent()) / res.getCount());
-        //if jump rate looks reasonable and did not change too much in the last iteration: break:
-        if(jump_rate > 0.1 and jump_rate < 0.5 and fabs((previous_jump_rate - jump_rate) / jump_rate) < 0.05) break;
-        //TODO: more diagnostics(?) startvalues should not change too much, covariance should not change too much. However,
-        // what's a good measure of equality here? Relative difference of eigenvalues and angular distance between the eigenvectors?
+        jump_rates.push_back(static_cast<double>(res.getCountDifferent()) / res.getCount());
+        if(jump_rates_converged(jump_rates)) break;
     }
     if(jump_rates.size()==max_passes){
-        stringstream ss;
-        ss << "get_sqrt_cov: covariance estimate did not really converge; jump rates were: ";
+        cout << "WARNING in get_sqrt_cov: covariance estimate did not really converge; jump rates were: ";
         for(size_t i=0; i<max_passes; ++i){
-            ss << jump_rates[i] << "; ";
+            cout << jump_rates[i] << "; ";
         }
-        throw Exception(ss.str());
     }
     return sqrt_cov;
 }

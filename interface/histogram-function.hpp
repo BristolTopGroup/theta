@@ -3,10 +3,42 @@
 
 #include "interface/decls.hpp"
 #include "interface/histogram.hpp"
-#include "interface/plugin.hpp"
+#include "interface/histogram-with-uncertainties.hpp"
 #include "interface/variables.hpp"
 
 namespace theta {
+    
+    template<typename T>
+    class functor{
+    public:
+        virtual void operator()(const T&) const = 0;
+        virtual ~functor(){}
+    };
+    
+    template<typename T>
+    class copy_to: public functor<T>{
+    private:
+        T & into;
+    public:
+        copy_to(T & into_): into(into_){}
+        virtual void operator()(const T& t) const {
+            into = t;
+        }
+    };
+    
+    template<typename T>
+    class add_with_coeff_to: public functor<T>{
+    private:
+        T & h0;
+        double coeff;
+    public:
+        add_with_coeff_to(T & h0_, double coeff_): h0(h0_), coeff(coeff_){}
+        virtual void operator()(const T& t) const {
+            theta_assert(h0.get_nbins() == t.get_nbins());
+            h0.add_with_coeff(coeff, t);
+        }
+    };
+
 
     /** \brief A Histogram-valued function which depends on zero or more parameters.
      *
@@ -21,56 +53,41 @@ namespace theta {
         /// Define us as the base_type for derived classes; required for the plugin system
         typedef HistogramFunction base_type;
         
-        /** \brief Returns the Histogram for the given parameter values.
+        //@{
+        /** \brief Apply a functor on the resulting Histogram1D / Histogram1DWithUncertainties
          *
-         * The returned reference is only guaranteed to be valid as long as this HistogramFunction object.
+         * This construction is an efficient generalization of the more straight-forward approach of providing
+         * evaluation operators which directly return Histogram1D or Histogram1DWithUncertainties: the former
+         * implementation would require copying the result to the return value, while this implementation can avoid this
+         * copy completely, if the functor does not perform such a copy.
+         *
+         * To just "get the result histogram", do:
+         * \code
+         * const ParValues & values;
+         * const HistogramFunction & hf;
+         * ...
+         * Histogram1D h;
+         * hf.apply_functor(copy_to<Histogram1D>(h), values);
+         * \endcode
+         *
+         * There are two version: with and without bin-by-bin uncertainties.
          */
-        virtual const Histogram & operator()(const ParValues & values) const = 0;
-
-        /** \brief Returns the Histogram for the given parameter values, but randomly fluctuated around its parametrization uncertainty.
-         *
-         * If a derived class does not provide its own implementation of this method, the
-         * default behaviour implemented here is to return an un-fluctuated Histogram
-         * (see documentation of the derived class for details of the particular behaviour).
-         *
-         *  HistogramFunctions are used in theta mainly as building blocks for a model. Here, there play the role
-         *  of p.d.f. estimations. Building a p.d.f. estimate always involves some uncertainty:
-         * <ul>
-         *  <li>for p.d.f.s derived through a fit of some function, the function parameters
-         *     have an uncertainty due to the finite statistics of the sample it was derived from</li>
-         *   <li>for p.d.f.s derived simply as histograms from some (simulated or actual) data, the limited
-         *    sample size of the data introduces a bin-by-bin statistical uncertainty of the p.d.f. estimation.</li>
-         *  </ul>
-         *
-         * The uncertainty is inherent to the way the p.d.f. was modeled. It is different
-         * from the treatment of other uncertainties in that it is not written explicitely in the likelihood.
-         * Rather, for pseudo data creation, this function will be used instead of \c operator(), effectively
-         * integrating over this uncertainty.
-         *
-         * Some p.d.f. uncertainties can be incorporated either here or explicitely through additional
-         * parameters in the likelihood: for example a p.d.f. desribes with a gaussian parametrization where
-         * the width has some error, this could either be treated here or, alternatively, the width can be
-         * included as parameter in the likelihood (possibly with some constraint). Choosing between this possibilities
-         * is up to the user specifying the model.
-         */
-        virtual const Histogram & getRandomFluctuation(Random & rnd, const ParValues & values) const{
-            return operator()(values);
-        }
+        virtual void apply_functor(const functor<Histogram1DWithUncertainties> & f, const ParValues & values) const = 0;
+        virtual void apply_functor(const functor<Histogram1D> & f, const ParValues & values) const = 0;
+        //@}
 
         /** \brief Returns the parameters which this HistogramFunction depends on.
          */
-        const ParIds & getParameters() const{
+        const ParIds & get_parameters() const{
             return par_ids;
         }
 
-        /** \brief Get a Histogram of the dimensions (nbins, xmin, xmax) also returned by the evaluation operator
+        /** \brief Get the dimensions of the Histogram (nbins, xmin, xmax) filled by the evaluation operators
          *
-         * The content of the returned Histogram does not matter.
-         *
-         * This function is used as part of the setup to make sure that the Histogram dimensions match; to save
+         * This function is used as part of the consistency checks to make sure that the Histogram dimensions match; to save
          * time, it is not usually not used during usual likelihood evaluation, etc.
          */
-        virtual Histogram get_histogram_dimensions() const = 0;
+        virtual void get_histogram_dimensions(size_t & nbins, double & xmin, double & xmax) const = 0;
 
         /// Declare the destructor virtual as there will be polymorphic access to derived classes
         virtual ~HistogramFunction(){}
@@ -87,26 +104,10 @@ namespace theta {
      */
     class ConstantHistogramFunction: public HistogramFunction{
     public:
-        /** \brief A \c HistogramFunction which does not depend on any parameters and always returns \c histo.
-         *
-         * \param histo is the Histogram to return on operator()(...).
-         *
-         *  \sa HistogramFunction getRandomFluctuation
-         */
-        ConstantHistogramFunction(const Histogram & histo){
-            set_histo(histo);
-        }
 
-        /** \brief Returns the Histogram \c h set at construction time.
-         */
-        virtual const Histogram & operator()(const ParValues & values) const{
-            return h;
-        }
-        
-        /// Return a Histogram of the same dimenions as the one returned by operator()
-        virtual Histogram get_histogram_dimensions() const{
-            return h;
-        }
+        virtual void apply_functor(const functor<Histogram1DWithUncertainties> & f, const ParValues & values) const;
+        virtual void apply_functor(const functor<Histogram1D> & f, const ParValues & values) const;
+        virtual void get_histogram_dimensions(size_t & nbins, double & xmin, double & xmax) const;
 
     protected:
         /** \brief Set the constant Histogram to return
@@ -114,112 +115,25 @@ namespace theta {
          * This method is meant for derived classes which can use it to set the constant Histogram to
          * be returned by operator()
          */
-        void set_histo(const Histogram & h_){
-           h = h_;
-           h.set(0,0);
-           h.set(h.get_nbins()+1,0);
-        }
+        void set_histo(const Histogram1DWithUncertainties & h);
+        
         /** \brief Default constructor to be used by derived classes
          */
-        ConstantHistogramFunction(){}
+        ConstantHistogramFunction();
+        
      private:
-        Histogram h;
+        Histogram1DWithUncertainties h_wu;
+        Histogram1D h;
     };
-
-
-    /** \brief A constant HistogramFunction, including bin-by-bin fluctuation for pseudodata generation.
-     * 
-     * Similar to ConstantHistogramFunction, but includes bin-by-bin gaussian errors as uncertainty which
-     * are assumed to be uncorrelated.
+ 
+    /** \brief Build a HistogramFunction according to the given configuration and return the result
+     *
+     * This assumes that the HistogramFunction specified by cfg does not depend on any parameters.
+     * If this is not the case, an invalid_argument exception will be thrown.
      */
-    class ConstantHistogramFunctionError: public HistogramFunction{
-    public:
-        /** \brief Construct from a Histogram and an error Histogram
-         *
-         * \param histo is the Histogram to return on operator()(...).
-         * \param error is a Histogram containing relative errors on the bin entries of histo.
-         *
-         * If bin j of error contains 0.2, it means that the bin content of bin j of histo is affected
-         * by a 20% relative uncertainty.
-         *
-         * Note that all errors must be >= 0. Otherwise, an InvalidArgumentException
-         * will be thrown. Also, the \c error and \c histo Histograms must be
-         * compatible, i.e., have the same range and number of bins. If not,
-         * an InvalidArgumentException is thrown.
-         *
-         *  \sa HistogramFunction getRandomFluctuation Histogram::check_compatibility
-         */
-        ConstantHistogramFunctionError(const Histogram & histo, const Histogram & error){
-            set_histos(histo, error);
-        }
-
-        /** \brief Returns the Histogram \c h set at construction time.
-         */
-        virtual const Histogram & operator()(const ParValues & values) const{
-            return h;
-        }
-
-        /** \brief Returns the bin-by-bin fluctuated Histogram.
-         *
-         * For evey bin j, a random number from a gaussian distribution around 1, truncated at 0, with
-         * the width taken from bin j of the error-Histogram is drawn. The contents of
-         * the histogram is multiplied by this random number and filled in the result
-         * histogram bin j.
-         *
-         * In particular, all bins are fluctuated statistically independently.
-         *
-         * Note that for large relative errors, some argue that the truncation at zero is
-         * not the "natural" solution as it does not look "nice" at zero. If you ever
-         * enter the discussion, you should remember that there is no sensible "&lt; 0" for
-         * bin entries, so the density of a truncated gaussian is continous for *everywhere*.
-         */
-        virtual const Histogram & getRandomFluctuation(Random & rnd, const ParValues & values) const;
-        
-        /// Return a Histogram of the same dimenions as the one returned by operator()
-        virtual Histogram get_histogram_dimensions() const{
-            return h;
-        }
-
-    protected:
-        /** \brief Set the Histogram and the errors to to return
-         *
-         * This method is meant for derived classes which can use it to set the constant Histogram to
-         * be returned by operator() and the error Histogram used by getRandomFlutuation(). As documented
-         * in ConstantHistogramFunctionError::ConstantHistogramFunctionError, the \c error Histogram
-         * contains bin-by-bin relative errors which are assumed to be independent.
-         */
-        void set_histos(const Histogram & histo, const Histogram & error){
-            h = histo;
-            err = error;
-            h.check_compatibility(error);//throws if not compatible
-            h.set(0,0);
-            h.set(h.get_nbins()+1,0);
-            fluc.reset(h.get_nbins(), h.get_xmin(), h.get_xmax());
-            //check that errors are positive:
-            for(size_t i=1; i<=h.get_nbins(); ++i){
-                if(error.get(i)<0.0) throw InvalidArgumentException("ConstantHistogramFunctionError: error histogram contains negative entries");
-            }
-        }
-
-        /** \brief Default constructor to be used by derived classes
-         */
-        ConstantHistogramFunctionError(){}
-        
-    private:
-        Histogram h;
-        Histogram err;
-        mutable Histogram fluc; // the fluctuated Histogram returned by getFluctuatedHistogram
-    };
+    Histogram1DWithUncertainties get_constant_histogram(const Configuration & cfg);
     
-    namespace HistogramFunctionUtils{
-        /** \brief Read the normalize_to setting
-         *
-         * parese the normalize_to setting, which can either be a double, or an array/list of doubles which are
-         * then multiplied.
-         */
-        double read_normalize_to(const theta::SettingWrapper & s);
-    }
-
+    
 }
 
 #endif

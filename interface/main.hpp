@@ -11,10 +11,8 @@ namespace theta{
  * should return as soon as possible without violating the consistency of the result, if possible.
  *
  * This variable is set to true once theta receives SIGINT.
- *
- * It is defined in run.cpp.
  */
-extern bool stop_execution;
+extern volatile bool stop_execution;
 
 /** \brief Install the SIGINT signal handler which sets stop_execution
  *
@@ -39,13 +37,15 @@ public:
     * This function will be called by Main to indicate the current progress.
     * \param done how many units of work have been done
     * \param total total units of work
+    * \param how many failures there have been in 'done'
     *
-    * It is not guaranteed that total remains constant or that done increases.
+    * In some cases, the 'total units of work' are not known. In this case, it is still useful
+    * to indicate some activity / progress and total should be set to a value <= 0 in that case.
     */
-    virtual void progress(int done, int total) = 0;
+    virtual void progress(int done, int total, int errors) = 0;
     
     /// Make destructor virtual as we have polymorphic access
-    virtual ~ProgressListener(){}
+    virtual ~ProgressListener();
 };
 
 
@@ -63,9 +63,7 @@ public:
     * The registered progress listener will be informed about the current progress of the run during
     * execution of Run::run().
     */
-    void set_progress_listener(const boost::shared_ptr<ProgressListener> & l){
-        progress_listener = l;
-    }
+    void set_progress_listener(const boost::shared_ptr<ProgressListener> & l);
     
     /** \brief Perform the actual run
      *
@@ -75,16 +73,14 @@ public:
      
      
      /// Declare destructor virtual as we will have polymorphic access to derived classes
-     virtual ~Main(){}
+     virtual ~Main();
     
 protected:
     boost::shared_ptr<ProgressListener> progress_listener;
 
 };
 
-
 }
-
 
 #endif
 

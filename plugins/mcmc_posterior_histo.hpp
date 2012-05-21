@@ -26,7 +26,7 @@
  *
  *   histo_s = {
  *      range = [0.0, 100.0];
- *      n_bins = 100;
+ *      nbins = 100;
  *   };
  * };
  *
@@ -34,8 +34,8 @@
  *
  * \c type is always "mcmc_posterior_histo" to select this producer.
  *
- * \c name is a name chosen by the user used to construct unique column names in the result table (this name and two underscores are
- *   prepended to the column names explained below).
+ * \c name is a unique producer name of your choice; it is used to construct column names in the output database. It may only contain alphanumeric
+ *    characters (no spaces, special characters, etc.).
  *
  * \c parameters is a list of parameter names you want to calculate the posterior Histograms for
  *
@@ -74,10 +74,12 @@
 class mcmc_posterior_histo: public theta::Producer, public theta::RandomConsumer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    mcmc_posterior_histo(const theta::plugin::Configuration & ctx);
+    mcmc_posterior_histo(const theta::Configuration & ctx);
     virtual void produce(const theta::Data & data, const theta::Model & model);
     
 private:
+    void declare_products();
+    
     //whether sqrt_cov* and startvalues* have been initialized:
     bool init;
     
@@ -86,7 +88,7 @@ private:
     std::vector<size_t> ipars; //parameters of the requested index, as in NLLikelihood::operator()(const double*) index convention
     
     //result columns: one per requested parameter:
-    boost::ptr_vector<theta::Column> columns;
+    std::vector<theta::Column> columns;
     std::vector<double> lower, upper;
     std::vector<size_t> nbins;
     
@@ -95,8 +97,6 @@ private:
     unsigned int burn_in;
     theta::Matrix sqrt_cov;
     std::vector<double> startvalues;
-    
-    boost::shared_ptr<theta::VarIdManager> vm;
     
     bool smooth;
 };

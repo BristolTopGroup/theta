@@ -3,6 +3,7 @@
 
 #include "interface/plugin.hpp"
 #include "interface/phys.hpp"
+#include "interface/data.hpp"
 
 /** \brief A data source using a list of constant Histograms
  *
@@ -13,14 +14,22 @@
  * \code
  * data_source = {
  *   type = "histo_source";
+ *   name = "source";
  *   obs1 = { // assuming "obs1" is an observable
  *        type = "root_histogram"; filename = "DATA.root"; histoname = "h_obs1";
  *    }; // or some other constant histogram specification
  *   obs2 = { ... }; // some constant histogram specification to use for observable obs2
+ *
+ *   rvobs-values = { rv1 = 2.0; rv2 = 3.0; }; //optional
  * };
  * \endcode
  *
  * \c type must be "histo_source" to select this DataSource type
+ *
+ * \c name is the name of the data source. (It is not actually used for this type but every DataSource
+ * requires the name setting).
+ *
+ * \c rvobs-values is optional and specifies the values for the real-valued observables.
  *
  * For all observables, a setting specifying the (constant) HistogramFunction must be specified,
  * with the name of that observable.
@@ -31,14 +40,9 @@ class histo_source: public theta::DataSource{
 public:
 
     /// Construct from a Configuration; required by the plugin system
-    histo_source(const theta::plugin::Configuration & cfg);
+    histo_source(const theta::Configuration & cfg);
 
-    /** \brief Fills the provided Data instance with data from the model
-     *
-     * Will only throw the DataUnavailable Exception if the parameter distribution instance
-     * (i.e., either the model's instance or the override-parameter-distribution instance) throws an Exception.
-     */
-    virtual void fill(theta::Data & dat, theta::Run & run);
+    virtual void fill(theta::Data & dat);
     
 private:
     theta::Data data;

@@ -1,16 +1,50 @@
 #include "interface/exception.hpp"
 
+#include <sstream>
+#include <typeinfo>
+#include <stdexcept>
+#include <cstdlib>
+
+#if __GNUC__
+#include <cxxabi.h>
+#endif
+
 using namespace theta;
 
-InvalidArgumentException::InvalidArgumentException(const std::string & m) : Exception(m) {}
-Exception::Exception(const std::string & m):message(m){}
+void fail_assert(const char * filename, int lineno, const char * expression){
+    std::stringstream ss;
+    ss << "Assertion '" << expression << "' failed in " << filename << ":" << lineno;
+    throw std::logic_error(ss.str());
+}
+
+std::string demangle(const std::string & s){
+    std::string result(s);
+    int status = 1;
+    char * realname;
+#if __GNUC__
+    realname = abi::__cxa_demangle(s.c_str(), 0, 0, &status);
+#endif
+    if(status==0){
+        result = realname;
+        std::free(realname);
+    }
+    return result;
+}
+
+const char* Exception::what() const throw(){
+    std::stringstream ss;
+    ss << demangle(typeid(*this).name()) << ": " << message;
+    whatstring = ss.str();
+    return whatstring.c_str();
+}
+
+Exception::Exception(const std::string & m): runtime_error(m), message(m){}
+
 ConfigurationException::ConfigurationException(const std::string & msg): Exception(msg){}
-NotFoundException::NotFoundException(const std::string & msg): Exception(msg){}
-MathException::MathException(const std::string & m): Exception(m){}
 
-FatalException::FatalException(const Exception & ex){
-    message = ex.what();
-}
+DatabaseException::DatabaseException(const std::string & s): Exception(s){}
 
-FatalException::FatalException(const std::string & message_): message(message_){
-}
+MinimizationException::MinimizationException(const std::string & s): Exception(s){}
+
+ExitException::ExitException(const std::string & message_): message(message_){}
+

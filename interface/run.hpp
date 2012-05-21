@@ -1,12 +1,10 @@
 #ifndef RUN_HPP
 #define RUN_HPP
 
-#include "interface/database.hpp"
+#include "interface/decls.hpp"
 #include "interface/main.hpp"
 
 #include <string>
-#include <sstream>
-
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_ptr.hpp>
 
@@ -87,18 +85,19 @@ public:
 
     /** \brief Perform the actual run.
      * 
-     * In a pseudo-experiment loop, ask the configuraed data_source for data and run
+     * In a pseudo-experiment loop, ask the configured data_source for data and run
      * all the producers on it, using the configured model.
      */
     virtual void run();
     
     /** \brief Construct a Run from the given configuration
      */
-    Run(const plugin::Configuration & cfg);
+    Run(const Configuration & cfg);
+    
+    virtual ~Run();
     
 private:
 
-    boost::shared_ptr<VarIdManager> vm;
     std::auto_ptr<Model> model;
     //note: the tables hold a shared_ptr to this database to ensure proper destruction order
     boost::shared_ptr<Database> db;
@@ -106,15 +105,13 @@ private:
 
     std::auto_ptr<LogTable> logtable;
     bool log_report;
-    boost::shared_ptr<RndInfoTable> rndinfo_table;
 
     //the producers to be run on the pseudo data:
     boost::ptr_vector<Producer> producers;
     boost::shared_ptr<ProductsTable> products_table;
 
-    //the runid, eventid and the total number of events to produce:
+    //the runid, and the total number of events to produce:
     int runid;
-    int eventid;
     int n_event;
 };
 

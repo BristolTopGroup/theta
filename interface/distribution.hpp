@@ -3,14 +3,13 @@
 
 #include "interface/decls.hpp"
 #include "interface/variables.hpp"
-#include "interface/plugin.hpp"
 
 namespace theta{
 
-    /** \brief A probability distribution of parameters in one or more dimensions
+    /** \brief A probability distribution of real-values random variables in one or more dimensions
      *
-     * The distribution class provides methods for generating random numbers according to the distribution
-     * it is representing. Further, it provides the negative logarithm of the probability density, including
+     * Implementations of this class provide methods for generating random numbers according to the distributions
+     * they are representing. Further, it provides the negative logarithm of the probability density, including
      * derivatives at a given point.
      *
      * The intended use of this class is twofold:
@@ -20,9 +19,14 @@ namespace theta{
      *       (mainly mpv, width, evalNL, support) are used.</li>
      * </ol>
      *
-     * This de-coupling allows some seemingly inconsistent definitions of a Distribution which, for example,
-     * a Distribution always sampling the same value but has a non-trivial density. Another example would
-     * be an improper density in one and (for example, a flat density on infinite range).
+     * Each Distribution is defined for a set of real-valued random variables (implemented as ParIds); these
+     * are the parameters as returned by Distribution::getParameters().
+     *
+     * The Distribution itself can depend on parameters, e.g., a Gaussian distribution can depend on the mean;
+     * these are the parameters returned by Distribution::getDistributionParameters(). If using a Distribution
+     * which depends on such parameters, the mathematical distribution is only completely defined once the
+     * values for these parameters are specified and these values must be set in the arguments
+     * to sample, mode, evalNL, etc.
      */
     class Distribution{
     public:
@@ -67,18 +71,7 @@ namespace theta{
          * \param values The point in parameter space the density is to be evaluated.
          * \return The density at \c values.
          */
-        virtual double evalNL(const ParValues & values) const = 0;
-        
-       /** \brief The negative logarithm of the probability, and derivatives thereof.
-        * 
-        * Returns the negative logarithm of the probability density at \c values, just as \c evalNL.
-        * Additionally, the partial derivatives are filled into \c derivatives.
-        * 
-        * \param values The point in parameter space to use to evaluate the density and its derivatives.
-        * \param[out] derivatives The container that will be filled with the partial derivatives.
-        * \return The density at \c values. This is the same value as \c evalNL(values) would return.
-        */
-        virtual double evalNL_withDerivatives(const ParValues & values, ParValues & derivatives) const = 0;
+        virtual double eval_nl(const ParValues & values) const = 0;
 
         /** \brief Get the support of a parameter
          *
@@ -92,30 +85,50 @@ namespace theta{
          */
         virtual const std::pair<double, double> & support(const ParId & p) const = 0;
 
-        /** \brief Get the parameters this Distribution depends on and provides values for
+        /** \brief Get the random variables of this Distribution
          */
-        const ParIds & getParameters() const{
+        const ParIds & get_parameters() const{
             return par_ids;
         }
         
+        /** \brief Get the parameters of this Distribution
+         */
+        const ParIds & get_distribution_parameters() const{
+            return distribution_par_ids;
+        }
+        
         /// declare destructor as virtual, as polymorphic access will happen
-        virtual ~Distribution(){};
+        virtual ~Distribution();
+        
     protected:
         ParIds par_ids;
+        ParIds distribution_par_ids;
     };
     
-    /// \brief namespace for free functions closely related to the \link Distribution Distribution\endlink class
-    namespace DistributionUtils{
+    /** \brief An empty distribution, not depending on any parameters
+     *
+     * This class simplifies the architecture at some places as an EmptyDistribution can take
+     * a place where "no distribution" is meant; this avoids some special cases.
+     */
+    class EmptyDistribution: public Distribution{
+    public:
+        virtual const std::pair<double, double> & support(const ParId & p) const;
+        virtual double eval_nl(const ParValues & values) const{ return 0.0; }
+        virtual double eval_nl_with_derivatives(const ParValues & values, ParValues & derivatives) const{ return 0.0; }
+        virtual void mode(ParValues & result) const{}
+        virtual void sample(ParValues & result, Random & rnd) const{}
+        virtual ~EmptyDistribution();
+    };
         
-        /** \brief Fill mode and and support from a Distribution instance
-         *
-         * This is a utility routine calling the Distribution::mode and
-         * and Distribution::support routines for all parameters of the Distribution and filling
-         * the result into the parameters \c mode, \c width and \c support
-         */
-        void fillModeSupport(theta::ParValues & mode, std::map<theta::ParId, std::pair<double, double> > & support, const theta::Distribution & d);
-    }
+    /** \brief Fill mode and and support from a Distribution instance
+     *
+     * This is a utility routine calling the Distribution::mode and
+     * and Distribution::support routines for all parameters of the Distribution and filling
+     * the result into the parameters \c mode, \c width and \c support
+     */
+    void fill_mode_support(theta::ParValues & mode, std::map<theta::ParId, std::pair<double, double> > & support, const theta::Distribution & d);
     
 }
 
 #endif
+

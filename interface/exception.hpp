@@ -2,17 +2,23 @@
 #define EXCEPTION_H
 
 #include <string>
-#include <sstream>
-#include <typeinfo>
+#include <stdexcept>
+
+void fail_assert(const char * filename, int lineno, const char * expression);
+
+// define our own assert macro because the standard assert does an abort which does not destroy object properly
+// which is a problem in some cases. Instread, theta_assert raises a FatalException, which, as part of exception handling,
+// detroys all objects ...
+#define theta_assert(expression) if(!(expression)) { ::fail_assert(__FILE__, __LINE__, #expression); }
 
 
 namespace theta {
 
-/** \brief Base class for all Exceptions used in %theta
+/** \brief Base class for the runtime exceptions used in %theta
  */
-class Exception: virtual public std::exception{
+class Exception: public std::runtime_error {
 public:
-    /// The human-readable, english message 
+    /// The human-readable message for the user
     std::string message;
     
     /// Constructor taking a message intended for the user which will be written to Exception::message
@@ -22,25 +28,12 @@ public:
     virtual ~Exception() throw(){}
     
     /// override std::exception::what to print out the message
-    virtual const char* what() const throw(){
-         std::stringstream ss;
-         ss << typeid(*this).name() << ": " << message;
-         whatstring = ss.str();
-         return whatstring.c_str();
-    }
+    virtual const char* what() const throw();
+    
 protected:
     /// buffer for the const char * returned by what()
     mutable std::string whatstring;
 };
-
-/** \brief Thrown in case of a request for a non-existing member in a conatiner-like structure is made. 
- */
-class NotFoundException: public Exception{
-public:
-    /// Constructor taking a message intended for the user which will be written to Exception::message
-   NotFoundException(const std::string & message);
-};
-
 
 /** \brief Thrown during configuration file processing.
  */
@@ -50,34 +43,12 @@ public:
     ConfigurationException(const std::string & msg);
 };
 
-/** \brief Thrown if a method is called which depends on a particular state of object which is not fulfilled
- */  
-class IllegalStateException: public Exception{
-public:
-    /// Constructor taking a message intended for the user which will be written to Exception::message
-    IllegalStateException(const std::string & msg=""): Exception(msg){}
-};
-
-/** \brief Thrown in case of invalid mathematical constructs like domain errors
- */
-class MathException: public Exception{
-public:
-    /// Constructor taking a message intended for the user which will be written to Exception::message
-    MathException(const std::string &);
-};
-
-/// \brief General exception to indicate that arguments passed to a function are invalid (=do not correspond to documentation)
-class InvalidArgumentException: public Exception{
-public:
-    /// Constructor taking a message intended for the user which will be written to Exception::message
-    InvalidArgumentException(const std::string &);
-};
 
 /// \brief Thrown in case of database errors.
 class DatabaseException: public Exception{
 public:
     /// Constructor taking a message intended for the user which will be written to Exception::message
-    DatabaseException(const std::string & s): Exception(s){}
+    DatabaseException(const std::string & s);
 };
 
 /** \brief Thrown in case of minimization errors.
@@ -87,30 +58,9 @@ public:
 class MinimizationException: public Exception{
 public:
     /// Constructor taking a message intended for the user which will be written to Exception::message
-    MinimizationException(const std::string & s): Exception(s){}
+    MinimizationException(const std::string & s);
 };
 
-/** \brief Exception class to indicate serious error
- * 
- * An exception of this kind should usually not be caught: it indicates a serious error
- * which prevents further execution.
- * 
- * In order to prevent catching FatalException in a catch(Exception &) statement, FatalException is not part
- * of the usual exception hierarchy of theta.
- */
-class FatalException{
-public:
-    std::string message;
-       
-    /** \brief Construct from a "usual" Exception
-     * 
-     * The error message displayed will be taken from ex. 
-     */
-    explicit FatalException(const Exception & ex);
-    
-    /// Construct directly from an error message
-    explicit FatalException(const std::string & message);
-};
 
 /** \brief Thrown in case an immediate exit of the main program is requested. 
  *
@@ -122,9 +72,10 @@ public:
    std::string message;
 
    /// Constructor taking a message intended for the user which will be written to Exception::message
-   ExitException(const std::string & message_): message(message_){}
+   ExitException(const std::string & message_);
 };
 
 }
 
 #endif
+

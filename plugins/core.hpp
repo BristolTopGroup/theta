@@ -9,6 +9,8 @@
 #include "interface/database.hpp"
 #include "interface/random-utils.hpp"
 
+#include <boost/optional.hpp>
+
 /** \brief A polynomial distribution where coefficients do not depend on any parameters
  *
  * Configuration is done with a setting group like
@@ -33,7 +35,7 @@
 class fixed_poly: public theta::ConstantHistogramFunction{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    fixed_poly(const theta::plugin::Configuration & cfg);
+    fixed_poly(const theta::Configuration & cfg);
 };
 
 /** \brief A normal distribution where mean and width do not depend on any parameters
@@ -60,7 +62,7 @@ public:
 class fixed_gauss: public theta::ConstantHistogramFunction{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-   fixed_gauss(const theta::plugin::Configuration & cfg);
+   fixed_gauss(const theta::Configuration & cfg);
 };
 
 /** \brief A lognormal distribution in one dimension.
@@ -87,20 +89,20 @@ public:
 class log_normal: public theta::Distribution{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    log_normal(const theta::plugin::Configuration & cfg);
+    log_normal(const theta::Configuration & cfg);
     
-    //@{
+    ///@{
     /** \brief Implementation of the pure methods of theta::Distribution
      *
      * See documentation of theta::Distribution.
      */
     virtual void sample(theta::ParValues & result, theta::Random & rnd) const;
     virtual void mode(theta::ParValues & result) const;
-    virtual double evalNL(const theta::ParValues & values) const;
-    virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
+    virtual double eval_nl(const theta::ParValues & values) const;
     virtual const std::pair<double, double> & support(const theta::ParId&) const;
-    //@}
+    ///@}
 private:
+    
     double mu, sigma;
     std::pair<double, double> support_;
 };
@@ -122,28 +124,17 @@ private:
  * \c type must always be "delta_distribution" to create an instance of this class.
  * 
  * Further, for every parameter, the fixed value is given.  
- * 
- * The evalNL and evalNLwithDerivatives will always return 0. Evaluating them with parameters
- * other than the specified ones is a bug from the caller side. However, no diagnostic is
- * performed for efficiency reasons.
  */
 class delta_distribution: public theta::Distribution{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    delta_distribution(const theta::plugin::Configuration & cfg);
+    delta_distribution(const theta::Configuration & cfg);
     
-    //@{
-    /** \brief Implementation of the pure methods of theta::Distribution
-     *
-     * See documentation of theta::Distribution. Note that evalNL and evalNL_withDerivatives will
-     * always throw an IllegatStateException.
-     */
     virtual void sample(theta::ParValues & result, theta::Random & rnd) const;
     virtual void mode(theta::ParValues & result) const;
-    virtual double evalNL(const theta::ParValues & values) const;
-    virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
+    virtual double eval_nl(const theta::ParValues & values) const;
     virtual const std::pair<double, double> & support(const theta::ParId&) const;
-    //@}
+    
 private:
     theta::ParValues values;
     std::map<theta::ParId, std::pair<double, double> > supports;
@@ -156,12 +147,11 @@ private:
  * 
  * Configuration is done via a setting group like
  * \code
- * {
+ * distribution = {
  *   type = "flat_distribution";
  *   s = {
  *      range = (0.0, "inf");
- *      width = 1.0; //optional, but should be specified for infinite range
- *      fix-sample-value = 7.0; //optional, but should be specified for infinite range
+ *      fix-sample-value = 7.0; // must be given here, as the range is infinite
  *   };
  *   
  *   b = {
@@ -177,16 +167,19 @@ private:
  * <ul>
  *   <li>a \c range setting which specifies, as a list of two doubles, the range of the variable.
  *     The special strings "inf" and "-inf" are allowed here.</li>
- *   <li>An optional \c fix-sample-value setting which will be used by the sample routine. In case of finite
- *     intervals, the default is to sample from a flat distribution on this interval. For infinite intervals,
- *     an exception will be thrown upon call of Distributiuon::sample</li>
+ *   <li>A \c fix-sample-value setting which will be used by the sample routine. In case of finite
+ *     intervals, the default is to sample from a flat distribution on this interval. For infinite intervals, \c fix-sample-value must be given and is the
+ *     value returned when sampling from the distribution.</li>
  * </ul>
+ * Note that \c fix-sample-value is also used as the mode (=most probable value) for this parameter and as such
+ * is used as starting point for minimization, MCMC, etc. Therefore, it is advisable to set \c fix-sample-value even for
+ * finite intervals to make sure the this value makes sense. In case of finite intervals, the mode is the midpoint of the interval.
  */
 class flat_distribution: public theta::Distribution{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    flat_distribution(const theta::plugin::Configuration & cfg);
-    //@{
+    flat_distribution(const theta::Configuration & cfg);
+    ///@{
     /** \brief Implementation of the pure methods of theta::Distribution
      *
      * See class documentation and documentation of theta::Distribution for details.
@@ -195,10 +188,10 @@ public:
      */
     virtual void sample(theta::ParValues & result, theta::Random & rnd) const;
     virtual void mode(theta::ParValues & result) const;
-    virtual double evalNL(const theta::ParValues & values) const;
-    virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
+    virtual double eval_nl(const theta::ParValues & values) const;
     virtual const std::pair<double, double> & support(const theta::ParId&) const;
-    //@}
+    ///@}
+    
     
 private:
     theta::ParValues fix_sample_values;
@@ -250,20 +243,15 @@ private:
 class gauss: public theta::Distribution{
    public:
         /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-        gauss(const theta::plugin::Configuration & cfg);
+        gauss(const theta::Configuration & cfg);
 
-        //@{
-        /** \brief Implementation of the pure methods of theta::Distribution
-         *
-         * See documentation of theta::Distribution.
-         */
         virtual void sample(theta::ParValues & result, theta::Random & rnd) const;
         virtual void mode(theta::ParValues & result) const;
-        virtual double evalNL(const theta::ParValues & values) const;
-        virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
+        virtual double eval_nl(const theta::ParValues & values) const;
         virtual const std::pair<double, double> & support(const theta::ParId&) const;
-        //@}
+        
     private:
+        
         std::vector<theta::ParId> v_par_ids;
         std::vector<double> mu;
         theta::Matrix sqrt_cov; //required for sampling
@@ -273,11 +261,9 @@ class gauss: public theta::Distribution{
 
 /** \brief A one-dimensional gauss-distribution
  *
- * It does the same as \link gauss gauss \endlink in the one-dimensional case, but is faster.
- *
- * It is cponfigured via a setting group like
+ * It is configured via a setting group like
  * \code
- * { 
+ * gauss = {
  *  type = "gauss1d";
  *  parameter = "p0";
  *  range = (0.0, 5.0);
@@ -292,54 +278,24 @@ class gauss: public theta::Distribution{
  *
  * \c mean is a floating point value specifying the mean value of the distribution, \c width is its standard deviation.
  *
+ * As special case, the \c mean can also be a string. In this case, it is interpreted as the name of a parameter which
+ * will be used as mean.
  */
 class gauss1d: public theta::Distribution{
    public:
         /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-        gauss1d(const theta::plugin::Configuration & cfg);
+        gauss1d(const theta::Configuration & cfg);
 
-        //@{
-        /** \brief Implementation of the pure methods of theta::Distribution
-         *
-         * See documentation of theta::Distribution.
-         */
         virtual void sample(theta::ParValues & result, theta::Random & rnd) const;
         virtual void mode(theta::ParValues & result) const;
-        virtual double evalNL(const theta::ParValues & values) const;
-        virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
+        virtual double eval_nl(const theta::ParValues & values) const;
         virtual const std::pair<double, double> & support(const theta::ParId&) const;
-        //@}
+        
     private:
         double mu;
         double sigma;
+        boost::optional<theta::ParId> mu_pid;
         std::pair<double, double> range;
-};
-
-/** \brief A function which multiplies a number of parameters
- *
- * Example configuration:
- * \code
- * {
- *   type = "mult";
- *   parameters = ("p1", "p2");
- * }
- * \endcode
- * This will make a Function object which returns p1 * p2.
- */
-class mult: public theta::Function{
-public:
-    /** \brief Construct a MultFunction from a Configuration instance
-     */
-    mult(const theta::plugin::Configuration & cfg);
-
-    /** \brief Definitions of the pure virtual methods of Function
-     *
-     * See documentation of Function for their meaning.
-     */
-    virtual double operator()(const theta::ParValues & v) const;
-    
-private:
-    std::vector<theta::ParId> v_pids;
 };
 
 /** \brief A Distribution product of other distributions
@@ -364,19 +320,16 @@ class product_distribution: public theta::Distribution{
 public:
 
     /// Constructor from a Configuration for the plugin system
-    product_distribution(const theta::plugin::Configuration & cfg);
+    product_distribution(const theta::Configuration & cfg);
 
-    //@{
-    /// See Distribution for details
     virtual void sample(theta::ParValues & result, theta::Random & rnd) const;
     virtual void mode(theta::ParValues & result) const;
-    virtual double evalNL(const theta::ParValues & values) const;
-    virtual double evalNL_withDerivatives(const theta::ParValues & values, theta::ParValues & derivatives) const;
+    virtual double eval_nl(const theta::ParValues & values) const;
     virtual const std::pair<double, double> & support(const theta::ParId & p) const;
-    //@}
+    
 
 private:
-    void add_distributions(const theta::plugin::Configuration & cfg, const theta::SettingWrapper & s, int depth);
+    void add_distributions(const theta::Configuration & cfg, const theta::SettingWrapper & s, int depth);
     
     boost::ptr_vector<theta::Distribution> distributions;
     std::map<theta::ParId, size_t> parid_to_index;
@@ -442,23 +395,20 @@ class model_source: public theta::DataSource, public theta::RandomConsumer {
 public:
 
     /// Construct from a Configuration; required by the plugin system
-    model_source(const theta::plugin::Configuration & cfg);
+    model_source(const theta::Configuration & cfg);
 
     /** \brief Fills the provided Data instance with data from the model
-     *
-     * Will only throw the DataUnavailable Exception if the parameter distribution instance
-     * (i.e., either the model's instance or the override-parameter-distribution instance) throws an Exception.
      */
-    virtual void fill(theta::Data & dat, theta::Run & run);
+    virtual void fill(theta::Data & dat);
     
 private:
     theta::ParValues parameters_for_nll;
     
     bool save_nll;
-    std::auto_ptr<theta::Column> c_nll;
+    theta::Column c_nll;
     
     theta::ParIds par_ids;
-    boost::ptr_vector<theta::Column> parameter_columns;
+    std::vector<theta::Column> parameter_columns;
     
     std::auto_ptr<theta::Model> model;
     std::auto_ptr<theta::Distribution> override_parameter_distribution;

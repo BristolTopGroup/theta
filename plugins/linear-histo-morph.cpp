@@ -3,18 +3,18 @@
 
 using namespace std;
 using namespace theta;
-using namespace theta::plugin;
 using namespace libconfig;
 
-const Histogram & linear_histo_morph::operator()(const ParValues & values) const {
-    h.reset_to_1();
+
+void linear_histo_morph::fill_h(const ParValues & values) const {
+    h.set_all_values(1.0);
     const size_t n_sys = kappa_plus.size();
     //1. interpolate linearly in each bin; also calculate normalization
     double scale_unc = 1;
     for (size_t isys = 0; isys < n_sys; ++isys) {
         const double delta = values.get(parameters[isys]);
         if(delta==0.0) continue;
-        const Histogram & kappa_sys = delta > 0 ? kappa_plus[isys] : kappa_minus[isys];
+        const Histogram1D & kappa_sys = delta > 0 ? kappa_plus[isys] : kappa_minus[isys];
         if(kappa_sys.get_nbins() > 0)
            h.add_with_coeff(fabs(delta), kappa_sys);
         double relexp = delta > 0 ? plus_relexp[isys] : minus_relexp[isys];
@@ -23,35 +23,52 @@ const Histogram & linear_histo_morph::operator()(const ParValues & values) const
     }
     h *= h0;
     //2. lower bin cutoff
-    for(size_t i=1; i <= h.get_nbins(); ++i){
+    for(size_t i=0; i < h.size(); ++i){
        if(h.get(i) < 0.0){
          h.set(i, 0.0);
          //throw UnphysicalPredictionException();
        }
     }
     //3.a. rescale to nominal:
-    h *= h0exp / h.get_sum_of_bincontents();
+    h *= h0exp / h.get_sum();
     //3.b. apply scale uncertainty
     h *= scale_unc;
-    return h;
+}
+
+void linear_histo_morph::apply_functor(const theta::functor<theta::Histogram1DWithUncertainties> & f, const theta::ParValues & values) const{
+    fill_h(values);
+    h_wu.set(h);
+    f(h_wu);
+}
+
+void linear_histo_morph::apply_functor(const theta::functor<theta::Histogram1D> & f, const theta::ParValues & values) const{
+    fill_h(values);
+    f(h);
+}
+
+void linear_histo_morph::get_histogram_dimensions(size_t & nbins, double & xmin, double & xmax) const{
+    nbins = h0.get_nbins();
+    xmin = h0.get_xmin();
+    xmax = h0.get_xmax();
 }
 
 linear_histo_morph::linear_histo_morph(const Configuration & ctx){
     SettingWrapper psetting = ctx.setting["parameters"];
+    boost::shared_ptr<VarIdManager> vm = ctx.pm->get<VarIdManager>();
     size_t n = psetting.size();
     for(size_t i=0; i<n; i++){
         string par_name = psetting[i];
-        ParId pid = ctx.vm->getParId(par_name);
+        ParId pid = vm->get_par_id(par_name);
         par_ids.insert(pid);
         parameters.push_back(pid);
         if(ctx.setting.exists(par_name + "-kappa-plus-histogram"))
-           kappa_plus.push_back(getConstantHistogram(ctx, ctx.setting[par_name + "-kappa-plus-histogram"] ));
+           kappa_plus.push_back(get_constant_histogram(Configuration(ctx, ctx.setting[par_name + "-kappa-plus-histogram"])).get_values_histogram());
         else
-           kappa_plus.push_back(Histogram());
+           kappa_plus.push_back(Histogram1D());
         if(ctx.setting.exists(par_name + "-kappa-minus-histogram"))
-            kappa_minus.push_back(getConstantHistogram(ctx, ctx.setting[par_name + "-kappa-minus-histogram"] ));
+            kappa_minus.push_back(get_constant_histogram(Configuration(ctx, ctx.setting[par_name + "-kappa-minus-histogram"])).get_values_histogram());
         else
-           kappa_minus.push_back(Histogram());
+           kappa_minus.push_back(Histogram1D());
         if(ctx.setting.exists(par_name + "-plus-relexp"))
             plus_relexp.push_back(ctx.setting[par_name + "-plus-relexp"]);
         else
@@ -60,16 +77,10 @@ linear_histo_morph::linear_histo_morph(const Configuration & ctx){
             minus_relexp.push_back(ctx.setting[par_name + "-minus-relexp"]);
         else
             minus_relexp.push_back(0.0);
-    }
-    assert(parameters.size()==n);
-    assert(n==kappa_minus.size());
-    assert(n==kappa_plus.size());
-    assert(n==plus_relexp.size());
-    assert(n==minus_relexp.size());
-    
+    }    
     const size_t nsys = kappa_plus.size();
     std::set<ParId> pid_set;
-    h0 = getConstantHistogram(ctx, ctx.setting["nominal-histogram"]);
+    h0 = get_constant_histogram(Configuration(ctx, ctx.setting["nominal-histogram"])).get_values_histogram();
     h = h0;
     for(size_t i=0; i < nsys; i++){
         pid_set.insert(parameters[i]);
@@ -77,28 +88,14 @@ linear_histo_morph::linear_histo_morph(const Configuration & ctx){
            h0.check_compatibility(kappa_plus[i]);
         if(kappa_minus[i].get_nbins() > 0)
            h0.check_compatibility(kappa_minus[i]);
-        kappa_plus[i].set(0,0);
-        kappa_plus[i].set(kappa_plus[i].get_nbins()+1,0);
-        kappa_minus[i].set(0,0);
-        kappa_minus[i].set(kappa_minus[i].get_nbins()+1,0);
     }
     if(pid_set.size()!=nsys){
-        throw InvalidArgumentException("linear_histo_morph: duplicate parameter in parameter list.");
+        throw invalid_argument("linear_histo_morph: duplicate parameter in parameter list.");
     }
-    h0.set(0,0);
-    h0.set(h0.get_nbins()+1,0);
     h0exp = ctx.setting["nominal-expectation"];
-    h0 *= h0exp / h0.get_sum_of_bincontents();
-}
-
-Histogram linear_histo_morph::getConstantHistogram(const Configuration & cfg, SettingWrapper s){
-    std::auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::instance().build(Configuration(cfg, s));
-    if(hf->getParameters().size()!=0){
-        stringstream ss;
-        ss << "Histogram defined in path " << s.getPath() << " is not constant (but has to be).";
-        throw InvalidArgumentException(ss.str());
-    }
-    return (*hf)(ParValues());
+    h0 *= h0exp / h0.get_sum();
+    h = h0;
+    h_wu.set(h);
 }
 
 REGISTER_PLUGIN(linear_histo_morph)

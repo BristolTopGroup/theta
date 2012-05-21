@@ -4,8 +4,6 @@
 #include "interface/decls.hpp"
 
 namespace theta{
-   namespace VarIdManagerUtils{
-   
       /** \brief Populate VarIdManager from a Setting.
        *
        * This function uses the "observables" and "parameters" setting groups in cfg.setting to
@@ -29,9 +27,12 @@ namespace theta{
        * \endcode
        * then this function will call VarIdManager::createParId("p0", 20, 0, inf) and VarIdManager::createObsId("mass", 200, 0.0, 10.0).
        */
-      void apply_settings(theta::plugin::Configuration & cfg);
-   }
+      void apply_vm_settings(theta::Configuration & cfg);
+      
+      std::ostream & operator<<(std::ostream & out, const theta::ParIds & pids);
 }
+
+
 
 #endif
 

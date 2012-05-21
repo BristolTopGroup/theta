@@ -1,8 +1,8 @@
 #ifndef PLUGINS_ASIMOV_LIKELIHOOD_WIDTHS_HPP
 #define PLUGINS_ASIMOV_LIKELIHOOD_WIDTHS_HPP
 
-#include "interface/model.hpp"
-#include "interface/variables.hpp"
+#include "interface/decls.hpp"
+#include <boost/shared_ptr.hpp>
 
 /** \brief Calculate parameter widths from the asimov data for the given model
  *
@@ -23,7 +23,7 @@
  *
  * This function is meant to be used to choose initial step sizes for minimization and MCMC integration.
  */
-theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boost::shared_ptr<theta::Distribution> & override_parameter_distribution
-     = boost::shared_ptr<theta::Distribution>());
+theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,
+     const boost::shared_ptr<theta::Function> & additional_nll_term);
 
 #endif

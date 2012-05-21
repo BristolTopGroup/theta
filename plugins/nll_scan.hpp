@@ -12,7 +12,7 @@
  *
  * Configuration is done with a settings block like:
  * \code
- * {
+ * nll_scan = {
  *  type = "nll_scan";
  *  name = "nll";
  *  parameter = "p0";
@@ -27,8 +27,8 @@
  *
  * \c type has always to be "nll_scan" in order to use this producer
  *
- * \c name is a name chosen by the user used to construct unique column names in the result table (this name and two underscores are
- *   prepended to the column names explained below).
+ * \c name is a unique producer name of your choice; it is used to construct column names in the output database. It may only contain alphanumeric
+ *    characters (no spaces, special characters, etc.).
  *
  * \c parameter is the name of the parameter for which the interval shall be calculated.
  *
@@ -52,7 +52,7 @@ class nll_scan: public theta::Producer{
 public:
 
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    nll_scan(const theta::plugin::Configuration & cfg);
+    nll_scan(const theta::Configuration & cfg);
     virtual void produce(const theta::Data & data, const theta::Model & model);
     
 private:
@@ -70,7 +70,7 @@ private:
     
 
     //table columns:
-    std::auto_ptr<theta::Column> c_nll, c_maxl;
+    theta::Column c_nll, c_maxl;
 };
 
 #endif

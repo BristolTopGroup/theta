@@ -1,7 +1,11 @@
 #include "plugins/asimov_likelihood_widths.hpp"
 #include "plugins/secant.hpp"
 #include "interface/distribution.hpp"
+#include "interface/model.hpp"
 #include "interface/exception.hpp"
+
+#include <sstream>
+
 
 using namespace theta;
 using namespace std;
@@ -30,16 +34,26 @@ private:
 
 }
 
-theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boost::shared_ptr<Distribution> & override_parameter_distribution){
+theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boost::shared_ptr<Distribution> & override_parameter_distribution, const boost::shared_ptr<theta::Function> & additional_nll_term){
     const Distribution & dist = override_parameter_distribution.get()? *override_parameter_distribution: model.get_parameter_distribution();
-    ParIds parameters = model.getParameters();
+    ParIds parameters = model.get_parameters();
     ParValues mode;
     dist.mode(mode);
     Data asimov_data;
     model.get_prediction(asimov_data, mode);
-    std::auto_ptr<NLLikelihood> nll = model.getNLLikelihood(asimov_data);
+    
+    const Distribution * rvobs_dist = model.get_rvobservable_distribution();
+    if(rvobs_dist){
+        rvobs_dist->mode(mode);
+        asimov_data.set_rvobs_values(ParValues(mode, model.get_rvobservables()));
+    }
+    std::auto_ptr<NLLikelihood> nll = model.get_nllikelihood(asimov_data);
     //0 value has same semantics for NLLikelihood:
     nll->set_override_distribution(override_parameter_distribution);
+    nll->set_additional_term(additional_nll_term);
+    if(additional_nll_term.get()){
+        parameters.insert_all(additional_nll_term->get_parameters());
+    }
     double nll_at_min = (*nll)(mode);
     ParValues result;
     int k=0;
@@ -47,7 +61,7 @@ theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boos
         ParId pid = *it;
         const double pid_mode = mode.get(pid);
         std::pair<double, double> support = dist.support(pid);
-        assert(support.first <= pid_mode && pid_mode <= support.second);
+        theta_assert(support.first <= pid_mode && pid_mode <= support.second);
         if(support.first == support.second){
             result.set(pid, 0.0);
             continue;
@@ -92,7 +106,7 @@ theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boos
         }
         //Now, one of the interval ends has to be infinite, otherwise we would not be here.
         //Scan in that direction:
-        assert(std::isinf(support.first) || std::isinf(support.second));
+        theta_assert(std::isinf(support.first) || std::isinf(support.second));
         bool found = false;
         for(double sign = -1.0; sign <= 1.001; sign+=2.0){
             if(!std::isinf(support.first) && sign < 0) continue;
@@ -115,7 +129,7 @@ theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boos
                         std::swap(xlow, xhigh);
                         std::swap(flow, fhigh);
                     }
-                    assert(xlow <= xhigh);
+                    theta_assert(xlow <= xhigh);
                     result.set(pid, fabs(pid_mode - secant(xlow, xhigh, 0.0, flow, fhigh, 0.05, f)));
                     found = true;
                     break;

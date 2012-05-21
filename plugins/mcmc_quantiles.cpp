@@ -16,7 +16,8 @@ using namespace libconfig;
 class MCMCPosteriorQuantilesResult{
     public:
         //ipar_ is the parameter of interest
-        MCMCPosteriorQuantilesResult(size_t npar_, size_t ipar_, size_t n_iterations_): npar(npar_), ipar(ipar_), n_iterations(n_iterations_){
+        MCMCPosteriorQuantilesResult(size_t npar_, size_t ipar_, size_t n_iterations_): npar(npar_), ipar(ipar_), n_iterations(n_iterations_), n_iterations_total(0),
+            n_iterations_different(0){
             par_values.reserve(n_iterations);
         }
         
@@ -26,15 +27,21 @@ class MCMCPosteriorQuantilesResult{
         
         //just save the parameter value we are interested in
         void fill(const double * x, double, size_t n_){
+            n_iterations_total += n_;
+            ++n_iterations_different;
             for(size_t i=0; i<n_; ++i){
                par_values.push_back(x[ipar]);
             }
+        }
+
+        double get_accrate() const{
+            return 1.0 * n_iterations_different / n_iterations_total;
         }
         
         //return the quantile q
         double get_quantile(double q){
             if(par_values.size()!=n_iterations){
-                throw InvalidArgumentException("MCMCPosteriorQuantilesResult: called get_quantile before chain has finished!");
+                throw invalid_argument("MCMCPosteriorQuantilesResult: called get_quantile before chain has finished!");
             }
             int index = static_cast<int>(q * n_iterations);
             if(index >= static_cast<int>(n_iterations)) index = n_iterations-1;
@@ -45,18 +52,22 @@ class MCMCPosteriorQuantilesResult{
     private:
         size_t npar;
         size_t ipar;
-        size_t n_iterations;
+        const size_t n_iterations;
+        size_t n_iterations_total;
+        size_t n_iterations_different;
         vector<double> par_values;
 };
 
 void mcmc_quantiles::produce(const Data & data, const Model & model) {
-    if(!init){
+    std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
+    
+    if(!init || (re_init > 0 && itoy % re_init == 0)){
         try{
-            sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, vm);
+            sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, additional_nll_term);
             //find the number of the parameter of interest:
-            ParIds model_pars = model.getParameters();
+            ParIds pars = nll->get_parameters();
             ipar=0;
-            for(ParIds::const_iterator it=model_pars.begin(); it!=model_pars.end(); ++it, ++ipar){
+            for(ParIds::const_iterator it=pars.begin(); it!=pars.end(); ++it, ++ipar){
                 if(*it == par_id) break;
             }
             //now ipar has the correct value ...
@@ -64,22 +75,36 @@ void mcmc_quantiles::produce(const Data & data, const Model & model) {
         }
         catch(Exception & ex){
             ex.message = "initialization failed: " + ex.message;
-            throw FatalException(ex);
+            throw invalid_argument(ex.message);
         }
     }
+    ++itoy;
     
-    std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     MCMCPosteriorQuantilesResult result(nll->getnpar(), ipar, iterations);
     metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
     
     for(size_t i=0; i<quantiles.size(); ++i){
         products_sink->set_product(columns[i], result.get_quantile(quantiles[i]));
     }
+    if(diag){
+        products_sink->set_product(c_accrate, result.get_accrate());
+    }
 }
 
-mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()),
-   init(false), par_id(cfg.vm->getParId(cfg.setting["parameter"])){
-    vm = cfg.vm;
+
+void mcmc_quantiles::declare_products(){
+    for(size_t i=0; i<quantiles.size(); ++i){
+        stringstream ss;
+        ss << "quant" << setw(5) << setfill('0') << static_cast<int>(quantiles[i] * 10000 + 0.5);
+        columns.push_back(products_sink->declare_product(*this, ss.str(), theta::typeDouble));
+    }
+    if(diag){
+        c_accrate = products_sink->declare_product(*this, "accrate", theta::typeDouble);
+    }
+}
+
+mcmc_quantiles::mcmc_quantiles(const theta::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, get_name()),
+   init(false), par_id(cfg.pm->get<VarIdManager>()->get_par_id(cfg.setting["parameter"])), re_init(0), itoy(0), diag(false){
     SettingWrapper s = cfg.setting;
     string parameter = s["parameter"];
     size_t n = s["quantiles"].size();
@@ -100,11 +125,13 @@ mcmc_quantiles::mcmc_quantiles(const theta::plugin::Configuration & cfg): Produc
     else{
         burn_in = iterations / 10;
     }
-    for(size_t i=0; i<quantiles.size(); ++i){
-        stringstream ss;
-        ss << "quant" << setw(5) << setfill('0') << static_cast<int>(quantiles[i] * 10000 + 0.5);
-        columns.push_back(products_sink->declare_product(*this, ss.str(), theta::typeDouble));
+    if(s.exists("diag")){
+        diag = s["diag"];
     }
+    if(s.exists("re-init")){
+        re_init = s["re-init"];
+    }
+    declare_products();
 }
 
 REGISTER_PLUGIN(mcmc_quantiles)

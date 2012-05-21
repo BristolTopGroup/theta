@@ -74,13 +74,6 @@ ifneq ($(BUILD_ARCH),x86_64)
    endif
 endif
 
-ifeq ($(BUILD_ARCH),)
-   ifeq ($(OPTIONS_USE_CRLIBM),yes)
-      DUMMY := $(warning build platform unknown, setting OPTIONS_USE_CRLIBM to no)
-      OPTIONS_USE_CRLIBM:=no
-    endif
-endif
-
 
 DEFINES :=
 
@@ -92,45 +85,53 @@ ifeq ($(OPTIONS_GENERIC_ARCH),yes)
    DEFINES += -DGENERIC_ARCH
 endif
 
-UNAME:=$(shell uname)
-ifeq ($(findstring BSD,$(UNAME)),BSD)
-  LDL:=-lc
-else
-  LDL:=-ldl
+INCLUDES := -I.. $(BOOST_INCLUDE) $(SQLITE_INCLUDE)
+EXTRA_COMPILE :=
+
+LIBS := -ltheta -ldl -lconfig
+ifeq ($(OPTIONS_USE_AMDLIBM),yes)
+    LIBS += -lamdlibm
+    DEFINES += -DUSE_AMDLIBM
+endif
+
+ifeq ($(OPTIONS_TIMER),yes)
+    DEFINES += -DUSE_TIMER
+    LIBS += -lboost_timer$(BS)
 endif
 
 
-INCLUDES := -I.. $(BOOST_INCLUDE) $(SQLITE_INCLUDE)
-EXTRA_COMPILE :=
-EXTRA_LINK_EXE :=
-EXTRA_LINK_SO :=
 
-WFLAGSCPP := -Wall -Wctor-dtor-privacy -Wnon-virtual-dtor -Woverloaded-virtual -Wsign-promo
-WFLAGSC := -Wall
+FLAGSC := -g -Wall -fPIC $(INCLUDES) $(DEFINES) $(OPTIONS_CFLAGS)
+FLAGSCPP := $(FLAGSC) -Wctor-dtor-privacy -Wnon-virtual-dtor -Woverloaded-virtual -Wsign-promo -fPIC $(INCLUDES) $(DEFINES)
+ifneq ($(OPTIONS_DEBUG),yes)
+    FLAGSC += -O3
+    FLAGSCPP += -O3
+endif
 
-#lazy evaluation of compile and link command to allow subdirectory-Makefiles to override the value of EXTRA_* ...
-COMPILE = echo creating $@; $(CXX) $(DEFINES) $(OPTIONS_CFLAGS) -g -c -fPIC -O3 $(INCLUDES) $(EXTRA_COMPILE)
-LINK_EXE = echo linking $@; $(CXX) $(OPTIONS_LDFLAGS) -Wl,-R,'$$ORIGIN/../lib' -rdynamic -L../lib $(LDL) -ltheta -lconfig $(SQLITE_LIBS) $(BOOST_LIBS) $(EXTRA_LINK_EXE)
-LINK_SO = echo linking $@; $(CXX) $(OPTIONS_LDFLAGS) -Wl,-R,'$$ORIGIN/../lib' -shared -rdynamic $(EXTRA_LINK_SO)
+#lazy evaluation because of $@, $+.
+COMPILE = echo creating $@; $(CXX) -c $(EXTRA_COMPILE)
+LINK_EXE = echo linking $@; $(CXX) -o $@ $+ $(OPTIONS_LDFLAGS_EXE) -Wl,-R,'$$ORIGIN/../lib' -rdynamic -L../lib $(LIBS) $(SQLITE_LIBS) $(BOOST_LIBS)
+LINK_EXE_NOLIBS = echo linking $@; $(CXX) -o $@ $+ $(OPTIONS_LDFLAGS_EXE) -Wl,-R,'$$ORIGIN/../lib' -rdynamic -L../lib
+LINK_SO = echo linking $@; $(CXX) -o $@ $+ $(OPTIONS_LDFLAGS_SO) -Wl,-R,'$$ORIGIN/../lib' -shared -rdynamic $(BOOST_LIBS)
 
 .bin/%.o: %.cpp
-	@$(COMPILE) $(WFLAGSCPP) -o $@ $<
+	@$(COMPILE) $(FLAGSCPP) -o $@ $<
 
 .bin/%.o: %.cxx
-	@$(COMPILE) $(WFLAGSCPP) -o $@ $<
+	@$(COMPILE) $(FLAGSCPP) -o $@ $<
 
 .bin/%.o: %.c
-	@$(COMPILE) $(WFLAGSC) -x c -o $@ $<
+	@$(COMPILE) $(FLAGSC) -x c -o $@ $<
 
 
 .bin/%.d: %.cpp
-	@$(COMPILE) -MM -MT '$(patsubst %.cpp,.bin/%.o,$<)' $< > $@
+	@echo creating $@; $(CXX) $(FLAGSCPP) $(EXTRA_COMPILE) -MM -MT '$(patsubst %.cpp,.bin/%.o,$<)' $< > $@
 
 .bin/%.d: %.cxx
-	@$(COMPILE) -MM -MT '$(patsubst %.cxx,.bin/%.o,$<)' $< > $@
+	@echo creating $@; $(CXX) $(FLAGSCPP) $(EXTRA_COMPILE) -MM -MT '$(patsubst %.cxx,.bin/%.o,$<)' $< > $@
 
 .bin/%.d: %.c
-	@$(COMPILE) -x c -MM -MT '$(patsubst %.c,.bin/%.o,$<)' $< > $@
+	@echo creating $@; $(CXX) $(FLAGSC) $(EXTRA_COMPILE) -x c -MM -MT '$(patsubst %.c,.bin/%.o,$<)' $< > $@
 
 
 #make clean rule depend on subdir-specific:

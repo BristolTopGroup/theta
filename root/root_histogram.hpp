@@ -1,11 +1,7 @@
-#include "interface/plugin.hpp"
-#include "interface/histogram-function.hpp"
-#include "TH1.h"
-#include "TFile.h"
+#ifndef ROOT_ROOT_HISTOGRAM_HPP
+#define ROOT_ROOT_HISTOGRAM_HPP
 
-using namespace theta;
-using namespace theta::plugin;
-using namespace std;
+#include "interface/histogram-function.hpp"
 
 /** \brief Plugin to read Histogram from a root file
  *
@@ -28,20 +24,17 @@ using namespace std;
  * given root file. Underflow and overflow are usually not copied, unless the range setting (see below)
  * explicitely includes them.
  *
- * If \c use_errors is true, the errors in the Histogram will be used to
- * build a \c ConstantHistogramFunctionError instance which implements bin-by-bin
- * fluctuations for pseudodata creation (for details, see documentation of
- * \c ConstantHistogramFunctionError). Otherwise, an instance of \c ConstantHistogramFunction
- * is returned which does not treat parametrization errors.
+ * If \c use_errors is true, the errors in the root Histogram are used. If it is \c false (the default),
+ * all uncertainties are set to 0.
  *
  * If rebin is given, TH1::Rebin will be called with this value.
  *
  * If range is given, only bins within this range are copied, not the whole histogram.
  * This can also be used to explicitely include the overflow or underflow bins by specifying
- * a range which goes beyond the border of the histogram. The range will include the bin which contains the
- * lower value up to and including the bin which contains the second value of the bin. This might include
- * more bins that you originally wanted: if you have a ROOT TH1 with 10 bins from 0 to 100 and specify
- * a range (0, 50.0), the bin including the value 50.0 is included, so the actual range will be up to 60.0.
+ * a range which goes beyond the border of the histogram. If the range is within the histogram range,
+ * the range borders must coincide with bin borders. Otherwise, an exception is thrown. Note that
+ * rebinning is done before the range is applied, so make sure to specify a range which is valid after
+ * rebinning.
  *
  * Bin entries of exactly zero can be problematic if dicing pseudo data from templates with a non-zero entry (for example,
  * because dicing pseudo data from templates affected by a systematic uncertainty) while calculating
@@ -65,8 +58,10 @@ using namespace std;
  *
  * \sa ConstantHistogramFunctionError ConstantHistogramFunction
  */
-class root_histogram: public ConstantHistogramFunctionError{
+class root_histogram: public theta::ConstantHistogramFunction{
 public:
     /// Constructor used by the plugin system
-    root_histogram(const Configuration & ctx);
+    root_histogram(const theta::Configuration & ctx);
 };
+
+#endif

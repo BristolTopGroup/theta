@@ -32,7 +32,7 @@
  * \c name is a name chosen by the user used to construct unique column names in the result table (this name and two underscores are
  *   prepended to the column names explained below).
  *
- * \c obserbales is a list of observables for which to calculate the mean and width histograms
+ * \c observables is a list of observables for which to calculate the mean and width histograms
  *
  * \c iterations is the number of MCMC iterations. See additional comments about runtime and suggested robustness tests
  *     in the documentation of \link mcmc_posterior_ratio mcmc_posterior_ratio \endlink.
@@ -54,17 +54,17 @@
 class mcmc_mean_prediction: public theta::Producer, public theta::RandomConsumer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    mcmc_mean_prediction(const theta::plugin::Configuration & ctx);
+    mcmc_mean_prediction(const theta::Configuration & ctx);
     virtual void produce(const theta::Data & data, const theta::Model & model);
     
 private:
-    boost::shared_ptr<theta::VarIdManager> vm;
+    void declare_products(const boost::shared_ptr<theta::VarIdManager> & vm);
     
     //result columns: one "mean" and one "width" column per observable.
     theta::ObsIds observables;
-    boost::ptr_vector<theta::Column> c_mean;
-    boost::ptr_vector<theta::Column> c_width;
-    boost::ptr_vector<theta::Column> c_best;
+    std::vector<theta::Column> c_mean;
+    std::vector<theta::Column> c_width;
+    std::vector<theta::Column> c_best;
     
     //MCMC parameters:
     unsigned int iterations;

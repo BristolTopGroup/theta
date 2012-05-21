@@ -4,22 +4,28 @@
 #include "interface/variables-utils.hpp"
 #include "interface/variables.hpp"
 #include "interface/main.hpp"
-#include "interface/redirect_stdio.hpp"
+
+#include "interface/database.hpp"
 
 #include "libconfig/libconfig.h++"
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
-#include "boost/date_time/posix_time/posix_time_types.hpp"
+#include <boost/date_time/posix_time/posix_time_types.hpp>
+
+#ifdef USE_TIMER
+#include <boost/timer/timer.hpp>
+#endif
 
 #include <termios.h>
 
 #include <fstream>
+#include <iostream>
 
 using namespace std;
 using namespace theta;
 using namespace theta::utils;
-using namespace theta::plugin;
+
 using namespace libconfig;
 
 namespace fs = boost::filesystem;
@@ -28,24 +34,49 @@ namespace btime = boost::posix_time;
 
 class MyProgressListener: public ProgressListener{
 public:
-    virtual void progress(int done, int total){
+    virtual void progress(int done_, int total_, int n_error_){
+        done = done_;
+        total = total_;
+        n_error = n_error_;
+        print();
+    }
+    
+    void print(){
         if(!is_tty) return;
         btime::ptime now = btime::microsec_clock::local_time();
         if(now < next_update && done < total) return;
         //move back to beginning of terminal line:
-        theta::cout << "\033[" << chars_written << "D";
-        chars_written = 0;
-        double d = 100.0 * done / total;
-        char c[40];
-        chars_written += snprintf(c, 40, "%6d / %-6d [%5.1f%%] ", done, total, d);
-        theta::cout << c;
-        theta::cout.flush();
+        cout << "\033[" << chars_written << "D";
+        chars_written = 0;  
+        char c[200];
+        double error_fraction = 100.0 * n_error / done;
+        const char * color_start;
+        const char * color_end = "\033[0m";
+        if(error_fraction > 30){ //red:
+           color_start = "\033[31m";
+        }
+        else if(error_fraction > 5){ //yellow:
+           color_start = "\033[1;33m";
+        }
+        else{ //green:
+           color_start = "\033[32m";
+        }
+        if(total > 0){
+            double progress_fraction = 100.0 * done / total;
+            chars_written += snprintf(c, 200, "progress: %6d / %-6d [%5.1f%%]   errors: %s%6d [%5.1f%%]%s", done, total, progress_fraction, color_start, n_error, error_fraction, color_end);
+        }
+        else{
+            chars_written += snprintf(c, 200, "progress: %6d   errors: %s%6d [%5.1f%%]%s", done, color_start, n_error, error_fraction, color_end);
+        }
+        cout << c;
+        cout.flush();
         next_update = now + btime::milliseconds(50);
     }
 
-    MyProgressListener(): stdout_fd(theta::cout_fd), is_tty(isatty(stdout_fd)), chars_written(0), next_update(btime::microsec_clock::local_time()){
+    MyProgressListener(): stdout_fd(1), done(0), total(0), n_error(0), is_tty(isatty(stdout_fd)),
+      chars_written(0), next_update(btime::microsec_clock::local_time()) {
         if(!is_tty) return;
-        //disable terminmal echoing; we don't expect any input.
+        //disable terminal echoing; we don't expect any input.
         termios settings;
         if (tcgetattr (stdout_fd, &settings) < 0) return; //ignore error
         settings.c_lflag &= ~ECHO;
@@ -54,42 +85,23 @@ public:
     
     ~MyProgressListener(){
         if(!is_tty) return;
-        //enable terminmal echoing again; don't be evil
+        //enable terminal echoing again; don't be evil
         termios settings;
         if (tcgetattr (stdout_fd, &settings) < 0) return; //ignore error
         settings.c_lflag |= ECHO;
         tcsetattr (stdout_fd, TCSANOW, &settings);
-        theta::cout << endl;
+        if(chars_written > 0)
+            cout << endl;
     }
     
 private:
     int stdout_fd;
+    int done, total, n_error;
     bool is_tty;
     int chars_written;
     btime::ptime next_update;
 };
 
-namespace{
-
-string get_theta_dir(char** argv){
-    string theta_dir;
-    fs::path guessed_self_path = fs::current_path() / argv[0];
-    if(fs::is_regular_file(guessed_self_path)){
-        theta_dir = fs::system_complete(guessed_self_path.parent_path().parent_path()).string();
-    }
-    else if(fs::is_symlink("/proc/self/exe")){
-        char path[4096];
-        ssize_t s = readlink("/proc/self/exe", path, 4096);
-        if(s > 0 && s < 4096){
-            path[s] = '\0';
-            theta_dir = fs::path(path).parent_path().parent_path().string();
-        }
-    }
-    return theta_dir;
-}
-
-
-}
 
 
 namespace{
@@ -106,15 +118,22 @@ namespace{
 }
 
 
-boost::shared_ptr<Main> build_main(string cfg_filename, const string & theta_dir, bool nowarn){
+boost::shared_ptr<Main> build_main(string cfg_filename, bool nowarn, bool print_time){
     Config cfg;
     boost::shared_ptr<SettingUsageRecorder> rec(new SettingUsageRecorder());
     boost::shared_ptr<Main> main;
-    boost::shared_ptr<VarIdManager> vm(new VarIdManager);
     bool init_complete = false;
+    #ifdef USE_TIMER
+    std::auto_ptr<boost::timer::cpu_timer> timer;
+    #endif
     try {
+        #ifdef USE_TIMER
+        if(print_time){
+            timer.reset(new boost::timer::cpu_timer());
+        }
+        #endif
         try {
-            //as includes in config files shouled always be resolved relative to the config file's location:
+            //as includes in config files should always be resolved relative to the config file's location:
             string old_path = fs::current_path().string();
             //convert any failure to a FileIOException:
             try{
@@ -137,28 +156,48 @@ boost::shared_ptr<Main> build_main(string cfg_filename, const string & theta_dir
             s << "Error parsing configuration file: " << p.getError() << " in line " << p.getLine() << ", file " << p.getFile();
             throw ConfigurationException(s.str());
         }
+        #ifdef USE_TIMER
+        if(print_time){
+            cout << timer->format(4, "Time to read and parse configuration file:        %w sec real, %t sec CPU") << endl;
+        }
+        #endif
         
         SettingWrapper root(cfg.getRoot(), cfg.getRoot(), rec);
-        Configuration config(vm, root, theta_dir);
+        Configuration config(root);
+        config.pm->set("default", boost::shared_ptr<VarIdManager>(new VarIdManager));
         
         //process options:
         Configuration cfg_options(config, config.setting["options"]);
+        #ifdef USE_TIMER
+        if(print_time){
+            timer.reset(new boost::timer::cpu_timer());
+        }
+        #endif
         PluginLoader::execute(cfg_options);
+        #ifdef USE_TIMER
+        if(print_time){
+            cout << timer->format(4, "Time to load plugin .so files:                    %w sec real, %t sec CPU") << endl;
+            timer.reset(new boost::timer::cpu_timer());
+        }
+        #endif
         
-        //fill VarIdManager:
-        VarIdManagerUtils::apply_settings(config);
+        //populate VarIdManager from config:
+        apply_vm_settings(config);
         //build run:
-        main = PluginManager<Main>::instance().build(Configuration(config, root["main"]));
+        main = PluginManager<Main>::build(Configuration(config, root["main"]));
         init_complete = true;
+        #ifdef USE_TIMER
+        if(print_time){
+            cout << timer->format(4, "Time to construct object tree from configuration: %w sec real, %t sec CPU") << endl;
+        }
+        #endif
     }
     catch (SettingNotFoundException & ex) {
-        theta::cerr << "Error: the required setting " << ex.getPath() << " was not found." << endl;
+        cerr << "Error: the required setting " << ex.getPath() << " was not found." << endl;
     } catch (SettingTypeException & ex) {
-        theta::cerr << "Error: the setting " << ex.getPath() << " has the wrong type." << endl;
-    } catch (SettingException & ex) {
-        theta::cerr << "Error while processing the configuration at " << ex.getPath() << endl;
+        cerr << "Error: the setting " << ex.getPath() << " has the wrong type." << endl;
     } catch (Exception & e) {
-        theta::cerr << "Error: " << e.message << endl;
+        cerr << "Error: " << e.message << endl;
     }
     if(not init_complete){
         main.reset();
@@ -169,11 +208,11 @@ boost::shared_ptr<Main> build_main(string cfg_filename, const string & theta_dir
         vector<string> unused;
         rec->get_unused(unused, cfg.getRoot());
         if (unused.size() > 0) {
-            theta::cout << "WARNING: following setting paths in the configuration file have not been used: " << endl;
+            cout << "WARNING: following setting paths in the configuration file have not been used: " << endl;
             for (size_t i = 0; i < unused.size(); ++i) {
-                theta::cout << "  " << (i+1) << ". " << unused[i] << endl;
+                cout << "  " << (i+1) << ". " << unused[i] << endl;
             }
-            theta::cout << "Comment out these settings to get rid of this message." << endl;
+            cout << "Comment out these settings to get rid of this message." << endl;
         }
     }
     return main;
@@ -181,13 +220,11 @@ boost::shared_ptr<Main> build_main(string cfg_filename, const string & theta_dir
 
 
 int main(int argc, char** argv) {
-    bool redirect_io;
-    
     po::options_description desc("Options");
     desc.add_options()("help,h", "show help message")
     ("quiet,q", "quiet mode (suppress progress message)")
-    ("nowarn", "do not warn about unused configuration file statements")
-    ("redirect-io", po::value<bool>(&redirect_io)->default_value(true), "redirect stio/stderr of libraries to /dev/null");
+    ("print-time", "print some time information to stdout")
+    ("nowarn", "do not warn about unused configuration file statements");
 
     po::options_description hidden("Hidden options");
 
@@ -205,39 +242,38 @@ int main(int argc, char** argv) {
         po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(p).run(), cmdline_vars);
     }
     catch(std::exception & ex){
-        theta::cerr << "Error parsing command line options: " << ex.what() << endl;
+        cerr << "Error parsing command line options: " << ex.what() << endl;
         return 1;
     }
     po::notify(cmdline_vars);
     
     if(cmdline_vars.count("help")){
-        theta::cout << desc << endl;
+        cout << desc << endl;
         return 0;
     }
     
     if(cmdline_vars.count("cfg-file")==0){
-        theta::cerr << "Error: you have to specify a configuration file" << endl;
+        cerr << "Error: you have to specify a configuration file" << endl;
         return 1;
     }
-    
-    if(redirect_io) theta::redirect_stdio();
     
     vector<string> cfg_filenames = cmdline_vars["cfg-file"].as<vector<string> >();
     bool quiet = cmdline_vars.count("quiet");
     bool nowarn = cmdline_vars.count("nowarn");
+    bool print_time = cmdline_vars.count("print-time");
     
     //determine theta_dir (for config file replacements with $THETA_DIR
-    string theta_dir = get_theta_dir(argv);
+    fill_theta_dir(argv);
     if(theta_dir==""){
-        theta::cout << "WARNING: could not determine THETA_DIR, leaving empty" << endl;
+        cerr << "WARNING: could not determine theta_dir, leaving empty" << endl;
     }
     
     try {
         for(size_t i=0; i<cfg_filenames.size(); ++i){
             if(!quiet and cfg_filenames.size() > 1){
-                theta::cout << "processing file " << (i+1) << " of " << cfg_filenames.size() << ", " << cfg_filenames[i] << endl;
+                cout << "processing file " << (i+1) << " of " << cfg_filenames.size() << ", " << cfg_filenames[i] << endl;
             }
-            boost::shared_ptr<Main> main = build_main(cfg_filenames[i], theta_dir, nowarn);
+            boost::shared_ptr<Main> main = build_main(cfg_filenames[i], nowarn, print_time);
             if(!main) return 1;
             if(not quiet){
                 boost::shared_ptr<ProgressListener> l(new MyProgressListener());
@@ -247,25 +283,39 @@ int main(int argc, char** argv) {
             //install signal handler now, not much earlier. Otherwise, plugin loading in build_run()
             // might change it ...
             install_sigint_handler();
+            #ifdef USE_TIMER
+            std::auto_ptr<boost::timer::cpu_timer> timer;
+            if(print_time){
+                timer.reset(new boost::timer::cpu_timer());
+            }
+            #endif
             main->run();
+            #ifdef USE_TIMER
+            if(print_time){
+                cout << timer->format(4, "Time to run main:                                 %w sec real, %t sec CPU") << endl;
+            }
+            #endif
             if(stop_execution) break;
         }
     }
     catch(ExitException & ex){
-       theta::cerr << "Exit requested: " << ex.message << endl;
+       cerr << "Exit requested: " << ex.message << endl;
        return 1;
     }
     catch (Exception & ex) {
-        theta::cerr << "An error ocurred in Run::run: " << ex.what() << endl;
+        cerr << "An error ocurred in Main::run: " << ex.what() << endl;
         return 1;
     }
-    catch(FatalException & ex){
-        theta::cerr << "A fatal error ocurred in Run::run: " << ex.message << endl;
+    catch(logic_error & ex){
+        cerr << "A logic error ocurred in Main::run: " << ex.what() << endl;
+        return 1;
+    }
+    catch(exception & ex){
+        cerr << "An unspecified exception ocurred in Main::run: " << ex.what() << endl;
         return 1;
     }
     if(theta::stop_execution){
-        theta::cout << "(exiting on SIGINT)" << endl;
+        cout << "(exiting on SIGINT)" << endl;
     }
     return 0;
 }
-

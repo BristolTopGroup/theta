@@ -2,10 +2,7 @@
 #define PLUGINS_SECANT_HPP
 
 #include "interface/exception.hpp"
-
-
-#include <iomanip>
-using namespace std;
+#include <cmath>
 
 /** \brief The secant method to find the root of a one-dimensional function
  *
@@ -21,23 +18,24 @@ using namespace std;
  * To use only one criterion, set the other value to 0.0 to prevent it from being fulfilled.
  *
  * Note that the function values at x_low and x_high must have different sign. Otherwise,
- * an InvalidArgumentException will be thrown.
- * All x and function values mus be finite.
+ * an std::invalid_argument will be thrown.
+ * All x and function values must be finite.
  */
 template<typename T>
-double secant(double x_low, double x_high, double x_accuracy, double f_x_low, double f_x_high, double f_accuracy, const T & function){
-    assert(isfinite(x_low) && isfinite(x_high));
-    assert(x_low <= x_high);
-    assert(isfinite(f_x_low) && isfinite(f_x_high));
-    if(f_x_low * f_x_high >= 0) throw theta::InvalidArgumentException("secant: function values have the same sign!");
-    if(fabs(f_x_low) <= f_accuracy) return x_low;
-    if(fabs(f_x_high) <= f_accuracy) return x_high;
+double secant(double x_low, double x_high, double x_accuracy, double f_x_low, double f_x_high, double f_accuracy, const T & function, int limit_depth = 500){
+    theta_assert(std::isfinite(x_low) && std::isfinite(x_high));
+    theta_assert(x_low <= x_high);
+    theta_assert(std::isfinite(f_x_low) && std::isfinite(f_x_high));
+    theta_assert(limit_depth > 0);
+    if(f_x_low * f_x_high >= 0) throw std::invalid_argument("secant: function values have the same sign!");
+    if(std::fabs(f_x_low) <= f_accuracy) return x_low;
+    if(std::fabs(f_x_high) <= f_accuracy) return x_high;
 
     const double old_interval_length = x_high - x_low;    
     //calculate intersection point for secant method:
     double x_intersect = x_low - (x_high - x_low) / (f_x_high - f_x_low) * f_x_low;
-    assert(x_intersect >= x_low);
-    assert(x_intersect <= x_high);
+    theta_assert(x_intersect >= x_low);
+    theta_assert(x_intersect <= x_high);
     if(old_interval_length < x_accuracy){
         return x_intersect;
     }
@@ -51,10 +49,10 @@ double secant(double x_low, double x_high, double x_accuracy, double f_x_low, do
         f_mult = f_x_low * f_x_intersect;
     }
     if(f_mult < 0){
-        return secant(x_low, x_intersect, x_accuracy, f_x_low, f_x_intersect, f_accuracy, function);
+        return secant(x_low, x_intersect, x_accuracy, f_x_low, f_x_intersect, f_accuracy, function, limit_depth - 1);
     }
     else if(f_mult > 0.0){
-        return secant(x_intersect, x_high, x_accuracy, f_x_intersect, f_x_high, f_accuracy, function);
+        return secant(x_intersect, x_high, x_accuracy, f_x_intersect, f_x_high, f_accuracy, function, limit_depth - 1);
     }
     //it can actually happen that we have 0.0. In this case, return the x value for
     // the smallest absolute function value:

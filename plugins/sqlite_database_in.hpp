@@ -18,7 +18,7 @@
  *  input_database = {
  *     type = "sqlite_database_in";
  *     filename = "in.db";
- *     //optionally: filenames = ("in1.db", "in2.db", "in3.db");
+ *     //alternatively: filenames = ("in1.db", "in2.db", "in3.db");
  *  };
  * \endcode
  *
@@ -27,21 +27,25 @@
 class sqlite_database_in: public theta::DatabaseInput{
 public:
     /// Constructor used by the plugin system to build an instance given the configuration
-    sqlite_database_in(const theta::plugin::Configuration & cfg);
+    sqlite_database_in(const theta::Configuration & cfg);
     
     ~sqlite_database_in();
     
     virtual std::auto_ptr<ResultIterator> query(const std::string & table_name, const std::vector<std::string> & column_names);
-    virtual size_t n_rows(const std::string & table_name);
+    virtual std::vector<std::string> get_all_tables();
+    virtual std::vector<std::pair<std::string, theta::data_type> > get_all_columns(const std::string & table_name);
     
 private:
    class SqliteResultIterator: public DatabaseInput::ResultIterator{
    private:
        sqlite3 * db;
        sqlite3_stmt * statement;
+       std::string sql_statement; // for error messages / debugging
        bool has_data_;
    public:
-       SqliteResultIterator(sqlite3_stmt * st, sqlite3 * db_);
+       SqliteResultIterator(const std::string & sql_statement_, sqlite3_stmt * st, sqlite3 * db_): db(db_), statement(st), sql_statement(sql_statement_){
+           operator++();
+       }
        ~SqliteResultIterator(){
            sqlite3_finalize(statement);
        }
@@ -52,7 +56,7 @@ private:
        double get_double(size_t icol);
        int get_int(size_t icol);
        std::string get_string(size_t icol);
-       theta::Histogram get_histogram(size_t icol);
+       theta::Histogram1D get_histogram(size_t icol);
    };
 
    sqlite3 * db;

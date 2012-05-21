@@ -21,7 +21,7 @@
  * For getting started with %theta quickly, make sure to install sqlite3, boost, root and cmake on your machine
  * and run
  * \code
- *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/trunk theta
+ *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/testing theta
  *  cd theta
  *  # Option 1: you have cmake
  *  mkdir build
@@ -51,6 +51,8 @@
  *   <li>\subpage cmd_interface "Command line interface" described the command line tools of %theta, namely the \c theta
  *     program and the \c merge program.</li>
  *   <li>\subpage extend "Extending theta" describes how to extend %theta using the plugin system</li>
+ *   <li>\subpage theta_auto_intro "Introduction to theta-auto" gives an introduction to python scripts which can be used to automatically
+ *     generate %theta configuration files and analyze %theta output.</li>
  * </ol>
  *
  * Bug tracking and feature requests are managed in the <a href="https://ekptrac.physik.uni-karlsruhe.de/trac/theta">theta trac</a>.
@@ -155,10 +157,16 @@
  *
  * \section obtaining Obtaining theta
  *
- * %theta is available as source-code distribution via subversion only. The latest version can be obtained by running
+ * %theta is available as source-code distribution via subversion only. The latest stable version can be obtained by running
  * <pre>
- * svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/april-2010 theta
+ * svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/stable theta
  * </pre>
+ * there is also a testing branch available:
+ * <pre>
+ * svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/testing theta
+ * </pre>
+ * However, this is not guaranteed and well tested as the stable tag.
+ *
  * You can use CMSSW software to provide the necessary dependencies. If you want to do that, make sure
  * to issue \c cmsenv before you build %theta.
  *
@@ -199,9 +207,9 @@
  * only applies to cmake-type builds.
  *
  * For cmake, these options are switched on or off by passing the \c cmake command
- * a define parameter. For example, to build with experimental postgresql support, you would issue
+ * a define parameter. For example, to build without amdlibm, you would issue
  * <pre>
- *   cmake .. -Dpsql:bool=ON
+ *   cmake .. -Damdlibm:bool=OFF
  * </pre>
  * You can pass more than one \c -D option to cmake at a time. The \c -D option always specifies the parameter name,
  * the type of the parameter (always bool here) and the value (use \c ON and \c OFF for bools).
@@ -209,17 +217,13 @@
  *
  * The following options are currently supported (roughly ordered by probability that you want to change these):
  * <ul>
- *   <li>\c psql (default: OFF) If enabled, will build experimental postgresql plugin (to be used as output_database setting at theta::Run)
- *     which allows to write the output to a central postgresql server concurrently by many workers.</li>
  *   <li>\c release (default: ON) If enabled, will optimize for a release built with high optimization
  *      and without debug information. If disabled, debug information will be included; optimizations are still enabled to some level.</li>
  *   <li>\c optiontest (default: OFF) If enabled, will build test executables and shared objects.</li>
  *   <li>\c coverage (default: OFF) If enabled, switched off optimization and adds compiler options to for coverage tests
  *     with gcov. If enabled, the \c release option is ignored.</li>
- *   <li>\c crlibm (default: ON) If enabled, uses the logarithm function (included in %theta)
- *         from the <a href="http://lipforge.ens-lyon.fr/www/crlibm/">crlibm project</a> which is often faster than the
- *         standard log function.</li>
- *   <li>\c sse (default: OFF) If enabled, use SSE optimization for vector operations in the Histogram class. </li>
+ *   <li>\c amdlibm (default: ON) If enabled, uses some math functions from amdlibm (included in %theta)
+ *         instead of the standard libm.</li>
  * </ul>
  *
  * \subsection with_cmssw With CMSSW
@@ -233,13 +237,14 @@
  *  cd CMSSW_3_8_4/src
  *  cmsenv
  *  cd ../..
- *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/trunk theta
+ *  svn co https://ekptrac.physik.uni-karlsruhe.de/public/theta/tags/{stable|testing} theta
  *  cd theta
  *  make
  *  bin/theta examples/gaussoverflat.cfg
  * </pre>
  *
  * <tt>CMSSW_3_8_4</tt> is an example, you can pick another version. It is recommended to pick a recent one, and -- if you can -- a 64-bit version.
+ *
  * Reports about failing builds (and of course, patches for these), are always welcome.
  *
  * \section platforms Supported Platforms / Libraries
@@ -248,9 +253,14 @@
  * boost or sqlite, adapt "Makefile.options" to make the installation path known to %theta and set the
  * LD_LIBRARY_PATH environment variable.
  *
+ * Successful builds on Mac OS X have been reported, last time 20th April 2011.
+ * However, I cannot guarantee future versions will work as I do not
+ * have a test setup for this architecture.
+ *
  * It is regularly tested with
  * <ul>
- *   <li>Ubuntu Lucid (10.04), with boost and sqlite libraries shipped, and root 5.28.00.</li>
+ *   <li>Ubuntu Lucid (10.04), which comes with boost 1.42. The root version used is 5.28.00.</li>
+ *   <li>same as before, but with a more recent boost (1.46.1)</li>
  *   <li>Scientific Linux CERN (SLC) 5.5. In this case, SLC-shipped version of boost is too old (1.33.1, released in 2006).
  *     Either setup CMSSW to use root/boost/sqlite from there (tested with CMSSW_3_8_7 on slc5_ia32_gcc434) or install boost, root and
  *     and sqlite manually.</li>
@@ -457,7 +467,8 @@
  * to construct an object the corresponding type. The string given in the "type=..." setting is the C++ class
  * name used. The configuration is documented in the respective class documentation.
  *
- * To find out about the available plugins, look at the class hierarchy (link above in the main menu). The
+ * To find out about the available plugins, look at the <a href="hierarchy.html">class hierarchy</a>
+ * (use "Classes", then "Class Hierarchy" in the above menu). The
  * abstract base classes the plugins are derived from are:
  * <ul>
  * <li>\link theta::HistogramFunction HistogramFunction\endlink: used in the "histogram=..."-setting in the observables
@@ -486,7 +497,7 @@
   * To define and use your own plugin, you have to:
   * <ol>
   * <li>Define a new class which is derived from a plugin-class and implement all its pure virtual methods and a constructor
-  *     taking a \link theta::plugin::Configuration Configuration \endlink object as the only argument.</li>
+  *     taking a \link theta::Configuration Configuration \endlink object as the only argument.</li>
   * <li>In a .cpp-file, call the REGISTER_PLUGIN(yourclass) macro</li>
   * <li>Make sure to compile and link this definition to a shared-object file.</li>
   * <li>In the configuration file, make sure to load the shared-object file as plugin.
@@ -505,7 +516,7 @@
   *
   * The first thing to do is to write down the documentation, of how this plugin will be configured. Note that
   * the setting group you speficy has to provide enough information to completely specify the instance to create:
-  * the constructor will <em>only</em> have accedd to the \link theta::plugin::Configuration Configuration \endlink object which essentially
+  * the constructor will <em>only</em> have accedd to the \link theta::Configuration Configuration \endlink object which essentially
   * contains the settings from the configuration file and the defined observables and parameters, but not more.
   *
   * The setting group should look like this:

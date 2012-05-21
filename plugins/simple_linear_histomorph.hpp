@@ -6,6 +6,8 @@
 
 
 /** \brief A HistogramFunction which interpolates a "zero" Histogram and several "distorted" Histograms with a simple linear ansatz.
+ * 
+ * Consider using cubiclinear_histomorph instead which is more flexible.
  *
  * The configuration is very similar to \c interpolating_histo :
  * \code
@@ -42,33 +44,24 @@ public:
     
     /** \brief Constructor used by the plugin system to build an instance from settings in a configuration file
      */
-    simple_linear_histomorph(const theta::plugin::Configuration & ctx);
-        
-    /** Returns the interpolated Histogram as documented in the class documentation.
-     * throws a NotFoundException if a parameter is missing.
-     */
-    virtual const theta::Histogram & operator()(const theta::ParValues & values) const;
-
-    /// Return a Histogram of the same dimenions as the one returned by operator()
-    virtual theta::Histogram get_histogram_dimensions() const{
-        return h0;
-    }
-
+    simple_linear_histomorph(const theta::Configuration & ctx);
+    
+    
+    virtual void apply_functor(const theta::functor<theta::Histogram1DWithUncertainties> & f, const theta::ParValues & values) const;
+    virtual void apply_functor(const theta::functor<theta::Histogram1D> & f, const theta::ParValues & values) const;
+    virtual void get_histogram_dimensions(size_t & nbins, double & xmin, double & xmax) const;
 
 private:
-    /** \brief Build a (constant) Histogram from a Setting block.
-    *
-    * Will throw an InvalidArgumentException if the Histogram is not constant.
-    */
-    static theta::Histogram getConstantHistogram(const theta::plugin::Configuration & ctx, theta::SettingWrapper s);
+    void fill_h(const theta::ParValues & values) const;
     
-    theta::Histogram h0;
-    std::vector<theta::Histogram> hplus_diff; // hplus_diff[i] + h0 yields hplus
-    std::vector<theta::Histogram> hminus_diff;
+    theta::Histogram1D h0;
+    std::vector<theta::Histogram1D> hplus_diff; // hplus_diff[i] + h0 yields hplus
+    std::vector<theta::Histogram1D> hminus_diff;
     //the interpolation parameters used to interpolate between hplus and hminus.
     std::vector<theta::ParId> vid;
     //the Histogram returned by operator(). Defined as mutable to allow operator() to be const.
-    mutable theta::Histogram h;
+    mutable theta::Histogram1D h;
+    mutable theta::Histogram1DWithUncertainties h_wu;
 };
 
 #endif

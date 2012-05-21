@@ -5,7 +5,9 @@
 #include "interface/plugin.hpp"
 
 
-/** \brief A HistogramFunction which interpolates a "zero" Histogram and several "distorted" Histograms as generic method to treat systematic uncertainties.
+/** \brief Linear histogram morphing handling rate and shapes separate.
+ * 
+ * This class is for compatibility checks with other tools only (notably the single-top CDF toos). Consider using cubiclinear_histomorph instead which is more flexible.
  *
  * The configuration block is something like (mass is some observable previously defined;
  * s, delta1, delta2 are parameters):
@@ -44,30 +46,21 @@ public:
     
     /** \brief Constructor used by the plugin system to build an instance from settings in a configuration file
      */
-    linear_histo_morph(const theta::plugin::Configuration & ctx);
-        
-    /** Returns the interpolated Histogram as documented in the class documentation.
-     * throws a NotFoundException if a parameter is missing.
-     */
-    virtual const theta::Histogram & operator()(const theta::ParValues & values) const;
-
-    /// Return a Histogram of the same dimenions as the one returned by operator()
-    virtual theta::Histogram get_histogram_dimensions() const{
-        return h;
-    }
-
-private:
-    /** \brief Build a (constant) Histogram from a Setting block.
-    *
-    * Will throw an InvalidArgumentException if the Histogram is not constant.
-    */
-    static theta::Histogram getConstantHistogram(const theta::plugin::Configuration & ctx, theta::SettingWrapper s);
+    linear_histo_morph(const theta::Configuration & ctx);
     
-    theta::Histogram h0;
+    
+    virtual void apply_functor(const theta::functor<theta::Histogram1DWithUncertainties> & f, const theta::ParValues & values) const;
+    virtual void apply_functor(const theta::functor<theta::Histogram1D> & f, const theta::ParValues & values) const;
+    virtual void get_histogram_dimensions(size_t & nbins, double & xmin, double & xmax) const;
+    
+private:
+    void fill_h(const theta::ParValues & values) const;
+    
+    theta::Histogram1D h0;
     double h0exp;
     
-    std::vector<theta::Histogram> kappa_plus;
-    std::vector<theta::Histogram> kappa_minus;
+    std::vector<theta::Histogram1D> kappa_plus;
+    std::vector<theta::Histogram1D> kappa_minus;
     std::vector<double> plus_relexp;
     std::vector<double> minus_relexp;
     
@@ -75,7 +68,8 @@ private:
     std::vector<theta::ParId> parameters;
     
     //the Histogram returned by operator(). Defined as mutable to allow operator() to be const.
-    mutable theta::Histogram h;
+    mutable theta::Histogram1D h;
+    mutable theta::Histogram1DWithUncertainties h_wu;
 };
 
 #endif

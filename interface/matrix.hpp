@@ -3,12 +3,13 @@
 
 #include <vector>
 #include <cstddef>
+#include "interface/exception.hpp"
 
 namespace theta {
 
 /** \brief A matrix of doubles
  *
- * Beyond mere data, this matrix class provides algortihms commonly required for
+ * Beyond mere data, this matrix class provides algorithms commonly required for
  * positive definite matrices: cholesky decomposition and matrix inversion based
  * on cholesky decomposition. A usage example for these transformation is the random number generation
  * of a multivariate normal distribution with a non-trivial covariance matrix.
@@ -37,7 +38,7 @@ public:
 
     /** \brief Detemines the cholesky decomposition of this matrix in-place.
      * 
-     * Throws a MathException if this Matrix is not square, not symmetric, or not positive definite.
+     * Throws a range_error if this Matrix is not square, not symmetric, or not positive definite.
      */
     void cholesky_decomposition();
 
@@ -66,13 +67,37 @@ public:
     double operator()(size_t row, size_t col) const {
         return elements[cols * row + col];
     }
+    
+    /** \brief Add other matrix to this
+     *
+     * \c other must have the same number of rows and columns. Otherwise,
+     * an invalid_argument exception is thrown.
+     */
+    const Matrix & operator+=(const Matrix & other){
+        if(rows!=other.rows || cols!=other.cols) throw std::invalid_argument("Matrix::operator+= called for matrices of different dimensions");
+        for(size_t i=0; i<elements.size(); ++i){
+            elements[i] += other.elements[i];
+        }
+        return *this;
+    }
+    
+    /** \brief Add two matrices
+     *
+     * \c other must have the same number of rows and columns. Otherwise,
+     * an invalid_argument exception is thrown.
+     */
+    Matrix operator+(const Matrix & other) const{
+        Matrix result(*this);
+        result += other;
+        return result;
+    }
 
     /** \brief The number of rows.
      * 
      * \return The number of rows this Matrix was constructed with.
      * \sa getCols
      */
-    size_t getRows() const {
+    size_t get_n_rows() const {
         return rows;
     }
 
@@ -81,7 +106,7 @@ public:
      * \return The number of columns this Matrix was constructed with.
      * \sa getRows
      */
-    size_t getCols() const {
+    size_t get_n_cols() const {
         return cols;
     }
 };

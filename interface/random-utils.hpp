@@ -1,20 +1,22 @@
 #ifndef RANDOM_UTILS_HPP
 #define RANDOM_UTILS_HPP
 
-#include "interface/plugin.hpp"
-#include "interface/random.hpp"
+#include "interface/decls.hpp"
 #include <string>
+#include <memory>
 
 namespace theta{
 
 /// \brief Base class for plugins using a random number generator.
 class RandomConsumer{
+public:
+   virtual ~RandomConsumer();
 protected:
    /** \brief Constructor to be used by derived classes
     *
-    * Will save the random seed in the 'rndinfo' table of the Run cfg.run, if it is set.
+    * Will save the random seed in the RndInfoTable of the cfg.pm, if this is set.
     */
-   RandomConsumer(const theta::plugin::Configuration & cfg, const std::string & name);
+   RandomConsumer(const theta::Configuration & cfg, const std::string & name);
    
    /// random seed used
    int seed;
@@ -24,15 +26,23 @@ protected:
 };
 
 
-/** \brief Dice a poisson for each bin of a given Histogram
+/** \brief Replace data in the supplied DoubleVector by a Poisson value
  *
- * Replaces the bin contents of the given Histogram \c h with a random variable drawn from a Poisson distribution.
- * As mean, the original bin content is used.
+ * Replaces each data value by a Poisson with mean equal to the original value.
  */
-void randomize_poisson(Histogram & h, Random & rnd);
+void randomize_poisson(DoubleVector & d, Random & rnd);
+
+/** \brief Smear the value in each bin by a Gaussian within its uncertainty
+ * 
+ * The returned Histogram1D consists of Gaussian random values drawn according to the values and uncertainties in histo.
+ * The values are drawn according to truncated Gaussians, i.e., values are drawn until the value is >=0, unless the value itself
+ * is < 0.
+ */
+Histogram1D randomize_gauss(const Histogram1DWithUncertainties & histo, Random & rnd);
 
 
 }
 
 
 #endif
+

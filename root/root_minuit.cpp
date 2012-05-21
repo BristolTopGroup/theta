@@ -1,7 +1,10 @@
 #include "root/root_minuit.hpp"
+#include "interface/plugin.hpp"
+#include "interface/phys.hpp"
+
+#include "TError.h"
 
 using namespace theta;
-using namespace theta::plugin;
 using namespace std;
 
 // function adapter to be used by root minuit and
@@ -17,7 +20,7 @@ public:
         return ndim;
     }
 
-    RootMinuitFunctionAdapter(const Function & f_): f(f_), ndim(f.getnpar()){
+    RootMinuitFunctionAdapter(const Function & f_): f(f_), ndim(f.get_parameters().size()){
     }
 
     virtual double DoEval(const double * x) const{
@@ -28,12 +31,7 @@ public:
         }
         double result = f(x);
         if(isinf(result)){
-           cerr << "Error in function to minimize: result is infinity!" << endl;
-           for(size_t i=0; i<ndim; ++i){
-             cerr << x[i] << " ";
-           }
-           cerr << endl;
-           throw FatalException("inf");
+           throw MinimizationException("function to minimize was infinity during minimization");
         }
         return result;
     }
@@ -43,13 +41,6 @@ private:
     const size_t ndim;
 };
 
-void root_minuit::set_printlevel(int p){
-    min->SetPrintLevel(p);
-}
-
-void root_minuit::set_tolerance(double tol){
-    tolerance = tol;
-}
 
 MinimizationResult root_minuit::minimize(const theta::Function & f, const theta::ParValues & start,
         const theta::ParValues & steps, const std::map<theta::ParId, std::pair<double, double> > & ranges){
@@ -57,19 +48,24 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
     // unsigned int ROOT::Minuit2::MnUserTransformation::IntOfExt(unsigned int) const: Assertion `!fParameters[ext].IsFixed()' failed.
     // when calling SetFixedVariable(...).
     //Using a "new" one every time seems very wastefull, but it seems to work ...
-    min.reset(new ROOT::Minuit2::Minuit2Minimizer(type));
+    std::auto_ptr<ROOT::Minuit2::Minuit2Minimizer> min(new ROOT::Minuit2::Minuit2Minimizer(type));
+    min->SetPrintLevel(printlevel);
+    if(max_function_calls > 0) min->SetMaxFunctionCalls(max_function_calls);
+    if(max_iterations > 0) min->SetMaxIterations(max_iterations);
     MinimizationResult result;
 
     //1. setup parameters, limits and initial step sizes
-    ParIds parameters = f.getParameters();
+    ParIds parameters = f.get_parameters();
     int ivar=0;
     for(ParIds::const_iterator it=parameters.begin(); it!=parameters.end(); ++it, ++ivar){
         std::map<theta::ParId, std::pair<double, double> >::const_iterator r_it = ranges.find(*it);
-        if(r_it==ranges.end()) throw InvalidArgumentException("root_minuit::minimize: range not set for a parameter");
+        if(r_it==ranges.end()) throw invalid_argument("root_minuit::minimize: range not set for a parameter");
         pair<double, double> range = r_it->second;
         double def = start.get(*it);
         double step = steps.get(*it);
-        string name = vm->getName(*it);
+        stringstream ss;
+        ss << "par" << ivar;
+        string name = ss.str();
         //use not the ranges directly, but a somewhat more narrow range (one permille of the respective border)
         // in order to avoid that the numerical evaluation of the numerical derivative at the boundaries pass these
         // boundaries ...
@@ -104,17 +100,23 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
     min->SetFunction(minuit_f);
 
     //3. setup tolerance
-    if(!isnan(tolerance))  min->SetTolerance(tolerance);
+    min->SetTolerance(tolerance);
     //3.a. error definition. Unfortunately, SetErrorDef in ROOT is not documented, so I had to guess.
     // 0.5 seems to work somehow.
     min->SetErrorDef(0.5);
     
-    //4. minimize. In case of failure, try harder
+    //4. minimize. In case of failure, try harder. Discard all output generated in min->Minimize.
     bool success;
-    for(int i=1; i<=3; i++){
+    {
+        theta::utils::discard_output d_o(true);
         success = min->Minimize();
-        if(success) break;
-    }
+        if(!success){
+            for(int i=1; i<=n_retries; i++){
+                success = min->Minimize();
+                if(success) break;
+            }
+        }
+    } // d_o is destroyed, output resumed.
 
     //5. do error handling
     if(not success){
@@ -171,11 +173,20 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
     return result;
 }
 
-root_minuit::root_minuit(const Configuration & cfg): Minimizer(cfg), tolerance(NAN){
-       min.reset(new ROOT::Minuit2::Minuit2Minimizer(type));
-       int printlevel = 0;
+root_minuit::root_minuit(const Configuration & cfg): tolerance(1e-6), printlevel(0),
+        max_iterations(0), max_function_calls(0), n_retries(2) {
+       gErrorIgnoreLevel = kFatal + 1;
        if(cfg.setting.exists("printlevel")){
            printlevel = cfg.setting["printlevel"];
+       }
+       if(cfg.setting.exists("max_iterations")){
+          max_iterations = cfg.setting["max_iterations"];
+       }
+       if(cfg.setting.exists("max_function_calls")){
+          max_iterations = cfg.setting["max_function_calls"];
+       }
+       if(cfg.setting.exists("n_retries")){
+          n_retries = cfg.setting["n_retries"];
        }
        string method = "migrad";
        if(cfg.setting.exists("method")){
@@ -189,16 +200,13 @@ root_minuit::root_minuit(const Configuration & cfg): Minimizer(cfg), tolerance(N
        }
        else{
            stringstream s;
-           s << "RootMinuit: invalid method '" << method << "' (allowed are only 'migrad' and 'simplex')";
-           throw InvalidArgumentException(s.str());
+           s << "invalid method '" << method << "' (allowed are only 'migrad' and 'simplex')";
+           throw ConfigurationException(s.str());
        }       
-       double tol = NAN;
        if(cfg.setting.exists("tolerance")){
-           tol = cfg.setting["tolerance"];
+           tolerance = cfg.setting["tolerance"];
        }
-       set_printlevel(printlevel);
-       set_tolerance(tol);
    }
 
-
 REGISTER_PLUGIN(root_minuit)
+

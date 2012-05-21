@@ -7,7 +7,6 @@
 
 using namespace theta;
 using namespace std;
-using namespace libconfig;
 
 //the result class for the metropolisHastings routine.
 class MCMCPosteriorRatioResult{
@@ -50,15 +49,16 @@ class MCMCPosteriorRatioResult{
         size_t n_total;
 };
 
+
 void mcmc_posterior_ratio::produce(const theta::Data & data, const theta::Model & model) {
     if(!init){
         try{
-            sqrt_cov_sb = get_sqrt_cov2(*rnd_gen, model, startvalues_sb, s_plus_b, vm);
-            sqrt_cov_b = get_sqrt_cov2(*rnd_gen, model, startvalues_b, b_only, vm);
+            sqrt_cov_sb = get_sqrt_cov2(*rnd_gen, model, startvalues_sb, s_plus_b, additional_nll_term);
+            sqrt_cov_b = get_sqrt_cov2(*rnd_gen, model, startvalues_b, b_only, additional_nll_term);
             init = true;
         }catch(Exception & ex){
             ex.message = "initialization failed: " + ex.message;
-            throw FatalException(ex);
+            throw invalid_argument(ex.message);
         }
     }
     
@@ -77,16 +77,14 @@ void mcmc_posterior_ratio::produce(const theta::Data & data, const theta::Model 
     if(std::isnan(nl_posterior_sb) || std::isnan(nl_posterior_b)){
         throw Exception("average posterior was NAN");
     }
-    products_sink->set_product(*c_nl_posterior_sb, nl_posterior_sb);
-    products_sink->set_product(*c_nl_posterior_b, nl_posterior_b);
+    products_sink->set_product(c_nl_posterior_sb, nl_posterior_sb);
+    products_sink->set_product(c_nl_posterior_b, nl_posterior_b);
 }
 
-mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()), init(false){
+mcmc_posterior_ratio::mcmc_posterior_ratio(const theta::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, get_name()), init(false){
     SettingWrapper s = cfg.setting;
-    vm = cfg.vm;
-    
-    s_plus_b = theta::plugin::PluginManager<Distribution>::instance().build(theta::plugin::Configuration(cfg, s["signal-plus-background-distribution"]));
-    b_only = theta::plugin::PluginManager<Distribution>::instance().build(theta::plugin::Configuration(cfg, s["background-only-distribution"]));    
+    s_plus_b = theta::PluginManager<Distribution>::build(theta::Configuration(cfg, s["signal-plus-background-distribution"]));
+    b_only = theta::PluginManager<Distribution>::build(theta::Configuration(cfg, s["background-only-distribution"]));    
     
     iterations = s["iterations"];
     if(s.exists("burn-in")){

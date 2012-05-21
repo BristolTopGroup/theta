@@ -37,12 +37,12 @@ namespace theta {
  * @param burn_in is the number of Markov-Chain iterations run at the beginning which are <em>not</em> reported to the \c res
  *   object.
  */
-template<class nlltype, class resulttype>
-void metropolisHastings(const nlltype & nllikelihood, resulttype &res, Random & rand,
+template<class resulttype>
+void metropolisHastings(const Function & nllikelihood, resulttype &res, Random & rand,
         const std::vector<double> & startvalues, const Matrix & sqrt_cov, size_t iterations, size_t burn_in) {    
     const size_t npar = startvalues.size();
-    if(npar != sqrt_cov.getRows() || npar!=sqrt_cov.getCols() || npar!=nllikelihood.getnpar() || npar!=res.getnpar())
-    throw InvalidArgumentException("metropolisHastings: dimension/size of arguments mismatch");
+    if(npar != sqrt_cov.get_n_rows() || npar!=sqrt_cov.get_n_cols() || npar!=nllikelihood.get_parameters().size() || npar!=res.getnpar())
+        throw std::invalid_argument("metropolisHastings: dimension/size of arguments mismatch");
     size_t npar_reduced = npar;
     for(size_t i=0; i<npar; i++){
         if(sqrt_cov(i,i)==0) --npar_reduced;
@@ -67,6 +67,9 @@ void metropolisHastings(const nlltype & nllikelihood, resulttype &res, Random & 
     //set the starting point:
     std::copy(startvalues.begin(), startvalues.end(), &x[0]);
     double nll = nllikelihood(x.get());
+    theta_assert(std::isfinite(nll)); // if theta fails here, it means that the likelihood function at the start values was inf or NAN.
+    // One common reason for this is that the model produces a zero prediction in some bin where there is >0 data which should
+    // be avoided by the model (e.g., by filling in some small number in all bins with content zero).
 
     const size_t iter = burn_in + iterations;
     size_t weight = 1;
@@ -115,7 +118,7 @@ void metropolisHastings(const nlltype & nllikelihood, resulttype &res, Random & 
  */
 Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & startvalues,
                     const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,
-                    const boost::shared_ptr<VarIdManager> & vm);
+                    const boost::shared_ptr<theta::Function> & additional_nll_term);
 
 /** \brief Calculate the cholesky decomposition, but allow zero eigenvalues.
  *

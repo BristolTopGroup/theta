@@ -15,9 +15,10 @@
  * or, equvalently, the difference in the negative log-likelihood.
  *
  * Configuration is done with a settings block like:
- * <pre>
+ * \code
  * {
  *  type = "deltanll_intervals";
+ *  name = "intervals";
  *  parameter = "p0";
  *  minimizer = "@myminuit";
  *  clevels = [0.68, 0.95];
@@ -25,13 +26,17 @@
  * }
  *
  * myminuit = {...} //see the minimizer documentation.
- * </pre>
+ * \endcode
  *
  * \c type has always to be "deltanll_intervals" in order to use this producer
+ *  
+ * \c name is a unique producer name of your choice; it is used to construct column names in the output database. It may only contain alphanumeric
+ *    characters (no spaces, special characters, etc.).
  *
  * \c parameter is the name of the parameter for which the interval shall be calculated.
  *
- * \c minimizer is the configuration path to a \link theta::Minimizer Minimizer\endlink definition.
+ * \c minimizer is the configuration path to a \link theta::Minimizer Minimizer\endlink definition. It does
+ *   not need to provide error estimates although error estimates can help to speed up calculation in some cases.
  *
  * \c re-minimize specifies whether or not to search for a minimum of the negative log-likelihood when scanning
  *    through the parameter of interest or to use the parameter values found at the global minimum. See below for details.
@@ -70,11 +75,12 @@ class deltanll_intervals: public theta::Producer{
 public:
 
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    deltanll_intervals(const theta::plugin::Configuration & cfg);
+    deltanll_intervals(const theta::Configuration & cfg);
     virtual void produce(const theta::Data & data, const theta::Model & model);
     
 private:
-    //boost::shared_ptr<theta::VarIdManager> vm;
+    void declare_products();
+    
     theta::ParId pid;
     std::vector<double> clevels;
     bool re_minimize;
@@ -88,9 +94,9 @@ private:
     std::map<theta::ParId, std::pair<double, double> > ranges;
 
     //table columns:
-    boost::ptr_vector<theta::Column> lower_columns;
-    boost::ptr_vector<theta::Column> upper_columns;
-    std::auto_ptr<theta::Column> c_maxl;
+    std::vector<theta::Column> lower_columns;
+    std::vector<theta::Column> upper_columns;
+    theta::Column c_maxl;
 };
 
 #endif

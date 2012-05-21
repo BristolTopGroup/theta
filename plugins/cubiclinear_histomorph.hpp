@@ -5,7 +5,12 @@
 #include "interface/plugin.hpp"
 
 
-/** \brief A HistogramFunction which interpolates a "zero" Histogram and several "distorted" Histograms with a cubic spline and extrapolates linearly
+/** \brief A HistogramFunction which interpolates between a "nominal" Histogram and several shifted Histograms
+ *
+ * Each bin is interpolated independently. Interpolation is done with a cubic spline and extrapolation (beyond the
+ * values of the shifted histograms) is done with a linear function.
+ * 
+ * The uncertainties returned in each bin are the ones of the nominal histogram *only*.
  *
  * The configuration is very similar to \c interpolating_histo :
  * \code
@@ -17,60 +22,76 @@
  *      delta1-minus-histogram = { / * fixed-histogram-specification * / };
  *      delta2-plus-histogram = { / * fixed-histogram-specification * / };
  *      delta2-minus-histogram = { / * fixed-histogram-specification * / };
+ *      //optional settings:
+ *      parameter_factors = (0.5, 1.2);
+ *      normalize_to_nominal = true; // default is false
  *   };
  * \endcode
- * Here, <tt>fixed-histogram-specification</tt> is a Histogram Setting block that returns a Histogram
- * which does not depend on any parameters.
  *
- * No random fluctuations are done: the method \c getRandomFluctuation is not overriden from \link theta::HistogramFunction HistogramFunction \endlink
- * and will therefore return the same values as the usual, non-random, evaluation operator, \c operator().
+ * \c parameters is a list of parameter names used to interpolate between the nominal and the shifted Histograms. For a parameter value of 0.0,
+ *    the nominal histograms is reproduced, for a parameter value of +-1, the "-plus-hitsogram" or "-minus-histogram" are reproduced.
+ *    Therefore, the parameters usually have a Gaussian prior around 0.0 with width 1.0.
  *
- * The bin content of the returned histogram is calculated independently for each bin:
+ * For each parameter given in \c parameters, there must be according "-plus-histogram" and "-minus-histogram" settings.
+ * \c fixed-histogram-specification is a Histogram Setting block that returns a Histogram which does not depend on any parameters.
  *
- * If this calculation leads to a negative bin entry, it is set to zero to avoid unphysical templates.
+ * \c parameter_factors is an optional list of floating point values to multiply the parameter value with before they are used in thye interpolation.
+ *  If given, it must have the same length as the \c parameters list as it refers to these parameters, in the same order. If it is not given,
+ *  it is equivalent to specifying a list of 1.0.
+ *  This setting is useful
+ *  if some shifted histograms actually represent other than +-1sigma shifts. For example, setting a parameter_factor to 0.5 while leaving the
+ *  prior to Gaussian around 0.0 with width 1.0 efectively means that the shifted shapes are the ones corresponding to +-2sigma.
  *
- * If for a parameter, no plus or minus histogram is given, the nominal value will be used, i.e., giving no histogram has the same effect
- * as specifying the nominal one.
+ * If \c normalize_to_nominal is \c true, the histogram after interpolation will be normalized to the nominal histogram. The default (false) is to
+ * interpolate the bin content in each bin and not to change the normalization after the interpolation at all. Setting this parameter to \c true
+ * is useful if one wants to treat the normalization uncertainty not as part of the interpolation but rather seperately by the
+ * coefficienct-function (which can use the same parameter as used here for histogram interpolation). This provides more flexibility in the
+ * handling of the normalization uncertainty.
  *
+ * If this calculation leads to a negative bin entry, it is set to zero to avoid unphysical templates. The uncertainty is not changed in this case.
+ * 
+ * The bin-by-bin uncertainties are the ones of the nominal histogram; the plus and minus histograms are assumed to be known exactly in the calculation
+ * of the interpolation. This means that unless \c normalize_to_nominal is \c true, the bin-by-bin uncertainties are exactly those of the nominal histogram.
  */
-class cubiclinear_histomorph : public theta::HistogramFunction {
+class cubiclinear_histomorph: public theta::HistogramFunction {
 public:
     
     /** \brief Constructor used by the plugin system to build an instance from settings in a configuration file
      */
-    cubiclinear_histomorph(const theta::plugin::Configuration & ctx);
-        
-    /** Returns the interpolated Histogram as documented in the class documentation.
-     * throws a NotFoundException if a parameter is missing.
-     */
-    virtual const theta::Histogram & operator()(const theta::ParValues & values) const;
+    cubiclinear_histomorph(const theta::Configuration & ctx);
     
-    /// Return a Histogram of the same dimenions as the one returned by operator()
-    virtual theta::Histogram get_histogram_dimensions() const{
-       return h0;
-    }
-
-
+    virtual void apply_functor(const theta::functor<theta::Histogram1DWithUncertainties> & f, const theta::ParValues & values) const;
+    virtual void apply_functor(const theta::functor<theta::Histogram1D> & f, const theta::ParValues & values) const;
+    
+    virtual void get_histogram_dimensions(size_t & nbins, double & xmin, double & xmax) const;
+    
 private:
-    /** \brief Build a (constant) Histogram from a Setting block.
-    *
-    * Will throw an InvalidArgumentException if the Histogram is not constant.
-    */
-    static theta::Histogram getConstantHistogram(const theta::plugin::Configuration & ctx, theta::SettingWrapper s);
+    // add the morph terms to the "nominal" histogram t.
+    // make this a template so we can re-use code for bothe the version with and without uncertainties.
+    template<typename HT>
+    void add_morph_terms(HT & t, const theta::ParValues & values) const;
     
-    theta::Histogram h0;
-    std::vector<theta::Histogram> hplus_diff; // hplus_diff[i] + h0 yields hplus
-    std::vector<theta::Histogram> hminus_diff;
+    theta::Histogram1DWithUncertainties h0_wu;
+    theta::Histogram1D h0;
+    double h0_sum;
     
-    //diff and sum are the difference and sum of the hplus_diff and hminus_diff histos
-    std::vector<theta::Histogram> diff;
-    std::vector<theta::Histogram> sum;
     //the interpolation parameters used to interpolate between hplus and hminus.
     std::vector<theta::ParId> vid;
-    //the Histogram returned by operator(). Defined as mutable to allow operator() to be const.
-    mutable theta::Histogram h;
+    std::vector<theta::Histogram1D> hplus_diff; // hplus_diff[i] + h0 yields hplus
+    std::vector<theta::Histogram1D> hminus_diff;
+    
+    //diff and sum are the difference and sum of the hplus_diff and hminus_diff histos
+    std::vector<theta::Histogram1D> diff;
+    std::vector<theta::Histogram1D> sum;
+    
+    std::vector<double> parameter_factors;
+    bool normalize_to_nominal;
+    
     //intermediate histogram for operator()
-    mutable theta::Histogram diff_total;
+    mutable theta::Histogram1D diff_total;
+    mutable theta::Histogram1DWithUncertainties h_wu;
+    mutable theta::Histogram1D h;
 };
 
 #endif
+

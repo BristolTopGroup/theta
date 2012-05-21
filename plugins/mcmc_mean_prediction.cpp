@@ -9,14 +9,16 @@
 
 using namespace theta;
 using namespace std;
-using namespace libconfig;
 
 //the result class for the metropolisHastings routine.
 class MCMCMeanPredictionResult{
     public:
-        MCMCMeanPredictionResult(const Model & model_, const ObsIds & observables, size_t npar_): model(model_), npar(npar_), obs_ids(observables), n(0){
-            par_ids = model.getParameters();
-            assert(par_ids.size() == npar);
+        MCMCMeanPredictionResult(const Model & model_, const Function * additional_nll_term, const ObsIds & observables, size_t npar_): model(model_), npar(npar_), obs_ids(observables), n(0){
+            par_ids = model.get_parameters();
+            if(additional_nll_term){
+                par_ids.insert_all(additional_nll_term->get_parameters());
+            }
+            theta_assert(par_ids.size() == npar);
             nll_min = std::numeric_limits<double>::infinity();
         }
         
@@ -29,19 +31,20 @@ class MCMCMeanPredictionResult{
             n += n_;
             ParValues values(x, par_ids);
             //get the prediction using this values from the model:
-            Data pred;
-            model.get_prediction(pred, values);
+            DataWithUncertainties pred_wu;
+            model.get_prediction(pred_wu, values);
             if(nll < nll_min){
                nll_min = nll;
-               best = pred;
+               best = pred_wu;
             }
             //add the prediction to sum, squaresum. Note
             // That if this is the first time, use "=" instead of "+=".
             for(ObsIds::const_iterator it=obs_ids.begin(); it!=obs_ids.end(); ++it){
-               Histogram & h_pred = pred[*it];
+                //TODO: can we avoid this copy?
+               Histogram1D h_pred = pred_wu[*it].get_values_histogram();
                h_pred *= n_;
-               Histogram & h_sum = sum[*it];
-               Histogram & h_squaresum = squaresum[*it];
+               Histogram1D & h_sum = sum[*it];
+               Histogram1D & h_squaresum = squaresum[*it];
                if(h_sum.get_nbins()==0){
                    h_sum = h_pred;
                    h_pred *= h_pred;
@@ -57,13 +60,13 @@ class MCMCMeanPredictionResult{
             }
         }
 
-        void get_mean_width(Histogram & mean, Histogram & width, const ObsId & oid) const{
-           const Histogram & h_sum = sum[oid];
-           const Histogram & h_squaresum = squaresum[oid];
+        void get_mean_width(Histogram1D & mean, Histogram1D & width, const ObsId & oid) const{
+           const Histogram1D & h_sum = sum[oid];
+           const Histogram1D & h_squaresum = squaresum[oid];
            mean = h_sum;
            mean *= 1.0 / n;
-           width.reset(h_sum.get_nbins(), h_sum.get_xmin(), h_sum.get_xmax());
-           for(size_t i=0; i<=h_sum.get_nbins()+1; ++i){
+           width = Histogram1D(h_sum.get_nbins(), h_sum.get_xmin(), h_sum.get_xmax());
+           for(size_t i=0; i<h_sum.get_nbins(); ++i){
               double ssum = h_squaresum.get(i);
               double sum = h_sum.get(i);
               double v = 1.0 / (n-1) * (ssum - 1.0 / n * sum * sum);
@@ -71,8 +74,8 @@ class MCMCMeanPredictionResult{
            }
         }
         
-        const Histogram & get_best(const ObsId & oid) const {
-            return best[oid];
+        Histogram1D get_best(const ObsId & oid) const {
+            return best[oid].get_values_histogram();
         }
         
     private:
@@ -86,7 +89,7 @@ class MCMCMeanPredictionResult{
         Data squaresum;
         //information for the "best" point:
         double nll_min;
-        Data best;
+        DataWithUncertainties best;
 };
 
 
@@ -94,22 +97,22 @@ void mcmc_mean_prediction::produce(const Data & data, const Model & model) {
     if(!init){
         try{
             //get the covariance for average data:
-            sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, vm);
+            sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, additional_nll_term);
             init = true;
         }
         catch(Exception & ex){
             ex.message = "initialization failed: " + ex.message;
-            throw FatalException(ex);
+            invalid_argument(ex.message);
         }
     }
     
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
-    MCMCMeanPredictionResult result(model, observables, nll->getnpar());
+    MCMCMeanPredictionResult result(model, additional_nll_term.get(), observables, nll->getnpar());
     metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
     
     size_t i=0;
     for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it, ++i){
-        Histogram mean, width;
+        Histogram1D mean, width;
         result.get_mean_width(mean, width, *it);
         products_sink->set_product(c_mean[i], mean);
         products_sink->set_product(c_width[i], width);
@@ -117,9 +120,18 @@ void mcmc_mean_prediction::produce(const Data & data, const Model & model) {
     }
 }
 
-mcmc_mean_prediction::mcmc_mean_prediction(const theta::plugin::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, getName()),
+
+void mcmc_mean_prediction::declare_products(const boost::shared_ptr<VarIdManager> & vm){
+    for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
+        c_mean.push_back(products_sink->declare_product(*this, vm->get_name(*it) + "_mean", theta::typeHisto));
+        c_width.push_back(products_sink->declare_product(*this, vm->get_name(*it) + "_width", theta::typeHisto));
+        c_best.push_back(products_sink->declare_product(*this, vm->get_name(*it) + "_best", theta::typeHisto));
+    }
+}
+
+mcmc_mean_prediction::mcmc_mean_prediction(const theta::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, get_name()),
         init(false){
-    vm = cfg.vm;
+    boost::shared_ptr<VarIdManager> vm = cfg.pm->get<VarIdManager>();
     SettingWrapper s = cfg.setting;
     
     size_t n = s["observables"].size();
@@ -127,7 +139,7 @@ mcmc_mean_prediction::mcmc_mean_prediction(const theta::plugin::Configuration & 
         throw ConfigurationException("list 'observables' is empty");
     }
     for(size_t i=0; i<n; ++i){
-        observables.insert(vm->getObsId(s["observables"][i]));
+        observables.insert(vm->get_obs_id(s["observables"][i]));
     }
     iterations = s["iterations"];
     if(s.exists("burn-in")){
@@ -136,12 +148,7 @@ mcmc_mean_prediction::mcmc_mean_prediction(const theta::plugin::Configuration & 
     else{
         burn_in = iterations / 10;
     }
-    
-    for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
-        c_mean.push_back(products_sink->declare_product(*this, vm->getName(*it) + "_mean", theta::typeHisto));
-        c_width.push_back(products_sink->declare_product(*this, vm->getName(*it) + "_width", theta::typeHisto));
-        c_best.push_back(products_sink->declare_product(*this, vm->getName(*it) + "_best", theta::typeHisto));
-    }
+    declare_products(vm);
 }
 
 REGISTER_PLUGIN(mcmc_mean_prediction)

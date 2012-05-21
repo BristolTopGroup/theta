@@ -13,7 +13,7 @@ private:
 
 public:
     /// constructor for the plugin system
-    nl_one_over_sqrt(const theta::plugin::Configuration & cfg);
+    nl_one_over_sqrt(const theta::Configuration & cfg);
     /// overloaded evaluation operator of theta::Function
     virtual double operator()(const theta::ParValues & v) const;
 };

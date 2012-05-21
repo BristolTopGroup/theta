@@ -1,4 +1,5 @@
 #include "plugins/vary_one.hpp"
+#include "interface/plugin.hpp"
 
 using namespace std;
 using namespace theta;
@@ -21,15 +22,16 @@ void vary_one::sample(ParValues & result, Random &) const{
           k-= other_values[i].second.size();
        }
     }
-    throw FatalException("logic error in vary_one::sample");
+    theta_assert(false);
 }
 
-vary_one::vary_one(const theta::plugin::Configuration & cfg): next_index(0), n_total(1){
+vary_one::vary_one(const theta::Configuration & cfg): next_index(0), n_total(1){
    size_t n = cfg.setting.size();
+   boost::shared_ptr<VarIdManager> vm = cfg.pm->get<VarIdManager>();
    for(size_t i=0; i<n; ++i){
-       string parname = cfg.setting[i].getName();
+       string parname = cfg.setting[i].get_name();
        if(parname=="type") continue;
-       ParId pid = cfg.vm->getParId(parname);
+       ParId pid = vm->get_par_id(parname);
        par_ids.insert(pid);
        default_values.set(pid, cfg.setting[i]["default"]);
        std::vector<double> values;

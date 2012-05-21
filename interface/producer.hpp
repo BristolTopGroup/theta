@@ -2,15 +2,13 @@
 #define PRODUCER_HPP
 
 #include "interface/decls.hpp"
-#include "interface/plugin.hpp"
-
-#include <vector>
-#include <string>
-#include <sstream>
-
-#include <boost/ptr_container/ptr_vector.hpp>
-#include "interface/plugin.hpp"
+#include "interface/variables.hpp"
 #include "interface/data_type.hpp"
+
+#include <string>
+#include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/utility.hpp>
 
 namespace theta {
 
@@ -20,12 +18,20 @@ namespace theta {
  */
 class ProductsSink: private boost::noncopyable{
 public:
-    virtual std::auto_ptr<Column> declare_product(const ProductsSource & source, const std::string & product_name, const data_type & type) = 0;
+    Column declare_product(const ProductsSource & source, const std::string & product_name, const data_type & type);
+    Column declare_column(const std::string & full_column_name, const data_type & type);
+    const std::map<std::string, std::pair<Column, data_type> > & get_name_to_column_type() const;
+
     virtual void set_product(const Column & c, double d) = 0;
     virtual void set_product(const Column & c, int i) = 0;
     virtual void set_product(const Column & c, const std::string & s) = 0;
-    virtual void set_product(const Column & c, const Histogram & h) = 0;
+    virtual void set_product(const Column & c, const Histogram1D & h) = 0;
     virtual ~ProductsSink(){}
+
+protected:
+    std::map<std::string, std::pair<Column, data_type> > name_to_column_type;
+    // this is to be implemented by subclasses:
+    virtual Column declare_column_impl(const std::string & full_column_name, const data_type & type) = 0;
 };
 
 
@@ -40,12 +46,13 @@ public:
 class ProductsSource{
 public:
     /// Get the name as configured via the configuration file
-    const std::string & getName()const{
-        return name;
-    }
+    const std::string & get_name() const;
+    
 protected:
     /// To be used by derived classes, to fill name and products_sink
-    ProductsSource(const plugin::Configuration & cfg);
+    explicit ProductsSource(const Configuration & cfg);
+    ProductsSource(const std::string & name_, const boost::shared_ptr<ProductsSink> & sink);
+    
     std::string name;
     boost::shared_ptr<ProductsSink> products_sink;
 };
@@ -60,6 +67,9 @@ protected:
  * The former is a distribution for all model parameters to be used for the likelihood function instead
  * of the ones from the model. The latter is a Function to add to the negative log-likelihood such as external
  * constraints or priors which cannot be expressed as parameter distributions.
+ * 
+ * The override-parameter-distribution, if given, must be defined for all parameters the model and the additional-nll-term
+ * depend on.
  */
 class Producer: public ProductsSource{
 public:
@@ -69,7 +79,7 @@ public:
     /** Declare the destructor as virtual, as we expect polymorphic
      *  access to derived classes.
      */
-    virtual ~Producer(){}
+    virtual ~Producer();
     
     /** \brief Run a statistical algorithm on the data and model and write out the results
      *
@@ -82,23 +92,46 @@ public:
      * or \link theta::FatalException \endlink.
      */
     virtual void produce(const Data & data, const Model & model) = 0;
-        
+    
 protected:
     /** \brief Construct from a Configuration instance
      *
      * Parses the settings "add-nllikelihood-functions".
      */
-    Producer(const plugin::Configuration & cfg);
+    Producer(const Configuration & cfg);
     
     /** \brief Get the likelihood for the provided Data and Model, including the setting of \c override-parameter-distribution, if applicable
      * 
-     * Derived classes should always use this method and never construct the NLLIkelihood
-     * directly from a Model instance to ensure consistent treatment of the additional likelihood terms.
+     * Derived classes should always use this method and never construct the NLLikelihood
+     * directly from a Model instance to ensure consistent treatment of the additional likelihood term
+     * and override_parameter_distribution.
      */
     std::auto_ptr<NLLikelihood> get_nllikelihood(const Data & data, const Model & model);
-
+    
     boost::shared_ptr<theta::Distribution> override_parameter_distribution;
     boost::shared_ptr<theta::Function> additional_nll_term;
+};
+
+/** \brief Base class for Producers whose result depend on parameter values
+ *
+ * If a producer depends on the value of certain model parameters, it should inherit from this class
+ * instead of inheriting from Producer directly.
+ *
+ * Derived classes should fill par_ids to indicate which parameters the class depends on (which can also be
+ * an empty set).
+ */
+class ParameterDependentProducer: public Producer{
+public:
+    virtual ~ParameterDependentProducer();
+    virtual void set_parameter_values(const ParValues & values) = 0;
+    const ParIds & get_parameters() const {
+        return par_ids;
+    }
+protected:
+    theta::ParIds par_ids;
+
+    // forward to Producer(cfg)
+    ParameterDependentProducer(const Configuration & cfg): Producer(cfg){}
 };
 
 

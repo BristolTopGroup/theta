@@ -1,15 +1,20 @@
 #include "interface/plugin.hpp"
+#include "interface/utils.hpp"
 
-using namespace theta::plugin;
+#include <dlfcn.h>
+
 using namespace std;
+using namespace theta;
 
-int theta::plugin::plugin_build_depth=0;
+Configuration::Configuration(const SettingWrapper & setting_): pm(new theta::PropertyMap()), setting(setting_){}
+
+Configuration::Configuration(const Configuration & cfg, const SettingWrapper & setting_): pm(cfg.pm), setting(setting_){}
 
 void PluginLoader::execute(const Configuration & cfg) {
     SettingWrapper files = cfg.setting["plugin_files"];
     size_t n = files.size();
     for (size_t i = 0; i < n; i++) {
-        std::string filename = cfg.replace_theta_dir(files[i]);
+        std::string filename = utils::replace_theta_dir(files[i]);
         load(filename);
     }
 }
@@ -18,17 +23,20 @@ void PluginLoader::load(const std::string & soname) {
     void* handle = 0;
     try {
         handle = dlopen(soname.c_str(), RTLD_NOW | RTLD_GLOBAL);
-    } catch (Exception & ex) {
+    } catch (std::exception & ex) {
         std::stringstream ss;
-        ss << ex.message << " (in PluginLoader::load while loading plugin file '" << soname << "')";
-        ex.message = ss.str();
-        throw;
+        ss << ex.what() << " (in PluginLoader::load while loading plugin file '" << soname << "')";
+        throw Exception(ss.str());
     }
     if (handle == 0) {
         std::stringstream s;
         const char * error = dlerror();
         if (error == 0) error = "0";
         s << "PluginLoader::load: error loading plugin file '" << soname << "': " << error << std::endl;
-        throw InvalidArgumentException(s.str());
+        throw Exception(s.str());
     }
 }
+
+
+
+

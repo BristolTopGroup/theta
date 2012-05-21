@@ -10,8 +10,8 @@
 using namespace std;
 using namespace theta;
 
-rootfile_database::rootfile_database(const plugin::Configuration & cfg): file(0){
-   std::string filename = cfg.replace_theta_dir(cfg.setting["filename"]);
+rootfile_database::rootfile_database(const Configuration & cfg): file(0){
+   std::string filename = utils::replace_theta_dir(cfg.setting["filename"]);
    file = new TFile(filename.c_str(), "recreate");
    if(not file->IsOpen()){
        delete file;
@@ -52,10 +52,9 @@ rootfile_database::rootfile_database(const plugin::Configuration & cfg): file(0)
           int nbins = cfg.setting["products_histograms"][i]["nbins"];
           double xmin = cfg.setting["products_histograms"][i]["range"][0];
           double xmax = cfg.setting["products_histograms"][i]["range"][1];
-          hist_infos.push_back(hist_info());
-          hist_infos.back().h.reset(nbins, xmin, xmax);
-          hist_infos.back().name = static_cast<string>(cfg.setting["products_histograms"][i]["name"]);
-          hist_infos.back().column_name = static_cast<string>(cfg.setting["products_histograms"][i]["column"]);
+          string name = cfg.setting["products_histograms"][i]["name"];
+          string colname = cfg.setting["products_histograms"][i]["column"];
+          hist_infos.push_back(hist_info(Histogram1D(nbins, xmin, xmax), name, colname));
       }
    }
 }
@@ -65,9 +64,12 @@ rootfile_database::~rootfile_database() {
        //write those root histos:
        TDirectory * dir = file->mkdir("products_histograms");
        for(size_t i=0; i<hist_infos.size(); ++i){
-           TH1D * root_histo = new TH1D(hist_infos[i].name.c_str(), hist_infos[i].name.c_str(), hist_infos[i].h.get_nbins(),
+           size_t nbins;
+           TH1D * root_histo = new TH1D(hist_infos[i].name.c_str(), hist_infos[i].name.c_str(), nbins = hist_infos[i].h.get_nbins(),
                                         hist_infos[i].h.get_xmin(), hist_infos[i].h.get_xmax());
-           root_histo->SetContent(hist_infos[i].h.getData());
+           for(size_t ibin=0; ibin<nbins; ++ibin){
+               root_histo->SetBinContent(ibin+1, hist_infos[i].h.get(i));
+           }
            root_histo->SetDirectory(dir);
        }
        file->Write();
@@ -89,85 +91,75 @@ std::auto_ptr<Table> rootfile_database::create_table(const string & table_name){
 
 
 rootfile_database::rootfile_table::rootfile_table(const std::string & tablename, const boost::shared_ptr<rootfile_database> & db_):Table(db_),
-   db(db_), save_all_columns(true){
+   db(db_), save_all_columns(true), next_id(0){
        tree = new TTree(tablename.c_str(), tablename.c_str());
        tree->SetDirectory(db->file);
-       //ugly switch, but should work:
        products_table = tablename == "products";
 }
 
 rootfile_database::rootfile_table::~rootfile_table(){}
 
-std::auto_ptr<Column> rootfile_database::rootfile_table::add_column(const std::string & name, const data_type & type){
-    std::auto_ptr<Column> result;
-    bool make_branch = false;
-    if(save_all_columns || save_columns.find(name)!=save_columns.end()) make_branch = true;
+Column rootfile_database::rootfile_table::add_column(const std::string & name, const data_type & type){
+    Column result(next_id++);
+    column_datas[result].name = name;
+    column_datas[result].type = type;
+    bool make_branch = save_all_columns || save_columns.find(name)!=save_columns.end();
     switch(type){
         case theta::typeDouble:
-            result.reset(new rootfile_column_double(name));
             if(make_branch)
-                tree->Branch(name.c_str(), &static_cast<rootfile_column_double*>(result.get())->d, "data/D");
+                tree->Branch(name.c_str(), &column_datas[result].data.d, "data/D");
             break;
         case theta::typeInt:
-            result.reset(new rootfile_column_int(name));
             if(make_branch)
-               tree->Branch(name.c_str(), &static_cast<rootfile_column_int*>(result.get())->i, "data/I");
+                tree->Branch(name.c_str(), &column_datas[result].data.i, "data/I");
             break;
         case theta::typeString:
-            result.reset(new rootfile_column_string(name));
+            column_datas[result].data.s = new TString();
             if(make_branch)
-               tree->Branch(name.c_str(), "TString", &static_cast<rootfile_column_string*>(result.get())->s);
+                tree->Branch(name.c_str(), "TString", &column_datas[result].data.s);
             break;
         case theta::typeHisto:
-            result.reset(new rootfile_column_histo(name));
+            column_datas[result].data.h = new TH1D(name.c_str(), name.c_str(), 1, 0, 1);
             if(make_branch)
-               tree->Branch(name.c_str(), "TH1D", &static_cast<rootfile_column_histo*>(result.get())->h);
+                tree->Branch(name.c_str(), "TH1D", &column_datas[result].data.h);
             break;
     }
     return result;
 }
 
-void rootfile_database::rootfile_table::set_autoinc_column(const std::string & s){
-    std::auto_ptr<Column> col = add_column(s, theta::typeInt);
-    autoinc_column.reset(static_cast<rootfile_column_int*>(col.release()));
-}
 
-void rootfile_database::rootfile_table::set_column(const Column & c_, double d){
-   const rootfile_column_double& c = static_cast<const rootfile_column_double&> (c_);
-   c.d = d;
-   if(products_table){
-       for(size_t i=0; i< db->hist_infos.size(); ++i){
-           if(db->hist_infos[i].column_name == c.name){
-               db->hist_infos[i].h.fill(d, 1.0);
-           }
-       }
-   }
-}
-
-void rootfile_database::rootfile_table::set_column(const Column & c, int i){
-   (static_cast<const rootfile_column_int&> (c)).i = i;
-}
-
-void rootfile_database::rootfile_table::set_column(const Column & c, const std::string & s){
-   *((static_cast<const rootfile_column_string&> (c)).s) = s.c_str();
-}
-
-void rootfile_database::rootfile_table::set_column(const Column & c, const theta::Histogram & h){
-   TH1D * root_histo = (static_cast<const rootfile_column_histo&> (c)).h;
-   root_histo->SetBins(h.get_nbins(), h.get_xmin(), h.get_xmax());
-   root_histo->SetContent(h.getData());
-}
-
-int rootfile_database::rootfile_table::add_row(){
-    int result = 0;
-    if(autoinc_column.get()){
-        result = ++autoinc_column->i;
+void rootfile_database::rootfile_table::add_row(const Row & row){
+    for(map<Column, column_data>::iterator it=column_datas.begin(); it!=column_datas.end(); ++it){
+        bool is_histo = false;
+        switch(it->second.type){
+            case typeDouble:
+                it->second.data.d = row.get_column_double(it->first);
+                if(products_table){
+                    for(size_t i=0; i< db->hist_infos.size(); ++i){
+                        if(db->hist_infos[i].column_name == it->second.name){
+                            db->hist_infos[i].h.fill(it->second.data.d, 1.0);
+                        }
+                    }
+                }
+                break;
+            case typeInt:
+                it->second.data.i = row.get_column_int(it->first);
+                break;
+            case typeString:
+                *(it->second.data.s) = row.get_column_string(it->first).c_str();
+                break;
+            case typeHisto:
+                is_histo = true;
+        }
+        if(is_histo){
+            const Histogram1D & h = row.get_column_histogram(it->first);
+            it->second.data.h->SetBins(h.get_nbins(), h.get_xmin(), h.get_xmax());
+            for(size_t i=0; i<h.get_nbins(); ++i){
+                it->second.data.h->SetBinContent(i+1, h.get(i));
+            }
+        }
     }
     tree->Fill();
-    return result;
-
 }
 
 REGISTER_PLUGIN(rootfile_database)
-
-

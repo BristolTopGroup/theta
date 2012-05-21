@@ -34,8 +34,8 @@ double SettingWrapper::get_double_or_inf() const {
     if(infstring == "inf" || infstring == "+inf") return numeric_limits<double>::infinity();
     if(infstring == "-inf") return -numeric_limits<double>::infinity();
     stringstream error;
-    error << "error reading double (or \"inf\") from configuration path " << getPath();
-    throw InvalidArgumentException(error.str());
+    error << "error reading double (or \"inf\") from configuration path " << get_path();
+    throw ConfigurationException(error.str());
 }
 
 const Setting & SettingWrapper::resolve_link(const Setting & setting, const Setting & root, const boost::shared_ptr<SettingUsageRecorder> & rec){
@@ -86,3 +86,63 @@ SettingWrapper::SettingWrapper(const libconfig::Setting & s, const libconfig::Se
     if(name) setting_name = name;
 }
 
+
+SettingWrapper::operator bool() const{
+    rec->markAsUsed(setting);
+    return setting;
+}
+
+SettingWrapper::operator std::string() const{
+    rec->markAsUsed(setting);
+    return setting;
+}
+
+SettingWrapper::operator int() const{
+    rec->markAsUsed(setting);
+    return setting;
+}
+
+SettingWrapper::operator unsigned int() const{
+    rec->markAsUsed(setting);
+    return setting;
+}
+
+SettingWrapper::operator double() const{
+    rec->markAsUsed(setting);
+    return setting;
+}
+
+size_t SettingWrapper::size() const{
+    rec->markAsUsed(setting);
+    return setting.getLength();
+}
+
+SettingWrapper SettingWrapper::operator[](int i) const{
+    rec->markAsUsed(setting);
+    return SettingWrapper(setting[i], rootsetting, rec);
+}
+
+SettingWrapper SettingWrapper::operator[](const std::string & name) const{
+    rec->markAsUsed(setting);
+    return SettingWrapper(setting[name], rootsetting, rec);
+}
+
+SettingWrapper SettingWrapper::operator[](const char * name) const{
+    return operator[](std::string(name));
+}
+
+bool SettingWrapper::exists(const std::string & path) const{
+    return setting.exists(path);
+}
+
+std::string SettingWrapper::get_name() const{
+    return setting_name;
+}
+
+std::string SettingWrapper::get_path() const{
+    return setting.getPath();
+}
+
+libconfig::Setting::Type SettingWrapper::get_type() const{
+    return setting.getType();
+}

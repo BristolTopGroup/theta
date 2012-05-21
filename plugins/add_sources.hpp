@@ -38,13 +38,11 @@ class add_sources: public theta::DataSource{
 public:
 
     /// Construct from a Configuration; required by the plugin system
-    add_sources(const theta::plugin::Configuration & cfg);
+    add_sources(const theta::Configuration & cfg);
 
     /** \brief Fills the provided Data instance with data from the model
-     *
-     * Will never throw the DataUnavailable Exception.
      */
-    virtual void fill(theta::Data & dat, theta::Run & run);
+    virtual void fill(theta::Data & dat);
     
 private:
     boost::ptr_vector<theta::DataSource> sources;

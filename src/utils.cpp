@@ -3,9 +3,100 @@
 #include <cmath>
 #include <limits>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#ifdef __clang__
+#include "/usr/include/fenv.h"
+#endif
+
 #include <boost/math/special_functions/gamma.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
+
+
+namespace fs = boost::filesystem;
 
 namespace theta{ namespace utils{
+
+discard_output::discard_output(bool discard_stderr): stdout_dup(-1), stderr_dup(-1){
+    stdout_dup = dup(STDOUT_FILENO);
+    if(stdout_dup > 0 && close(STDOUT_FILENO)==0){
+        int fd_tmp = open("/dev/null", O_WRONLY);
+        assert(fd_tmp==STDOUT_FILENO);
+    }
+    if(discard_stderr){
+        stderr_dup = dup(STDERR_FILENO);
+        if(stderr_dup > 0 && close(STDERR_FILENO)==0){
+            int fd_tmp = open("/dev/null", O_WRONLY);
+            assert(fd_tmp==STDERR_FILENO);
+        }
+    }
+}
+
+discard_output::~discard_output(){
+    // restore original state by duplicating the saved descriptors
+    // to 1 and 2:
+    if(stdout_dup > 0){
+        dup2(stdout_dup, STDOUT_FILENO);
+        close(stdout_dup);
+    }
+    if(stderr_dup > 0){
+        dup2(stderr_dup, STDERR_FILENO);
+        close(stderr_dup);
+    }
+}
+
+std::string replace_theta_dir(const std::string & path) {
+   return boost::algorithm::replace_all_copy(path, "$THETA_DIR", theta_dir);
+}
+
+void fill_theta_dir(char** argv){
+    if(argv!=0){
+        fs::path guessed_self_path = fs::current_path() / argv[0];
+        if(fs::is_regular_file(guessed_self_path)){
+            theta_dir = fs::system_complete(guessed_self_path.parent_path().parent_path()).string();
+            return;
+        }
+    }
+    if(fs::is_symlink("/proc/self/exe")){
+        char path[4096];
+        ssize_t s = readlink("/proc/self/exe", path, 4096);
+        if(s > 0 && s < 4096){
+            path[s] = '\0';
+            theta_dir = fs::path(path).parent_path().parent_path().string();
+        }
+    }
+}
+
+std::string theta_dir;
+
+int roots_quad(double & x1, double & x2, double b, double c){
+    double D = b*b - 4*c;
+    if(D < 0){
+        x1 = x2 = NAN;
+        return 0;
+    }
+    if(D==0){
+        x1 = x2 = -0.5 * b;
+        return 1;
+    }
+    if(b==0.0){
+        x1 = -0.5 * sqrt(D);
+        x2 = 0.5 * sqrt(D);
+    }
+    else if(b > 0){
+        x1 = 0.5 * (-b - sqrt(D));
+        x2 = c / x1;
+    }
+    else{
+        x2 = 0.5 * (-b + sqrt(D));
+        x1 = c / x2;
+    }
+    return 2;
+}
 
 double lngamma(double x){
     return boost::math::lgamma(x);

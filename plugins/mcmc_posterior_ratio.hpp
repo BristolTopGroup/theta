@@ -31,8 +31,8 @@
  *
  * \c type is always "mcmc_posterior_ratio" to select this producer.
  *
- * \c name is a name chosen by the user used to construct unique column names in the result table (this name and two underscores are
- *   prepended to the column names explained below).
+ * \c name is a unique producer name of your choice; it is used to construct column names in the output database. It may only contain alphanumeric
+ *    characters (no spaces, special characters, etc.).
  *
  * \c background-only-distribution and \c signal-plus-background-distribution deinfe the Distribution instances to use for the
  *   two MCMC integrations.
@@ -58,10 +58,11 @@
 class mcmc_posterior_ratio: public theta::Producer, public theta::RandomConsumer{
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
-    mcmc_posterior_ratio(const theta::plugin::Configuration & ctx);
+    mcmc_posterior_ratio(const theta::Configuration & ctx);
     virtual void produce(const theta::Data & data, const theta::Model & model);
     
 private:
+    
     //whether sqrt_cov* and startvalues* have been initialized:
     bool init;
     
@@ -77,9 +78,7 @@ private:
     theta::Matrix sqrt_cov_b;
     std::vector<double> startvalues_b;
     
-    std::auto_ptr<theta::Column> c_nl_posterior_sb, c_nl_posterior_b;
-    
-    boost::shared_ptr<theta::VarIdManager> vm;
+    theta::Column c_nl_posterior_sb, c_nl_posterior_b;
 };
 
 #endif

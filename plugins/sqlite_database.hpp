@@ -8,6 +8,7 @@
 #include <sqlite3.h>
 #include <memory>
 #include <string>
+#include <sstream>
 #include <set>
 
 
@@ -15,7 +16,7 @@
  *
  * Configured via a setting group like
  * \code
- * {
+ * output_database = {
  *   type = "sqlite_database";
  *   filename = "abc.db";
  *   products_data = ("deltanll__nll_sb"); // optional, default is '*'
@@ -26,7 +27,7 @@
  *
  * \c filename is the filename of the sqlite3 output file. It is a path relative to the path where theta is invoked
  *
- * \c products_data is a list of column names to save in the 'products' table. The default is to save all columns which can
+ * \c products_data is a list of column names to save. The default is to save all columns which can
  *    be configured by setting it to "*". Note that the 'runid' and 'eventid' columns will always be saved.
  *
  * If the file already exists, it is overwritten silently.
@@ -41,9 +42,9 @@ public:
     
     /** \brief Constructor for the plugin system
      *
-     * See class documentation for a description of the parsed COnfiguration settings.
+     * See class documentation for a description of the Configuration settings.
      */
-    sqlite_database(const theta::plugin::Configuration & cfg);
+    sqlite_database(const theta::Configuration & cfg);
     
     
     virtual ~sqlite_database();
@@ -93,21 +94,15 @@ private:
         // destructor; creates the table if empty
         virtual ~sqlite_table();
         
-        virtual std::auto_ptr<theta::Column> add_column(const std::string & name, const theta::data_type & type);
-        virtual void set_autoinc_column(const std::string & name);
-        
-        virtual void set_column(const theta::Column & c, double d);
-        virtual void set_column(const theta::Column & c, int i);
-        virtual void set_column(const theta::Column & c, const std::string & s);
-        virtual void set_column(const theta::Column & c, const theta::Histogram & h);
-        virtual int add_row();
+        virtual theta::Column add_column(const std::string & name, const theta::data_type & type);
+
+        virtual void add_row(const theta::Row & row);
 
     private:
         
         sqlite_table(const std::string & name_, const boost::shared_ptr<sqlite_database> & db_);
         
         std::string name;
-        bool have_autoinc;
         std::stringstream column_definitions; // use by the add_column method
         std::stringstream ss_insert_statement;
         bool table_created;
@@ -122,17 +117,13 @@ private:
         
         void create_table();
         
-        class sqlite_column: public theta::Column{
-        public:
-            int insert_index;
-            sqlite_column(int i):insert_index(i){}
-            virtual ~sqlite_column(){}
+        struct column_info{
+            std::string name;
+            theta::data_type type;
+            column_info(){}
+            column_info(const std::string & name_, const theta::data_type & type_): name(name_), type(type_){}
         };
-        
-        class sqlite_autoinc_column: public theta::Column{
-        public:
-            virtual ~sqlite_autoinc_column(){}
-        };
+        std::map<theta::Column, column_info> column_infos;
     };
 };
 

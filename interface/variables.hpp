@@ -3,15 +3,14 @@
 
 #include <set>
 #include <map>
-#include <limits>
 #include <string>
-#include <sstream>
 #include <vector>
 #include <ostream>
 
 #include "interface/decls.hpp"
 #include "interface/exception.hpp"
-#include "interface/utils.hpp"
+
+#include <cmath>
 
 #include <boost/utility.hpp>
 
@@ -33,7 +32,7 @@ namespace theta {
     class VarId{
     friend class VarIdManager;
     friend class ParValues;
-    friend class Data;
+    template<typename T>  friend class DataT;
     friend std::ostream & operator<<(std::ostream & out, const VarId & vid){
         return out << vid.id;
     }
@@ -52,9 +51,6 @@ namespace theta {
         }
         //@}
         
-        /** Creates in invalid VarId which evaluates to false
-         */
-        //VarId(): id(-1){}
     private:
         size_t id;
         explicit VarId(size_t i): id(i){}
@@ -95,12 +91,12 @@ namespace theta {
      * The interface allows an STL-like iteration over the VarIds contained in this object.
      * The iteration will visit the elements in their natural order.
      * 
-     * \tparam id_type The type to build the container for. Only ObsId and ParId are used here.
+     * \param id_type The type to build the container for. Only ObsId and ParId are used here.
      */
     template<class id_type>
     class VarIds {
     public:
-        /// \brief A STL compliant forward iterator 
+        /// \brief Sort of an iterator. Not necessarily one of the standard flavor, but can be used to go through all ids.
         typedef typename std::set<id_type>::const_iterator const_iterator;
 
         /// \brief Get the an iterator pointing to the first element. 
@@ -114,28 +110,17 @@ namespace theta {
         }
 
         /** \brief Insert a new id
-         *
-         * \param id The id object to insert. 
-         * \return \c true, if an insertion actually took place and \c false if the id was already contained. 
          */
-        bool insert(const id_type & id) {
-            return vars.insert(id).second;
-        }
-        
-        /** \brief Erase a previously inserted id
-         *
-         * \param id The id object to erase.
-         */
-        void erase(const id_type & id) {
-            vars.erase(id);
+        void insert(const id_type & id) {
+            vars.insert(id).second;
         }
         
         /** \brief Insert new ids.
          *
          * Insert [first, last) in this container.
          */
-        void insert(const_iterator first, const_iterator last) {
-            vars.insert(first, last);
+        void insert_all(const VarIds & vids) {
+            vars.insert(vids.vars.begin(), vids.vars.end());
         }
 
         /** \brief Test whether an id is contained.
@@ -145,30 +130,6 @@ namespace theta {
          */ 
         bool contains(const id_type & id)const {
             return vars.find(id) != vars.end();
-        }
-
-        /** \brief Test whether all given ids are contained
-         */
-        bool contains_all(const VarIds<id_type> & rhs) const{
-            const_iterator rhs_it = rhs.vars.begin();
-            const_iterator it = vars.begin();
-            const const_iterator rhs_end = rhs.vars.end();
-            const const_iterator end = vars.end();
-
-            //rhs_it points to the next element to test
-            while(rhs_it!=rhs_end && it!=end){
-                if(*rhs_it == *it){
-                    ++rhs_it;
-                    ++it;
-                }
-                else if(not (*rhs_it < *it)){
-                    ++it;
-                }
-                else{
-                    return false;
-                }
-            }
-            return rhs_it == rhs_end;
         }
 
         /** \brief Test equality with other VarIds object.
@@ -207,39 +168,36 @@ namespace theta {
      *
      * Note that there does not exist any global "current value" of a variable.
      */
-    class VarIdManager: private boost::noncopyable {
+    class VarIdManager {
         friend class ParValues;
     public:
         //@{
         /** \brief Creates a new parameter or observable ids (ParId, ObsId) and associates it with the given name.
          *
+         * Observable names on themselves and parameter names on themselves must be unique;
+         * using the same name for an observable and a parameter is allowed.
+         *
+         * \c type is the parameter type. The meaning is user-defined; the value of "type"
+         * is just saved here and returned by getType.
+         *
          * If the name is already used for another parameter / observable, an InvalidArgumentException is thrown.
          * In case of nbins==0 or xmax < xmin, an InvalidArgumentException will be thrown.
          */
-        ParId createParId(const std::string & name);
-        ObsId createObsId(const std::string & name, size_t nbins, double xmin, double xmax);
+        ParId create_par_id(const std::string & name, const std::string & type = "par");
+        ObsId create_obs_id(const std::string & name, size_t nbins, double xmin, double xmax);
         //@}
-        
-        //@{
-        /** \brief Returns whether the given name is already used as parameter / observable name.
-         *
-         * Note that parameters and observables are different things in theta and it is possible
-         * (although not recommended) to have the same name for a parameter and an observable.
-         *
-         * Names are case-sensitive.
-         */
-        bool parNameExists(const std::string & name) const;
-        bool obsNameExists(const std::string & name) const;
-        //@}
-        
+                
         //@{
         /** \brief Return the name of the given ParId or ObsId.
          *
-         * If the id is not known, a NotFoundException is thrown.
+         * If the id is not known, a std::invalid_argument is thrown.
          */
-        std::string getName(const ParId & id) const;
-        std::string getName(const ObsId & id) const;
+        std::string get_name(const ParId & id) const;
+        std::string get_name(const ObsId & id) const;
         //@}
+        
+        /// Return the type of this parameter
+        std::string get_type(const ParId & id) const;
         
         //@{
         /** \brief Return the number of bins and range for an observable identified by the ObsId id.
@@ -251,19 +209,19 @@ namespace theta {
         //@{
         /** \brief Return the ParId / ObsId with the given name
          *
-         * If the name is not known, a NotFoundException is thrown.
+         * If the name is not known, a std::invalid_argument is thrown.
          *
          * If you merely want to test whether a name already exists, use parNameExists and obsNameExists
          */
-        ParId getParId(const std::string & name) const;
-        ObsId getObsId(const std::string & name) const;
+        ParId get_par_id(const std::string & name) const;
+        ObsId get_obs_id(const std::string & name) const;
         //@}
         
         //@{
         /** Returns all currently defined ParId or ObsId identifiers as ParIds or ObsIds
          */
-        ParIds getAllParIds() const;
-        ObsIds getAllObsIds() const;
+        ParIds get_all_parameters() const;
+        ObsIds get_all_observables() const;
         //@}
         
         /** \brief Create an empty VarIdManager with no registered variables.
@@ -274,6 +232,7 @@ namespace theta {
     private:
         //ParIds:
         std::map<size_t, std::string> pid_to_name;
+        std::map<size_t, std::string> pid_to_type;
         std::map<std::string, size_t> name_to_pid;
         size_t next_pid_id;
         //ObsIds:
@@ -331,11 +290,21 @@ namespace theta {
            }
         }
         
+        /** \brief Constructor initializing the values according to an existing ParValues instance, only using the given parameters
+         *
+         * Set the values according to rhs, but only those parameters given in \c pids.
+         */
+        ParValues(const ParValues & rhs, const ParIds & pids): values(rhs.values.size(), NAN){
+            for(ParIds::const_iterator it = pids.begin(); it!=pids.end(); ++it){
+                values[it->id] = rhs.values[it->id];
+            }
+        }
+        
         /** \brief Set a value.
          *
          * Set the value of the ParId \c pid to \c val. Setting a parameter 
          * to NAN means to delete it from the list (i.e., get() will throw a
-         * NotFoundException for that parameter). This makes it possible to "clear" a parameter
+         * invalid_argument for that parameter). This makes it possible to "clear" a parameter
          * from a VarValues instance after setting it.
          *
          * Returns a reference to this \c ParValues object to allow 
@@ -366,26 +335,10 @@ namespace theta {
                  values[i] = rhs.values[i];
              }
          }
-        
-        /** \brief Add a value to a parameter.
-         *
-         * Same as \c set(pid, get(pid) + delta), but faster. Throws NotFoundException if not value
-         * was set for \c pid before.
-         *
-         * \param pid The parameter to change.
-         * \param delta The value to add to the parameter. 
-         */
-        void addTo(const ParId & pid, double delta){
-            const size_t id = pid.id;
-            if(id >= values.size() || std::isnan(values[id])){
-                throw NotFoundException("ParValues::addTo: given ParId not found.");
-            }
-            values[id] += delta;
-        }
 
         /** \brief Retrieve the current value of a parameter.
          *
-         *  Throws a NotFoundException if no value was set for \c pid in this \c ParValues.
+         *  Throws a invalid_argument if no value was set for \c pid in this \c ParValues.
          *
          *  \param pid The parameter for which the value should be returned.
          *  \return The current value for the parameter \c pid.
@@ -400,22 +353,36 @@ namespace theta {
             return result;
         }
 
-        /** \brief Returns whether \c pid is contained in this VarVariables.
+        /// fast replacement for get which does not perform boundary checking
+        double get_unchecked(const ParId & pid) const{
+            return values[pid.id];
+        }
+
+        /** \brief Returns whether there is a value for \c pid.
          */
         bool contains(const ParId & pid) const{
             const size_t id = pid.id;
             return id < values.size() && !std::isnan(values[id]);
         }
-
-        /** \brief Return all \c ParIds of the variables in this \c VarValues.
+        
+        /** \brief Test whether all given parameters have a value set
          */
-        ParIds getParameters() const;
+        bool contains_all(const ParIds & pids) const{
+            for(ParIds::const_iterator it=pids.begin(); it!=pids.end(); ++it){
+                const size_t id = it->id;
+                if(id > values.size() || std::isnan(values[id])) return false;
+            }
+            return true;
+        }
+        
+        /** \brief Clear all parameter values
+         */
+        void clear(){
+            std::fill(values.begin(), values.end(), NAN);
+        }
 
     private:
-        //Make private an do not implement, because usually, one should not replace
-        // the values already set and should use "set(ParValues)" instead ...
-        const ParValues & operator=(const ParValues &);
-        //values are stored using the VarId.id as index
+        //values are stored using the ParId.id as index
         std::vector<double> values;
     };
 

@@ -9,28 +9,25 @@ namespace libconfig{
 }
 
 namespace theta{
-    class Histogram;
+    class DoubleVector;
+    class Histogram1D;
+    class Histogram1DWithUncertainties;
     class HistogramFunction;
     class Minimizer;
     class Producer;
-    class ProductsSource;
+    class ParameterDependentProducer;
     class ProductsSource;
     class Distribution;
-    
-    //database.hpp
     class Database;
     class DatabaseInput;
     class Table;
     class Column;
     class ProductsTable;
+    class LogTable;
+    class RndInfoTable;
         
-    namespace plugin{
-          class Configuration;
-    }
+    class Configuration;
     class Random;
-    class Run;
-    
-    //variables.hpp
     class VarIdManager;
     template<typename tag> class VarId;
     struct ParIdTag;
@@ -41,15 +38,22 @@ namespace theta{
     typedef VarIds<ObsId> ObsIds;
     typedef VarIds<ParId> ParIds;
     class ParValues;
+    class PropertyMap;
     
-    //phys.hpp
-    class Data;
+    //class Data;
+    template<typename T> class DataT;
+    typedef DataT<Histogram1D> Data;
+    typedef DataT<Histogram1DWithUncertainties> DataWithUncertainties;
     class Function;
     class Model;
     class DataSource;
     class NLLikelihood;
     
     class SettingWrapper;
+    class atomic_int;
+
+    class ToyMaker;
+    class BufferingProductsSink;
 }
 
 #endif

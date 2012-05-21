@@ -178,6 +178,8 @@ extra_legend_items = [], xmin = None, xmax=None, ymin=None, ymax=None, legend_ar
     for histo in histos:
         assert len(histo.x)==len(histo.y), "number of x,y coordinates not the same for '%s'" % histo.legend
         if histo.legend: draw_legend = True
+        # allow empty "dummy" plots which have legend but no content:
+        if len(histo.x)==0: continue
         if histo.bands is not None:
             for band in histo.bands:
                 if histo.bands_fill:

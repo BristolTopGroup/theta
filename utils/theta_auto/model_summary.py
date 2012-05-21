@@ -35,10 +35,17 @@ def print_mcstat_syst(model):
 # If in addition to create_plots, 'all_nominal_plots' is also true, all nominal processes will be plottet separately. This is switched
 #   off by default as there usually are a lot of nominal processes.
 #
+#  lnmode is either 'sym' or '1sigma'. '1sigma' will report the yield changes at +-1sigma in the table which means that
+# a lognormal uncertainty configured via Model.ad_lognormal_uncertainty will be asymmetric. However, it actually reflects the yield
+# change if moving to +1sigma or to -1sigma.
+# Setting lnmode to 'sym' will report the uncertainty as symmetric if the lognormal is actually a plain lognormal without different lambdas
+# (lognormals are implemented as factors exp(lambda * u) where u is the nuisance parameter around 0 with sigma=1).
+# 
+#
 # Returns a dictionary containing instances of Report.table:
 # * 'rate_table' the rate table
 # * 'sysrate_tables' --> (observable name): the systematics table for the given observable
-def model_summary(model, create_plots = True, all_nominal_templates = False, shape_templates = False):
+def model_summary(model, create_plots = True, all_nominal_templates = False, shape_templates = False, lnmode = '1sigma'):
     result = {}
     observables = sorted(list(model.observables))
     processes = sorted(list(model.processes))
@@ -167,7 +174,8 @@ def model_summary(model, create_plots = True, all_nominal_templates = False, sha
                 if par in coeff.factors:
                     if type(coeff.factors[par])==dict and coeff.factors[par]['type'] == 'exp_function':
                         rplus = math.exp(coeff.factors[par]['lambda_plus']) - 1
-                        rminus = math.exp(-coeff.factors[par]['lambda_minus']) - 1
+                        if lnmode == '1sigma': rminus = math.exp(-coeff.factors[par]['lambda_minus']) - 1
+                        else: rminus = 1 - math.exp(coeff.factors[par]['lambda_minus'])
                     else:
                        rplus = model.distribution.get_distribution(par)['width']
                        rminus = -model.distribution.get_distribution(par)['width']

@@ -219,6 +219,30 @@ def discovery(model, ts = 'lr', use_data = True, Z_error_max = 0.05, **options):
         if max_Z_error < Z_error_max: break
     return expected_significance, observed_significance
 
+# Calculate an approximation to the observed significance (using Wilks' theorem)
+#
+# Returns a dictionary (signal process id) --> (observed Z value)
+def obs_significance_approx(model):
+    result1 = ml_fit2(model, nuisance_constraint = '')
+    result2 = ml_fit2(model, signal_prior = 'fix:0.0', nuisance_constraint = '')
+    result = {}
+    for spid in result1:
+        result[spid] = math.sqrt(2 * (result2[spid]['nll'][0] - result1[spid]['nll'][0]))
+    return result
+
+# Calculate an approximation to the expected significance (using asimov data and Wilks' theorem)
+#
+# Returns a dictionary (signal process id) --> (expected Z value)
+def exp_significance_approx(model):
+    dist_orig = model.distribution
+    model.distribution = get_fixed_dist(model.distribution)
+    result1 = ml_fit2(model, 'toys-asimov:1.0', nuisance_constraint = dist_orig)
+    result2 = ml_fit2(model, 'toys-asimov:1.0', signal_prior = 'fix:0.0', nuisance_constraint = dist_orig)
+    model.distribution = dist_orig
+    result = {}
+    for spid in result1:
+        result[spid] = math.sqrt(2 * (result2[spid]['nll'][0] - result1[spid]['nll'][0]))
+    return result
 
 # container for toys made for the CLs construction
 class truth_ts_values:

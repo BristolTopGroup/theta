@@ -103,7 +103,7 @@ void run_mt::run(){
 }
 
 run_mt::run_mt(const Configuration & cfg){
-    SettingWrapper s = cfg.setting;
+    Setting s = cfg.setting;
     log_report = true;
     n_event = s["n-events"];
     if(s.exists("n_threads")){

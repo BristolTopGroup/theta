@@ -7,7 +7,6 @@
 
 using namespace theta;
 using namespace std;
-using namespace libconfig;
 
 void pseudodata_writer::produce(const Data & data, const Model & model) {
     for(size_t i=0; i<observables.size(); ++i){

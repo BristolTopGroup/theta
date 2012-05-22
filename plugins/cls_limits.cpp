@@ -542,6 +542,11 @@ void data_filler::fill(Data & dat){
         }
     }
     values.set(truth_parameter, truth_value);
+    const Distribution * rvobsdist = model->get_rvobservable_distribution();
+    if(rvobsdist){
+        rvobsdist->sample(values, rnd);
+        dat.set_rvobs_values(ParValues(values, model->get_rvobservables()));
+    }
     DataWithUncertainties data_wu;
     model->get_prediction(data_wu, values);
     const ObsIds & observables = model->get_observables();

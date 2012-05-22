@@ -520,18 +520,36 @@ void data_filler::fill(Data & dat){
                 step.set(truth_parameter, 0.0);
                 start_step_ranges_init = true;
             }
-            start.set(truth_parameter, truth_value);
+            ParValues mystart(start);
+            map<double, ParValues>::const_iterator it_higher = truth_to_nuisancevalues.lower_bound(truth_value);
+            map<double, ParValues>::const_iterator it_lower = it_higher;
+            if(it_lower != truth_to_nuisancevalues.begin()) --it_lower;
+            if(it_higher == truth_to_nuisancevalues.end()){
+                if(it_lower != truth_to_nuisancevalues.end()){
+                    mystart.set(it_lower->second);
+                }
+            }else{
+                if(it_lower == it_higher){
+                    mystart.set(it_lower->second);
+                }
+                else{
+                    //TODO: could interpolate here ...
+                    mystart.set(it_lower->second);
+                }
+            }
+            mystart.set(truth_parameter, truth_value);
             ranges[truth_parameter] = make_pair(truth_value, truth_value);
             try{
-                MinimizationResult minres = minimizer->minimize(*nll, start, step, ranges);
+                MinimizationResult minres = minimizer->minimize(*nll, mystart, step, ranges);
                 truth_to_nuisancevalues[truth_value].set(minres.values);
                 values.set(minres.values);
                 if(debug_out.get()){
-                    debug_out << "datafit minimization for truth_value=" << truth_value << ":\n";
+                    debug_out << "datafit minimization for truth_value=" << truth_value << ": ";
                     const ParIds & pids = model->get_parameters();
                     for(ParIds::const_iterator pit=pids.begin(); pit!=pids.end(); ++pit){
-                        debug_out << vm->get_name(*pit) << " = " <<  values.get(*pit) << "\n";
+                        debug_out << vm->get_name(*pit) << " = " <<  values.get(*pit) << "; ";
                     }
+                    debug_out << "\n";
                 }
             }
             catch(Exception & ex){

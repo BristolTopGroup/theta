@@ -621,8 +621,8 @@ void cls_limits::run_single_truth(double truth, bool bkg_only, int n_event){
 
 class OutlierException{
 public:
-    double limit;
-    explicit OutlierException(double limit_ = numeric_limits<double>::quiet_NaN()): limit(limit_){};
+    string message;
+    explicit OutlierException(const string & message_): message(message_){};
 };
 
 
@@ -656,7 +656,10 @@ void cls_limits::run_single_truth_adaptive(map<double, double> & truth_to_ts, do
         debug_out << " clb  = " << res.clb  << " +- " << res.clb_uncertainty << "\n";
         debug_out << " cls  = " << res.cls  << " +- " << cls_uncertainty << "\n";
         if(res.clb + res.clb_uncertainty < clb_cutoff){
-           throw OutlierException(numeric_limits<double>::infinity());
+            debug_out << "run_single_truth_adaptive: clb is below cutoff!\n";
+            if(idata!=0){
+                throw OutlierException("run_single_truth_adaptive: clb too low");
+            }
         }
         if(mode == M_ADAPTIVE){
             if(fabs(res.cls - (1 - cl)) / cls_uncertainty > 3) return;
@@ -702,8 +705,7 @@ void cls_limits::run_single_truth_adaptive(map<double, double> & truth_to_ts, do
             return;
         }
     }
-    debug_out << "run_single_truth_adaptive: could not reach target accuracy for CLs after 100 iterations; marking as outlier.\n";
-    throw OutlierException();
+    throw OutlierException("run_single_truth_adaptive: too many iterations to reach CLs accuracy");
 }
 
 
@@ -976,10 +978,13 @@ void cls_limits::update_truth_to_ts(map<double, double> & truth_to_ts, double ts
             throw;
         }
         double ts = sdc->consum_value() + ts_epsilon;
-        // for truth!=0, check if ts is an outlier and if it is, reject this toy by throwing an OutlierException:
+        // for truth!=0, and if this is not real data, check if ts is an outlier and if it is, reject this toy by throwing an OutlierException:
         if(*it!=0){
             if(tts->is_outlier(*it, ts, ts_epsilon)){
-                throw OutlierException();
+                debug_out << "update_truth_to_ts: ts for truth = " << *it << " is " << ts << " which was identified as outlier.\n";
+                if(idata!=0){
+                    throw OutlierException("update_truth_to_ts: test statistic outlier");
+                }
             }
         }
         truth_to_ts[*it] = ts;
@@ -1163,7 +1168,7 @@ void cls_limits::run_set_limits(){
                  double next_value = data.truth_values().back()*2.0;
                  if(next_value > truth_max){
                      debug_out << "to high truth value: " << next_value << ". Marking as outlier\n";
-                     throw OutlierException();
+                     throw OutlierException("run_set_limits: too high truth value");
                  }
                  debug_out << "making toys at high truth values to find upper limit on limit; next is truth=" << next_value << "\n";
                  flush(debug_out);
@@ -1180,7 +1185,7 @@ void cls_limits::run_set_limits(){
                 // 0. debugging stuff:
                 if(i==N_maxit){
                     debug_out << idata << "." << i << ": maximum number of iterations reached. Marking as outlier.\n";
-                    throw OutlierException();
+                    throw OutlierException("run_set_limits: too many iterations necessary");
                 }
                 debug_out << idata << "." << i << "\n";
                 if(debug_out.get()){
@@ -1303,26 +1308,15 @@ void cls_limits::run_set_limits(){
             cls_limits_table->add_row(r);
             debug_out << "final limit for idata = " << idata << ": " << latest_res.limit << " +- " << latest_res.limit_error << "\n";
             flush(debug_out);
-            if(idata==0) break;
         }
         catch(OutlierException & ex){
-            if(isnan(ex.limit)){ 
-                debug_out << "idata " << idata  << " identified as outlier; skipping.\n";
-            }
-            else{ // an infinity outlier
-                debug_out << "idata " << idata  << " identified as outlier, limit is " << ex.limit << " \n";
-                flush(debug_out);
-                ++n_results;
-                Row r;
-                r.set_column(cls_limits__index, idata);
-                r.set_column(cls_limits__limit, ex.limit);
-                r.set_column(cls_limits__limit_uncertainty, 0.0);
-                cls_limits_table->add_row(r);
-            }
+            debug_out << "idata " << idata  << " identified as outlier (reason: " << ex.message << "); skipping\n";
         }
         catch(MinimizationException & ex){
             debug_out << "idata " << idata << " had minimizationexception; skipping.\n";
+            
         }
+        if(idata==0) break;
     }
     // print the total number of toys per point (hint for setting up grid ...)
     if(debug_out.get()){

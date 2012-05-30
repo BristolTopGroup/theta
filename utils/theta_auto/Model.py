@@ -6,20 +6,30 @@ from utils import *
 
 
 class rootfile:
+    
+    # these are caching dictionaries indexing by filename
+    tfiles = {}
+    all_templates = {}
+    uncertainties_histos = {}
+    
     def __init__(self, filename):
         assert os.path.isfile(filename), "File %s not found (cwd: %s)" % (filename, os.getcwd())
         self.filename = filename
-        self.tfile = ROOT.TFile(filename, "read")
+        if self.filename not in rootfile.tfiles: rootfile.tfiles[self.filename] = ROOT.TFile(filename, "read")
+        self.tfile = rootfile.tfiles[self.filename]
+        
         
     @staticmethod
     def th1_to_histo(th1):
         xmin, xmax, nbins = th1.GetXaxis().GetXmin(), th1.GetXaxis().GetXmax(), th1.GetNbinsX()
-        data = [th1.GetBinContent(i) for i in range(1, nbins+1)]
+        #data = [th1.GetBinContent(i) for i in range(1, nbins+1)]
+        data = array.array('d', [th1.GetBinContent(i) for i in range(1, nbins+1)])
         return xmin, xmax, data
   
     # get all templates as dictionary (histogram name) --> (float xmin, float xmax, list float data)
     # only checks type of histogram, not naming convention
     def get_all_templates(self):
+        if self.filename in rootfile.all_templates: return rootfile.all_templates[self.filename]
         result = {}
         l = self.tfile.GetListOfKeys()
         for key in l:
@@ -30,6 +40,7 @@ class rootfile:
                 continue
             th1 = key.ReadObj()
             result[str(key.GetName())] = rootfile.th1_to_histo(th1)
+        rootfile.all_templates[self.filename] = result
         return result
         
     def get_histogram(self, hname, fail_with_exception = False):
@@ -40,11 +51,14 @@ class rootfile:
         return rootfile.th1_to_histo(th1)
         
     def get_uncertainties_histo(self, hname):
+        if self.filename in rootfile.uncertainties_histos and hname in rootfile.uncertainties_histos[self.filename]: return rootfile.uncertainties_histos[self.filename][hname]
         th1 = self.tfile.Get(hname)
         if type(th1) not in (ROOT.TH1F, ROOT.TH1D):
             raise RuntimeError, "did not find histogram '%s' in file '%s'" % (hname, self.filename)
         xmin, xmax, nbins = th1.GetXaxis().GetXmin(), th1.GetXaxis().GetXmax(), th1.GetNbinsX()
-        data = [th1.GetBinError(i) for i in range(1, nbins+1)]
+        data = array.array('d', [th1.GetBinError(i) for i in range(1, nbins+1)])
+        if not self.filename in rootfile.uncertainties_histos: rootfile.uncertainties_histos[self.filename] = {}
+        rootfile.uncertainties_histos[self.filename][hname] = xmin, xmax, data
         return xmin, xmax, data
         
 
@@ -780,9 +794,8 @@ def build_model_from_rootfile(filenames, histogram_filter = lambda s: True, root
         rf = rootfile(fname)
         templates = rf.get_all_templates()
         for hexternal in templates:
-            # note: copy hexternal before passing to user-defined routiunes, or they might change them ...
-            if not histogram_filter(hexternal[:]): continue
-            hinternal = root_hname_to_convention(hexternal[:])
+            if not histogram_filter(hexternal): continue
+            hinternal = root_hname_to_convention(hexternal)
             xmin, xmax, data = templates[hexternal]
             dummy_name, xmin, xmax, data = transform_histo((hinternal, xmin, xmax, data))
             assert dummy_name == hinternal, "transform_histo changed the name. This is not allowed; use root_hname_to_convention!"
@@ -810,8 +823,11 @@ def build_model_from_rootfile(filenames, histogram_filter = lambda s: True, root
             if direction=='down': direction='minus'
             if uncertainty is not None: h_new = '%s__%s__%s__%s' % (observable, process, uncertainty, direction)
             else: h_new = '%s__%s' % (observable, process)
-            histos[h_new] = (xmin, xmax, data)
-            if include_mc_uncertainties: uncertainties_histos[h_new] = rf.get_uncertainties_histo(hexternal)
+            # note: copy the data as rootfile caches histograms(!)
+            histos[h_new] = (xmin, xmax, data[:])
+            if include_mc_uncertainties:
+                xmin, xmax, data = rf.get_uncertainties_histo(hexternal)
+                uncertainties_histos[h_new] = (xmin, xmax, data[:])
 
     # build histogram functions from templates, and make some sanity checks:
     for o in observables:

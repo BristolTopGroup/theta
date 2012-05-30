@@ -31,9 +31,8 @@ def get_histo_cfg(histogram, histogram_err = None):
     if histogram_err is not None:
         xmin2, xmax2, data2 = histogram_err
         assert xmin == xmin2 and xmax==xmax2 and len(data2) == len(data)
-    result = {'type': 'direct_data_histo', 'range': [xmin, xmax], 'nbins': len(data), 'data': map(lambda f: float(f), data)}
-    if data2 is not None:
-        result['uncertainties'] = map(lambda f: float(f), data2)
+    result = {'type': 'direct_data_histo', 'range': [xmin, xmax], 'nbins': len(data), 'data': data}
+    if data2 is not None: result['uncertainties'] = data2
     return result
 
 # signal_processes is a list of process names (strings) to consider *simultaneously* as signal

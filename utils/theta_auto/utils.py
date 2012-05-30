@@ -54,6 +54,7 @@ def minimizer(need_error = True, always_mcmc = False, minimizer_insane = False):
     minimizers.append({'type': 'mcmc_minimizer', 'name':'mcmc_min0', 'iterations': n_iterations, 'after_minimizer': {'type': 'root_minuit'}})
     if not always_mcmc: minimizers.append({'type': 'root_minuit', 'method': 'simplex'})
     minimizers.append({'type': 'mcmc_minimizer', 'name':'mcmc_min1', 'iterations': n_iterations, 'after_minimizer': {'type': 'root_minuit', 'method': 'simplex'}})
+    #minimizers.append({'type': 'mcmc_minimizer', 'name':'mcmc_min2', 'iterations': n_iterations * 10, 'after_minimizer': {'type': 'root_minuit', 'method': 'simplex'}})
     result = {'type': 'minimizer_chain', 'minimizers': minimizers}
     if need_error: result['last_minimizer'] = {'type': 'root_minuit'}
     return result

@@ -200,10 +200,11 @@ def setup_workdir():
 def main():
     ROOT.gROOT.SetBatch(True)
     scriptname = 'analysis.py'
-    tmpdir = False
+    tmpdir, profile = False, False
     for arg in sys.argv[1:]:
         if '.py' in arg: scriptname = arg
         if arg=='--tmpdir': tmpdir = True
+        if arg=='--profile': profile = True
     if tmpdir:
         config.workdir = tempfile.mkdtemp()
     else:
@@ -216,7 +217,11 @@ def main():
     variables['report'] = config.report
     utils.info("executing script %s" % scriptname)
     try:
-        execfile(scriptname, variables)
+        if profile:
+            import cProfile
+            cProfile.runctx("execfile(scriptname, variables)", globals(), locals())
+        else:
+            execfile(scriptname, variables)
     except Exception as e:
         print "error while trying to execute analysis script %s:" % scriptname
         traceback.print_exc()

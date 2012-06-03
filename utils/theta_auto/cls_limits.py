@@ -248,7 +248,7 @@ def obs_significance_approx(model):
     result2 = ml_fit2(model, signal_prior = 'fix:0.0', nuisance_constraint = '')
     result = {}
     for spid in result1:
-        result[spid] = math.sqrt(2 * (result2[spid]['nll'][0] - result1[spid]['nll'][0]))
+        result[spid] = math.sqrt(max(2 * (result2[spid]['nll'][0] - result1[spid]['nll'][0]), 0.0))
     return result
 
 # Calculate an approximation to the expected significance (using asimov data and Wilks' theorem)
@@ -262,7 +262,7 @@ def exp_significance_approx(model):
     model.distribution = dist_orig
     result = {}
     for spid in result1:
-        result[spid] = math.sqrt(2 * (result2[spid]['nll'][0] - result1[spid]['nll'][0]))
+        result[spid] = math.sqrt(max(2 * (result2[spid]['nll'][0] - result1[spid]['nll'][0]), 0.0))
     return result
 
 # container for toys made for the CLs construction

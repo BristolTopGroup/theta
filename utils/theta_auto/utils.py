@@ -4,6 +4,8 @@ import numpy.linalg, array, math
 
 import theta_interface, plotutil
 
+import scipy.stats
+
 import Model
 
 inf = float("inf")
@@ -143,6 +145,14 @@ def get_trunc_mean_width(l):
    l2 = [x for x in l if x >= median-width and x <= median+width]
    return get_mean_width(l2)
 
+   
+def p_to_Z(p_value):
+   return -scipy.stats.norm.ppf(p_value)
+   
+def Z_to_p(z_value):
+    return scipy.stats.norm.sf(z_value)
+   
+   
 # returns the theta config dictionary, given a signal_prior specification ('flat' / 'fix:X')
 def signal_prior_dict(spec):
     if type(spec) == str:

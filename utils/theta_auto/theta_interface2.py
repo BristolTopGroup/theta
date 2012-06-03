@@ -254,14 +254,26 @@ class PliProducer(ProducerBase):
         result.update(self.get_cfg_base(options))
         return result
         
-"""
-class DeltaNllProducer(ProducerBase):
-    def __init__(self, model, signal_processes, override_distribution = None, name = 'deltanll', parameter = 'beta_signal'):
-        ProducerBase.__init__(self, model, signal_processes, override_distribution = None, name)
         
-        self.sb_dist = 
-"""     
+class DeltaNllHypotest(ProducerBase):
+    def __init__(self, model, signal_processes, override_distribution = None, name = 'dnll'):
+        ProducerBase.__init__(self, model, signal_processes, override_distribution = None, name = name, signal_prior = None)
+        self.minimizer = Minimizer(need_error = False)
+        self.add_submodule(self.minimizer)
+        if override_distribution is not None: dist = Distribution.merge(model.distribution, override_distribution)
+        else: dist = model.distribution
+        parameters = set(model.get_parameters(signal_processes, True))
+        self.sb_distribution_cfg = {'type': 'product_distribution', 'distributions': [dist.get_cfg(parameters), _signal_prior_dict('flat')]}
+        self.b_distribution_cfg = {'type': 'product_distribution', 'distributions': [dist.get_cfg(parameters), _signal_prior_dict('fix:0.0')]}
         
+        
+    def get_cfg(self, options):
+        result = {'type': 'deltanll_hypotest', 'minimizer': self.minimizer.get_cfg(options), 'background-only-distribution': self.b_distribution_cfg, 'signal-plus-background-distribution': self.sb_distribution_cfg}
+        result.update(self.get_cfg_base(options))
+        return result
+       
+    
+       
 """        
 class NllScanProducer(ProducerBase):
     def __init__(self, parameter_dist, parameter = 'beta_signal', name = 'nll_scan', range = [0.0, 3.0], npoints = 101):
@@ -519,7 +531,6 @@ class Run:
         else: assert columns == '*'
         data, columns = sql_singlefile(self.theta_db_fname, 'select %s from products' % columns, True)
         result = {}
-        # TODO: convert histograms to 3-tuples!
         for i in range(len(columns)):
             result[columns[i][0]] = [row[i] for row in data]
         return result
@@ -529,6 +540,12 @@ class Run:
         data = sql_singlefile(self.theta_db_fname, 'select count(*) from products')
         return data[0][0]
         
+
+# create a Histogram instance from the blob data in a sqlite db
+def histogram_from_dbblob(blob_data):
+    a = array.array('d')
+    a.fromstring(blob_data)
+    return Histogram(xmin = a[0], xmax = a[1], values = a[3:-1])
 
 # the nuisance prior used for the 
 """

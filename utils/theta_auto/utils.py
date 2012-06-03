@@ -174,7 +174,7 @@ def data_source_dict(model, input_spec, **options):
     if input_spec == 'data':
         source_dict = {'type': 'histo_source', 'name': 'source'}
         for o in model.observables:
-            source_dict[o] = theta_interface.get_histo_cfg(model.data_histos[o])
+            source_dict[o] = model.data_histos[o].get_cfg(False)
         if len(model.data_rvobsvalues) > 0:
             source_dict['rvobs-values'] = dict(model.data_rvobsvalues)
         return (source_dict, theta_interface.delta_distribution(beta_signal = 0.0))

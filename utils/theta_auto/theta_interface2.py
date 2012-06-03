@@ -164,8 +164,7 @@ class DataSource(ModuleBase):
             return result
         else:
             result['type'] = 'histo_source'
-            for o in self.data_histos:
-                result[o] = get_histo_cfg(self.data_histos[o])
+            for o in self.data_histos: result[o] = self.data_histos[o].get_cfg(False)
             if len(self.data_rvobsvalues) > 0:
                 result['rvobs-values'] = dict(self.data_rvobsvalues)
             return result
@@ -184,21 +183,26 @@ class ProducerBase(ModuleBase):
     
     
     # note that signal_prior is only respected is override_distribution
+    # if model is None, override_distribution and signal_prior is ignored.
     def __init__(self, model, signal_processes, override_distribution, name, signal_prior):
         ModuleBase.__init__(self)
         assert type(name) == str
         self.override_distribution_cfg, self.additional_nll_cfg = None, None
-        signal_prior_cfg = _signal_prior_dict(signal_prior)
-        parameters = set(model.get_parameters(signal_processes, True))
-        if override_distribution is not None: dist = Distribution.merge(model.distribution, override_distribution)
-        else: dist = model.distribution
-        self.override_distribution_cfg = {'type': 'product_distribution', 'distributions': [dist.get_cfg(parameters), signal_prior_cfg]}
-        if model is not None and model.additional_nll_term is not None:
-            self.additional_nll_cfg = model.additional_nll_term.get_cfg()
         self.name = name
+        if model is not None:
+            signal_prior_cfg = _signal_prior_dict(signal_prior)
+            parameters = set(model.get_parameters(signal_processes, True))
+            if override_distribution is not None: dist = Distribution.merge(model.distribution, override_distribution)
+            else: dist = model.distribution
+            self.override_distribution_cfg = {'type': 'product_distribution', 'distributions': [dist.get_cfg(parameters), signal_prior_cfg]}
+            if model.additional_nll_term is not None:
+                self.additional_nll_cfg = model.additional_nll_term.get_cfg()
+        
     
 
 class MleProducer(ProducerBase):
+    # parameters_write is the list of parameters to write the mle for in the db. The default (None) means
+    # to use all parameters.
     def __init__(self, model, signal_processes, override_distribution, signal_prior = 'flat', name = 'mle', need_error = True, parameters_write = None):
         ProducerBase.__init__(self, model, signal_processes, override_distribution, name, signal_prior)
         self.minimizer = Minimizer(need_error)
@@ -206,10 +210,22 @@ class MleProducer(ProducerBase):
         if parameters_write is None: self.parameters_write = sorted(list(model.get_parameters(signal_processes, True)))
         else: self.parameters_write = sorted(list(parameters_write))
         
-    # parameters_write is the list of parameters to write the mle for in the db. The default (None) means
-    # to use all parameters.
     def get_cfg(self, options):
         result = {'type': 'mle', 'minimizer': self.minimizer.get_cfg(options), 'parameters': list(self.parameters_write)}
+        result.update(self.get_cfg_base(options))
+        return result
+        
+        
+class QuantilesProducer(ProducerBase):
+    def __init__(self, model, signal_processes, override_distribution, signal_prior = 'flat', name = 'quant', parameter = 'beta_signal', quantiles = [0.16, 0.5, 0.84],
+    iterations = 10000):
+        ProducerBase.__init__(self, model, signal_processes, override_distribution, name, signal_prior)
+        self.parameter = parameter
+        self.quantiles = quantiles
+        self.iterations = iterations
+        
+    def get_cfg(self, options):
+        result = {'type': 'mcmc_quantiles', 'parameter': self.parameter, 'quantiles': self.quantiles, 'iterations': self.iterations}
         result.update(self.get_cfg_base(options))
         return result
 
@@ -271,11 +287,13 @@ class Minimizer(ModuleBase):
         always_mcmc = options.getboolean('minimizer', 'always_mcmc')
         mcmc_iterations = options.getint('minimizer', 'mcmc_iterations')
         minimizers = []
-        #try, in this order: migrad, mcmc+migrad, simplex, mcmc+simplex.
+        #try, in this order: migrad, mcmc+migrad, simplex, mcmc+simplex, more mcmc+simplex
         if not always_mcmc: minimizers.append({'type': 'root_minuit'})
         minimizers.append({'type': 'mcmc_minimizer', 'name':'mcmc_min0', 'iterations': mcmc_iterations, 'after_minimizer': {'type': 'root_minuit'}})
         if not always_mcmc: minimizers.append({'type': 'root_minuit', 'method': 'simplex'})
         minimizers.append({'type': 'mcmc_minimizer', 'name':'mcmc_min1', 'iterations': mcmc_iterations, 'after_minimizer': {'type': 'root_minuit', 'method': 'simplex'}})
+        minimizers.append({'type': 'mcmc_minimizer', 'name':'mcmc_min1', 'iterations': 50 * mcmc_iterations, 'after_minimizer': {'type': 'root_minuit', 'method': 'simplex'}})
+        minimizers.append({'type': 'mcmc_minimizer', 'name':'mcmc_min1', 'iterations': 500 * mcmc_iterations, 'after_minimizer': {'type': 'root_minuit', 'method': 'simplex'}})
         result = {'type': 'minimizer_chain', 'minimizers': minimizers}
         if self.need_error: result['last_minimizer'] = {'type': 'root_minuit'}
         return result

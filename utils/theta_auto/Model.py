@@ -10,7 +10,6 @@ class rootfile:
     # these are caching dictionaries indexing by filename
     tfiles = {}
     all_templates = {}
-    uncertainties_histos = {}
     
     def __init__(self, filename):
         assert os.path.isfile(filename), "File %s not found (cwd: %s)" % (filename, os.getcwd())
@@ -18,18 +17,18 @@ class rootfile:
         if self.filename not in rootfile.tfiles: rootfile.tfiles[self.filename] = ROOT.TFile(filename, "read")
         self.tfile = rootfile.tfiles[self.filename]
         
-        
     @staticmethod
-    def th1_to_histo(th1):
+    def th1_to_histo(th1, include_uncertainties):
         xmin, xmax, nbins = th1.GetXaxis().GetXmin(), th1.GetXaxis().GetXmax(), th1.GetNbinsX()
         #data = [th1.GetBinContent(i) for i in range(1, nbins+1)]
-        data = array.array('d', [th1.GetBinContent(i) for i in range(1, nbins+1)])
-        return xmin, xmax, data
+        values = array.array('d', [th1.GetBinContent(i) for i in range(1, nbins+1)])
+        uncertainties = array.array('d', [th1.GetBinError(i) for i in range(1, nbins+1)]) if include_uncertainties else None
+        return Histogram(xmin, xmax, values, uncertainties, th1.GetName())
   
     # get all templates as dictionary (histogram name) --> (float xmin, float xmax, list float data)
     # only checks type of histogram, not naming convention
-    def get_all_templates(self):
-        if self.filename in rootfile.all_templates: return rootfile.all_templates[self.filename]
+    def get_all_templates(self, include_uncertainties):
+        if (self.filename, include_uncertainties) in rootfile.all_templates: return rootfile.all_templates[self.filename, include_uncertainties]
         result = {}
         l = self.tfile.GetListOfKeys()
         for key in l:
@@ -39,8 +38,8 @@ class rootfile:
                 print "WARNING: ignoring key %s in input file %s because it is of ROOT class %s, not TH1F / TH1D" % (key.GetName(), self.filename, clas)
                 continue
             th1 = key.ReadObj()
-            result[str(key.GetName())] = rootfile.th1_to_histo(th1)
-        rootfile.all_templates[self.filename] = result
+            result[str(key.GetName())] = rootfile.th1_to_histo(th1, include_uncertainties)
+        rootfile.all_templates[self.filename, include_uncertainties] = result
         return result
         
     def get_histogram(self, hname, fail_with_exception = False):
@@ -49,18 +48,6 @@ class rootfile:
             if fail_with_exception: raise RuntimeError, "did not find histogram '%s' in file '%s'" % (hname, self.filename)
             return None
         return rootfile.th1_to_histo(th1)
-        
-    def get_uncertainties_histo(self, hname):
-        if self.filename in rootfile.uncertainties_histos and hname in rootfile.uncertainties_histos[self.filename]: return rootfile.uncertainties_histos[self.filename][hname]
-        th1 = self.tfile.Get(hname)
-        if type(th1) not in (ROOT.TH1F, ROOT.TH1D):
-            raise RuntimeError, "did not find histogram '%s' in file '%s'" % (hname, self.filename)
-        xmin, xmax, nbins = th1.GetXaxis().GetXmin(), th1.GetXaxis().GetXmax(), th1.GetNbinsX()
-        data = array.array('d', [th1.GetBinError(i) for i in range(1, nbins+1)])
-        if not self.filename in rootfile.uncertainties_histos: rootfile.uncertainties_histos[self.filename] = {}
-        rootfile.uncertainties_histos[self.filename][hname] = xmin, xmax, data
-        return xmin, xmax, data
-        
 
 
 # par_values is a dictionary (parameter name) --> (floating point value)
@@ -227,17 +214,34 @@ class Model:
     
     # make sure all histogram bins of histogram h contain at least
     # epsilon * (average bin content of histogram h)
+    #
+    # The special case epsion = None will leave the prediction at the value of 0.0
+    # but will make sure that the uncertainty in each bin is at least the one corresponding 1 MC event.
+    # The average weight for the MC sample is estimated from the uncertainties given in the histogram.
     def fill_histogram_zerobins(self, epsilon = 0.001):
         for o in self.observable_to_pred:
             for p in self.observable_to_pred[o]:
                 hf = self.observable_to_pred[o][p]['histogram']
-                histos = [hf.nominal_histo]
-                for par in hf.syst_histos: histos.extend([hf.syst_histos[par][0], hf.syst_histos[par][1]])
-                for h in histos:
-                    s = sum(h[2])
-                    nbins = len(h[2])
-                    for i in range(nbins):
-                        h[2][i] = max(epsilon * s / nbins, h[2][i])
+                if epsilon is None:
+                    h = hf.get_nominal_histo()
+                    unc = h.get_value_sum_uncertainty()
+                    if unc is None: continue
+                    s = h.get_value_sum()
+                    # the number of effective MC events is estimated via the MC stat. uncertainty:
+                    n_eff = s**2 / unc**2
+                    # the average MC event weight; this is used as minimum uncertainty ...
+                    w = s / n_eff
+                    #print o, p, n_eff, w
+                    uncs = h.get_uncertainties()
+                    new_uncs = [max(u, w) for u in uncs]
+                    hf.set_nominal_histo(Histogram(h.get_xmin(), h.get_xmax(), h.get_values(), new_uncs, h.get_name()))
+                else:
+                    histos = [hf.get_nominal_histo()]
+                    for par in hf.syst_histos: histos.extend([hf.syst_histos[par][0], hf.syst_histos[par][1]])
+                    for h in histos:
+                        s = sum(h[2])
+                        nbins = len(h[2])
+                        h[2][:] = array.array('d', [max(epsilon * s / nbins, y) for y in h[2]])
 
     # obsname and procname can be '*' to match all observables / processes.
     def scale_predictions(self, factor, procname = '*', obsname = '*'):
@@ -517,6 +521,93 @@ def add(l, l2, coeff = 1.0):
     assert len(l) == len(l2)
     return [l[i] + coeff * l2[i] for i in range(len(l))]
 
+
+
+# a histogram class which stores the x range and 1D data.
+# note that for backward-compatibility, this emulates a three-tuple
+# (xmin, xmax, values) where xmin, xmax are floats and values is
+# list-like (=int-indexed) container of floats
+#
+# It extends this by
+# * adding uncertainties
+# * providing some convenience functions like rebinning, scaling
+#
+# Note that those functions return a new Histogram instance.
+class Histogram:
+    def __init__(self, xmin, xmax, values, uncertainties = None, name = None):
+        self.xmin = xmin
+        self.xmax = xmax
+        self.values = values
+        self.name = name
+        if uncertainties is not None: assert len(values) == len(uncertainties)
+        self.uncertainties = uncertainties
+        
+    def get_uncertainties(self): return self.uncertainties
+    
+    def get_values(self): return self.values
+    
+    def get_value_sum(self): return sum(self.values)
+    
+    def get_value_sum_uncertainty(self):
+        if self.uncertainties is None: return None
+        return math.sqrt(sum([x**2 for x in self.uncertainties]))
+        
+    def get_xmin(self): return self.xmin
+    def get_xmax(self): return self.xmax
+    
+    def get_cfg(self, include_error = True):
+        result = {'type': 'direct_data_histo', 'range': [self.xmin, self.xmax], 'nbins': len(self.values), 'data': self.values}
+        if self.uncertainties is not None and include_error: result['uncertainties'] = self.uncertainties
+        return result
+    
+    def get_name(self): return self.name
+    
+    def copy(self):
+        uncs = None if self.uncertainties is None else self.uncertainties[:]
+        return Histogram(self.xmin, self.xmax, self.values[:], uncs, self.name)
+    
+    def strip_uncertainties(self): return Histogram(self.xmin, self.xmax, self.values, None, self.name)
+    
+    def scale(self, factor, new_name = None):
+        uncs = None if self.uncertainties is None else array.array('d', [v * factor for v in self.uncertainties])
+        return Histogram(self.xmin, self.xmax, array.array('d', [v * factor for v in self.values]), uncs, new_name)
+
+    def rebin(self, rebin_factor, new_name = None):
+        if len(self.values) % rebin_factor != 0: raise RuntimeError, "tried to rebin %d bins with factor %d" % (len(self.values), rebin_factor)
+        newlen = len(self.values) / rebin_factor
+        new_vals = array.array('d', [0.0] * newlen)
+        uncs2 = [0.0] * newlen
+        for i in range(len(self.values)):
+            new_vals[i / rebin_factor] += self.values[i]
+            if self.uncertainties is not None: uncs2[i / rebin_factor] += self.uncertainties[i]**2
+        new_uncs = None
+        if self.uncertainties is not None: new_uncs = array.array('d', map(math.sqrt, uncs2))
+        return Histogram(self.xmin, self.xmax,  new_vals, new_uncs, new_name)
+        
+        
+    def __len__(self): return 3
+    
+    def __getitem__(self, index):
+        if index==0: return self.xmin
+        if index==1: return self.xmax
+        if index==2: return self.values
+        raise KeyError
+        
+    def __iter__(self):
+        class it:
+            def __init__(self, h):
+                self.index = 0
+                self.h = h
+            def __iter__(self): return self
+            def next(self):
+                if self.index==3: raise StopIteration
+                res = self.h[self.index]
+                self.index += 1
+                return res
+        return it(self)
+
+
+
 # for morphing histos:
 class HistogramFunction:
     def __init__(self, typ = 'cubiclinear'):
@@ -528,9 +619,11 @@ class HistogramFunction:
         self.normalize_to_nominal = False
         self.syst_histos = {} # map par_name -> (plus histo, minus_histo)
         self.histrb = None # xmin, xmax nbins
-        self.nominal_uncertainty_histo = None
         
     def get_nominal_histo(self): return self.nominal_histo
+    def get_plus_histo(self, par): return self.syst_histos[par][0]
+    def get_minus_histo(self, par): return self.syst_histos[par][1]
+        
 
     def rename_parameter(self, current_name, new_name):
         if current_name not in self.parameters: return
@@ -577,12 +670,6 @@ class HistogramFunction:
         assert histrb == self.histrb, "histogram range / binning inconsistent!"
         self.nominal_histo = nominal_histo
     
-    def set_nominal_uncertainty_histo(self, histo):
-        histrb = histo[0], histo[1], len(histo[2])
-        if self.histrb is None: self.histrb = histrb
-        assert histrb == self.histrb, "histogram range / binning inconsistent!"
-        self.nominal_uncertainty_histo = histo
-    
     def set_syst_histos(self, par_name, plus_histo, minus_histo, factor = 1.0):
         self.parameters.add(par_name)
         self.factors[par_name] = factor
@@ -592,35 +679,31 @@ class HistogramFunction:
         if self.histrb is None: self.histrb = histrb_plus
         assert histrb_plus == self.histrb, "histogram range / binning inconsistent!"
         self.syst_histos[par_name] = (plus_histo, minus_histo)
-        
+    
     def scale(self, factor):
-        n = len(self.nominal_histo[2])
-        for i in range(n): self.nominal_histo[2][i] = self.nominal_histo[2][i] * factor
-        if self.nominal_uncertainty_histo is not None:
-            for i in range(n): self.nominal_uncertainty_histo[2][i] = self.nominal_uncertainty_histo[2][i] * factor
-        for hp, hm in self.syst_histos.itervalues():
-            for i in range(n):
-                hp[2][i] = hp[2][i] * factor
-                hm[2][i] = hm[2][i] * factor
-        
+        self.nominal_histo = self.nominal_histo.scale(factor)
+        for s in self.syst_histos:
+            self.syst_histos[s] = self.syst_histos[s][0].scale(factor), self.syst_histos[s][1].scale(factor)
+    """    
     def rebin(self, rebin_factor):
         rebin_hlist(self.nominal_histo[2], rebin_factor)
         for hp, hm in self.syst_histos.itervalues():
             rebin_hlist(hp, rebin_factor)
             rebin_hlist(hm, rebin_factor)
+    """
 
     def get_cfg(self):
         if len(self.syst_histos) == 0:
-            return get_histo_cfg(self.nominal_histo, self.nominal_uncertainty_histo)
+            return self.nominal_histo.get_cfg()
         result = {'type': 'cubiclinear_histomorph', 'parameters': sorted(list(self.parameters)),
-           'nominal-histogram': get_histo_cfg(self.nominal_histo, self.nominal_uncertainty_histo), 'normalize_to_nominal': self.normalize_to_nominal}
+           'nominal-histogram': self.nominal_histo.get_cfg(), 'normalize_to_nominal': self.normalize_to_nominal}
         if set(self.factors.values()) != set([1.0]):
             result['parameter_factors'] = []
             for p in result['parameters']:
                 result['parameter_factors'].append(self.factors[p])
         for p in self.parameters:
-            result['%s-plus-histogram' % p] = get_histo_cfg(self.syst_histos[p][0])
-            result['%s-minus-histogram' % p] = get_histo_cfg(self.syst_histos[p][1])
+            result['%s-plus-histogram' % p] = self.syst_histos[p][0].get_cfg(False)
+            result['%s-minus-histogram' % p] = self.syst_histos[p][1].get_cfg(False)
         return result
 
     def get_parameters(self): return self.parameters
@@ -787,19 +870,20 @@ def build_model_from_rootfile(filenames, histogram_filter = lambda s: True, root
     if type(filenames)==str: filenames = [filenames]
     result = Model()
     histos = {}
-    uncertainties_histos = {}
     observables, processes, uncertainties = set(), set(), set()
 
     for fname in filenames:
         rf = rootfile(fname)
-        templates = rf.get_all_templates()
+        templates = rf.get_all_templates(include_mc_uncertainties)
         for hexternal in templates:
             if not histogram_filter(hexternal): continue
-            hinternal = root_hname_to_convention(hexternal)
-            xmin, xmax, data = templates[hexternal]
-            dummy_name, xmin, xmax, data = transform_histo((hinternal, xmin, xmax, data))
-            assert dummy_name == hinternal, "transform_histo changed the name. This is not allowed; use root_hname_to_convention!"
-            l = hinternal.split('__')
+            hname_theta = root_hname_to_convention(hexternal)
+            h_rootfile = templates[hexternal]
+            h_mine = h_rootfile.copy()
+            h_mine.name = hname_theta
+            h_mine = transform_histo(h_mine)
+            assert h_mine.get_name() == hname_theta, "transform_histo changed the name. This is not allowed; use root_hname_to_convention!"
+            l = hname_theta.split('__')
             observable, process, uncertainty, direction = [None]*4
             if len(l)==2:
                 observable, process = map(utils.transform_name_to_theta, l)
@@ -809,25 +893,21 @@ def build_model_from_rootfile(filenames, histogram_filter = lambda s: True, root
                 observable, process, uncertainty, direction = l
                 observable, process = map(utils.transform_name_to_theta, [observable, process])
             else:
-                print "Warning: ignoring template %s (was: %s) which does not obey naming convention!" % (hinternal, hexternal)
+                print "Warning: ignoring template %s (was: %s) which does not obey naming convention!" % (hname_theta, hexternal)
                 continue
             if direction not in (None, 'plus', 'minus', 'up', 'down'):
-                print "Warning: ignoring template %s (was: %s) which does not obey naming convention!" % (hinternal, hexternal)
+                print "Warning: ignoring template %s (was: %s) which does not obey naming convention!" % (hname_theta, hexternal)
                 continue
             if process == 'DATA':
                 assert len(l)==2
-                result.set_data_histogram(observable, (xmin, xmax, data))
+                result.set_data_histogram(observable, h_mine.strip_uncertainties())
                 continue
             if uncertainty is not None: uncertainties.add(uncertainty)
             if direction=='up': direction='plus'
             if direction=='down': direction='minus'
             if uncertainty is not None: h_new = '%s__%s__%s__%s' % (observable, process, uncertainty, direction)
             else: h_new = '%s__%s' % (observable, process)
-            # note: copy the data as rootfile caches histograms(!)
-            histos[h_new] = (xmin, xmax, data[:])
-            if include_mc_uncertainties:
-                xmin, xmax, data = rf.get_uncertainties_histo(hexternal)
-                uncertainties_histos[h_new] = (xmin, xmax, data[:])
+            histos[h_new] = h_mine
 
     # build histogram functions from templates, and make some sanity checks:
     for o in observables:
@@ -835,9 +915,9 @@ def build_model_from_rootfile(filenames, histogram_filter = lambda s: True, root
             hname_nominal = '%s__%s' % (o, p)
             if hname_nominal not in histos: continue
             hf = HistogramFunction()
-            hf.set_nominal_histo(histos[hname_nominal])
-            if include_mc_uncertainties:
-                hf.set_nominal_uncertainty_histo(uncertainties_histos[hname_nominal])
+            h = histos[hname_nominal]
+            if not include_mc_uncertainties: h =  h.strip_uncertainties()
+            hf.set_nominal_histo(h)
             for u in uncertainties:
                 n_syst = 0
                 if ('%s__%s__%s__plus' % (o, p, u)) in histos: n_syst += 1

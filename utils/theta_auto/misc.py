@@ -593,13 +593,13 @@ def ks_test_individual_channels(model, fit_yield = False, **options):
 #  two-tuples (lower interval border, upper interval border). In addition to the confidence levels, there is a special key 'mle' which contains a list
 #  of beta_signal values at the maximum.
 #
-# For example, if the only signal process is called 'signal' and cl=[0.68, 0.84], the 1sigma intervals are
+# For example, if the only signal process is called 'signal' and cl=[0.68, 0.95], the 1sigma intervals are
 # \code
 #  result['signal'][0.68][i] # i=0..n-1
 # \endcode
 # and the 2signma intervals are
 # \code
-#  result['signal'][0.84][i] # i=0..n-1
+#  result['signal'][0.95][i] # i=0..n-1
 # \endcode
 # and the beta_signal values at the maximum are 
 # \code

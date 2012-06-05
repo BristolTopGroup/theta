@@ -109,7 +109,7 @@ def add_shapes(model, obs, proc, uncs, filename, hname, hname_with_systematics, 
     hname = hname.replace('$PROCESS', proc)
     hname_with_systematics = hname_with_systematics.replace('$PROCESS', proc)
     nominal_histogram = rf.get_histogram(hname, include_uncertainties = include_uncertainties)
-    if utils.reldiff(sum(old_nominal_histogram[2]), sum(nominal_histogram[2])) > 0.01 and abs(sum(old_nominal_histogram[2]) - sum(nominal_histogram[2])) > 1e-4:
+    if utils.reldiff(old_nominal_histogram.get_value_sum(), nominal_histogram.get_value_sum()) > 0.01 and abs(old_nominal_histogram.get_value_sum() - nominal_histogram.get_value_sum()) > 1e-4:
         raise RuntimeError, "add_shapes: histogram normalisation given in datacard and from root file differ by more than >1% (and absolute difference is > 1e-4)"
     hf.set_nominal_histo(nominal_histogram, reset_binning = True)
     model.reset_binning(theta_obs, nominal_histogram[0], nominal_histogram[1], len(nominal_histogram[2]))
@@ -130,13 +130,13 @@ def add_shapes(model, obs, proc, uncs, filename, hname, hname_with_systematics, 
         histo_minus = rf.get_histogram(hname_minus, include_uncertainties = include_uncertainties, fail_with_exception = True)
         # make the rate uncertainty part of the coefficient function, i.e., normalize plus and minus histograms
         # to nominal and add a lognormal uncertainty to the coefficient function:
-        lambda_plus = math.log(sum(histo_plus[2]) / sum(nominal_histogram[2])) * uncs[u]
-        lambda_minus = -math.log(sum(histo_minus[2]) / sum(nominal_histogram[2])) * uncs[u]
+        lambda_plus = math.log(histo_plus.get_value_sum() / nominal_histogram.get_value_sum()) * uncs[u]
+        lambda_minus = -math.log(histo_minus.get_value_sum() / nominal_histogram.get_value_sum()) * uncs[u]
         model.get_coeff(theta_obs, theta_proc).add_factor('exp', parameter = u, lambda_plus = lambda_plus, lambda_minus = lambda_minus)
-        f_plus = sum(nominal_histogram[2]) / sum(histo_plus[2])
-        utils.mul_list(histo_plus[2], f_plus)
-        f_minus = sum(nominal_histogram[2]) / sum(histo_minus[2])
-        utils.mul_list(histo_minus[2], f_minus)
+        f_plus = nominal_histogram.get_value_sum() / histo_plus.get_value_sum()
+        histo_plus = histo_plus.scale(f_plus)
+        f_minus = nominal_histogram.get_value_sum() / histo_minus.get_value_sum()
+        histo_minus = histo_minus.scale(f_minus)
         hf.set_syst_histos(u, histo_plus, histo_minus, uncs[u])
         hf.normalize_to_nominal = True
  
@@ -304,10 +304,10 @@ def build_model(fname, filter_channel = lambda chan: True, filter_uncertainty = 
             if n_affected > 0:
                 k = float(cmds[2])
                 hf = HistogramFunction()
-                hf.set_nominal_histo((0.0, 1.0, [k]))
+                hf.set_nominal_histo(Histogram(0.0, 1.0, [k]))
                 obs_sb = '%s_sideband' % uncertainty
                 model.set_histogram_function(obs_sb, 'proc_sb', hf)
-                model.set_data_histogram(obs_sb, (0.0, 1.0, [k]))
+                model.set_data_histogram(obs_sb, Histogram(0.0, 1.0, [k]))
                 model.get_coeff(obs_sb, 'proc_sb').add_factor('id', parameter = uncertainty)
                 # the maximum likelihood estimate for the delta parameter is 1.0
                 model.distribution.set_distribution(uncertainty, 'gauss', mean = 1.0, width = float("inf"), range = (0.0, float("inf")))

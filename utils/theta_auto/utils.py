@@ -9,6 +9,8 @@ import scipy.stats
 import Model
 
 inf = float("inf")
+cl_1sigma = 0.68268949213708585
+cl_2sigma = 0.95449973610364158
 
 # returns a dictionary float x --> signal process group id
 #
@@ -29,6 +31,8 @@ def get_x_to_sp(spgids, **options):
     assert len(spgids) == len(x_to_sp)
     return x_to_sp
 
+
+def make_tuple(*args): return tuple(args)
 
 # options: booleans load_root_ plugins  (default: True)
 # use_llvm (default: False)

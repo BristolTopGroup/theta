@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-
-import hashlib, io, os, time
-from theta_auto import *
+import hashlib, io, os, time, re, numpy, shutil
+from Model import *
+from utils import *
+import config
 
 # In general, each (plugin) class in theta (which in turn corresponds to a setting group with a "type" setting) corresponds to a class here.
 #
@@ -482,8 +483,8 @@ class Run:
         if self.result_available: return
         workdir = options.get_workdir()
         cache_dir = os.path.join(workdir, 'cache')
-        theta = os.path.realpath(os.path.join(global_config.theta_dir, 'bin', 'theta'))
-        utils.info("Running 'theta %s'" % cfgfile)
+        theta = os.path.realpath(os.path.join(config.theta_dir, 'bin', 'theta'))
+        info("Running 'theta %s'" % cfgfile)
         to_execute = lambda : self._exec(theta + " " + cfgfile)
         if in_background_thread:
             assert self.thread is None
@@ -523,18 +524,31 @@ class Run:
     #  column_name --> list of values
     # which columns are returned can be controlled by the columns argument wich is either a list of column names
     # or as special case the string '*'. The defaul is '*' in which case all columns are returned.
-    def get_products(self, columns = '*'):
+    #
+    #
+    def get_products(self, columns = '*', fail_if_empty = True):
         if not self.result_available: return None
         assert self.theta_db_fname is not None
         if type(columns)!=str:
             columns = '"' + '", "'.join(columns) + '"'
         else: assert columns == '*'
         data, columns = sql_singlefile(self.theta_db_fname, 'select %s from products' % columns, True)
+        if len(data)==0 and fail_empty:
+            self.print_logtable_errors()
+            raise RuntimeError, "No result is available, see errors above"
         result = {}
         for i in range(len(columns)):
             result[columns[i][0]] = [row[i] for row in data]
         return result
         
+    def print_logtable_errors(self, limit = 10):
+        if not self.result_available: return
+        assert self.theta_db_fname is not None
+        data = sql_singlefile(self.theta_db_fname, 'select "eventid", "message" from "log" where "severity"=0 limit %d' % int(limit))
+        if len(data)==0: return
+        print "There have been errors for some toys: eventid, message"
+        for i in range(len(data)):
+            print data[i][0], data[i][1]
         
     def get_products_nevents(self):
         data = sql_singlefile(self.theta_db_fname, 'select count(*) from products')

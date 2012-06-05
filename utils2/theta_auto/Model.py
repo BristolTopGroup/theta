@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-import ROOT, re, fnmatch, math
+import ROOT, re, fnmatch, math, copy
 import os, os.path
-from theta_interface import *
-from utils import *
+#from theta_interface import *
+
+import array
 
 
 class rootfile:
-    
     # these are caching dictionaries indexing by filename
     tfiles = {}
     all_templates = {}
@@ -375,7 +375,7 @@ class Model:
                 if proc in signal_processes:
                     result[o][proc]['coefficient-function']['factors'].append('beta_signal')
         parameters = self.get_parameters(signal_processes)
-        result['parameter-distribution'] = product_distribution(self.distribution.get_cfg(parameters), signal_prior_cfg)
+        result['parameter-distribution'] = {'type': 'product_distribution', 'distributions': (self.distribution.get_cfg(parameters), signal_prior_cfg)}
         #rv observables:
         rvobservables = self.rvobs_distribution.get_parameters()
         if len(rvobservables) > 0:

@@ -61,6 +61,55 @@ namespace theta{
         /// Define explicitely as ParValues::operator= is private
         void operator=(const MinimizationResult& rhs);
     };
+    
+    /** \brief A minimization problem: function, parameter bounds, and start/step values
+     * 
+     * Successful construction guarantees some basic properties: start, step, and range values are available for
+     * all parameters of the function; all step sizes are &gt;= 0.0; the start value is always within the range.
+     * 
+     * The matrix is an estimate for the covariance matrix, using the function parameters to convert ParIds to indices
+     * consistently.
+     */
+    // this could also be done in parameters of Minimizer::minimize, but this is more general ...
+    class MinimizationProblem{
+    public:
+        MinimizationProblem(const theta::Function & f, const theta::ParValues & start, const theta::ParValues & step, const std::map<theta::ParId, std::pair<double, double> > & ranges);
+        MinimizationProblem(const theta::Function & f, const theta::ParValues & start, const theta::Matrix & matrix, const std::map<theta::ParId, std::pair<double, double> > & ranges);
+        
+        /// The function to minimize
+        const theta::Function & get_f() const{
+            return f;
+        }
+        
+        /// The start values for the minimization.
+        theta::ParValues get_start() const{
+            return start;
+        }
+        
+        /// The parameter ranges. Guaranteed to contain all parameters of f.
+        const std::map<theta::ParId, std::pair<double, double> > & get_ranges() const{
+            return ranges;
+        }
+        
+        /// the step values contain approximately the standard deviation of the parameters to estimate
+        theta::ParValues get_steps() const{
+            return step;
+        }
+        
+        /// the step matrix holds approximately the covariance matrix (if known).
+        Matrix get_step_matrix() const{
+            return matrix;
+        }
+        
+    private:
+        const theta::Function & f;
+        theta::ParValues start;
+        theta::ParValues step;
+        std::map<theta::ParId, std::pair<double, double> > ranges;
+        Matrix matrix;
+        
+        void check_consistency() const;
+    };
 
 
     /** \brief Abstract interface to different minimizers.
@@ -70,28 +119,36 @@ namespace theta{
     class Minimizer{
     public:
         
-        /// Define us as the base_type for derived classes; required for the plugin system
+        /// Define this class as the base_type for derived classes; required for the plugin system
         typedef Minimizer base_type;
 
         /// declare destructor virtual as we expect polymorphic access to derived classes
         virtual ~Minimizer();
 
-        /** \brief Attempt to minimize the function.
+        /** \brief Find the minimum of a function.
          *
-         * The function f is attempted to be minimized, with specified start values, step sizes and
-         * ranges. The step size should be an estimate of the posterior RMS (minimization implementations
-         * can scale this up or down, depending on what performs best for the specific minimization implementation).
+         * The minimum of f is found, starting at the specified start values, step sizes and
+         * ranges. The step size should be an estimate of the parameter uncertainty.
          *
          * If a serious error occurs during minimization and the minimization fails,
-         * a MinimizationException is thrown. The reasons for such a failure are manifold
-         * and also depend on the particular minimization algorithm and should be documented
+         * a MinimizationException is thrown. The reasons for such a failure 
+         * depend on the particular minimization algorithm and should be documented
          * in derived classes.
          * 
-         * If either step is 0.0 or the range contains only one value, the parameter should be
-         * considered as fixed.
+         * If for a parameter either step is 0.0 or the range contains only one value, this parameter is considered
+         * as constant and it is not varied during minimization.
          */
         virtual MinimizationResult minimize(const theta::Function & f, const theta::ParValues & start,
                 const theta::ParValues & step, const std::map<theta::ParId, std::pair<double, double> > & ranges) = 0;
+        
+        /** same as the above minimize method, but can use more information from the MinimizationProblem.
+         * 
+         * The base class implements a simple forwarding to the pure virtual minimize method above; derived classes
+         * can implement this method if they can make use of the information provided by the MinimizationProblem class. If they
+         * do, the usual implementation of the minimize method above would be to just forward the call to this minimize method,
+         * using the appropriate contructor of MinimizationProblem.
+         */
+        virtual MinimizationResult minimize(const MinimizationProblem & mp);
         
     };
     

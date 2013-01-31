@@ -100,7 +100,11 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
     min->SetFunction(minuit_f);
 
     //3. setup tolerance
-    min->SetTolerance(tolerance_factor * min->Tolerance());
+    double root_tol = min->Tolerance();
+    if(root_tol == 0.01){
+        root_tol *= 0.1;
+    }
+    min->SetTolerance(tolerance_factor * root_tol);
     //3.a. error definition. Unfortunately, SetErrorDef in ROOT is not documented, so I had to guess.
     // 0.5 seems to work somehow.
     min->SetErrorDef(0.5);

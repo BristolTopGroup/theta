@@ -36,7 +36,32 @@ namespace{
    }
 }
 
-DoubleVector::DoubleVector(size_t n): data(0), n_data(n){
+void theta::blockorder(const std::vector<DoubleVector *> & dvs){
+    //return;
+    // how much to allocate:
+    size_t n=0;
+    for(size_t i=0; i<dvs.size(); ++i){
+        theta_assert(dvs[i]->own_data);
+        n += dvs[i]->n_data;
+        n += (n % 2);
+    }
+    //allocate the block:
+    double * blockdata = allocate_doubles(n);
+    // use the block:
+    n = 0;
+    for(size_t i=0; i<dvs.size(); ++i){
+        double * old_data = dvs[i]->data;
+        dvs[i]->data = blockdata + n;
+        memcpy(dvs[i]->data, old_data, dvs[i]->n_data * sizeof(double));
+        free_doubles(old_data);
+        dvs[i]->own_data = i==0;
+        n += dvs[i]->n_data;
+        n += (n % 2);
+    }
+}
+
+
+DoubleVector::DoubleVector(size_t n): data(0), n_data(n), own_data(true){
     if(n_data > 0){
        data = allocate_doubles(n_data);
        set_all_values(0.0);
@@ -44,10 +69,10 @@ DoubleVector::DoubleVector(size_t n): data(0), n_data(n){
 }
 
 DoubleVector::~DoubleVector(){
-    free_doubles(data);
+    if(own_data) free_doubles(data);
 }
 
-DoubleVector::DoubleVector(const DoubleVector & rhs): data(0), n_data(rhs.n_data){
+DoubleVector::DoubleVector(const DoubleVector & rhs): data(0), n_data(rhs.n_data), own_data(true){
    if(n_data > 0){
        data = allocate_doubles(n_data);
        memcpy(data, rhs.data, sizeof(double) * n_data);
@@ -56,6 +81,7 @@ DoubleVector::DoubleVector(const DoubleVector & rhs): data(0), n_data(rhs.n_data
 
 void DoubleVector::operator=(const DoubleVector & rhs){
     if(&rhs == this) return;
+    own_data = true;
     if(n_data != rhs.n_data){
         free_doubles(data);
         if(rhs.n_data > 0)

@@ -4,8 +4,11 @@
 #include "interface/decls.hpp"
 #include "interface/utils.hpp"
 #include <cstring>
+#include <vector>
 
 namespace theta{
+
+void blockorder(const std::vector<DoubleVector *> &);
     
 /** \brief Container for a vector of doubles
  * 
@@ -18,6 +21,9 @@ class DoubleVector{
 private:
     double * data;
     size_t n_data;
+    bool own_data;
+
+    friend void theta::blockorder(const std::vector<DoubleVector *> &);
     
 public:
     
@@ -96,7 +102,7 @@ public:
     }
     ///@}
 };
-
+    
 
 /** \brief A Histogram class holding binned, 1D data, without overflow and underflow bins.
  *

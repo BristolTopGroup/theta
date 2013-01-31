@@ -101,7 +101,7 @@ def template_counting_bb(s, s_uncertainty, n_obs):
     return model
 
 
-# a gaussian signal (mean 50, width 20) over flat background on a range 0--100, with 100 bins no data.
+# a gaussian "signal" distribution (mean s_mean, width s_sigma) over flat background on a range 0--100, with 100 bins; no observed data.
 # b_uncertainty is the (absolute!) uncertainty on the background yield, which will be handeled with a log-normal.
 def gaussoverflat(s, b, b_uncertainty = 0.0, s_mean = 50.0, s_sigma = 20., obs_suffix = ''):
     model = Model()    

@@ -8,12 +8,10 @@ import utils
 class rootfile:
     # these are caching dictionaries indexing by filename
     tfiles = {}
-    #all_templates = {}
     
     def __init__(self, filename):
         assert os.path.isfile(filename), "File %s not found (cwd: %s)" % (filename, os.getcwd())
         self.filename = filename
-        #self.cache = cache_all_templates
         if self.filename not in rootfile.tfiles: rootfile.tfiles[self.filename] = ROOT.TFile(filename, "read")
         self.tfile = rootfile.tfiles[self.filename]
         
@@ -39,7 +37,6 @@ class rootfile:
     # get all templates as dictionary (histogram name) --> Histogram instance
     # only checks type of histogram, not naming convention
     def get_all_templates(self, include_uncertainties, warn = True, include_uoflow = False):
-        #if (self.filename, include_uncertainties) in rootfile.all_templates: return rootfile.all_templates[self.filename, include_uncertainties]
         result = {}
         l = self.tfile.GetListOfKeys()
         for key in l:
@@ -50,21 +47,11 @@ class rootfile:
                 continue
             th1 = key.ReadObj()
             result[str(key.GetName())] = rootfile.th1_to_histo(th1, include_uncertainties, include_uoflow = include_uoflow)
-        #rootfile.all_templates[self.filename, include_uncertainties] = result
         return result
         
     def get_filename(self): return self.filename
         
     def get_histogram(self, hname, include_uncertainties, fail_with_exception = False):
-        """
-        if self.cache:
-            if (self.filename, include_uncertainties) not in rootfile.all_templates: self.get_all_templates(include_uncertainties, False)
-            if hname not in rootfile.all_templates[(self.filename, include_uncertainties)]:
-                if fail_with_exception: raise RuntimeError, "histogram '%s' in root file '%s' not found!" % (hname, self.tfile.GetName())
-                else: return None
-            return rootfile.all_templates[(self.filename, include_uncertainties)][hname].copy()
-        else:
-        """
         h = self.tfile.Get(hname)
         if not h.Class().InheritsFrom("TH1"):
             if fail_with_exception: raise RuntimeError, "histogram '%s' in root file '%s' not found!" % (hname, self.tfile.GetName())

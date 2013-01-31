@@ -93,6 +93,7 @@ def get_data_fitvalues(model, spid, signal_prior = 'flat'):
 #   around default_nuisance_values (use the ML estimate on data here ...). This ensures that
 #   sampling always uses the values fitted in data, and all constraints come from the real-valued observables,
 #   not from the prior.
+"""
 def frequentize_model(model, spid, signal_prior):
     signal_process_groups = {spid: model.signal_process_groups[spid]}
     parameters = model.distribution.get_parameters()
@@ -112,17 +113,83 @@ def frequentize_model(model, spid, signal_prior):
         result.data_rvobsvalues[rvobs] = prior_nuisance['mean'] # usually 0.0    
     result.rvobs_distribution = dist
     return result
-
+"""
 
 # construct original model
-model, mname = simple_counting(s = 100.0, n_obs = 1050.0, b = 1000.0, b_uncertainty = 100.0), '1cc'
+#model, mname = simple_counting(s = 100.0, n_obs = 1050.0, b = 1000.0, b_uncertainty = 100.0), '1cc'
 
-#model, mname = multichannel_counting(signals = [1000.0, 1000.0], n_obs = [11000.0, 11000.0], backgrounds = [10000.0, 10000.0], b_uncertainty1 = [0.1, 0.2], b_uncertainty2 = [0.2, 0.1]), '15'
+def poisson_lr_p(pd_data, pd_model):
+    assert len(pd_data)==len(pd_model)
+    nll = 0.0
+    ndof = 0
+    for n,mu in zip(pd_data, pd_model):
+        if n > 0.0: nll += n * math.log(n / mu)
+        nll += mu - n
+        ndof += 1
+    return scipy.stats.chi2.sf(2 * nll, ndof)
+
+def poisson(mus): return scipy.random.poisson(mus)
+
+"""
+mus = [20., 10., 100.0]
+ps = []
+for i in range(1000):
+    data = poisson(mus)
+    p = poisson_lr_p(data, mus)
+    ps.append(p)
+
+pd_p = plotutil.plotdata()
+pd_p.histogram(ps, 0.0, 1.0, 50)
+plot([pd_p], 'p', 'N', 'ps.pdf', ymin = 0.0)
+
+sys.exit(0)
+""" 
+
+sqrt2 = lambda x: math.sqrt(max([0.0, 2*x]))
+
+model = multichannel_counting(signals = [1000.0, 1000.0], n_obs = [11000.0, 11000.0], backgrounds = [10000.0, 10000.0], b_uncertainty1 = [0.1, 0.2], b_uncertainty2 = [0.3, 0.1])
+#model = simple_counting(100.0, 1000, 1000.0, 30.0)
+
+#model = multichannel_counting(signals = [1000.0, 1000.0], n_obs = [11000.0, 11000.0], backgrounds = [10000.0, 10000.0], b_uncertainty1 = [0.1, 0.2])
+
+options = Options()
+options.set('minimizer', 'minuit_tolerance_factor', '0.001')
+
+# 1. the Z-values calculated this way are not Gaussian:
+tsvals = zvalue_approx(model, 'toys:0.0', 10000, options = options)
+h = plotutil.plotdata()
+h.histogram(tsvals['s']['Z'], 0.0, 4.0, 40, errors = True)
+h_expected = plotutil.plotdata(color = '#ff0000')
+h_expected.x = h.x
+norm = sum(h.y)
+h_expected.y = map(lambda r: norm * (scipy.stats.norm.cdf(r[1]) - scipy.stats.norm.cdf(r[0])), zip([-inf] + h.x[1:], h.x[1:] + [inf]))
+plot([h, h_expected], 'Z', 'N', 'z.pdf', logy = True, ymin = 0.1)
+pval = poisson_lr_p(h.y, h_expected.y)
+print pval
+#assert pval < 1e-80
+
+# 2. let's look at the frequentized version, which behaves much better:
+model_freq = frequentize_model(model)
+tsvals = zvalue_approx(model_freq, 'toys:0.0', 10000, options = options)
+h = plotutil.plotdata()
+h.histogram(tsvals['s']['Z'], 0.0, 4.0, 40, errors = True)
+h_expected = plotutil.plotdata(color = '#ff0000')
+h_expected.x = h.x
+norm = sum(h.y)
+h_expected.y = map(lambda r: norm * (scipy.stats.norm.cdf(r[1]) - scipy.stats.norm.cdf(r[0])), zip([-inf] + h.x, h.x))
+plot([h, h_expected], 'Z', 'N', 'z2.pdf', logy = True, ymin = 0.1)
+pval = poisson_lr_p(h.y, h_expected.y)
+print pval
+
+"""
+sys.exit(0)
+
+
 #model, mname = multichannel_counting(signals = [1000.0, 1000.0], n_obs = [11000.0, 11000.0], backgrounds = [10000.0, 10000.0], b_uncertainty1 = [0.05, 0.02], b_uncertainty2 = [0.02, 0.05]), '3'
 #model, mname = multichannel_counting(signals = [1000.0, 1000.0], n_obs = [11000.0, 11000.0], backgrounds = [10000.0, 10000.0], b_uncertainty1 = [0.3, 0.3], b_uncertainty2 = [0.3, 0.3]), '30'
 
 
-model_freq = frequentize_model(model, 's', signal_prior = 'fix:1.0')
+#model_freq = frequentize_model(model, 's', signal_prior = 'fix:1.0')
 
 #dat = make_data(model_freq, input = 'toys-asimov:1.0', n=10)
 #print dat
@@ -133,7 +200,7 @@ print 's+b fit: ', vals, nll
 vals, dist, nll = get_data_fitvalues(model_freq, 's', 'fix:0.0')
 print 'b fit: ', vals, nll
 sys.exit(0)
-
+"""
 
 # make fixed model around fitted nuisance parameter values:
     

@@ -312,15 +312,15 @@ int main(int argc, char** argv) {
        return 1;
     }
     catch (Exception & ex) {
-        cerr << "An error ocurred in Main::run: " << ex.what() << endl;
+        cerr << "An error occurred in Main::run: " << ex.what() << endl;
         return 1;
     }
     catch(logic_error & ex){
-        cerr << "A logic error ocurred in Main::run: " << ex.what() << endl;
+        cerr << "A logic error occurred in Main::run: " << ex.what() << endl;
         return 1;
     }
     catch(exception & ex){
-        cerr << "An unspecified exception ocurred in Main::run: " << ex.what() << endl;
+        cerr << "An unspecified exception occurred in Main::run: " << ex.what() << endl;
         return 1;
     }
     if(theta::stop_execution){

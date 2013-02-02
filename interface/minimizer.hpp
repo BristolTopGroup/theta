@@ -141,14 +141,17 @@ namespace theta{
         virtual MinimizationResult minimize(const theta::Function & f, const theta::ParValues & start,
                 const theta::ParValues & step, const std::map<theta::ParId, std::pair<double, double> > & ranges) = 0;
         
-        /** same as the above minimize method, but can use more information from the MinimizationProblem.
+        /** \brief Alternative minimize method with more information
+         *
+         * Same as the minimize method, but can make use of more information about the minimization problem
+         * via the MinimizationProblem instance.
          * 
-         * The base class implements a simple forwarding to the pure virtual minimize method above; derived classes
-         * can implement this method if they can make use of the information provided by the MinimizationProblem class. If they
-         * do, the usual implementation of the minimize method above would be to just forward the call to this minimize method,
-         * using the appropriate contructor of MinimizationProblem.
+         * Derived classes should implement this method. The default implementation is a simple forwarding to
+         * the minimize method above. In derived classes, it makes sense to implement the main
+         * function in this method and make minimize a forward to this one, using the appropriate constructor
+         * of MinimizationProblem.
          */
-        virtual MinimizationResult minimize(const MinimizationProblem & mp);
+        virtual MinimizationResult minimize2(const MinimizationProblem & mp);
         
     };
     

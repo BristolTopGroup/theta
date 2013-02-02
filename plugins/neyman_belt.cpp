@@ -365,8 +365,8 @@ t_interval_coverage construct_interval(const tto_ensemble::tto_range & tto_range
             ts_value_right = it_max->ts;
         }
         bool left = false, right = false;
-        if(isnan(order_value_right)){
-           if(isnan(order_value_left)){
+        if(std::isnan(order_value_right)){
+           if(std::isnan(order_value_left)){
                throw Exception("no valid range found");//can only happen if input contained nans ...
            }
            else{
@@ -374,7 +374,7 @@ t_interval_coverage construct_interval(const tto_ensemble::tto_range & tto_range
            }
         }
         else{
-           if(isnan(order_value_left)){
+           if(std::isnan(order_value_left)){
               ++it_max; ++n; result.second = ts_value_right; right = true;
            }
            else{
@@ -687,7 +687,7 @@ void neyman_belt::run(){
             // arising from discrete ts values:
             const double truth = *truth_it;
             double l = 0.0;
-            if(!isinf(previous_interval.first) && !isinf(previous_interval.second)){
+            if(!std::isinf(previous_interval.first) && !std::isinf(previous_interval.second)){
                 l = 0.001 * (previous_interval.second - previous_interval.first);
             }
             t_interval_coverage interval = construct_interval(ttos.get_ttos(truth, tto_ensemble::sorted_by_ordering),

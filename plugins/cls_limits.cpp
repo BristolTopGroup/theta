@@ -21,9 +21,6 @@
 using namespace std;
 using namespace theta;
 
-using boost::shared_ptr;
-
-
 // runid conventions for the products tables:
 // * runid = 0 is used to calculate the ts values for the current dataset; the eventid is set to idata
 // * runid >= 1 is used to make the toys at different truth values for the CLs construction
@@ -1121,8 +1118,8 @@ void cls_limits::run_set_limits(){
     debug_out << "tol_cls = " << tol_cls << ".\n";
     // 0. determine signal width
     double signal_width = limit_hint.second - limit_hint.first;
-    if(!isfinite(limit_hint.first) || !isfinite(limit_hint.second)){
-        ParValues widths = asimov_likelihood_widths(*model, shared_ptr<Distribution>(), shared_ptr<Function>());
+    if(!std::isfinite(limit_hint.first) || !std::isfinite(limit_hint.second)){
+        ParValues widths = asimov_likelihood_widths(*model, boost::shared_ptr<Distribution>(), boost::shared_ptr<Function>());
         signal_width = widths.get(truth_parameter);
         debug_out << "signal_width = " << signal_width << "\n";
         if(signal_width <= 0.0){
@@ -1139,7 +1136,7 @@ void cls_limits::run_set_limits(){
     // only by a very small amount).
     // truth0 is a guess for a 'high' truth value, which should be in about the right region of the limit.
     double truth0 = 2 * signal_width;
-    if(isfinite(limit_hint.second)) truth0 = max(truth0, limit_hint.second);
+    if(std::isfinite(limit_hint.second)) truth0 = max(truth0, limit_hint.second);
     run_single_truth(truth0, false, 200);
     run_single_truth(truth0, true, 200);
     const double ts_epsilon = fabs(tts->get_ts_b_quantile(truth0, 0.68) - tts->get_ts_b_quantile(truth0, 0.16)) * 1e-3;
@@ -1223,7 +1220,7 @@ void cls_limits::run_set_limits(){
                 i_high = seed.second;
                 debug_out << "proposed fit interval: " << data.truth_values()[i_low] << "--" << data.truth_values()[i_high] << "\n";
                 // 1.b. make sure that fit range includes latest fit (if it converged ...):
-                if(!isnan(latest_res.limit) && (latest_res.limit < data.truth_values()[i_low] || latest_res.limit > data.truth_values()[i_high])){
+                if(!std::isnan(latest_res.limit) && (latest_res.limit < data.truth_values()[i_low] || latest_res.limit > data.truth_values()[i_high])){
                     debug_out << "WARNING: latest fitted limit (" << latest_res.limit << ") not contained in proposed fit interval, making fit interval larger\n";
                     while(latest_res.limit < data.truth_values()[i_low] && i_low > 0){
                         --i_low;
@@ -1238,7 +1235,7 @@ void cls_limits::run_set_limits(){
                 truth_high = data.truth_values()[i_high];
                 // 2. make the fit
                 latest_res = fitexp(data, 1 - cl, pars, truth_low, truth_high, debug_out);
-                if(isnan(latest_res.limit)){
+                if(std::isnan(latest_res.limit)){
                     debug_out << "exp fit did not work; fill in some random point in fitted interval, with large error\n";
                     // u is a uniform random number between 0 and 1. Details don't play a role here, so just hard code a linear
                     // congruent generator using i+17 as seed:
@@ -1280,7 +1277,7 @@ void cls_limits::run_set_limits(){
                         min_diff = fabs(t - next_truth0);
                     }
                 }
-                if(!isinf(min_diff)){
+                if(!std::isinf(min_diff)){
                     debug_out << "rounded next truth value to existing point " << next_truth << "\n";
                     flush(debug_out);
                 }

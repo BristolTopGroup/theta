@@ -38,6 +38,8 @@ inline bool close_to(double a, double b, double scale){
    return fabs(a-b) / scale < 1e-15;
 }
 
+bool histos_equal(const theta::Histogram1D & h1, const theta::Histogram1D & h2);
+
 class ConfigCreator{
 public:
     

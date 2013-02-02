@@ -31,17 +31,16 @@ class MCMCMeanPredictionResult{
             n += n_;
             ParValues values(x, par_ids);
             //get the prediction using this values from the model:
-            DataWithUncertainties pred_wu;
-            model.get_prediction(pred_wu, values);
+            Data pred;
+            model.get_prediction(pred, values);
             if(nll < nll_min){
                nll_min = nll;
-               best = pred_wu;
+               best = pred;
             }
             //add the prediction to sum, squaresum. Note
             // That if this is the first time, use "=" instead of "+=".
             for(ObsIds::const_iterator it=obs_ids.begin(); it!=obs_ids.end(); ++it){
-                //TODO: can we avoid this copy?
-               Histogram1D h_pred = pred_wu[*it].get_values_histogram();
+               Histogram1D & h_pred = pred[*it];
                h_pred *= n_;
                Histogram1D & h_sum = sum[*it];
                Histogram1D & h_squaresum = squaresum[*it];
@@ -54,8 +53,7 @@ class MCMCMeanPredictionResult{
                else{
                    h_sum += h_pred;
                    h_pred *= h_pred;
-                   h_pred *= 1.0 / n_;
-                   h_squaresum += h_pred;
+                   h_squaresum.add_with_coeff(1.0 / n_, h_pred);
                }
             }
         }
@@ -75,7 +73,7 @@ class MCMCMeanPredictionResult{
         }
         
         Histogram1D get_best(const ObsId & oid) const {
-            return best[oid].get_values_histogram();
+            return best[oid];
         }
         
     private:
@@ -89,7 +87,7 @@ class MCMCMeanPredictionResult{
         Data squaresum;
         //information for the "best" point:
         double nll_min;
-        DataWithUncertainties best;
+        Data best;
 };
 
 

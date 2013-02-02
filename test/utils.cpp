@@ -1,6 +1,6 @@
 #include "test/utils.hpp"
-
 #include "interface/plugin.hpp"
+#include "interface/histogram.hpp"
 #include "interface/variables.hpp"
 
 #include <string>
@@ -8,9 +8,18 @@
 #include <boost/test/unit_test.hpp>
 
 using namespace theta;
-
-
 using namespace std;
+
+bool histos_equal(const Histogram1D & h1, const Histogram1D & h2){
+    if(h1.get_nbins()!=h2.get_nbins()) return false;
+    if(h1.get_xmin()!=h2.get_xmin()) return false;
+    if(h1.get_xmax()!=h2.get_xmax()) return false;
+    const size_t n = h1.get_nbins();
+    for(size_t i=0; i<n; i++){
+        if(h1.get(i)!=h2.get(i)) return false;
+    }
+    return true;
+}
 
 
 ConfigCreator::ConfigCreator(const std::string & cfg_string, const boost::shared_ptr<theta::VarIdManager> & vm):

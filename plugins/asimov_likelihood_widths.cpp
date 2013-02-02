@@ -116,7 +116,7 @@ theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boos
             if(step==0) step = 1.0;
             for(int i=0; i<1000; ++i){
                 double fval = f(pid_mode + sign * step);
-                if(isinf(fval)){
+                if(std::isinf(fval)){
                     step /= 1.5;
                     continue;
                 }

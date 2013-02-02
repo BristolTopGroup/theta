@@ -25,12 +25,12 @@ public:
 
     virtual double DoEval(const double * x) const{
         for(size_t i=0; i<ndim; ++i){
-            if(isnan(x[i])){
+            if(std::isnan(x[i])){
                throw MinimizationException("minuit called likelihood function with NAN argument!");
             }
         }
         double result = f(x);
-        if(isinf(result)){
+        if(std::isinf(result)){
            throw MinimizationException("function to minimize was infinity during minimization");
         }
         return result;
@@ -72,8 +72,8 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
         if(step == 0.0){
             min->SetFixedVariable(ivar, name, def);
         }
-        else if(isinf(range.first)){
-            if(isinf(range.second)){
+        else if(std::isinf(range.first)){
+            if(std::isinf(range.second)){
                 min->SetVariable(ivar, name, def, step);
             }
             else{
@@ -81,7 +81,7 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
             }
         }
         else{
-            if(isinf(range.second)){
+            if(std::isinf(range.second)){
                 min->SetLowerLimitedVariable(ivar, name, def, step, range.first + fabs(range.first) * 0.001);
             }
             else{ // both ends are finite

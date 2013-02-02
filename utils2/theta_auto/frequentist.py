@@ -178,7 +178,7 @@ def pvalue(model, input, n, signal_process_groups = None, nuisance_constraint = 
 
 
 
-def discovery(model, spid = None, use_data = True, Z_error_max = 0.05, maxit = 100, n = 10000, input_expected = 'toys:1.0',
+def discovery(model, spid = None, use_data = True, Z_error_max = 0.05, maxit = 100, n = 10000, input_expected = 'toys:1.0', n_expected = 1000,
    nuisance_constraint = None, nuisance_prior_toys_bkg = None, options = None, verbose = True):
     """
     Determine p-value / "N sigma" from tail distribution of background-only test statistic.
@@ -206,7 +206,7 @@ def discovery(model, spid = None, use_data = True, Z_error_max = 0.05, maxit = 1
     signal_process_groups = {spid : model.signal_process_groups[spid]}
     if options is None: options = Options()
     
-    ts_sorted = deltanll(model, signal_process_groups = signal_process_groups, nuisance_constraint = nuisance_constraint, input = input_expected, n = n)[spid]
+    ts_sorted = deltanll(model, signal_process_groups = signal_process_groups, nuisance_constraint = nuisance_constraint, input = input_expected, n = n_expected)[spid]
     ts_sorted.sort()
     expected = (ts_sorted[int(0.5 * len(ts_sorted))], ts_sorted[int(0.16 * len(ts_sorted))], ts_sorted[int(0.84 * len(ts_sorted))])
     del ts_sorted

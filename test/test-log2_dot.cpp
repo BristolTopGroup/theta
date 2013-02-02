@@ -46,14 +46,14 @@ BOOST_AUTO_TEST_CASE(tl){
     //check that inf is returned if pred is 0.0:
     pred[N/2] = 0.0;
     res = template_nllikelihood(data, pred, N);
-    BOOST_CHECK(isinf(res) && res > 0);
+    BOOST_CHECK(std::isinf(res) && res > 0);
     
     //check that bin is skipped if data is 0.0:
     data[N/2] = 0.0;
     ref = template_nllikelihood_reference(data, pred, N);
     res = template_nllikelihood(data, pred, N);
-    BOOST_REQUIRE(!isinf(res) && !isinf(ref));
-    BOOST_CHECK(close_to_relative(ref, res));
+    BOOST_REQUIRE(!std::isinf(res) && !std::isinf(ref));
+    BOOST_CHECK(close_to(ref, res, 1.0));
 }
 
 

@@ -6,7 +6,7 @@ option(coverage "build for coverage tests" OFF)
 option(lto "build with link-time optimization (only for gcc and release builds)" OFF)
 option(profile "build for profiling" OFF)
 option(release "build release version" ON)
-option(amdlibm "use amdlibm instead of libm in some places" OFF)
+option(amdlibm "use amdlibm instead of libm in some places" ON)
 option(llvm "Build llvm plugins" OFF)
 option(generic "use generic implementation of funtions; not optimized, platform-specific ones" OFF)
 

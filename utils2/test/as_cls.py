@@ -45,8 +45,9 @@ def sigma1(model, beta_signal, spid):
 
 # method 2 (usually preferred): get sigma from the value of the likelihood ratio in an asimov toy.
 # This is called "sigma_A" in the reference, see eq. 30, 31 there:
-def sigma2(model, beta_signal, spid):
+def sigma2(model, beta_signal):
     res = deltanll(model, input = 'toys-asimov:%g' % beta_signal, n=1, signal_prior = 'flat:[-inf, inf]')
+    spid = res.keys()[0]
     lr = res[spid][0]
     return math.sqrt(beta_signal**2 / (2*lr))
 
@@ -126,9 +127,43 @@ def poisson_lr_p(pd_data, pd_model):
         if n > 0.0: nll += n * math.log(n / mu)
         nll += mu - n
         ndof += 1
-    return scipy.stats.chi2.sf(2 * nll, ndof)
+    return scipy.stats.chi2.sf(2 * nll, ndof-1)
 
 def poisson(mus): return scipy.random.poisson(mus)
+
+def test_zval_dist(model, n = 10000, xmin = 0.0, xmax = 4.0, nbins=50, plot_fname = None, signal_prior = 'flat:[0,inf]'):
+    spid = model.signal_process_groups.keys()[0]
+    tsvals = zvalue_approx(model, 'toys:0.0', 10000, signal_prior_sb = signal_prior)
+    h = plotutil.plotdata()
+    zs = tsvals[spid]['Z']
+    #print "above 0: ", len([z for z in zs if z >= 0.0])
+    #print "below 0: ", len([z for z in zs if z < 0.0])
+    #sys.exit(0)
+    h.histogram(tsvals[spid]['Z'], xmin, xmax, nbins, errors = True, include_uoflow = True)
+    h_expected = plotutil.plotdata(color = '#ff0000')
+    h_expected.x = h.x
+    norm = len(tsvals[spid]['Z'])
+    h_expected.y = map(lambda r: norm * (scipy.stats.norm.cdf(r[1]) - scipy.stats.norm.cdf(r[0])), zip([-inf] + h.x[1:], h.x[1:] + [inf]))
+    """
+    h_expected2 = plotutil.plotdata(color = '#0000ff')
+    h_expected2.x = h.x
+    s = sigma2(model, 1.0)
+    print "sigma: %.3f" % s
+    print "sigmas: ", [sigma2(model, b) for b in (0.0, 0.01, 0.1, 0.5, 1.0, 2.0)]
+    dist = asymptotic_ts_dist(0.0, s)
+    h_expected2.y = dist.histo_yvalues(0.0, h_expected2.x + [inf])
+    """
+    if plot_fname is not None:
+        h.legend = 'Toys'
+        pval = poisson_lr_p(h.y, h_expected.y)
+        h_expected.legend = 'Gauss(0, 1): p=%.3g' % pval
+        #h_expected2.legend = 'Asymptotic: p=%.3g' % poisson_lr_p(h.y, h_expected2.y)
+        h.lw, h_expected.lw= 1, 1
+        #plot([h_expected, h_expected2, h], 'Z', 'N', plot_fname, logy = True, ymin = 0.1)
+        plot([h_expected, h], 'Z', 'N', plot_fname, logy = True, ymin = 0.1)
+    return pval
+    
+
 
 """
 mus = [20., 10., 100.0]
@@ -147,39 +182,33 @@ sys.exit(0)
 
 sqrt2 = lambda x: math.sqrt(max([0.0, 2*x]))
 
-model = multichannel_counting(signals = [1000.0, 1000.0], n_obs = [11000.0, 11000.0], backgrounds = [10000.0, 10000.0], b_uncertainty1 = [0.1, 0.2], b_uncertainty2 = [0.3, 0.1])
-#model = simple_counting(100.0, 1000, 1000.0, 30.0)
+# asymptotic (freq only) works more or less:
+model1 = multichannel_counting(signals = [1000.0, 1000.0], n_obs = [11000.0, 11000.0], backgrounds = [10000.0, 10000.0], b_uncertainty1 = [0.1, 0.2], b_uncertainty2 = [0.3, 0.1])
 
-#model = multichannel_counting(signals = [1000.0, 1000.0], n_obs = [11000.0, 11000.0], backgrounds = [10000.0, 10000.0], b_uncertainty1 = [0.1, 0.2])
+# aymptotic starts to break down (seems to still work in the tail ...):
+model2 = multichannel_counting(signals = [1000.0, 1000.0], n_obs = [11000.0, 11000.0], backgrounds = [10000.0, 10000.0], b_uncertainty1 = [0.1, 0.2], b_uncertainty2 = [0.3, -0.25])
 
-options = Options()
-options.set('minimizer', 'minuit_tolerance_factor', '0.001')
+# asymptotic breaks down completely for asymmetric uncertainties:
+model3 = simple_counting_shape(100., 10100, 10000, 10300, 9900)
 
-# 1. the Z-values calculated this way are not Gaussian:
-tsvals = zvalue_approx(model, 'toys:0.0', 10000, options = options)
-h = plotutil.plotdata()
-h.histogram(tsvals['s']['Z'], 0.0, 4.0, 40, errors = True)
-h_expected = plotutil.plotdata(color = '#ff0000')
-h_expected.x = h.x
-norm = sum(h.y)
-h_expected.y = map(lambda r: norm * (scipy.stats.norm.cdf(r[1]) - scipy.stats.norm.cdf(r[0])), zip([-inf] + h.x[1:], h.x[1:] + [inf]))
-plot([h, h_expected], 'Z', 'N', 'z.pdf', logy = True, ymin = 0.1)
-pval = poisson_lr_p(h.y, h_expected.y)
-print pval
-#assert pval < 1e-80
+#TODO: find a counter-example where it does not work in the tail
 
-# 2. let's look at the frequentized version, which behaves much better:
-model_freq = frequentize_model(model)
-tsvals = zvalue_approx(model_freq, 'toys:0.0', 10000, options = options)
-h = plotutil.plotdata()
-h.histogram(tsvals['s']['Z'], 0.0, 4.0, 40, errors = True)
-h_expected = plotutil.plotdata(color = '#ff0000')
-h_expected.x = h.x
-norm = sum(h.y)
-h_expected.y = map(lambda r: norm * (scipy.stats.norm.cdf(r[1]) - scipy.stats.norm.cdf(r[0])), zip([-inf] + h.x, h.x))
-plot([h, h_expected], 'Z', 'N', 'z2.pdf', logy = True, ymin = 0.1)
-pval = poisson_lr_p(h.y, h_expected.y)
-print pval
+for model, name in zip((model2,), ('model2',)):#zip((model1, model2, model3), ('model1', 'model2', 'model3')):
+        """
+        #  1. model directly:
+        pval = test_zval_dist(model, plot_fname = '%s.pdf' % (name))
+        print "%s: %.3g" % (name, pval)
+        #assert pval < 1e-10
+        """
+
+        # 2. frequentized version:
+        model_freq = frequentize_model(model)
+        pval = test_zval_dist(model_freq, plot_fname = '%s_freq.pdf' % name)
+        print "%s (freq): %.3g" % (name, pval)
+        #assert pval > 1e-3
+
+
+sys.exit(0)
 
 """
 sys.exit(0)

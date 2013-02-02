@@ -54,23 +54,23 @@ void MinimizationProblem::check_consistency() const{
     // check that start is within ranges, and that steps are non-negative:
     for(ParIds::const_iterator it=f_pars.begin(); it!=f_pars.end(); ++it){
         double val = start.get(*it);
-        theta_assert(isfinite(val));
+        theta_assert(std::isfinite(val));
         std::map<theta::ParId, std::pair<double, double> >::const_iterator r_it = ranges.find(*it);
         theta_assert(r_it!=ranges.end());
         const pair<double, double> & range = r_it->second;
         theta_assert(range.first <= range.second);
         theta_assert(val <= range.second && val >= range.second);
         double st = step.get(*it);
-        theta_assert(st >= 0.0 && isfinite(st));
+        theta_assert(st >= 0.0 && std::isfinite(st));
     }
     for(size_t i=0; i<matrix.get_n_rows(); ++i){
         double me = matrix(i,i);
-        theta_assert(isfinite(me));
+        theta_assert(std::isfinite(me));
         theta_assert(me >= 0.0);
     }
 }
 
-MinimizationResult Minimizer::minimize(const MinimizationProblem & mp){
+MinimizationResult Minimizer::minimize2(const MinimizationProblem & mp){
     return minimize(mp.get_f(), mp.get_start(), mp.get_steps(), mp.get_ranges());
 }
 

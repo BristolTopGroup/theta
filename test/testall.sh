@@ -10,6 +10,8 @@
 execute_checked bin/test
 rm -f testhistos.root
 
+[ "$*" = "unit" ] && exit 0;
+
 fail=0
 
 for i in test/test-stat/*.py; do

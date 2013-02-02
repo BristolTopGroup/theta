@@ -71,14 +71,6 @@ simple_linear_histomorph::simple_linear_histomorph(const Configuration & cfg){
         }
     }
     h = h0;
-    vector<DoubleVector*> histos;
-    histos.push_back(&h);
-    histos.push_back(&h0);
-    for(size_t i=0; i<n; ++i){
-        histos.push_back(&hminus_diff[i]);
-        histos.push_back(&hplus_diff[i]);
-    }
-    //blockorder(histos);
     h_wu.set(h);
 }
 

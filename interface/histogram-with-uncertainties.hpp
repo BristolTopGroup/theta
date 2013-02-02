@@ -19,7 +19,7 @@ namespace theta{
 // h *= hwu
 // where h is a Histogram1D and hwu is a Histogram1DWithUncertainties.
 //
-//The histogram includes optimisations for the case where all uncertainties are 0, so that the overhead
+//The histogram includes optimizations for the case where all uncertainties are 0, so that the overhead
 // in this case compared to Histogram1D should be small.
 class Histogram1DWithUncertainties {
 private:
@@ -35,6 +35,14 @@ private:
     
     void fail_check_compatibility(const Histogram1DWithUncertainties & h) const;
 public:
+    void swap(Histogram1DWithUncertainties & other){
+    	std::swap(xmin, other.xmin);
+    	std::swap(xmax, other.xmax);
+    	values.swap(other.values);
+    	sq_uncertainties.swap(other.sq_uncertainties);
+    	std::swap(nontrivial_unc, other.nontrivial_unc);
+    }
+
     /// create a Histogram with the given range and number of bins
     Histogram1DWithUncertainties(size_t bins=0, double xmin=0, double xmax=1);
     
@@ -155,7 +163,7 @@ public:
             sq_uncertainties.add_with_coeff(c * c, other.sq_uncertainties);
         }
     }
-    
+
     void operator*=(const Histogram1D & other);
     
     void operator+=(const Histogram1D & other){

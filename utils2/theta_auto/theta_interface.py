@@ -237,8 +237,8 @@ class ProducerBase(ModuleBase):
         return result
     
     
-    # note that signal_prior is only respected is override_distribution
-    # if model is None, override_distribution and signal_prior is ignored.
+    # note that signal_prior is only respected if override_distribution is not None.
+    # if model is None, override_distribution and signal_prior are ignored.
     def __init__(self, model, signal_processes, override_distribution, name, signal_prior):
         ModuleBase.__init__(self)
         assert type(name) == str
@@ -362,6 +362,29 @@ class DeltaNllHypotest(ProducerBase):
         if 'override-parameter-distribution' in result: del result['override-parameter-distribution']
         if self.restrict_poi is not None: result['restrict_poi'] = self.restrict_poi
         if self.restrict_poi_value is not None: result['default_poi_value'] = self.restrict_poi_value
+        return result
+        
+class MCMCRatioProducer(ProducerBase):
+    def __init__(self, model, signal_processes, override_distribution = None, name = 'mcmcratio', signal_prior_sb = 'fix:1.0', signal_prior_b = 'fix:0.0', iterations = 10000):
+        ProducerBase.__init__(self, model, signal_processes, override_distribution = None, name = name, signal_prior = None)
+        if override_distribution is not None: dist = Distribution.merge(model.distribution, override_distribution)
+        else: dist = model.distribution
+        sb_parameters = set(model.get_parameters(signal_processes, True))
+        b_parameters = set(model.get_parameters('', True))
+        means = dist.get_means()
+        # the "signal parameters": those which the model depends only for the signal ...
+        means_spar = {}
+        for p in means:
+            if p in sb_parameters and p not in b_parameters: means_spar[p] = means[p]
+        dist_bkg = Distribution.merge(dist, get_fixed_dist_at_values(means_spar))
+        self.sb_distribution_cfg = {'type': 'product_distribution', 'distributions': [dist.get_cfg(sb_parameters), _signal_prior_dict(signal_prior_sb)]}
+        self.b_distribution_cfg = {'type': 'product_distribution', 'distributions': [dist_bkg.get_cfg(sb_parameters), _signal_prior_dict(signal_prior_b)]}
+        self.iterations = iterations        
+        
+    def get_cfg(self, options):
+        result = {'type': 'mcmc_posterior_ratio', 'background-only-distribution': self.b_distribution_cfg, 'signal-plus-background-distribution': self.sb_distribution_cfg, 'iterations': self.iterations}
+        result.update(self.get_cfg_base(options))
+        if 'override-parameter-distribution' in result: del result['override-parameter-distribution']
         return result
        
 class NllScanProducer(ProducerBase):

@@ -66,8 +66,11 @@ class plotdata:
         self.draw_histo = True
         self.draw_line = True
         
-    # make a histogram of the given values
-    def histogram(self, values, xmin, xmax, nbins, errors = False):
+    # create new data by making a histogram from xmin to xmax with nbins from the given values
+    # which should be a iterable yielding floats.
+    # If errors is True, yerrors is set to sqrt(n) in each bin.
+    # if include_uoflow is True, values under (over) the range are inserted in the first (last) bin.
+    def histogram(self, values, xmin, xmax, nbins, errors = False, include_uoflow = False):
         xmin, xmax = float(xmin), float(xmax)
         self.xmax = xmax
         self.x = [xmin + (xmax - xmin) / nbins * i for i in range(nbins)]
@@ -75,7 +78,11 @@ class plotdata:
         if errors: self.yerrors = [0.0] * nbins
         for v in values:
             ibin = int((v - xmin) / (xmax - xmin) * nbins)
-            if ibin < 0 or ibin >= nbins: continue
+            if not include_uoflow:
+                if ibin < 0 or ibin >= nbins: continue
+            else:
+                if ibin < 0: ibin = 0
+                if ibin >= nbins: ibin = nbins-1
             self.y[ibin] += 1
             if errors: self.yerrors[ibin] += 1
         if errors: self.yerrors = map(math.sqrt, self.yerrors)

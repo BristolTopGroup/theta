@@ -257,6 +257,9 @@ class gauss: public theta::Distribution{
         theta::Matrix sqrt_cov; //required for sampling
         theta::Matrix inverse_cov;//required for density evaluation
         std::vector<std::pair<double, double> > ranges;
+
+        // temporary variables for sampling:
+        mutable std::vector<double> x, x_trafo;
 };
 
 /** \brief A one-dimensional gauss-distribution

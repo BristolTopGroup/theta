@@ -38,9 +38,6 @@ class MCMCPosteriorRatioResult{
             return min_nll_value - log(posterior_sum / n_total);
         }
         
-        double get_jump_rate(){
-            return (1.0 * n.size()) / n_total;
-        }
     private:
         size_t npar;
         vector<double> nll_values;

@@ -52,6 +52,9 @@ public:
                                  const NLLikelihood & nll_): nll(nll_), npar(nll.getnpar()), ipars(ipars_){
             histos.resize(ipars.size());
             histos_tmp.resize(ipars.size());
+            theta_assert(ipars.size()==nbins.size());
+            theta_assert(ipars.size()==lower.size());
+            theta_assert(ipars.size()==upper.size());
             for(size_t i=0; i<ipars.size(); ++i){
                 histos[i] = Histogram1D(nbins[i], lower[i], upper[i]);
                 histos_tmp[i] = Histogram1D(nbins[i], lower[i], upper[i]);
@@ -60,7 +63,7 @@ public:
     
     void fill(const double * x, double nll0, size_t n){
         vector<double> myvalues(npar);
-        if(isnan(nll0) || (isinf(nll0) && nll0 < 0)){
+        if(std::isnan(nll0) || (std::isinf(nll0) && nll0 < 0)){
             throw range_error("nll0 is nan/-inf in mcmc_posterior_histo");
         }
         for(size_t ih=0; ih<histos.size(); ++ih){
@@ -70,7 +73,7 @@ public:
             for(size_t i=0; i<histos[ih].get_nbins(); ++i){
                 myvalues[ipars[ih]] = xmin + (i + 0.5) * x_binwidth;
                 double nll_value = nll(&myvalues[0]);
-                if(isnan(nll_value) || (isinf(nll_value) && nll_value < 0)){
+                if(std::isnan(nll_value) || (std::isinf(nll_value) && nll_value < 0)){
                     throw range_error("nll value is nan/-inf in mcmc_posterior_histo");
                 }
                 histos_tmp[ih].set(i, exp(-nll_value + nll0));
@@ -137,13 +140,6 @@ void mcmc_posterior_histo::produce(const Data & data, const Model & model) {
     }
 }
 
-void mcmc_posterior_histo::declare_products(){
-    for(size_t i=0; i<parameters.size(); ++i){
-        columns.push_back(products_sink->declare_product(*this, "posterior_" + parameter_names[i], theta::typeHisto));
-    }
-}
-
-
 mcmc_posterior_histo::mcmc_posterior_histo(const theta::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, get_name()),
         init(false), smooth(false){
     Setting s = cfg.setting;
@@ -167,7 +163,9 @@ mcmc_posterior_histo::mcmc_posterior_histo(const theta::Configuration & cfg): Pr
     if(s.exists("smooth")){
         smooth = s["smooth"];
     }
-    declare_products();
+    for(size_t i=0; i<parameters.size(); ++i){
+		columns.push_back(products_sink->declare_product(*this, "posterior_" + parameter_names[i], theta::typeHisto));
+	}
 }
 
 REGISTER_PLUGIN(mcmc_posterior_histo)

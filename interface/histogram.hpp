@@ -8,8 +8,6 @@
 
 namespace theta{
 
-void blockorder(const std::vector<DoubleVector *> &);
-    
 /** \brief Container for a vector of doubles
  * 
  * Container for a vector of doubles, with some common operations, to be used
@@ -21,11 +19,12 @@ class DoubleVector{
 private:
     double * data;
     size_t n_data;
-    bool own_data;
-
-    friend void theta::blockorder(const std::vector<DoubleVector *> &);
     
 public:
+    void swap(DoubleVector & other){
+    	std::swap(data, other.data);
+    	std::swap(n_data, other.n_data);
+    }
     
     /// Create a new DoubleVector with \c n entries, all set to zero.
     explicit DoubleVector(size_t n=0);
@@ -59,6 +58,11 @@ public:
         utils::add_fast_with_coeff(data, rhs.data, c, n_data);
     }
     
+    // calculate this += c1*v1 + c2*v2
+    void add_with_coeff2(double c1, const DoubleVector & v1, double c2, const DoubleVector & v2){
+    	utils::add_fast_with_coeff2(data, v1.data, c1, v2.data, c2, n_data);
+    }
+
     /// The current number of stored values
     size_t size() const{
         return n_data;
@@ -123,6 +127,12 @@ public:
     
     using DoubleVector::operator*=;
     
+    void swap(Histogram1D & other){
+    	DoubleVector::swap(other);
+    	std::swap(xmin, other.xmin);
+    	std::swap(xmax, other.xmax);
+    }
+
     /** \brief Create an empty Histogram with \c bins bins with range (\c xmin, \c xmax )
      */
     explicit Histogram1D(size_t bins=0, double xmin=0, double xmax=1);

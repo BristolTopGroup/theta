@@ -54,7 +54,7 @@ void Histogram1DWithUncertainties::operator*=(const Histogram1DWithUncertainties
     }
 }
 
-// arithmetic operations with Hisogram1D s (witout uncertainty) on the rhs:
+// arithmetic operations with Hisogram1D s (without uncertainty) on the rhs:
 void Histogram1DWithUncertainties::operator*=(const Histogram1D & other){
     const size_t n = other.size();
     for(size_t i=0; i<n; ++i){

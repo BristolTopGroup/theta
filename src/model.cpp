@@ -28,7 +28,7 @@ const ObsIds & Model::get_observables() const{
 void default_model::set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs_, boost::ptr_vector<HistogramFunction> & histos_){
     observables.insert(obs_id);
     const size_t n = coeffs_.size();
-    if(n!=coeffs_.size()) throw invalid_argument("number of histograms and coefficients do not match");
+    if(n!=histos_.size()) throw invalid_argument("number of histograms and coefficients do not match");
     if(histos[obs_id].size()>0 || coeffs[obs_id].size()>0){
         throw invalid_argument("prediction already set for this observable");
     }
@@ -66,7 +66,6 @@ void default_model::get_prediction_impl(DataT<HT> & result, const ParValues & pa
         const ObsId & oid = h_it->first;
         histos_type::const_mapped_reference hfs = *(h_it->second);
         coeffs_type::const_mapped_reference h_coeffs = *(c_it->second);
-        theta_assert(hfs.size() > 0 && hfs.size() == h_coeffs.size());
         // overwrite result[oid] with first term:
         hfs[0].apply_functor(copy_to<HT>(result[oid]), parameters);
         result[oid] *= h_coeffs[0](parameters);

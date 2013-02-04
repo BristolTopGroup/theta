@@ -131,6 +131,7 @@ def poisson_lr_p(pd_data, pd_model):
 
 def poisson(mus): return scipy.random.poisson(mus)
 
+
 def test_zval_dist(model, n = 10000, xmin = 0.0, xmax = 4.0, nbins=50, plot_fname = None, signal_prior = 'flat:[0,inf]'):
     spid = model.signal_process_groups.keys()[0]
     tsvals = zvalue_approx(model, 'toys:0.0', 10000, signal_prior_sb = signal_prior)
@@ -163,8 +164,6 @@ def test_zval_dist(model, n = 10000, xmin = 0.0, xmax = 4.0, nbins=50, plot_fnam
         plot([h_expected, h], 'Z', 'N', plot_fname, logy = True, ymin = 0.1)
     return pval
     
-
-
 """
 mus = [20., 10., 100.0]
 ps = []
@@ -184,31 +183,26 @@ sqrt2 = lambda x: math.sqrt(max([0.0, 2*x]))
 
 # asymptotic (freq only) works more or less:
 model1 = multichannel_counting(signals = [1000.0, 1000.0], n_obs = [11000.0, 11000.0], backgrounds = [10000.0, 10000.0], b_uncertainty1 = [0.1, 0.2], b_uncertainty2 = [0.3, 0.1])
-
-# aymptotic starts to break down (seems to still work in the tail ...):
 model2 = multichannel_counting(signals = [1000.0, 1000.0], n_obs = [11000.0, 11000.0], backgrounds = [10000.0, 10000.0], b_uncertainty1 = [0.1, 0.2], b_uncertainty2 = [0.3, -0.25])
-
-# asymptotic breaks down completely for asymmetric uncertainties:
 model3 = simple_counting_shape(100., 10100, 10000, 10300, 9900)
 
-#TODO: find a counter-example where it does not work in the tail
 
-for model, name in zip((model2,), ('model2',)):#zip((model1, model2, model3), ('model1', 'model2', 'model3')):
-        """
-        #  1. model directly:
-        pval = test_zval_dist(model, plot_fname = '%s.pdf' % (name))
-        print "%s: %.3g" % (name, pval)
-        #assert pval < 1e-10
-        """
+for model, name in zip((model1, model2, model3), ('model1', 'model2', 'model3')):
+    #  1. model directly:
+    pval = test_zval_dist(model, plot_fname = '%s.pdf' % name)
+    print "%s: %.3g" % (name, pval)
+    #assert pval < 1e-10
 
-        # 2. frequentized version:
-        model_freq = frequentize_model(model)
-        pval = test_zval_dist(model_freq, plot_fname = '%s_freq.pdf' % name)
-        print "%s (freq): %.3g" % (name, pval)
-        #assert pval > 1e-3
+
+    # 2. frequentized version:
+    model_freq = frequentize_model(model)
+    pval = test_zval_dist(model_freq, plot_fname = '%s_freq.pdf' % name)
+    print "%s (freq): %.3g" % (name, pval)
+    #assert pval > 1e-3
 
 
 sys.exit(0)
+
 
 """
 sys.exit(0)

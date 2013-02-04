@@ -1,4 +1,4 @@
-file(GLOB libtheta_sources *.cpp log2_dot.cxx)
+file(GLOB libtheta_sources *.cpp)
 
 if(generic)
    set(libtheta_sources ${libtheta_sources} atomic.cxx)

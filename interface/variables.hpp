@@ -1,7 +1,7 @@
 #ifndef VARIABLES_HPP
 #define VARIABLES_HPP
 
-//#include <set>
+#include <set>
 #include <map>
 #include <string>
 #include <vector>
@@ -13,7 +13,7 @@
 #include <cmath>
 
 #include <boost/utility.hpp>
-#include <boost/container/flat_set.hpp>
+//#include <boost/container/flat_set.hpp>
 
 namespace theta {
     
@@ -96,9 +96,11 @@ namespace theta {
      */
     template<class id_type>
     class VarIds {
+        //typedef typename boost::container::flat_set<id_type> set_type;
+        typedef typename std::set<id_type> set_type;
     public:
         /// \brief Sort of an iterator. Not necessarily one of the standard flavor, but can be used to go through all ids.
-        typedef typename boost::container::flat_set<id_type>::const_iterator const_iterator;
+        typedef typename set_type::const_iterator const_iterator;
 
         void operator=(const VarIds & rhs){
             vars = rhs.vars;
@@ -150,7 +152,7 @@ namespace theta {
             return vars.size();
         }
     private:
-        boost::container::flat_set<id_type> vars;
+        set_type vars;
     };
     
     /// \brief Template instantiation for a set of observables

@@ -21,7 +21,7 @@ OPTIONS_BUILD_LLVM := no
 OPTIONS_DEBUG := no
 
 # if set to yes, include the "--print-time" option for theta
-OPTIONS_TIMER := yes
+OPTIONS_TIMER := no
 
 # Additional flags for compilation / linking so files / linking exe files:
 OPTIONS_CFLAGS := 

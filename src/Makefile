@@ -4,12 +4,9 @@ libsources := $(wildcard *.cpp)
 libobjects := $(patsubst %.cpp,.bin/%.o,$(libsources))
 deps := $(patsubst %.cpp,.bin/%.d,$(libsources))
 
-libobjects += .bin/log2_dot.o .bin/atomic.o
+libobjects += .bin/atomic.o
 
 all: ../lib/libtheta.so
-
-.bin/log2_dot.o: log2_dot.cxx
-	@$(COMPILE) $(FLAGSCPP) -o $@ $<
 
 # switch between implementations of atomic:
 ifeq ($(OPTIONS_GENERIC_ARCH),yes)
@@ -19,8 +16,6 @@ ifeq ($(OPTIONS_GENERIC_ARCH),yes)
 
 else
 
-#.bin/log2_dot.o: log2_dot.s
-#	@$(COMPILE) $(FLAGSC) -o $@ $<
 .bin/atomic.o: atomic.s
 	@$(COMPILE) $(FLAGSC) -o $@ $<
 .bin/atomic_asserts.o: atomic_asserts.cxx
@@ -36,7 +31,6 @@ include ../Makefile.rules
 
 ../lib/libtheta.so: $(libobjects)
 	@$(LINK_SO)
-
 
 
 clean-subdir:

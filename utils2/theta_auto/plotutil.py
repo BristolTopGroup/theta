@@ -75,7 +75,6 @@ class plotdata:
         self.xmax = xmax
         self.x = [xmin + (xmax - xmin) / nbins * i for i in range(nbins)]
         self.y = [0.0] * nbins
-        if errors: self.yerrors = [0.0] * nbins
         for v in values:
             ibin = int((v - xmin) / (xmax - xmin) * nbins)
             if not include_uoflow:
@@ -84,8 +83,7 @@ class plotdata:
                 if ibin < 0: ibin = 0
                 if ibin >= nbins: ibin = nbins-1
             self.y[ibin] += 1
-            if errors: self.yerrors[ibin] += 1
-        if errors: self.yerrors = map(math.sqrt, self.yerrors)
+        if errors: self.yerrors = map(math.sqrt, self.y)
 
     # scale all y values by factor
     def scale_y(self, factor):

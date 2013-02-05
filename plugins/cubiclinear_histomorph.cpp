@@ -30,7 +30,9 @@ void cubiclinear_histomorph::add_morph_terms(HT & t, const ParValues & values) c
         }
         else{
             //cubic interpolation:
-        	add_with_coeff2(t, 0.5*delta, diff[isys], delta * delta - 0.5 * pow(fabs(delta), 3), sum[isys]);
+            const double d2 = delta * delta;
+            const double d3 = d2 * fabs(delta);
+        	add_with_coeff2(t, 0.5*delta, diff[isys], d2 - 0.5 * d3, sum[isys]);
         }
     }
     double h_sum = 0.0;

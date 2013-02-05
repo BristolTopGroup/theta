@@ -42,6 +42,7 @@ bool operator==(const Histogram1D& h0, const Histogram1D & h1){
 BOOST_AUTO_TEST_SUITE(codegen)
 
 BOOST_AUTO_TEST_CASE(llvm_function_wrapper){
+	load_core_plugins();
     if(!load_llvm_plugins()){
         std::cout << "skipping llvm test" << endl;
         return;
@@ -77,6 +78,7 @@ BOOST_AUTO_TEST_CASE(llvm_function_wrapper){
 
 
 BOOST_AUTO_TEST_CASE(llvm_multiply){
+	load_core_plugins();
     if(!load_llvm_plugins()){
         return;
     }
@@ -109,6 +111,7 @@ BOOST_AUTO_TEST_CASE(llvm_multiply){
 
 
 BOOST_AUTO_TEST_CASE(llvm_exp_function){
+	load_core_plugins();
     if(!load_llvm_plugins()){
         return;
     }
@@ -142,6 +145,7 @@ BOOST_AUTO_TEST_CASE(llvm_exp_function){
 
 
 BOOST_AUTO_TEST_CASE(constant_histo){
+	load_core_plugins();
     if(!load_llvm_plugins()){
         return;
     }
@@ -173,6 +177,7 @@ BOOST_AUTO_TEST_CASE(constant_histo){
 
 
 BOOST_AUTO_TEST_CASE(model){
+	load_core_plugins();
     if(!load_llvm_plugins()){
         return;
     }

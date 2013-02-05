@@ -27,7 +27,7 @@ private:
     const std::map<theta::ParId, size_t> pid_to_index;
     llvm::ExecutionEngine * ee;
 public:
-    // makeing the module public is probably nor very nice. On the other hand, re-inventing and proxying
+    // making the module public is probably nor very nice. On the other hand, re-inventing and proxying
     // the whole llvm interface isn't either.
     llvm::Module * module;
 
@@ -52,10 +52,10 @@ public:
 
 /** \brief Abstract base class for plugins supporting llvm code generation
  *
- * Only used for Functions and HistogramFunctions
+ * Only used for T=Function and T=HistogramFunction
  * 
  * Note: making this derived from T [= Function, HistogramFunction], so we can
- * try to dynamic_cast pointers of T down to llvm_enabled<T>.
+ * try to dynamic_cast pointers of T down to llvm_enabled<T> during setup.
  */
 template<typename T>
 class llvm_enabled: public T{
@@ -96,7 +96,7 @@ public:
  *
  * Same as llvm_enable_function but for HistogramFunctions.
  *
- * Cofigure via:
+ * Configure via:
  * \code
  * {
  *   type = "llvm_enable_histogram_function";

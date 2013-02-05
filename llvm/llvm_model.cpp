@@ -110,7 +110,7 @@ void llvm_model::set_prediction(const ObsId & obs_id, boost::ptr_vector<theta::F
     histos[obs_id].transfer(histos[obs_id].end(), histos_.begin(), histos_.end(), histos_);
     for(boost::ptr_vector<theta::Function>::const_iterator it=coeffs[obs_id].begin(); it!=coeffs[obs_id].end(); ++it){
         ParIds pids = (*it).get_parameters();
-        parameters.insert(pids.begin(), pids.end());
+        parameters.insert_all(pids);
     }
     size_t nbins = 0;
     double xmin = NAN, xmax = NAN;
@@ -129,7 +129,7 @@ void llvm_model::set_prediction(const ObsId & obs_id, boost::ptr_vector<theta::F
             }
         }
         const ParIds & pids = (*it).get_parameters();
-        parameters.insert(pids.begin(), pids.end());
+        parameters.insert_all(pids);
     }
 }
 
@@ -176,10 +176,10 @@ void llvm_model::get_prediction(DataWithUncertainties & result, const theta::Par
 void llvm_model::generate_llvm() const {
     module.reset(new llvm_module(parameters));
     LLVMContext & context = module->module->getContext();
-    const Type * double_t = Type::getDoubleTy(context);
-    const Type * i32_t = Type::getInt32Ty(context);
-    const Type * void_t = Type::getVoidTy(context);
-    std::vector<const Type*> arg_types(2, double_t->getPointerTo());
+    Type * double_t = Type::getDoubleTy(context);
+    Type * i32_t = Type::getInt32Ty(context);
+    Type * void_t = Type::getVoidTy(context);
+    std::vector<Type*> arg_types(2, double_t->getPointerTo());
     FunctionType * FT = FunctionType::get(void_t, arg_types, false);
     llvm::Function * F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "model_evaluate", module->module);
     llvm::Function::arg_iterator iter = F->arg_begin();
@@ -236,7 +236,7 @@ std::auto_ptr<NLLikelihood> llvm_model::get_nllikelihood(const Data & data) cons
 
 llvm_model::llvm_model(const Configuration & ctx): vm(*ctx.pm->get<VarIdManager>()),
  llvm_always(false), model_get_prediction(0){
-    SettingWrapper s = ctx.setting;
+    Setting s = ctx.setting;
     if(s.exists("bb_uncertainties")){
         bool bb_uncertainties =  s["bb_uncertainties"];
         if(bb_uncertainties) throw ConfigurationException("llvm_model does not implement bb_uncertainties!");
@@ -247,7 +247,7 @@ llvm_model::llvm_model(const Configuration & ctx): vm(*ctx.pm->get<VarIdManager>
     for (ObsIds::const_iterator obsit = observables.begin(); obsit != observables.end(); obsit++) {
         string obs_name = vm.get_name(*obsit);
         if(not s.exists(obs_name)) continue;
-        SettingWrapper obs_setting = s[obs_name];
+        Setting obs_setting = s[obs_name];
         boost::ptr_vector<HistogramFunction> histos;
         boost::ptr_vector<theta::Function> coeffs;
         for (size_t i = 0; i < obs_setting.size(); i++) {
@@ -268,7 +268,7 @@ llvm_model::llvm_model(const Configuration & ctx): vm(*ctx.pm->get<VarIdManager>
         ParIds dist_pars = parameter_distribution->get_parameters();
         const ParIds & m_pars = parameters;
         ParIds all_pars = parameters;
-        all_pars.insert(dist_pars.begin(), dist_pars.end());
+        all_pars.insert_all(dist_pars);
         for(ParIds::const_iterator p_it=all_pars.begin(); p_it!=all_pars.end(); ++p_it){
             if(m_pars.contains(*p_it) && dist_pars.contains(*p_it)) continue;
             if(m_pars.contains(*p_it)){
@@ -324,7 +324,7 @@ void llvm_model_nll::set_additional_term(const boost::shared_ptr<theta::Function
     par_ids = model.get_parameters();
     if(additional_term.get()){
          const ParIds & pids = additional_term->get_parameters();
-         par_ids.insert(pids.begin(), pids.end());
+         par_ids.insert_all(pids);
     }
     fill_par_ids_vec();
 }

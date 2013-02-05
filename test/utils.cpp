@@ -70,13 +70,16 @@ bool load_root_plugins(){
 
 bool load_llvm_plugins(){
     static bool loaded(false);
+    static bool load_err(false);
     if(loaded) return true;
+    if(load_err) return false;
     BOOST_TEST_CHECKPOINT("loading llvm plugins");
     try{
         PluginLoader::load("lib/llvm-plugins.so");
     }
     catch(exception & ex){
-        //std::cout << "error loadin llvm plugins: " << ex.message << endl;
+        std::cout << "error loadin llvm plugins: " << ex.what() << endl;
+    	load_err = true;
         return false;
     }
     BOOST_TEST_CHECKPOINT("loaded llvm plugin");

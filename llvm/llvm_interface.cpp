@@ -3,15 +3,16 @@
 #include "llvm/DerivedTypes.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/Module.h"
+
 #include "llvm/Support/IRBuilder.h"
-#include "llvm/Support/StandardPasses.h"
-#include "llvm/Target/TargetSelect.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetData.h"
 
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Attributes.h"
 
 #include "llvm/PassManager.h"
+#include "llvm/DefaultPasses.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
@@ -26,23 +27,23 @@ using namespace theta;
 using namespace std;
 
 namespace {
-    struct llvm_initializer{
-        llvm_initializer(){
-            InitializeNativeTarget();
-        }
-    };
-    llvm_initializer init;
 
-    std::map<theta::ParId, size_t> create_pid_to_index(const ParIds & pids){
-        std::map<theta::ParId, size_t> result;
-        size_t i=0;
-        for(ParIds::const_iterator it=pids.begin(); it!=pids.end(); ++it){
-            result[*it] = i++;
-        }
-        return result;
-    }
 
+struct llvm_initializer{
+	llvm_initializer(){
+		InitializeNativeTarget();
+	}
+} init;
+
+std::map<theta::ParId, size_t> create_pid_to_index(const ParIds & pids){
+	std::map<theta::ParId, size_t> result;
+	size_t i=0;
+	for(ParIds::const_iterator it=pids.begin(); it!=pids.end(); ++it){
+		result[*it] = i++;
+	}
+	return result;
 }
+
 
 // create the module function
 // inline void add_with_coeff(double coeff, double * data, const double * rhs_data, int n);
@@ -50,11 +51,11 @@ namespace {
 // length n  (or n + (n%2)).
 void emit_add_with_coeff(llvm::Module * mod){
     LLVMContext & context = mod->getContext();
-    const Type * double_t = Type::getDoubleTy(context);
+    Type * double_t = Type::getDoubleTy(context);
     VectorType* double2_t = VectorType::get(double_t, 2);
-    const Type * void_t = Type::getVoidTy(context);
-    const Type * i32_t = Type::getInt32Ty(context);
-    std::vector<const Type*> arg_types(4);
+    Type * void_t = Type::getVoidTy(context);
+    Type * i32_t = Type::getInt32Ty(context);
+    std::vector<Type*> arg_types(4);
     arg_types[0] = double_t;
     arg_types[1] = arg_types[2] = double_t->getPointerTo();
     arg_types[3] = i32_t;
@@ -90,7 +91,7 @@ void emit_add_with_coeff(llvm::Module * mod){
     BasicBlock * BB_loop_exit = BasicBlock::Create(context, "loop_exit", F);
     Builder.CreateBr(BB_loop_header);
     Builder.SetInsertPoint(BB_loop_header);
-    PHINode * i_phi = Builder.CreatePHI(i32_t, "i");
+    PHINode * i_phi = Builder.CreatePHI(i32_t, 2, "i");
     theta_assert(i_phi != 0);
     i_phi->addIncoming(ConstantInt::get(i32_t, 0), BB);
     // add the i_phi incoming value for next loop value later
@@ -113,6 +114,13 @@ void emit_add_with_coeff(llvm::Module * mod){
     //llvm_verify(F, "add_with_coeff");
 }
 
+void set_private_inline(llvm::Function * f){
+    f->addFnAttr(Attribute::AlwaysInline);
+    f->setLinkage(GlobalValue::PrivateLinkage);
+}
+
+
+}
 
 llvm_module::llvm_module(const ParIds & pids_): pids(pids_), pid_to_index(create_pid_to_index(pids)){
    LLVMContext & context = getGlobalContext();
@@ -124,10 +132,10 @@ llvm_module::llvm_module(const ParIds & pids_): pids(pids_), pid_to_index(create
    }
    //define function prototype for the codegen_*_evaluate functions:
    //double codegen_f_evaluate(llvm_module* mod, void* fptr, const double * par_value);
-   const Type * double_t = Type::getDoubleTy(context);
-   const Type * void_t = Type::getVoidTy(context);
-   const Type * p_char_t = Type::getInt8Ty(context)->getPointerTo();
-   std::vector<const Type*> arg_types(3, p_char_t);
+   Type * double_t = Type::getDoubleTy(context);
+   Type * void_t = Type::getVoidTy(context);
+   Type * p_char_t = Type::getInt8Ty(context)->getPointerTo();
+   std::vector<Type*> arg_types(3, p_char_t);
    arg_types[2] = double_t->getPointerTo();
    FunctionType * FT = FunctionType::get(double_t, arg_types, false);
    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "codegen_f_evaluate", module);
@@ -144,6 +152,7 @@ llvm_module::llvm_module(const ParIds & pids_): pids(pids_), pid_to_index(create
    FunctionType * FT_exp = FunctionType::get(double_t, arg_types, false);
    void * handle = dlopen(0, 0);
    bool amd_exp_available = handle && dlsym(handle, "amd_exp");
+   dlclose(handle);
    llvm::Function * f_exp = llvm::Function::Create(FT_exp, llvm::Function::ExternalLinkage, amd_exp_available?"amd_exp":"exp", module);
    new GlobalAlias(FT_exp, GlobalValue::PrivateLinkage, "exp_function", f_exp, module);
    emit_add_with_coeff(module);
@@ -165,30 +174,33 @@ llvm_module::~llvm_module(){
 }
 
 void llvm_module::optimize(){
-    PassManager pm;    
+    PassManager pm;
     // this:
     //createStandardFunctionPasses(&pm, 3);
     // does not work because it need a FunctionPassManager, so add it by hand:
     pm.add(createCFGSimplificationPass());
     pm.add(createScalarReplAggregatesPass());
     pm.add(createInstructionCombiningPass());
-    createStandardModulePasses(&pm, 3, /* OptimizeSize = */ false, /* UnitAtATime = */ true, /* UnrollLoops = */ true,
-        /* SimplifyLibCalls= */ false, /* HaveExceptions = */ false, createFunctionInliningPass());
+    //TODO: add standard passes!
+    // like this ?!
+    //
+    /*StandardPass::AddPassesFromSet(&pm, StandardPass::AliasAnalysis);
+    StandardPass::AddPassesFromSet(&pm, StandardPass::Function);
+    StandardPass::AddPassesFromSet(&pm, StandardPass::Module);*/
+    //createStandardModulePasses(&pm, 3, /* OptimizeSize = */ false, /* UnitAtATime = */ true, /* UnrollLoops = */ true,
+    //    /* SimplifyLibCalls= */ false, /* HaveExceptions = */ false, createFunctionInliningPass());
     pm.run(*module);
 }
 
-void set_private_inline(llvm::Function * f){
-    f->addFnAttr(Attribute::AlwaysInline);
-    f->setLinkage(GlobalValue::PrivateLinkage);
-}
+
 
 // get llvm function types for the functions created by HistogramFunction and Function code
 // generators:
 llvm::FunctionType * get_ft_hf_add_with_coeff(llvm_module & mod){
     LLVMContext & context = mod.module->getContext();
-    const Type * double_t = Type::getDoubleTy(context);
-    const Type * void_t = Type::getVoidTy(context);
-    std::vector<const Type*> arg_types(3);
+    Type * double_t = Type::getDoubleTy(context);
+    Type * void_t = Type::getVoidTy(context);
+    std::vector<Type*> arg_types(3);
     arg_types[0] = double_t;
     arg_types[1] = arg_types[2] = double_t->getPointerTo();
     return FunctionType::get(void_t, arg_types, false);
@@ -196,8 +208,8 @@ llvm::FunctionType * get_ft_hf_add_with_coeff(llvm_module & mod){
 
 llvm::FunctionType * get_ft_function_evaluate(llvm_module & mod){
     LLVMContext & context = mod.module->getContext();
-    const Type * double_t = Type::getDoubleTy(context);
-    std::vector<const Type*> arg_types(1);
+    Type * double_t = Type::getDoubleTy(context);
+    std::vector<Type*> arg_types(1);
     arg_types[0] = double_t->getPointerTo();
     return FunctionType::get(double_t, arg_types, false);
 }
@@ -232,8 +244,8 @@ llvm::Function * llvm_generic_codegen(const theta::Function * f, llvm_module & m
     LLVMContext & context = mod.module->getContext();
     IRBuilder<> Builder(context);
     llvm::Function * llvm_codegen_f_evaluate = mod.module->getFunction("codegen_f_evaluate");
-    const Type * p_char_t = Type::getInt8Ty(context)->getPointerTo();
-    const Type * i64_t = Type::getInt64Ty(context);
+    Type * p_char_t = Type::getInt8Ty(context)->getPointerTo();
+    Type * i64_t = Type::getInt64Ty(context);
     BasicBlock * BB = BasicBlock::Create(context, "entry", F);
     Builder.SetInsertPoint(BB);
     Value * par_values = &*(F->arg_begin());
@@ -250,8 +262,8 @@ llvm::Function * llvm_generic_codegen(const theta::HistogramFunction * hf, llvm_
     LLVMContext & context = mod.module->getContext();
     IRBuilder<> Builder(context);
     llvm::Function * llvm_codegen_hf_add_with_coeff = mod.module->getFunction("codegen_hf_add_with_coeff");
-    const Type * p_char_t = Type::getInt8Ty(context)->getPointerTo();
-    const Type * i64_t = Type::getInt64Ty(context);
+    Type * p_char_t = Type::getInt8Ty(context)->getPointerTo();
+    Type * i64_t = Type::getInt64Ty(context);
     BasicBlock * BB = BasicBlock::Create(context, "entry", F);
     Builder.SetInsertPoint(BB);
     llvm::Function::arg_iterator iter = F->arg_begin();
@@ -261,7 +273,7 @@ llvm::Function * llvm_generic_codegen(const theta::HistogramFunction * hf, llvm_
     Value * mod_ = Builder.CreateBitCast(ConstantInt::get(i64_t, reinterpret_cast<unsigned long>(&mod)), p_char_t);
     Value * hfptr = Builder.CreateBitCast(ConstantInt::get(i64_t, reinterpret_cast<unsigned long>(hf)), p_char_t);
     Value *Args[] = { mod_, hfptr, coeff, par_values, data };
-    Builder.Insert(CallInst::Create(llvm_codegen_hf_add_with_coeff, Args, Args+5), "");
+    Builder.Insert(CallInst::Create(llvm_codegen_hf_add_with_coeff, ArrayRef<Value*>(Args, Args+5)), "");
     Builder.CreateRetVoid();
     return F;
 }
@@ -296,8 +308,8 @@ llvm::Function * create_llvm_histogram_function(const theta::HistogramFunction *
         Value * coeff = iter++;
         /*Value * par_values =*/ iter++; // not used ...
         Value * data = iter;
-        const Type * double_t = Type::getDoubleTy(context);
-        const Type * i32_t = Type::getInt32Ty(context);
+        Type * double_t = Type::getDoubleTy(context);
+        Type * i32_t = Type::getInt32Ty(context);
         Value * gv_data_conv = Builder.CreateBitCast(gv_data, double_t->getPointerTo());
         BasicBlock * BB = BasicBlock::Create(context, "entry", result);
         Builder.SetInsertPoint(BB);
@@ -341,8 +353,6 @@ double codegen_f_evaluate(llvm_module* mod, void* fptr, const double * par_value
 
 void codegen_hf_add_with_coeff(llvm_module* mod, void* hfptr, double coeff, const double * par_values, double * data){
     ParValues values(par_values, mod->get_parameters());
-    //const Histogram1D & h = static_cast<theta::HistogramFunction*>(hfptr)->operator()(values);
-    //utils::add_fast_with_coeff(data, h.get_data(), coeff, h.size());
     static_cast<theta::HistogramFunction*>(hfptr)->apply_functor(add_to_vdouble(data, coeff), values);
 }
 

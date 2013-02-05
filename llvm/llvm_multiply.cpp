@@ -17,19 +17,19 @@ llvm_multiply::llvm_multiply(const Configuration & cfg): literal_factor(1.0){
     size_t n = cfg.setting["factors"].size();
     boost::shared_ptr<VarIdManager> vm = cfg.pm->get<VarIdManager>();
     for(size_t i=0; i<n; ++i){
-        libconfig::Setting::Type t = cfg.setting["factors"][i].get_type();
-        if(t==libconfig::Setting::TypeFloat){
+        Setting::Type t = cfg.setting["factors"][i].get_type();
+        if(t==Setting::TypeFloat){
             literal_factor *= static_cast<double>(cfg.setting["factors"][i]);
         }
-        else if(t==libconfig::Setting::TypeString){
+        else if(t==Setting::TypeString){
            ParId pid = vm->get_par_id(cfg.setting["factors"][i]);
            v_pids.push_back(pid);
            par_ids.insert(pid);
         }
-        else if(t==libconfig::Setting::TypeGroup){
+        else if(t==Setting::TypeGroup){
             std::auto_ptr<Function> f = PluginManager<Function>::build(Configuration(cfg, cfg.setting["factors"][i]));
             const ParIds & f_p = f->get_parameters();
-            par_ids.insert(f_p.begin(), f_p.end());
+            par_ids.insert_all(f_p);
             functions.push_back(f);
         }
         else{
@@ -58,8 +58,8 @@ llvm::Function * llvm_multiply::llvm_codegen(llvm_module & mod, const std::strin
     IRBuilder<> Builder(context);
     BasicBlock * BB = BasicBlock::Create(context, "entry", F);
     Builder.SetInsertPoint(BB);
-    const Type * double_t = Type::getDoubleTy(context);
-    const Type * i32_t = Type::getInt32Ty(context);
+    Type * double_t = Type::getDoubleTy(context);
+    Type * i32_t = Type::getInt32Ty(context);
     Value * val0 = Builder.CreateFAdd(ConstantFP::get(double_t, literal_factor), ConstantFP::get(double_t, 0.0));
     Value * last_value = val0;
     Value * p_par_values = F->arg_begin();

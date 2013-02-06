@@ -5,12 +5,12 @@ deps := $(patsubst %.cpp,.bin/%.d,$(libsources))
 include ../Makefile.options
 include ../Makefile.rules
 
-EXTRA_COMPILE += $(shell llvm-config-3.0 --cppflags)
+EXTRA_COMPILE += $(shell llvm-config-3.1 --cppflags)
 
 all: ../lib/llvm-plugins.so
 
 ../lib/llvm-plugins.so: $(libobjects)
-	@$(LINK_SO) $(shell llvm-config-3.0 --libfiles nativecodegen engine scalaropts ipo)
+	@$(LINK_SO) $(shell llvm-config-3.1 --libfiles all) #nativecodegen engine scalaropts ipo)
 
 clean-subdir:
 	@rm -f ../lib/llvm-plugins.so

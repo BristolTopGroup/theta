@@ -200,8 +200,7 @@ void llvm_model::generate_llvm() const {
         coeffs_type::const_mapped_reference h_coeffs = *(c_it->second);
         theta_assert(h_functions.size() == h_coeffs.size());
         // data_iobs = data + obs_offset:
-        Constant * index = ConstantInt::get(i32_t, obs_offset);
-        GetElementPtrInst* data_iobs = GetElementPtrInst::Create(data, index, "", BB);
+        Value * data_iobs = Builder.CreateGEP(data, ConstantInt::get(i32_t, obs_offset), "data_iobs");
         for(size_t i=0; i<h_functions.size(); ++i){
             stringstream ss_prefix;
             ss_prefix << "c" << iobs << "_p" << i;
@@ -235,11 +234,11 @@ std::auto_ptr<NLLikelihood> llvm_model::get_nllikelihood(const Data & data) cons
 
 
 llvm_model::llvm_model(const Configuration & ctx): vm(*ctx.pm->get<VarIdManager>()),
- llvm_always(false), model_get_prediction(0){
+ llvm_always(false), model_get_prediction(0), bb_uncertainties(false){
     Setting s = ctx.setting;
     if(s.exists("bb_uncertainties")){
-        bool bb_uncertainties =  s["bb_uncertainties"];
-        if(bb_uncertainties) throw ConfigurationException("llvm_model does not implement bb_uncertainties!");
+        bb_uncertainties =  s["bb_uncertainties"];
+        //if(bb_uncertainties) throw ConfigurationException("llvm_model does not implement bb_uncertainties!");
     }
     ObsIds observables = vm.get_all_observables();
     llvm_pb_sentinel b;

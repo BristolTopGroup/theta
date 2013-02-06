@@ -36,6 +36,16 @@ bool operator==(const Histogram1D& h0, const Histogram1D & h1){
     return true;
 }
 
+double cubic_interpolation_delta(double nom, double minus, double plus, double delta){
+	double hplus = plus - nom;
+	double hminus = minus - nom;
+	double sum = hplus + hminus;
+	double diff = hplus - hminus;
+	double result = 0.5 * delta * diff;
+	result += (delta * delta - 0.5 * pow(fabs(delta), 3)) * sum;
+	return result;
+}
+
 
 }
 
@@ -171,6 +181,85 @@ BOOST_AUTO_TEST_CASE(constant_histo){
     for(size_t i=0; i<h_l.get_nbins(); ++i){
         BOOST_REQUIRE(h.get_value(i) == h_l.get_value(i));
     }
+}
+
+BOOST_AUTO_TEST_CASE(cubiclinear_histo){
+	BOOST_CHECKPOINT("cubiclinear enter");
+	load_core_plugins();
+	if(!load_llvm_plugins()){
+		return;
+	}
+	boost::shared_ptr<VarIdManager> vm(new VarIdManager);
+	ParId p = vm->create_par_id("p");
+	utils::fill_theta_dir(0);
+	PropertyMap pm;
+	pm.set("default", vm);
+	ConfigCreator cc(
+			"histo = {type = \"direct_data_histo\"; range = (0.0, 3.0); nbins = 3; data = (10.0, 10.1, 10.2); };\n"
+			"histop = {type = \"direct_data_histo\"; range = (0.0, 3.0); nbins = 3; data = (12.0, 12.1, 15.2); };\n"
+			"histom = {type = \"direct_data_histo\"; range = (0.0, 3.0); nbins = 3; data = (7.0, 8.1, 9.2); };\n"
+			"llvm_hf = {type = \"llvm_cubiclinear_histomorph\"; nominal-histogram = \"@histo\"; parameters = (\"p\");\n"
+			"    p-plus-histogram = \"@histop\"; p-minus-histogram = \"@histom\";};\n"
+			"llvm_hf2 = {type = \"llvm_enable_histogram_function\"; histogram_function = \"@llvm_hf\";};"
+			, vm);
+	const theta::Configuration & cfg = cc.get();
+	BOOST_CHECKPOINT("building hf");
+	std::auto_ptr<HistogramFunction> hf = PluginManager<HistogramFunction>::build(Configuration(cfg, cfg.setting["llvm_hf2"]));
+	BOOST_CHECKPOINT("hf built");
+
+	Histogram1D hnominal = get_constant_histogram(Configuration(cfg, cfg.setting["histo"])).get_values_histogram();
+
+	Histogram1D result;
+	ParValues values;
+	values.set(p, 0.0);
+	hf->apply_functor(copy_to<Histogram1D>(result), values);
+	BOOST_CHECK(result == hnominal);
+	result.set_all_values(-1.0);
+
+	// linear extrapolation:
+	values.set(p, 1.1);
+	hf->apply_functor(copy_to<Histogram1D>(result), values);
+	BOOST_CHECK(close_to_relative(result.get(0), 10.0 + 2.0 * 1.1));
+	BOOST_CHECK(close_to_relative(result.get(1), 10.1 + 2.0 * 1.1));
+	BOOST_CHECK(close_to_relative(result.get(2), 10.2 + 5.0 * 1.1));
+
+	values.set(p, 3.1);
+	hf->apply_functor(copy_to<Histogram1D>(result), values);
+	BOOST_CHECK(close_to_relative(result.get(0), 10.0 + 2.0 * 3.1));
+	BOOST_CHECK(close_to_relative(result.get(1), 10.1 + 2.0 * 3.1));
+	BOOST_CHECK(close_to_relative(result.get(2), 10.2 + 5.0 * 3.1));
+
+	double delta = 1.7;
+	values.set(p, -delta);
+	hf->apply_functor(copy_to<Histogram1D>(result), values);
+	BOOST_CHECK(close_to_relative(result.get(0), 10.0 - 3.0 * delta));
+	BOOST_CHECK(close_to_relative(result.get(1), 10.1 - 2.0 * delta));
+	BOOST_CHECK(close_to_relative(result.get(2), 10.2 - 1.0 * delta));
+
+	//cubic interpolation
+	for(delta=-0.33; delta < 0.9; delta += .1){
+		values.set(p, delta);
+		hf->apply_functor(copy_to<Histogram1D>(result), values);
+		BOOST_CHECK(close_to_relative(result.get(0), 10. + cubic_interpolation_delta(10.0, 7.0, 12.0, delta)));
+		BOOST_CHECK(close_to_relative(result.get(1), 10.1 + cubic_interpolation_delta(10.1, 8.1, 12.1, delta)));
+		BOOST_CHECK(close_to_relative(result.get(2), 10.2 + cubic_interpolation_delta(10.2, 9.2, 15.2, delta)));
+	}
+
+	// * truncation at 0.0
+	for(delta = -4.0; delta > -18.; delta -= 6.0){
+		values.set(p, delta);
+		hf->apply_functor(copy_to<Histogram1D>(result), values);
+		BOOST_CHECK(close_to(result.get(0), max(10. + delta * (10. - 7.), 0.0), 1e-10));
+		BOOST_CHECK(close_to(result.get(1), max(10.1 + delta * (10.1 - 8.1), 0.0), 1e-10));
+		BOOST_CHECK(close_to(result.get(2), max(10.2 + delta * (10.2 - 9.2), 0.0), 1e-10));
+	}
+
+
+	// * parameter_factors
+	// * more than 1 syst
+
+	// * FIXME: normalize_to_nominal
+
 }
 
 

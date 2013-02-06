@@ -603,6 +603,11 @@ class Run(ModuleBase):
             if self.data_source is not None: main['data_source'] = self.data_source.get_cfg(options)
         result.update({'main': main, 'options': {'plugin_files': ['$THETA_DIR/lib/'+s for s in sorted(list(plugins))]},
                   'model': self.model.get_cfg2(self.signal_processes, self.signal_prior_cfg, options)})
+        use_llvm = options.getboolean('model', 'use_llvm')
+        if use_llvm:
+            print "using llvm. This is EXPERIMENTAL. Use at your own risk"
+            result['model']['type'] = 'llvm_model'
+            result['options']['plugin_files'].append('$THETA_DIR/lib/llvm-plugins.so')
         result['parameters'] = sorted(list(self.model.get_parameters(self.signal_processes, True)))
         rvobservables = sorted(list(self.model.rvobs_distribution.get_parameters()))
         if len(rvobservables) > 0:

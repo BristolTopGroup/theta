@@ -5,7 +5,7 @@
 #include "llvm/llvm_interface.hpp"
 #include "interface/histogram-function.hpp"
 
-class llvm_cubiclinear_histomorph: public llvm_enabled<theta::HistogramFunction>{
+class llvm_cubiclinear_histomorph: public llvm_enabled_histogram_function{
 public:
     llvm_cubiclinear_histomorph(const theta::Configuration & cfg);
     virtual void apply_functor(const theta::functor<theta::Histogram1DWithUncertainties> & f, const theta::ParValues & values) const{
@@ -14,8 +14,10 @@ public:
     virtual void apply_functor(const theta::functor<theta::Histogram1D> & f, const theta::ParValues & values) const;
     virtual void get_histogram_dimensions(size_t & nbins, double & xmin, double & xmax) const;
     virtual llvm::Function * llvm_codegen(llvm_module & mod, const std::string & prefix) const;
+    virtual theta::Histogram1D get_uncertainty2_histogram() const;
 private:
     theta::Histogram1D h0;
+    theta::Histogram1D h0_uncertainty2;
 	double h0_sum;
 
 	//the interpolation parameters used to interpolate between hplus and hminus.

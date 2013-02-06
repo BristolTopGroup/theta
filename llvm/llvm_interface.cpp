@@ -13,14 +13,15 @@
 
 #include "llvm/PassManager.h"
 #include "llvm/DefaultPasses.h"
+
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Vectorize.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JIT.h"
 
 #include "interface/plugin.hpp"
 #include <dlfcn.h>
-
 
 using namespace llvm;
 using namespace theta;
@@ -60,7 +61,7 @@ void emit_add_with_coeff(llvm::Module * mod){
     arg_types[1] = arg_types[2] = double_t->getPointerTo();
     arg_types[3] = i32_t;
     FunctionType * FT = FunctionType::get(void_t, arg_types, false);
-    llvm::Function * F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "add_with_coeff", mod);
+    llvm::Function * F = llvm::Function::Create(FT, llvm::Function::PrivateLinkage, "add_with_coeff", mod);
     F->addFnAttr(Attribute::InlineHint);
     llvm::Function::arg_iterator iter = F->arg_begin();
     Argument * coeff = iter++;
@@ -73,7 +74,6 @@ void emit_add_with_coeff(llvm::Module * mod){
     IRBuilder<> Builder(context);
     BasicBlock * BB = BasicBlock::Create(context, "entry", F);
     Builder.SetInsertPoint(BB);
-    //coeff2 = Vector<double, 2>(coeff, coeff):
     std::vector<Constant *> zeros(2);
     zeros[0] = zeros[1] = ConstantFP::get(double_t, 0.0);
     Value * coeff2tmp = Builder.CreateInsertElement(ConstantVector::get(zeros), coeff, ConstantInt::get(i32_t, 0));
@@ -114,12 +114,12 @@ void emit_add_with_coeff(llvm::Module * mod){
     //llvm_verify(F, "add_with_coeff");
 }
 
+
+}
+
 void set_private_inline(llvm::Function * f){
     f->addFnAttr(Attribute::AlwaysInline);
     f->setLinkage(GlobalValue::PrivateLinkage);
-}
-
-
 }
 
 llvm_module::llvm_module(const ParIds & pids_): pids(pids_), pid_to_index(create_pid_to_index(pids)){
@@ -152,7 +152,7 @@ llvm_module::llvm_module(const ParIds & pids_): pids(pids_), pid_to_index(create
    FunctionType * FT_exp = FunctionType::get(double_t, arg_types, false);
    void * handle = dlopen(0, 0);
    bool amd_exp_available = handle && dlsym(handle, "amd_exp");
-   dlclose(handle);
+   //dlclose(handle); // <- leads to segfault ...
    llvm::Function * f_exp = llvm::Function::Create(FT_exp, llvm::Function::ExternalLinkage, amd_exp_available?"amd_exp":"exp", module);
    new GlobalAlias(FT_exp, GlobalValue::PrivateLinkage, "exp_function", f_exp, module);
    emit_add_with_coeff(module);
@@ -175,27 +175,36 @@ llvm_module::~llvm_module(){
 
 void llvm_module::optimize(){
     PassManager pm;
-    // this:
-    //createStandardFunctionPasses(&pm, 3);
-    // does not work because it need a FunctionPassManager, so add it by hand:
+    pm.add(createFunctionInliningPass());
     pm.add(createCFGSimplificationPass());
-    pm.add(createScalarReplAggregatesPass());
-    pm.add(createInstructionCombiningPass());
-    //TODO: add standard passes!
-    // like this ?!
-    //
-    /*StandardPass::AddPassesFromSet(&pm, StandardPass::AliasAnalysis);
-    StandardPass::AddPassesFromSet(&pm, StandardPass::Function);
-    StandardPass::AddPassesFromSet(&pm, StandardPass::Module);*/
-    //createStandardModulePasses(&pm, 3, /* OptimizeSize = */ false, /* UnitAtATime = */ true, /* UnrollLoops = */ true,
-    //    /* SimplifyLibCalls= */ false, /* HaveExceptions = */ false, createFunctionInliningPass());
+    //TODO: find out good combinations ...
+    pm.add(createIndVarSimplifyPass());
+    pm.add(createLoopUnrollPass());
+
+    //pm.add(createInstructionCombiningPass());
+
+    /*pm.add(createLoopSimplifyPass());
+    pm.add(createLoopStrengthReducePass());
+
+    pm.add(createBBVectorizePass());
+
+    pm.add(createLoopInstSimplifyPass());*/
+
+
+    //pm.add(createGVNPass());
+    //pm.add(createInstructionSimplifierPass());
+    pm.add(createAggressiveDCEPass());
+    pm.add(createGlobalDCEPass());
     pm.run(*module);
 }
 
 
 
 // get llvm function types for the functions created by HistogramFunction and Function code
-// generators:
+// generators:     double coeff, double * par_values, double * data
+// the generated function should perform:
+//     data += coeff * eval(par_values)
+// where eval is the result of the HistogramFunction evaluation ...
 llvm::FunctionType * get_ft_hf_add_with_coeff(llvm_module & mod){
     LLVMContext & context = mod.module->getContext();
     Type * double_t = Type::getDoubleTy(context);
@@ -215,13 +224,13 @@ llvm::FunctionType * get_ft_function_evaluate(llvm_module & mod){
 }
 
 void llvm_verify(llvm::Function* f, const std::string & fname){
-    if(verifyFunction(*f, llvm::ReturnStatusAction)){
+    if(verifyFunction(*f, llvm::PrintMessageAction)){
         f->dump();
         throw invalid_argument("llvm_verify failed for function " + fname);
     }
 }
 
-GlobalVariable * add_global_const_ddata(Module * m, const std::string & name, const double * data, size_t n){
+GlobalVariable * add_global_ddata(Module * m, const std::string & name, const double * data, size_t n, bool const_){
     size_t n_orig = n;
     if(n%2)++n;
     std::vector<Constant*> elements(n);
@@ -233,7 +242,7 @@ GlobalVariable * add_global_const_ddata(Module * m, const std::string & name, co
     }
     ArrayType* typ = ArrayType::get(Type::getDoubleTy(m->getContext()), n);
     Constant * ini = ConstantArray::get(typ, elements);
-    GlobalVariable * gvar = new GlobalVariable(*m, typ, true, GlobalValue::PrivateLinkage, ini, name);
+    GlobalVariable * gvar = new GlobalVariable(*m, typ, const_, GlobalValue::PrivateLinkage, ini, name);
     gvar->setAlignment(16);
     return gvar;
 }
@@ -280,7 +289,7 @@ llvm::Function * llvm_generic_codegen(const theta::HistogramFunction * hf, llvm_
 
 llvm::Function * create_llvm_function(const theta::Function * f, llvm_module & mod, const std::string & prefix){
     llvm::Function * result;
-    if(const llvm_enabled<theta::Function>* en = dynamic_cast<const llvm_enabled<theta::Function>*>(f)){
+    if(const llvm_enabled_function * en = dynamic_cast<const llvm_enabled_function*>(f)){
         result = en->llvm_codegen(mod, prefix);
     }
     else{
@@ -290,31 +299,62 @@ llvm::Function * create_llvm_function(const theta::Function * f, llvm_module & m
     return result;
 }
 
+void emit_add_with_coeff(llvm_module & mod, Value * coeff, Value * data_out, const Histogram1D & h, llvm::Function * F, const string & prefix){
+	LLVMContext & context = mod.module->getContext();
+	IRBuilder<> Builder(context);
+	Type * double_t = Type::getDoubleTy(context);
+	VectorType* double2_t = VectorType::get(double_t, 2);
+	Type * i32_t = Type::getInt32Ty(context);
+	BasicBlock * BB = BasicBlock::Create(context, "entry", F);
+	Builder.SetInsertPoint(BB);
+	const size_t n = h.size();
+	if(n<=8){
+		std::vector<Constant *> zeros(2);
+		zeros[0] = zeros[1] = ConstantFP::get(double_t, 0.0);
+		Value * coeff2tmp = Builder.CreateInsertElement(ConstantVector::get(zeros), coeff, ConstantInt::get(i32_t, 0));
+		Value * coeff2 = Builder.CreateInsertElement(coeff2tmp, coeff, ConstantInt::get(i32_t, 1), "coeff2");
+		Value * data_o = Builder.CreateBitCast(data_out, double2_t->getPointerTo(), "data_out");
+		const size_t imax = (n + n%2) / 2;
+		for(size_t i=0; i < imax; ++i){
+			Value * p_data_i = Builder.CreateGEP(data_o, ConstantInt::get(i32_t, i));
+			Value * data_i = Builder.CreateLoad(p_data_i);
+			Value * h2tmp = Builder.CreateInsertElement(ConstantVector::get(zeros), ConstantFP::get(double_t, h.get(2*i)), ConstantInt::get(i32_t, 0));
+			Value * h2;
+			if(2*i+1 < n){
+				h2 = Builder.CreateInsertElement(h2tmp, ConstantFP::get(double_t, h.get(2*i + 1)), ConstantInt::get(i32_t, 1), "coeff2");
+			}
+			else{
+				h2 = h2tmp;
+			}
+			Value * coeff_times_h = Builder.CreateFMul(coeff2, h2);
+			Value * res = Builder.CreateFAdd(data_i, coeff_times_h);
+			Builder.CreateStore(res, p_data_i);
+		}
+	}
+	else{
+		llvm::Function * add_with_coeff = mod.module->getFunction("add_with_coeff");
+		GlobalVariable * gv_data = add_global_ddata(mod.module, prefix + "_data", h.get_data(), h.size());
+		Value * gv_data_conv = Builder.CreateBitCast(gv_data, double_t->getPointerTo());
+		Builder.CreateCall4(add_with_coeff, coeff, data_out, gv_data_conv, ConstantInt::get(i32_t, h.size()));
+	}
+	Builder.CreateRetVoid();
+}
+
 llvm::Function * create_llvm_histogram_function(const theta::HistogramFunction * hf, llvm_module & mod, const std::string & prefix){
     llvm::Function * result;
-    if(const llvm_enabled<theta::HistogramFunction>* en = dynamic_cast<const llvm_enabled<theta::HistogramFunction>*>(hf)){
+    if(const llvm_enabled_histogram_function* en = dynamic_cast<const llvm_enabled_histogram_function*>(hf)){
         result = en->llvm_codegen(mod, prefix);
     }
     else if(hf->get_parameters().size()==0){
         Histogram1D h0;
         hf->apply_functor(copy_to<Histogram1D>(h0), ParValues());
-        GlobalVariable * gv_data = add_global_const_ddata(mod.module, prefix + "_data", h0.get_data(), h0.size());
         llvm::FunctionType * FT = get_ft_hf_add_with_coeff(mod);
         result = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, prefix + "_add_with_coeff", mod.module);
-        llvm::Function * add_with_coeff = mod.module->getFunction("add_with_coeff");
-        LLVMContext & context = mod.module->getContext();
-        IRBuilder<> Builder(context);
         llvm::Function::arg_iterator iter = result->arg_begin();
         Value * coeff = iter++;
         /*Value * par_values =*/ iter++; // not used ...
         Value * data = iter;
-        Type * double_t = Type::getDoubleTy(context);
-        Type * i32_t = Type::getInt32Ty(context);
-        Value * gv_data_conv = Builder.CreateBitCast(gv_data, double_t->getPointerTo());
-        BasicBlock * BB = BasicBlock::Create(context, "entry", result);
-        Builder.SetInsertPoint(BB);
-        Builder.CreateCall4(add_with_coeff, coeff, data, gv_data_conv, ConstantInt::get(i32_t, h0.size()));
-        Builder.CreateRetVoid();
+        emit_add_with_coeff(mod, coeff, data, h0, result, prefix);
         //mod.module->dump();
     }else{
         result = llvm_generic_codegen(hf, mod, prefix);
@@ -384,7 +424,8 @@ void llvm_enable_histogram_function::apply_functor(const functor<Histogram1D> & 
     for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it, ++i){
         v_values[i] = values.get(*it);
     }
-    h0.set_all_values(0.0);    llvmhf(1.0, &v_values[0], h0.get_data());
+    h0.set_all_values(0.0);
+    llvmhf(1.0, &v_values[0], h0.get_data());
     f(h0);
 }
 

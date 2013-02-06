@@ -36,6 +36,8 @@ private:
     
     size_t nbins_total;
     
+    bool bb_uncertainties;
+
     void set_prediction(const theta::ObsId & obs_id, boost::ptr_vector<theta::Function> & coeffs, boost::ptr_vector<theta::HistogramFunction> & histos);
     // generate and compile llvm, fill mode_get_prediction function pointer.
     void generate_llvm() const;

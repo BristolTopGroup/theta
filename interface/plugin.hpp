@@ -79,17 +79,13 @@ namespace theta {
          }
      };
 
-     //helper macros for REGISTER_PLUGIN
-     #define CONCAT(a,b) CONCAT2(a,b)
-     #define CONCAT2(a,b) a ## b
-
      /* define a template specialization of abstract_factory<base_type> which constructs the desired type
      */
-     #define REGISTER_PLUGIN_NAME(type,name) namespace { struct CONCAT(factory,__LINE__): public theta::factory<type::base_type>{ \
+     #define REGISTER_PLUGIN_NAME(type,name) namespace { struct factory__##type##name : public theta::factory<type::base_type>{ \
      virtual std::auto_ptr<type::base_type> build(const theta::Configuration & cfg){return std::auto_ptr<type::base_type>(new type(cfg)); }\
      virtual std::string get_typename(){ return #name ;}\
-     CONCAT(factory,__LINE__)(){reg();}\
-     } CONCAT(factory_instance,__LINE__);}
+     factory__##type##name (){reg();}\
+     } factory_instance__##type##name;}
 
      #define REGISTER_PLUGIN(type) REGISTER_PLUGIN_NAME(type, type)
      #define REGISTER_PLUGIN_DEFAULT(type) REGISTER_PLUGIN_NAME(type, default) 

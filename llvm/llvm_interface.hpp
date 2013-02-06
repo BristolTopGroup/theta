@@ -12,6 +12,7 @@ class Function;
 class FunctionType;
 class Module;
 class ExecutionEngine;
+class GlobalVariable;
 }
 
 typedef double (*t_function_evaluate)(const double *);
@@ -57,11 +58,19 @@ public:
  * Note: making this derived from T [= Function, HistogramFunction], so we can
  * try to dynamic_cast pointers of T down to llvm_enabled<T> during setup.
  */
-template<typename T>
-class llvm_enabled: public T{
+class llvm_enabled_function: public theta::Function{
 public:
     virtual llvm::Function * llvm_codegen(llvm_module & mod, const std::string & prefix) const = 0;
-    virtual ~llvm_enabled(){}
+    virtual ~llvm_enabled_function(){}
+};
+
+
+class llvm_enabled_histogram_function: public theta::HistogramFunction{
+public:
+    virtual llvm::Function * llvm_codegen(llvm_module & mod, const std::string & prefix) const = 0;
+    // the histogram with squared uncertainties. It will be added by the model in case of bb_uncertainties = true
+    virtual theta::Histogram1D get_uncertainty2_histogram() const = 0;
+    virtual ~llvm_enabled_histogram_function(){}
 };
 
 /** \brief Function plugin wrapper to execute Functions within llvm
@@ -134,11 +143,14 @@ llvm::Function * create_llvm_histogram_function(const theta::HistogramFunction *
 
 void set_private_inline(llvm::Function * f);
 void llvm_verify(llvm::Function*, const std::string & fname);
+llvm::GlobalVariable * add_global_ddata(llvm::Module * m, const std::string & name, const double * data, size_t n, bool const_ = true);
 
 // get the llvm function types the llvm_enabled<Function>::llvm_codegen and llvm_enabled<HistogramFunction>::llvm_codegen should
 // generate.
 llvm::FunctionType * get_ft_function_evaluate(llvm_module & mod);
 llvm::FunctionType * get_ft_hf_add_with_coeff(llvm_module & mod);
+
+
 
 #endif
 

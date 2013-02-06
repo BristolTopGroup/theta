@@ -65,8 +65,7 @@ llvm::Function * llvm_multiply::llvm_codegen(llvm_module & mod, const std::strin
     Value * p_par_values = F->arg_begin();
     for(size_t i=0; i<v_pids.size(); ++i){
         unsigned int pindex = mod.get_index(v_pids[i]);
-        Constant * index = ConstantInt::get(i32_t, pindex);
-        GetElementPtrInst* p_parameter_value = GetElementPtrInst::Create(p_par_values, index, "", BB);
+        Value * p_parameter_value = Builder.CreateGEP(p_par_values, ConstantInt::get(i32_t, pindex));
         Value * parameter_value = Builder.CreateLoad(p_parameter_value);
         last_value = Builder.CreateFMul(last_value, parameter_value);
     }

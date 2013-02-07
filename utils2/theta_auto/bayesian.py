@@ -16,14 +16,14 @@ from utils import *
 #
 # Returns a dictionary (spid) --> (q) --> (list of results)
 # where q is one element of quantiles. The list of results are the quantiles 
-def bayesian_quantiles(model, input, n, quantiles = [0.95], signal_process_groups = None, nuisance_constraint = None, nuisance_prior_toys = None, signal_prior = 'flat', options = None, parameter = 'beta_signal'):
+def bayesian_quantiles(model, input, n, quantiles = [0.95], signal_process_groups = None, nuisance_constraint = None, nuisance_prior_toys = None, signal_prior = 'flat', options = None, parameter = 'beta_signal', iterations = 10000):
     if signal_process_groups is None: signal_process_groups = model.signal_process_groups
     if options is None: options = Options()
     colnames = ['quant__quant%05d' % int(q*10000 + 0.5) for q in quantiles]
     result = {}
     for spid, signal_processes in signal_process_groups.iteritems():
         r = Run(model, signal_processes, signal_prior = signal_prior, input = input, n = n,
-             producers = [QuantilesProducer(model, signal_processes, nuisance_constraint, signal_prior, parameter = parameter, quantiles = quantiles)],
+             producers = [QuantilesProducer(model, signal_processes, nuisance_constraint, signal_prior, parameter = parameter, quantiles = quantiles, iterations = iterations)],
              nuisance_prior_toys = nuisance_prior_toys)
         r.run_theta(options)
         res = r.get_products(colnames)

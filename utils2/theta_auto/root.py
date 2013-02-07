@@ -6,6 +6,8 @@ import os, os.path
 import array
 import utils
 
+from theta_auto.Model import Histogram
+
 
 class rootfile:
     # these are caching dictionaries indexing by filename

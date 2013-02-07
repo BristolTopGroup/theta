@@ -4,21 +4,6 @@ import os, os.path
 import array
 import utils
 
-# flatten a nested dictionary with string indices into a flat dictionary. The new key names
-# are given by <key1>__<key2>...
-#
-# note that the nesting is only flattened if the key is a str and the value is a dict.
-def _flatten_nested_dict(d, result, current_key = ''):
-    for k in d:
-        if type(k)==str and type(d[k]) == dict:
-            if current_key == '':   new_current_key = k
-            else: new_current_key = current_key + '__' + k
-            _flatten_nested_dict(d[k], result, new_current_key)
-        else:
-            if current_key == '':   new_current_key = k
-            else: new_current_key = current_key + '__' + k
-            result[new_current_key] = d[k]
-
 
 # par_values is a dictionary (parameter name) --> (floating point value)
 #
@@ -748,6 +733,12 @@ class HistogramFunction:
     def get_plus_histo(self, par): return self.syst_histos[par][0]
     def get_minus_histo(self, par): return self.syst_histos[par][1]
     def get_factor(self, par): return self.factors[par]
+    
+    def remove_parameter(self, par_name):
+        assert par_name in self.parameters
+        self.parameters.discard(par_name)
+        del self.factors[par_name]
+        del self.syst_histos[par_name]
         
     def rename_parameter(self, current_name, new_name):
         """

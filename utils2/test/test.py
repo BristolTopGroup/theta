@@ -4,7 +4,7 @@ from theta_auto.test_model import *
 import unittest
 import time
 
-config.suppress_info = True
+config.suppress_info = False
 one_sigma = 0.6827
 
 class TestMle(unittest.TestCase):
@@ -32,6 +32,26 @@ class TestMle(unittest.TestCase):
         # the interval should be about +- 10%:
         self.assertAlmostEqual(res['s'][one_sigma][0][0], 0.90, places = 2)
         self.assertAlmostEqual(res['s'][one_sigma][0][1], 1.10, places = 2)
+        
+    def test_chi2(self):
+        res = mle(self.model_nobkg, 'toys:1.0', 1000, chi2 = True, signal_prior = 'fix:1.0')
+        mean, width = get_mean_width(res['s']['__chi2'])
+        self.assertTrue(abs(mean - 1.0) < 0.1)
+        self.assertTrue(abs(width - math.sqrt(2)) < 0.2)
+        m2 = multichannel_counting([10000., 10000.])
+        res = mle(m2, 'toys:1.0', 3000, chi2 = True, signal_prior = 'fix:1.0')
+        mean, width = get_mean_width(res['s']['__chi2'])
+        self.assertTrue(abs(mean - 2.0) < 0.1)
+        self.assertTrue(abs(width - math.sqrt(4)) < 0.2)
+        
+        # test absolute chi2 values:
+        s = [10000., 10000.]
+        n_obs = [10170., 9786.]
+        model = multichannel_counting(s, n_obs = n_obs)
+        res = mle(model, 'data', 1, chi2 = True, signal_prior = 'fix:1.0', nuisance_constraint = get_fixed_dist(model.distribution))
+        expected_chi2 = sum(map(lambda (mu, n): (mu - n)**2 / mu, zip(s, n_obs)))
+        self.assertAlmostEqual(res['s']['__chi2'][0], expected_chi2, places = 1)
+        
         
     def test_pl_termonly(self):
         model_termonly = Model()

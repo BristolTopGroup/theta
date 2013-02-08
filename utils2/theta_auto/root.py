@@ -6,7 +6,7 @@ import os, os.path
 import array
 import utils
 
-from theta_auto.Model import Histogram
+from theta_auto.Model import *
 
 
 class rootfile:

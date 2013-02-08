@@ -84,6 +84,22 @@ class plotdata:
                 if ibin >= nbins: ibin = nbins-1
             self.y[ibin] += 1
         if errors: self.yerrors = map(math.sqrt, self.y)
+        
+    # add the values in values to the current histogram, i.e. increments y[ibin] by 1
+    # for the corresponding bin for each v in values.
+    def histogram_add(self, values, include_uoflow = False):
+        xmin, xmax, nbins = self.x[0], self.xmax, len(self.x)
+        if len(self.y) == 0: self.y = [0.0] * nbins
+        assert len(self.y) == nbins
+        for v in values:
+            ibin = int((v - xmin) / (xmax - xmin) * nbins)
+            if not include_uoflow:
+                if ibin < 0 or ibin >= nbins: continue
+            else:
+                if ibin < 0: ibin = 0
+                if ibin >= nbins: ibin = nbins-1
+            self.y[ibin] += 1
+        
 
     # scale all y values by factor
     def scale_y(self, factor):

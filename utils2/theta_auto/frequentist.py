@@ -210,7 +210,7 @@ def discovery(model, spid = None, use_data = True, Z_error_max = 0.05, maxit = 1
     signal_process_groups = {spid : model.signal_process_groups[spid]}
     if options is None: options = Options()
     
-    ts_sorted = deltanll(model, signal_process_groups = signal_process_groups, nuisance_constraint = nuisance_constraint, input = input_expected, n = n_expected)[spid]
+    ts_sorted = deltanll(model, signal_process_groups = signal_process_groups, nuisance_constraint = nuisance_constraint, input = input_expected, n = n_expected, options = options)[spid]
     ts_sorted.sort()
     if debug_method is not None: debug_method('expected', ts_sorted)
     expected = (ts_sorted[int(0.5 * len(ts_sorted))], ts_sorted[int(0.16 * len(ts_sorted))], ts_sorted[int(0.84 * len(ts_sorted))])
@@ -227,7 +227,7 @@ def discovery(model, spid = None, use_data = True, Z_error_max = 0.05, maxit = 1
     observed_nn0 = [0,0]
     observed_significance = None
     options.set('minimizer', 'strategy', 'fast')
-    if verbose: print "making at most maxit=%d iterations of background-only toys, each with exactly n=%d toys" % (maxit, n)
+    if verbose: print "making at most maxit=%d iterations of background-only toys, each with n=%d toys" % (maxit, n)
     for seed in range(1, maxit + 1):
         # only create only one run, so seed is never re-used.
         run = pvalue_bkgtoys_runs(model, signal_process_groups = signal_process_groups, n_runs = 1, n = n, nuisance_constraint = nuisance_constraint,
@@ -243,16 +243,20 @@ def discovery(model, spid = None, use_data = True, Z_error_max = 0.05, maxit = 1
             expected_nn0[i][0] += count(lambda c: c >= expected[i], ts_bkgonly)
             expected_Z[i] = get_Z(*expected_nn0[i])
             max_Z_error = max(max_Z_error, expected_Z[i][1])
+        exp_info = ''
+        if expected_nn0[0][0] == 0:
+            exp_info = ' (>~ %.3f)'  % get_Z(1, expected_nn0[0][1])[0]
         if use_data:
             observed_nn0[1] += len(ts_bkgonly)
             observed_nn0[0] += count(lambda c: c >= observed, ts_bkgonly)
             Z, Z_error = get_Z(*observed_nn0)
+            obs_info = '' if observed_nn0[0]==0 else " (>~ %.3f)" % get_Z(1, observed_nn0[1])[0]
             max_Z_error = max(max_Z_error, Z_error)
             observed_significance = Z, Z_error
         if verbose:
             print "after %d iterations" % seed
-            if use_data: print "    observed_significance = %.3f +- %.3f" % (Z, Z_error)
-            print "    expected significance (median, lower 1sigma, upper 1sigma): %.3f +-%.3f (%.3f--%.3f)" % (expected_Z[0][0], expected_Z[0][1], expected_Z[1][0], expected_Z[2][0])
+            if use_data: print "    observed_significance = %.3f +- %.3f%s" % (Z, Z_error, obs_info)
+            print "    expected significance (median, lower 1sigma, upper 1sigma): %.3f +-%.3f%s (%.3f--%.3f)" % (expected_Z[0][0], expected_Z[0][1], exp_info, expected_Z[1][0], expected_Z[2][0])
         if max_Z_error < Z_error_max:
             print "current max error on Z is %.3f, which is smaller than the provided threshold Z_error_max=%.3f; stopping iteration." % (max_Z_error, Z_error_max)
             break

@@ -161,7 +161,7 @@ namespace theta {
         void get_prediction_impl(DataT<HT> & result, const ParValues & parameters) const;
         
      public:
-        default_model(const Configuration & cfg);
+        explicit default_model(const Configuration & cfg);
         virtual void get_prediction(DataWithUncertainties & result, const ParValues & parameters) const;
         virtual void get_prediction(Data & result, const ParValues & parameters) const;
         virtual std::auto_ptr<NLLikelihood> get_nllikelihood(const Data & data) const;

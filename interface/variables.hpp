@@ -401,6 +401,18 @@ namespace theta {
         void clear(){
             std::fill(values.begin(), values.end(), NAN);
         }
+        
+        /** \brief get all parameters for which values are set.
+         */
+        ParIds get_parameters() const{
+            ParIds result;
+            for(size_t i=0; i<values.size(); ++i){
+                if(!std::isnan(values[i])){
+                    result.insert(ParId(i));
+                }
+            }
+            return result;
+        }
 
     private:
         //values are stored using the ParId.id as index

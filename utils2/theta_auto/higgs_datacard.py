@@ -2,6 +2,7 @@
 import math
 import utils
 from Model import *
+from root import *
 
 _debug = False
 
@@ -330,7 +331,7 @@ def build_model(fname, filter_channel = lambda chan: True, filter_uncertainty = 
     # factors of 0 are omitted.
     shape_systematics = {}
     for i in range(kmax):
-        if debug: print "processing line %d" % lines[i][1]
+        if _debug: print "processing line %d" % lines[i][1]
         cmds = get_cmds(lines[i])
         assert len(cmds) >= len(processes_for_table) + 2, "Line %d: wrong number of entries for uncertainty '%s'" % (lines[i][1], cmds[0])
         if not filter_uncertainty(cmds[0]): continue

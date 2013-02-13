@@ -15,20 +15,25 @@ from utils import *
 # the +-1sigma and +-2sigma (i.e., the centrgl 68% and central 84%) are given.
 #
 # Returns a dictionary (spid) --> (q) --> (list of results)
-# where q is one element of quantiles. The list of results are the quantiles 
-def bayesian_quantiles(model, input, n, quantiles = [0.95], signal_process_groups = None, nuisance_constraint = None, nuisance_prior_toys = None, signal_prior = 'flat', options = None, parameter = 'beta_signal', iterations = 10000):
+# where q is one element of quantiles (a float value). The list of results are the quantiles 
+#
+# q can also be the special string "accrate" to return the acceptance rate, if the parameter \c accrate was set to
+# \c True
+def bayesian_quantiles(model, input, n, quantiles = [0.95], signal_process_groups = None, nuisance_constraint = None, nuisance_prior_toys = None, signal_prior = 'flat', options = None, parameter = 'beta_signal', iterations = 10000, accrate = False):
     if signal_process_groups is None: signal_process_groups = model.signal_process_groups
     if options is None: options = Options()
     colnames = ['quant__quant%05d' % int(q*10000 + 0.5) for q in quantiles]
+    if accrate: colnames.append('quant__accrate')
     result = {}
     for spid, signal_processes in signal_process_groups.iteritems():
+        p = QuantilesProducer(model, signal_processes, nuisance_constraint, signal_prior, parameter = parameter, quantiles = quantiles, iterations = iterations, diag = accrate)
         r = Run(model, signal_processes, signal_prior = signal_prior, input = input, n = n,
-             producers = [QuantilesProducer(model, signal_processes, nuisance_constraint, signal_prior, parameter = parameter, quantiles = quantiles, iterations = iterations)],
-             nuisance_prior_toys = nuisance_prior_toys)
+             producers = [p], nuisance_prior_toys = nuisance_prior_toys)
         r.run_theta(options)
         res = r.get_products(colnames)
         result[spid] = {}
         for i, q in enumerate(quantiles): result[spid][q] = res[colnames[i]]
+        if accrate: result[spid]['accrate'] = res['quant__accrate']
     return result
     
     

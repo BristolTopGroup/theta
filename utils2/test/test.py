@@ -191,12 +191,34 @@ class TestRootModel(unittest.TestCase):
         
         #MC stat uncertainty should enlarge interval:
         self.assertTrue(lower < nlower and upper > nupper)
+        
+        
+class MCMCHighdimtest(unittest.TestCase):
+    def test_1d(self):
+        model = Model()
+        ndim = 10
+        parameters = ['p%d' % i for i in range(ndim)]
+        mu = [0.0] * ndim
+        cov = [[0.0] * ndim] * ndim
+        for i in range(ndim):
+            cov[i][i] = 1.0
+            model.distribution.set_distribution('p%d' % i, 'gauss', mean = 0.0, width = inf, range = (-inf, inf))
+        model.additional_nll_term = NLGauss(parameters, mu, cov)
+        
+        res = bayesian_quantiles(model, 'toys:0.0', 1, quantiles = [0.5], signal_process_groups = {'': []}, parameter = 'p0')
+        print res
+    
 
+"""
 suite1 = unittest.TestLoader().loadTestsFromTestCase(TestMle)
 suite2 = unittest.TestLoader().loadTestsFromTestCase(TestBB)
 suite3 = unittest.TestLoader().loadTestsFromTestCase(TestRootModel)
 suite4 = unittest.TestLoader().loadTestsFromTestCase(TestBayes)
 alltests = unittest.TestSuite([suite1, suite2, suite3, suite4])
+"""
+
+mcmc = unittest.TestLoader().loadTestsFromTestCase(MCMCHighdimtest)
+alltests = unittest.TestSuite([mcmc])
 
 # verbose version:
 res = unittest.TextTestRunner(verbosity=2).run(alltests)

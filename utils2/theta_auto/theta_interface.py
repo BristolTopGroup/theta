@@ -282,15 +282,17 @@ class MleProducer(ProducerBase):
         
 class QuantilesProducer(ProducerBase):
     def __init__(self, model, signal_processes, override_distribution, signal_prior = 'flat', name = 'quant', parameter = 'beta_signal', quantiles = [0.16, 0.5, 0.84],
-    iterations = 10000):
+    iterations = 10000, diag = False):
         ProducerBase.__init__(self, model, signal_processes, override_distribution, name, signal_prior)
         self.parameter = parameter
         self.quantiles = quantiles
         self.iterations = iterations
+        self.diag = diag
         
     def get_cfg(self, options):
         result = {'type': 'mcmc_quantiles', 'parameter': self.parameter, 'quantiles': self.quantiles, 'iterations': self.iterations}
         result.update(self.get_cfg_base(options))
+        if self.diag: result['diag'] = True
         return result
         
         

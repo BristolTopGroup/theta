@@ -146,6 +146,9 @@ namespace theta {
         bool operator==(const VarIds<id_type> & rhs) const{
             return vars == rhs.vars;
         }
+        bool operator!=(const VarIds<id_type> & rhs) const{
+        	return vars != rhs.vars;
+        }
 
         /// The number of contained ids
         size_t size() const {
@@ -154,13 +157,6 @@ namespace theta {
     private:
         set_type vars;
     };
-    
-    /// \brief Template instantiation for a set of observables
-    typedef VarIds<ObsId> ObsIds;
-    /// \brief Template instantiation for a set of parameters
-    typedef VarIds<ParId> ParIds;
-
-    class ParValues;
     
     /** \brief Manager class for parameter and observable information
      *

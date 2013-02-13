@@ -59,7 +59,7 @@ void MinimizationProblem::check_consistency() const{
         theta_assert(r_it!=ranges.end());
         const pair<double, double> & range = r_it->second;
         theta_assert(range.first <= range.second);
-        theta_assert(val <= range.second && val >= range.second);
+        theta_assert(val <= range.second && val >= range.first);
         double st = step.get(*it);
         theta_assert(st >= 0.0 && std::isfinite(st));
     }

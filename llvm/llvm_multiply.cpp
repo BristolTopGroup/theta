@@ -73,7 +73,6 @@ llvm::Function * llvm_multiply::llvm_codegen(llvm_module & mod, const std::strin
         stringstream ss_prefix;
         ss_prefix << prefix << "_f" << i;
         llvm::Function * f = create_llvm_function(&functions[i], mod, ss_prefix.str());
-        set_private_inline(f);
         Value * f_factor = Builder.CreateCall(f, p_par_values);
         last_value = Builder.CreateFMul(last_value, f_factor);
     }

@@ -14,3 +14,6 @@ all: ../lib/simplex.so
 #define clean target in any case:
 clean-subdir:
 	@rm -f ../lib/simplex.so
+	
+test: .bin/test.o .bin/test_main.o ../lib/simplex.so
+	@$(LINK_EXE)

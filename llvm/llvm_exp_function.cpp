@@ -107,9 +107,7 @@ llvm::Function * llvm_exp_function::llvm_codegen(llvm_module & mod, const std::s
             Builder.SetInsertPoint(BB = BB_join);
         }
     }
-    llvm::GlobalAlias * exp_function_alias = mod.module->getNamedAlias("exp_function");
-    theta_assert(exp_function_alias);
-    llvm::Function * exp_function = dyn_cast<llvm::Function>(exp_function_alias->getAliasee());
+    llvm::Function * exp_function = mod.module->getFunction("exp_function");
     theta_assert(exp_function);
     Value * retval = Builder.CreateCall(exp_function, exponent_total);
     Builder.CreateRet(retval);

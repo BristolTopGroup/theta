@@ -26,7 +26,7 @@
  *   re-init = 1; //optional. Default is 0
  *
  *   // option 1: write into text files
- *   oufile_prefix = "chain";
+ *   outfile_prefix = "chain";
  *
  *   // option 2: write into a database
  *   output_database = {

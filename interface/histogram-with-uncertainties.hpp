@@ -44,7 +44,7 @@ public:
     }
 
     /// create a Histogram with the given range and number of bins
-    Histogram1DWithUncertainties(size_t bins=0, double xmin=0, double xmax=1);
+    explicit Histogram1DWithUncertainties(size_t bins=0, double xmin=0, double xmax=1);
     
     
     /// Construct from Histogram1D, setting all uncertainties to zero
@@ -105,6 +105,15 @@ public:
         return Histogram1D(xmin, xmax, values);
     }
     
+    Histogram1D get_uncertainty2_histogram() const{
+    	if(nontrivial_unc){
+    		return Histogram1D(xmin, xmax, sq_uncertainties);
+    	}
+    	else{
+    		return Histogram1D(get_nbins(), xmin, xmax);
+    	}
+    }
+
     // setting uncertainty to NAN leaves it unchanged.
     void set(size_t i, double value, double uncertainty = NAN){
         values.set(i, value);
@@ -115,14 +124,17 @@ public:
             }
         }
     }
-    
-    void set_all(double val, double unc){
-        values.set_all_values(val);
-        if(unc!=0.0) set_nontrivial_unc();
-        // can call set_all_values in both cases (trivial and non-trivial uncertainties)
-        sq_uncertainties.set_all_values(unc * unc);
+
+    void set_unc2(size_t i, double value, double uncertainty2 = NAN){
+        values.set(i, value);
+        if(!std::isnan(uncertainty2)){
+            if(nontrivial_unc || uncertainty2!=0){
+                set_nontrivial_unc();
+                sq_uncertainties.set(i, uncertainty2);
+            }
+        }
     }
-    
+
     // set values, uncertainties are set to zero.
     void set(const Histogram1D & rhs){
         xmin = rhs.get_xmin();
@@ -131,6 +143,21 @@ public:
         sq_uncertainties = DoubleVector();
         nontrivial_unc = false;
     }
+
+    void set(const Histogram1D & values_, const Histogram1D & uncertainties){
+    	values_.check_compatibility(uncertainties);
+        xmin = values_.get_xmin();
+        xmax = values_.get_xmax();
+        values = values_;
+        sq_uncertainties = uncertainties;
+        for(size_t i=0; i<sq_uncertainties.size(); ++i){
+        	double newval = sq_uncertainties.get(i);
+        	newval *= newval;
+        	sq_uncertainties.set(i, newval);
+        }
+        nontrivial_unc = true;
+    }
+
     //@}
 
     //@{

@@ -96,7 +96,7 @@ public:
 protected:
     /** \brief Construct from a Configuration instance
      *
-     * Parses the settings "add-nllikelihood-functions".
+     * Parses the settings "additional-nll-term".
      *
      * I name_ is non-empty, it overrides the name given in the configuration setting.
      */

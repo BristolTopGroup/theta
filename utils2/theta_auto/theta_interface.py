@@ -727,7 +727,9 @@ class Run(ModuleBase):
         cache_dir = os.path.join(workdir, 'cache')
         theta = os.path.realpath(os.path.join(config.theta_dir, 'bin', 'theta'))
         info("Running 'theta %s'" % cfgfile)
-        to_execute = lambda : self._exec(theta + " " + cfgfile)
+        cmd = theta + " " + cfgfile
+        if self.debug: cmd += " --print-time"
+        to_execute = lambda : self._exec(cmd)
         if in_background_thread:
             assert self.thread is None
             self.thread = threading.Thread(target = to_execute)

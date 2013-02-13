@@ -129,7 +129,7 @@ mcmc_chain::mcmc_chain(const theta::Configuration & cfg): Producer(cfg, construc
     Setting s = cfg.setting;
     if(s.exists("outfile_prefix")){
         if(s.exists("output_database")){
-            throw ConfigurationException("You have to specify excatly one of the settings 'outfile_prefix', 'output_database', but found both");
+            throw ConfigurationException("You have to specify exactly one of the settings 'outfile_prefix', 'output_database', but found both");
         }
         outfile_prefix = static_cast<string>(s["outfile_prefix"]);
     }

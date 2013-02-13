@@ -131,6 +131,10 @@ public:
     
 };
 
+simplex_minimizer::simplex_minimizer(const options & opts_): opts(opts_){
+
+}
+
 simplex_minimizer::simplex_minimizer(const theta::Configuration & cfg){
     if(cfg.setting.exists("alpha")){
         opts.alpha = cfg.setting["alpha"];
@@ -292,7 +296,6 @@ theta::MinimizationResult simplex_minimizer::minimize(const theta::Function & th
         if(fabs(fvals[ib] - fvals[iw]) < opts.f_eps){
             theta::MinimizationResult result;
             result.fval = fvals[ib];
-            result.values = start;
             size_t j=0;
             for(ParIds::const_iterator it=pids.begin(); it!=pids.end(); ++j, ++it){
                 result.values.set(*it, current_simplex[ib][j]);
@@ -300,36 +303,41 @@ theta::MinimizationResult simplex_minimizer::minimize(const theta::Function & th
             return result;
         }
         
-        
-#ifdef SIMPLEX_CHECKS
-        // consistecy checks (can be removed once in production ...):
-        vec c2(c);
-        c2.zeros();
-        for(size_t i=0; i<npoints; ++i){
-            if(i==iw)continue;
-            c2.add_with_coeff(1.0 / (npoints - 1), current_simplex[i]);
-        }
-        assert(c2.equals(c, 1e-7));
-        
-        assert(iw!=ib && iw!=isw);
-        //cout << "iw: " << iw << "; ib: " << ib  << "; isw: " << isw << endl;
-        for(size_t i=0; i<npoints; ++i){
-            /*cout << "[" << i << "]: ";
-            for(size_t j=0; j<ndim; ++j){
-                cout << current_simplex[i][j] << ", ";
-            }
-            cout << "--> " << fvals[i] << endl;*/
-            if(i==iw)continue;
-            assert(fvals[isw] >= fvals[i]);
-        }
-        assert(fvals[isw] <= fvals[iw]);
-        for(size_t i=0; i<npoints; ++i){
-            assert(fvals[ib] <= fvals[i]);
-            assert(fvals[iw] >= fvals[i]);
-        }
-#endif
-        
-        
+        bool debug = opts.debug;
+        if(debug){
+			cout << endl << "iteraton " << it << " iw = " << iw << "; isw = " << isw << "; ib = " << ib << endl;
+			// consistency checks (can be removed once in production):
+			vec c2(c);
+			c2.zeros();
+			for(size_t i=0; i<npoints; ++i){
+				if(i==iw)continue;
+				c2.add_with_coeff(1.0 / (npoints - 1), current_simplex[i]);
+			}
+			assert(c2.equals(c, 1e-7));
+
+			assert(iw!=ib && iw!=isw);
+			//cout << "iw: " << iw << "; ib: " << ib  << "; isw: " << isw << endl;
+			for(size_t i=0; i<npoints; ++i){
+				cout << "[" << i << "]: ";
+				for(size_t j=0; j<ndim; ++j){
+					cout << current_simplex[i][j] << ", ";
+				}
+				cout << "--> " << fvals[i] << endl;
+				if(i==iw)continue;
+				assert(fvals[isw] >= fvals[i]);
+			}
+			cout << "[c]: ";
+			for(size_t j=0; j<ndim; ++j){
+				cout << c[j] << ", ";
+			}
+			cout << endl;
+			assert(fvals[isw] <= fvals[iw]);
+			for(size_t i=0; i<npoints; ++i){
+				assert(fvals[ib] <= fvals[i]);
+				assert(fvals[iw] >= fvals[i]);
+			}
+        } // if debug
+
         //reflect worst point at the centroid:
         vec xr(c);
         xr *= 1 + opts.alpha;
@@ -337,7 +345,7 @@ theta::MinimizationResult simplex_minimizer::minimize(const theta::Function & th
         const double fr = f(xr.get_data());
         // accept xr if it is better than the second worst, but not the best:
         if(fr < fvals[isw] && fr >= fvals[ib]){
-            //cout << "case 1: accepting xr as it's better than second worst" << endl;
+            if(debug)cout << "case 1: accepting xr as it's better than second worst" << endl;
             // a)
             const size_t new_index = iw;
             current_simplex[iw] = xr;
@@ -359,40 +367,46 @@ theta::MinimizationResult simplex_minimizer::minimize(const theta::Function & th
         }
         // if fr is better than the current best: expand
         else if(fr < fvals[ib]){
-            //cout << "case 2: xr is better than current best" << endl;
+        	if(debug)cout << "case 2: xr is better than current best" << endl;
             // compute the expansion point:
             vec xe(c);
             xe *= 1 - opts.gamma;
             xe.add_with_coeff(opts.gamma, xr);
             const double fe = f(xe.get_data());
             // depending on fe < fr, accept either xe or xr and terminate iteration:
-            // c.1)
-            c.add_with_coeff(-1.0 / (npoints - 1), current_simplex[ib]);
             if(fe < fr){
-                //cout << "case 2a: expanded xr (=xe) is even better" << endl;
+            	if(debug)cout << "case 2a: expanded xr (=xe) is even better" << endl;
                 // accept xe. a)
-                current_simplex[ib] = xe;
-                fvals[ib] = fe;
-                // b): all indices remain the same ...
+                current_simplex[iw] = xe;
+                fvals[iw] = fe;
             }
             else{
-                //cout << "case 2b: expanded xr (=xe) wasn't better, using xr" << endl;
+            	if(debug)cout << "case 2b: expanded xr (=xe) wasn't better, using xr" << endl;
                 // accept xr. a)
-                current_simplex[ib] = xr;
-                fvals[ib] = fr;
+                current_simplex[iw] = xr;
+                fvals[iw] = fr;
             }
-            // c.2)
+            ib = iw;
+            iw = isw;
+            //look for new isw:
+            isw = npoints;
+			for(size_t i=0; i< npoints; ++i){
+				if(i==iw) continue;
+				if(isw==npoints || fvals[i] > fvals[isw]) isw = i;
+			}
+            // c. remove new worst from simplex:
+			c.add_with_coeff(-1.0 / (npoints - 1), current_simplex[iw]);
             c.add_with_coeff(1.0 / (npoints - 1), current_simplex[ib]);
         }
         else{
-            //cout << "case 3: xr is worse than second worst" << endl;
+        	if(debug)cout << "case 3: xr is worse than second worst" << endl;
             // compute the contraction point xc:
             vec xc(c);
             xc *= 1 - opts.beta;
             xc.add_with_coeff(opts.beta, current_simplex[iw]);
             const double fc = f(xc.get_data());
             if(fc <= fvals[iw]){
-                //cout << "case 3a: contracted point was better than current worst" << endl;
+            	if(debug)cout << "case 3a: contracted point was better than current worst" << endl;
                 // accept xc and terminate iteration:
                 // a)
                 const size_t new_index = iw;
@@ -415,7 +429,7 @@ theta::MinimizationResult simplex_minimizer::minimize(const theta::Function & th
                 }
             }
             else{
-                //cout << "case 3b: contracted point was worse than current worst; shrinking" << endl;
+            	if(debug)cout << "case 3b: contracted point was worse than current worst; shrinking" << endl;
                 //shrink all points toward the best:
                 for(size_t i=0; i<npoints; ++i){
                     if(i==ib)continue;

@@ -1,9 +1,4 @@
 #include "llvm/llvm_interface.hpp"
-
-#include "llvm/DerivedTypes.h"
-#include "llvm/LLVMContext.h"
-#include "llvm/Module.h"
-
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetData.h"
@@ -23,9 +18,12 @@
 #include "interface/plugin.hpp"
 #include <dlfcn.h>
 
+#include <iostream>
+
 using namespace llvm;
 using namespace theta;
 using namespace std;
+
 
 namespace {
 
@@ -45,23 +43,25 @@ std::map<theta::ParId, size_t> create_pid_to_index(const ParIds & pids){
 	return result;
 }
 
+}
+
+void dump_info(double d, int i){
+	std::cout << "dump_info: " << i << " " << d << std::endl;
+}
+
 
 // create the module function
-// inline void add_with_coeff(double coeff, double * data, const double * rhs_data, int n);
-// which calculates data += coeff * rhs_data where data and rhs_data are 16-byte aligned double-vectors of
+// inline void add_with_coeff(double coeff, double * data_out, const double * data_in, int n);
+// which calculates data_out[i] += coeff * data_in[i] for i = 0..n, where data and rhs_data are 16-byte aligned double-vectors of
 // length n  (or n + (n%2)).
-void emit_add_with_coeff(llvm::Module * mod){
-    LLVMContext & context = mod->getContext();
-    Type * double_t = Type::getDoubleTy(context);
-    VectorType* double2_t = VectorType::get(double_t, 2);
-    Type * void_t = Type::getVoidTy(context);
-    Type * i32_t = Type::getInt32Ty(context);
+void llvm_module::emit_add_with_coeff_function(){
+    LLVMContext & context = module->getContext();
     std::vector<Type*> arg_types(4);
-    arg_types[0] = double_t;
-    arg_types[1] = arg_types[2] = double_t->getPointerTo();
-    arg_types[3] = i32_t;
-    FunctionType * FT = FunctionType::get(void_t, arg_types, false);
-    llvm::Function * F = llvm::Function::Create(FT, llvm::Function::PrivateLinkage, "add_with_coeff", mod);
+    arg_types[0] = double_;
+    arg_types[1] = arg_types[2] = double_->getPointerTo();
+    arg_types[3] = i32_;
+    FunctionType * FT = FunctionType::get(void_, arg_types, false);
+    llvm::Function * F = llvm::Function::Create(FT, llvm::Function::PrivateLinkage, "add_with_coeff", module);
     F->addFnAttr(Attribute::InlineHint);
     llvm::Function::arg_iterator iter = F->arg_begin();
     Argument * coeff = iter++;
@@ -75,25 +75,24 @@ void emit_add_with_coeff(llvm::Module * mod){
     BasicBlock * BB = BasicBlock::Create(context, "entry", F);
     Builder.SetInsertPoint(BB);
     std::vector<Constant *> zeros(2);
-    zeros[0] = zeros[1] = ConstantFP::get(double_t, 0.0);
-    Value * coeff2tmp = Builder.CreateInsertElement(ConstantVector::get(zeros), coeff, ConstantInt::get(i32_t, 0));
-    Value * coeff2 = Builder.CreateInsertElement(coeff2tmp, coeff, ConstantInt::get(i32_t, 1), "coeff2");
-    // n = n_ + n_%2  (n_%2 = n_ % 1)
-    Value * n_mod_2 = Builder.CreateAnd(n_, ConstantInt::get(i32_t, 1), "n_mod_2");
-    Value * n = Builder.CreateAdd(n_, n_mod_2, "n_aligned");
-    Value * n_half = Builder.CreateUDiv(n, ConstantInt::get(i32_t, 2), "n2");
+    zeros[0] = zeros[1] = ConstantFP::get(double_, 0.0);
+    Value * coeff2tmp = Builder.CreateInsertElement(ConstantVector::get(zeros), coeff, ConstantInt::get(i32_, 0));
+    Value * coeff2 = Builder.CreateInsertElement(coeff2tmp, coeff, ConstantInt::get(i32_, 1), "coeff2");
+    // n_half = (n_ + 1)/2:
+    Value * n1 = Builder.CreateAdd(n_, ConstantInt::get(i32_, 1), "n1");
+    Value * n_half = Builder.CreateUDiv(n1, ConstantInt::get(i32_, 2), "n_half");
     // create data and rhs_data to point to data_ / rhs_data_ but of type pointer to double2_t:
-    Value * data = Builder.CreateBitCast(data_, double2_t->getPointerTo(), "data");
-    Value * rhs_data = Builder.CreateBitCast(rhs_data_, double2_t->getPointerTo(), "rhs_data");
+    Value * data = Builder.CreateBitCast(data_, double2_->getPointerTo(), "data");
+    Value * rhs_data = Builder.CreateBitCast(rhs_data_, double2_->getPointerTo(), "rhs_data");
     // make a loop i = 0..n_half
     BasicBlock * BB_loop_header = BasicBlock::Create(context, "loop_header", F); // here compare i with n and jump to body or exit
     BasicBlock * BB_loop_body = BasicBlock::Create(context, "loop_body", F);
     BasicBlock * BB_loop_exit = BasicBlock::Create(context, "loop_exit", F);
     Builder.CreateBr(BB_loop_header);
     Builder.SetInsertPoint(BB_loop_header);
-    PHINode * i_phi = Builder.CreatePHI(i32_t, 2, "i");
+    PHINode * i_phi = Builder.CreatePHI(i32_, 2, "i");
     theta_assert(i_phi != 0);
-    i_phi->addIncoming(ConstantInt::get(i32_t, 0), BB);
+    i_phi->addIncoming(ConstantInt::get(i32_, 0), BB);
     // add the i_phi incoming value for next loop value later
     Value * i_eq_n = Builder.CreateICmpEQ(i_phi, n_half);
     Builder.CreateCondBr(i_eq_n, BB_loop_exit, BB_loop_body);
@@ -106,7 +105,7 @@ void emit_add_with_coeff(llvm::Module * mod){
     Value * data_i = Builder.CreateLoad(p_data_i, "data_i");
     Value * res = Builder.CreateFAdd(multmp, data_i, "res");
     Builder.CreateStore(res, p_data_i);
-    Value * next_i = Builder.CreateAdd(i_phi, ConstantInt::get(i32_t, 1), "next_i");
+    Value * next_i = Builder.CreateAdd(i_phi, ConstantInt::get(i32_, 1), "next_i");
     i_phi->addIncoming(next_i, BB_loop_body);
     Builder.CreateBr(BB_loop_header);
     Builder.SetInsertPoint(BB_loop_exit);
@@ -114,13 +113,274 @@ void emit_add_with_coeff(llvm::Module * mod){
     //llvm_verify(F, "add_with_coeff");
 }
 
-
+llvm::BasicBlock * llvm_module::emit_add_with_coeff(llvm::BasicBlock * BB_in, llvm::Value * coeff, llvm::Value * data_out,
+		llvm::Value * data_in, size_t n){
+	LLVMContext & context = module->getContext();
+	IRBuilder<> Builder(context);
+	Builder.SetInsertPoint(BB_in);
+	llvm::Function * add_with_coeff = module->getFunction("add_with_coeff");
+	Builder.CreateCall4(add_with_coeff, coeff, data_out, data_in, ConstantInt::get(i32_, n));
+	return BB_in;
 }
 
-void set_private_inline(llvm::Function * f){
-    f->addFnAttr(Attribute::AlwaysInline);
-    f->setLinkage(GlobalValue::PrivateLinkage);
+BasicBlock * llvm_module::emit_add_with_coeff(BasicBlock * BB_in, Value * coeff, Value * data_out, const DoubleVector & h){
+	LLVMContext & context = module->getContext();
+	IRBuilder<> Builder(context);
+	Builder.SetInsertPoint(BB_in);
+	const size_t n = h.size();
+	if(n==1){
+		Value * data_o = Builder.CreateBitCast(data_out, double_->getPointerTo(), "data_out");
+		Value * p_data0 = Builder.CreateGEP(data_o, ConstantInt::get(i32_, 0));
+		Value * data0 = Builder.CreateLoad(p_data0);
+		Value * coeff_times_h = Builder.CreateFMul(coeff, ConstantFP::get(double_, h.get(0)));
+		Value * res = Builder.CreateFAdd(data0, coeff_times_h);
+		Builder.CreateStore(res, p_data0);
+	}
+	else if(n<=8){
+		std::vector<Constant *> zeros(2);
+		zeros[0] = zeros[1] = ConstantFP::get(double_, 0.0);
+		Value * coeff2tmp = Builder.CreateInsertElement(ConstantVector::get(zeros), coeff, ConstantInt::get(i32_, 0));
+		Value * coeff2 = Builder.CreateInsertElement(coeff2tmp, coeff, ConstantInt::get(i32_, 1), "coeff2");
+		Value * data_o = Builder.CreateBitCast(data_out, double2_->getPointerTo(), "data_out");
+		const size_t imax = (n + n%2) / 2;
+		for(size_t i=0; i < imax; ++i){
+			Value * p_data_i = Builder.CreateGEP(data_o, ConstantInt::get(i32_, i));
+			Value * data_i = Builder.CreateLoad(p_data_i);
+			Value * h2tmp = Builder.CreateInsertElement(ConstantVector::get(zeros), ConstantFP::get(double_, h.get(2*i)), ConstantInt::get(i32_, 0));
+			Value * h2 = h2tmp;
+			if(2*i+1 < n){
+				h2 = Builder.CreateInsertElement(h2tmp, ConstantFP::get(double_, h.get(2*i + 1)), ConstantInt::get(i32_, 1), "coeff2");
+			}
+			Value * coeff_times_h = Builder.CreateFMul(coeff2, h2);
+			Value * res = Builder.CreateFAdd(data_i, coeff_times_h);
+			Builder.CreateStore(res, p_data_i);
+		}
+	}
+	else{
+		llvm::Function * add_with_coeff = module->getFunction("add_with_coeff");
+		GlobalVariable * gv_data = add_global_ddata(h.get_data(), h.size(), "ewc_data", true);
+		Value * gv_data_conv = Builder.CreateBitCast(gv_data, double_->getPointerTo());
+		Builder.CreateCall4(add_with_coeff, coeff, data_out, gv_data_conv, ConstantInt::get(i32_, h.size()));
+	}
+	return BB_in;
+	//Builder.CreateRetVoid();
 }
+
+/*
+void llvm_module::emit_dump(llvm::Value * d_, llvm::Value * int_, IRBuilder<> & Builder){
+	Builder.CreateCall2(f_dump_info, d_, int_);
+}*/
+
+BasicBlock * llvm_module::emit_multiply(BasicBlock * BB_in, Value * coeff, Value * histo_, size_t n){
+	LLVMContext & context = module->getContext();
+	IRBuilder<> Builder(context);
+	llvm::Function * f = BB_in->getParent();
+	Builder.SetInsertPoint(BB_in);
+	Value * histo = Builder.CreateBitCast(histo_, double2_->getPointerTo(), "histo");
+
+	std::vector<Constant *> zeros(2);
+	zeros[0] = zeros[1] = ConstantFP::get(double_, 0.0);
+	Value * coeff2tmp = Builder.CreateInsertElement(ConstantVector::get(zeros), coeff, ConstantInt::get(i32_, 0));
+	Value * coeff2 = Builder.CreateInsertElement(coeff2tmp, coeff, ConstantInt::get(i32_, 1), "coeff2");
+
+	BasicBlock * BB_loop_exit = BasicBlock::Create(context, "mul_loop_exit", f);
+	BasicBlock * BB_loop_header = BasicBlock::Create(context, "mul_loop_header", f, BB_loop_exit);
+	BasicBlock * BB_loop_body = BasicBlock::Create(context, "mul_loop_body", f, BB_loop_exit);
+
+	Builder.CreateBr(BB_loop_header);
+	Builder.SetInsertPoint(BB_loop_header);
+	PHINode * i_phi = Builder.CreatePHI(i32_, 2, "i");
+	i_phi->addIncoming(ConstantInt::get(i32_, 0), BB_in);
+	Value * i_eq_n = Builder.CreateICmpEQ(i_phi, ConstantInt::get(i32_, (n + n%2) / 2));
+	Builder.CreateCondBr(i_eq_n, BB_loop_exit, BB_loop_body);
+
+	Builder.SetInsertPoint(BB_loop_body);
+	Value * p_histo_i = Builder.CreateGEP(histo, i_phi, "p_src_i");
+	Value * histo_i = Builder.CreateLoad(p_histo_i, "src_i");
+	Value * multiplied = Builder.CreateFMul(histo_i, coeff2);
+	Builder.CreateStore(multiplied, p_histo_i);
+	Value * next_i = Builder.CreateAdd(i_phi, ConstantInt::get(i32_, 1), "next_i");
+	i_phi->addIncoming(next_i, BB_loop_body);
+	Builder.CreateBr(BB_loop_header);
+
+	return BB_loop_exit;
+}
+
+
+BasicBlock * llvm_module::emit_normalize_histo(llvm::BasicBlock * BB_in, Value * histo_, size_t n, const boost::optional<double> & normalize_to){
+	LLVMContext & context = module->getContext();
+	IRBuilder<> Builder(context);
+	llvm::Function * f = BB_in->getParent();
+	BasicBlock * BB = BB_in;
+	Builder.SetInsertPoint(BB);
+	Value * histo = Builder.CreateBitCast(histo_, double_->getPointerTo(), "histo");
+	Value * sum_p = 0;
+	if(normalize_to){
+		sum_p = Builder.CreateAlloca(double_, ConstantInt::get(i32_, 1), "sum_p");
+		Builder.CreateStore(ConstantFP::get(double_, 0.0), sum_p);
+	}
+	Value * sum = 0;
+	if(n <= 8){
+		if(normalize_to){
+			sum = Builder.CreateLoad(sum_p);
+		}
+		for(size_t i=0; i<n; ++i){
+			BasicBlock * BB_lt0 = BasicBlock::Create(context, "sz_lt0", f);
+			BasicBlock * BB_gt0 = BasicBlock::Create(context, "sz_gt0", f);
+			BasicBlock * BB_next = BasicBlock::Create(context, "sz_next", f);
+			Value * p_data_i = Builder.CreateGEP(histo, ConstantInt::get(i32_, i), "p_histo_i");
+			Value * data_i = Builder.CreateLoad(p_data_i, "histo_i");
+			Value * data_gtr0 = Builder.CreateFCmpOGE(data_i, ConstantFP::get(double_, 0.0), "data_i_gtr0");
+			Builder.CreateCondBr(data_gtr0, BB_gt0, BB_lt0);
+
+			Builder.SetInsertPoint(BB_lt0);
+			Builder.CreateStore(ConstantFP::get(double_, 0.0), p_data_i);
+			Builder.CreateBr(BB_next);
+
+			Builder.SetInsertPoint(BB_gt0);
+			Value * sum_gt0 = 0;
+			if(normalize_to){
+				sum_gt0 = Builder.CreateFAdd(sum, data_i);
+			}
+			Builder.CreateBr(BB_next);
+
+			Builder.SetInsertPoint(BB = BB_next);
+			if(normalize_to){
+				PHINode * s = Builder.CreatePHI(double_, 2, "s");
+				s->addIncoming(sum_gt0, BB_gt0);
+				s->addIncoming(sum, BB_lt0);
+				sum = s;
+			}
+		}
+		if(normalize_to){
+			Builder.CreateStore(sum, sum_p);
+		}
+	}
+	else{
+		BasicBlock * BB_loop_header = BasicBlock::Create(context, "sz_loop_header", f);
+		BasicBlock * BB_loop_body = BasicBlock::Create(context, "sz_loop_body", f);
+		BasicBlock * BB_loop_inc = BasicBlock::Create(context, "sz_loop_inc", f);
+		BasicBlock * BB_loop_exit = BasicBlock::Create(context, "sz_loop_exit", f);
+
+		Builder.CreateBr(BB_loop_header);
+		Builder.SetInsertPoint(BB_loop_header);
+		PHINode * i_phi = Builder.CreatePHI(i32_, 2, "i");
+		i_phi->addIncoming(ConstantInt::get(i32_, 0), BB_in);
+		// add the i_phi incoming value for next loop value later
+		Value * i_eq_n = Builder.CreateICmpEQ(i_phi, ConstantInt::get(i32_, n));
+		Builder.CreateCondBr(i_eq_n, BB_loop_exit, BB_loop_body);
+
+		Builder.SetInsertPoint(BB_loop_body);
+		BasicBlock * BB_gt0 = BasicBlock::Create(context, "sz_gt0", f, BB_loop_exit);
+		BasicBlock * BB_lt0 = BasicBlock::Create(context, "sz_lt0", f, BB_loop_exit);
+		Value * p_data_i = Builder.CreateGEP(histo, i_phi, "p_histo_i");
+		Value * data_i = Builder.CreateLoad(p_data_i, "histo_i");
+		Value * data_gtr0 = Builder.CreateFCmpOGE(data_i, ConstantFP::get(double_, 0.0), "data_i_gtr0");
+		Builder.CreateCondBr(data_gtr0, BB_gt0, BB_lt0);
+
+		Builder.SetInsertPoint(BB_lt0);
+		Builder.CreateStore(ConstantFP::get(double_, 0.0), p_data_i);
+		Builder.CreateBr(BB_loop_inc);
+
+		Builder.SetInsertPoint(BB_gt0);
+		if(normalize_to){
+			Value * sum = Builder.CreateLoad(sum_p);
+			sum = Builder.CreateFAdd(sum, data_i);
+			Builder.CreateStore(sum, sum_p);
+		}
+		Builder.CreateBr(BB_loop_inc);
+
+		Builder.SetInsertPoint(BB_loop_inc);
+		Value * next_i = Builder.CreateAdd(i_phi, ConstantInt::get(i32_, 1), "next_i");
+		i_phi->addIncoming(next_i, BB_loop_inc);
+		Builder.CreateBr(BB_loop_header);
+
+		Builder.SetInsertPoint(BB = BB_loop_exit);
+	}
+	if(normalize_to){
+		Value * sum = Builder.CreateLoad(sum_p);
+		Value * sum_gt0 = Builder.CreateFCmpOGT(sum, ConstantFP::get(double_, 0.0), "sum_gt0");
+		BasicBlock * bb_gt0 = BasicBlock::Create(context, "bb_gt0", f);
+		BasicBlock * bb_exit = BasicBlock::Create(context, "bb_exit", f);
+		Builder.CreateCondBr(sum_gt0, bb_gt0, bb_exit);
+
+		Builder.SetInsertPoint(BB = bb_gt0);
+		Value * coeff_p = Builder.CreateAlloca(double_, ConstantInt::get(i32_, 1), "coeff_p");
+		Builder.CreateStore(ConstantFP::get(double_, *normalize_to), coeff_p);
+		Value * coeff = Builder.CreateLoad(coeff_p);
+		coeff = Builder.CreateFDiv(coeff, sum);
+		BB = emit_multiply(BB, coeff, histo, n);
+		Builder.SetInsertPoint(BB);
+		Builder.CreateBr(bb_exit); // closes BB = bb_gt0
+
+		BB = bb_exit;
+	}
+	return BB;
+}
+/*
+llvm::BasicBlock * llvm_module::append_bb(llvm::Function * f, const std::string & name){
+	if(f->empty()){
+		BasicBlock * result = BasicBlock::Create(module->getContext(), name, f);
+		return result;
+	}
+	else{
+		BasicBlock * previous_bb = &f->back();
+		BasicBlock * result = BasicBlock::Create(module->getContext(), name, f);
+		if(previous_bb->getTerminator()==0){
+			LLVMContext & context = module->getContext();
+			IRBuilder<> Builder(context);
+			Builder.SetInsertPoint(previous_bb);
+			Builder.CreateBr(result);
+		}
+		return result;
+	}
+}*/
+
+BasicBlock * llvm_module::emit_copy_ddata(BasicBlock * BB_in, Value * dest_, Value * src_, size_t n){
+	LLVMContext & context = module->getContext();
+	IRBuilder<> Builder(context);
+	//BasicBlock * BB_entry = append_bb(f, "copy_ddata_entry");
+	BasicBlock * BB = BB_in;
+	llvm::Function * f = BB_in->getParent();
+	Builder.SetInsertPoint(BB);
+	Value * dest = Builder.CreateBitCast(dest_, double2_->getPointerTo(), "dest");
+	Value * src = Builder.CreateBitCast(src_, double2_->getPointerTo(), "src");
+	// process 2 doubles at a time, so make sure to process enough pairs:
+	const size_t n_padded = n + (n % 2);
+	if(n<=8){
+		for(size_t i=0; i<n_padded/2; ++i){
+			Value * src_index = Builder.CreateGEP(src, ConstantInt::get(i32_, i));
+			Value * dest_index = Builder.CreateGEP(dest, ConstantInt::get(i32_, i));
+			Value * src_value = Builder.CreateLoad(src_index);
+			Builder.CreateStore(src_value, dest_index);
+		}
+	}
+	else{
+		BasicBlock * BB_loop_header = BasicBlock::Create(context, "memcpy_loop_header", f);
+		BasicBlock * BB_loop_body = BasicBlock::Create(context, "memcpy_loop_body", f);
+		BasicBlock * BB_loop_exit = BasicBlock::Create(context, "memcpy_loop_exit", f);
+		Builder.CreateBr(BB_loop_header); // closes BB
+
+		Builder.SetInsertPoint(BB_loop_header);
+		PHINode * i_phi = Builder.CreatePHI(i32_, 2, "i");
+		i_phi->addIncoming(ConstantInt::get(i32_, 0), BB);
+		Value * i_eq_n = Builder.CreateICmpEQ(i_phi, ConstantInt::get(i32_, n_padded / 2));
+		Builder.CreateCondBr(i_eq_n, BB_loop_exit, BB_loop_body); // closes loop_header
+
+		Builder.SetInsertPoint(BB_loop_body);
+		Value * p_src_i = GetElementPtrInst::Create(src, i_phi, "p_src_i", BB_loop_body);
+		Value * src_i = Builder.CreateLoad(p_src_i, "src_i");
+		Value * p_dest_i = GetElementPtrInst::Create(dest, i_phi, "p_dest_i", BB_loop_body);
+		Builder.CreateStore(src_i, p_dest_i);
+		Value * next_i = Builder.CreateAdd(i_phi, ConstantInt::get(i32_, 1), "next_i");
+		i_phi->addIncoming(next_i, BB_loop_body);
+		Builder.CreateBr(BB_loop_header); // closes loop_body
+
+		BB = BB_loop_exit;
+	}
+	return BB;
+}
+
 
 llvm_module::llvm_module(const ParIds & pids_): pids(pids_), pid_to_index(create_pid_to_index(pids)){
    LLVMContext & context = getGlobalContext();
@@ -132,31 +392,47 @@ llvm_module::llvm_module(const ParIds & pids_): pids(pids_), pid_to_index(create
    }
    //define function prototype for the codegen_*_evaluate functions:
    //double codegen_f_evaluate(llvm_module* mod, void* fptr, const double * par_value);
-   Type * double_t = Type::getDoubleTy(context);
-   Type * void_t = Type::getVoidTy(context);
+   double_ = Type::getDoubleTy(context);
+   double2_ = VectorType::get(double_, 2);
+   void_ = Type::getVoidTy(context);
+   i32_ = Type::getInt32Ty(context);
+
+   vector<Type*> arg_types(2);
+   arg_types[0] = double_;
+   arg_types[1] = i32_;
+   llvm::FunctionType * dump_info_ty = FunctionType::get(void_, arg_types, false);
+   f_dump_info = llvm::Function::Create(dump_info_ty, llvm::Function::ExternalLinkage, "dump_info", module);
+
+   // TODO: maybe get rid of indirection ...
    Type * p_char_t = Type::getInt8Ty(context)->getPointerTo();
-   std::vector<Type*> arg_types(3, p_char_t);
-   arg_types[2] = double_t->getPointerTo();
-   FunctionType * FT = FunctionType::get(double_t, arg_types, false);
+   arg_types.resize(3);
+   arg_types[0] = arg_types[1] = p_char_t;
+   arg_types[2] = double_->getPointerTo();
+   FunctionType * FT = FunctionType::get(double_, arg_types, false);
    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "codegen_f_evaluate", module);
-   //void codegen_hf_add_with_coeff(llvm_module* mod, void* hfptr, double coeff, const double * par_values, double * data)
    arg_types.resize(5);
-   arg_types[2] = double_t;
-   arg_types[3] = arg_types[4] = double_t->getPointerTo();
-   FunctionType * FT2 = FunctionType::get(void_t, arg_types, false);
+   arg_types[2] = double_;
+   arg_types[3] = arg_types[4] = double_->getPointerTo();
+   FunctionType * FT2 = FunctionType::get(void_, arg_types, false);
    llvm::Function::Create(FT2, llvm::Function::ExternalLinkage, "codegen_hf_add_with_coeff", module);
    
    // create an alias 'exp_function' which either redirects to amd_exp (if it exists) or to exp:
    arg_types.resize(1);
-   arg_types[0] = double_t;
-   FunctionType * FT_exp = FunctionType::get(double_t, arg_types, false);
+   arg_types[0] = double_;
+   FunctionType * FT_exp = FunctionType::get(double_, arg_types, false);
    void * handle = dlopen(0, 0);
    bool amd_exp_available = handle && dlsym(handle, "amd_exp");
-   //dlclose(handle); // <- leads to segfault ...
    llvm::Function * f_exp = llvm::Function::Create(FT_exp, llvm::Function::ExternalLinkage, amd_exp_available?"amd_exp":"exp", module);
-   new GlobalAlias(FT_exp, GlobalValue::PrivateLinkage, "exp_function", f_exp, module);
-   emit_add_with_coeff(module);
-   //module->dump();
+   llvm::Function * f_exp_function = llvm::Function::Create(FT_exp, llvm::Function::PrivateLinkage, "exp_function", module);
+   {
+	   IRBuilder<> Builder(context);
+	   BasicBlock * BB = BasicBlock::Create(context, "entry", f_exp_function);
+	   Builder.SetInsertPoint(BB);
+	   Value * ret = Builder.CreateCall(f_exp, f_exp_function->arg_begin());
+	   Builder.CreateRet(ret);
+   }
+   f_exp_function->addFnAttr(Attribute::AlwaysInline);
+   emit_add_with_coeff_function();
 }
 
 size_t llvm_module::get_index(const theta::ParId & pid) const{
@@ -166,6 +442,7 @@ size_t llvm_module::get_index(const theta::ParId & pid) const{
 }
 
 void* llvm_module::getFunctionPointer(llvm::Function * function){
+	theta_assert(function);
     return ee->getPointerToFunction(function);
 }
 
@@ -230,19 +507,20 @@ void llvm_verify(llvm::Function* f, const std::string & fname){
     }
 }
 
-GlobalVariable * add_global_ddata(Module * m, const std::string & name, const double * data, size_t n, bool const_){
+GlobalVariable * llvm_module::add_global_ddata(const double * data, size_t n, const std::string & name, bool const_){
     size_t n_orig = n;
     if(n%2)++n;
+    LLVMContext & context = module->getContext();
     std::vector<Constant*> elements(n);
     for(size_t i=0; i<n_orig; ++i){
-        elements[i] = ConstantFP::get(m->getContext(), APFloat(data[i]));
+        elements[i] = ConstantFP::get(context, APFloat(data[i]));
     }
     if(n_orig % 2){
-        elements[n_orig] = ConstantFP::get(m->getContext(), APFloat(0.0));
+        elements[n_orig] = ConstantFP::get(context, APFloat(0.0));
     }
-    ArrayType* typ = ArrayType::get(Type::getDoubleTy(m->getContext()), n);
+    ArrayType* typ = ArrayType::get(Type::getDoubleTy(context), n);
     Constant * ini = ConstantArray::get(typ, elements);
-    GlobalVariable * gvar = new GlobalVariable(*m, typ, const_, GlobalValue::PrivateLinkage, ini, name);
+    GlobalVariable * gvar = new GlobalVariable(*module, typ, const_, GlobalValue::PrivateLinkage, ini, name);
     gvar->setAlignment(16);
     return gvar;
 }
@@ -295,50 +573,12 @@ llvm::Function * create_llvm_function(const theta::Function * f, llvm_module & m
     else{
         result = llvm_generic_codegen(f, mod, prefix);
     }
-    llvm_verify(result, prefix);
+    result->addFnAttr(Attribute::AlwaysInline);
+    result->setLinkage(GlobalValue::PrivateLinkage);
     return result;
 }
 
-void emit_add_with_coeff(llvm_module & mod, Value * coeff, Value * data_out, const Histogram1D & h, llvm::Function * F, const string & prefix){
-	LLVMContext & context = mod.module->getContext();
-	IRBuilder<> Builder(context);
-	Type * double_t = Type::getDoubleTy(context);
-	VectorType* double2_t = VectorType::get(double_t, 2);
-	Type * i32_t = Type::getInt32Ty(context);
-	BasicBlock * BB = BasicBlock::Create(context, "entry", F);
-	Builder.SetInsertPoint(BB);
-	const size_t n = h.size();
-	if(n<=8){
-		std::vector<Constant *> zeros(2);
-		zeros[0] = zeros[1] = ConstantFP::get(double_t, 0.0);
-		Value * coeff2tmp = Builder.CreateInsertElement(ConstantVector::get(zeros), coeff, ConstantInt::get(i32_t, 0));
-		Value * coeff2 = Builder.CreateInsertElement(coeff2tmp, coeff, ConstantInt::get(i32_t, 1), "coeff2");
-		Value * data_o = Builder.CreateBitCast(data_out, double2_t->getPointerTo(), "data_out");
-		const size_t imax = (n + n%2) / 2;
-		for(size_t i=0; i < imax; ++i){
-			Value * p_data_i = Builder.CreateGEP(data_o, ConstantInt::get(i32_t, i));
-			Value * data_i = Builder.CreateLoad(p_data_i);
-			Value * h2tmp = Builder.CreateInsertElement(ConstantVector::get(zeros), ConstantFP::get(double_t, h.get(2*i)), ConstantInt::get(i32_t, 0));
-			Value * h2;
-			if(2*i+1 < n){
-				h2 = Builder.CreateInsertElement(h2tmp, ConstantFP::get(double_t, h.get(2*i + 1)), ConstantInt::get(i32_t, 1), "coeff2");
-			}
-			else{
-				h2 = h2tmp;
-			}
-			Value * coeff_times_h = Builder.CreateFMul(coeff2, h2);
-			Value * res = Builder.CreateFAdd(data_i, coeff_times_h);
-			Builder.CreateStore(res, p_data_i);
-		}
-	}
-	else{
-		llvm::Function * add_with_coeff = mod.module->getFunction("add_with_coeff");
-		GlobalVariable * gv_data = add_global_ddata(mod.module, prefix + "_data", h.get_data(), h.size());
-		Value * gv_data_conv = Builder.CreateBitCast(gv_data, double_t->getPointerTo());
-		Builder.CreateCall4(add_with_coeff, coeff, data_out, gv_data_conv, ConstantInt::get(i32_t, h.size()));
-	}
-	Builder.CreateRetVoid();
-}
+
 
 llvm::Function * create_llvm_histogram_function(const theta::HistogramFunction * hf, llvm_module & mod, const std::string & prefix){
     llvm::Function * result;
@@ -349,17 +589,23 @@ llvm::Function * create_llvm_histogram_function(const theta::HistogramFunction *
         Histogram1D h0;
         hf->apply_functor(copy_to<Histogram1D>(h0), ParValues());
         llvm::FunctionType * FT = get_ft_hf_add_with_coeff(mod);
-        result = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, prefix + "_add_with_coeff", mod.module);
+        result = llvm::Function::Create(FT, llvm::Function::PrivateLinkage, prefix + "_add_with_coeff", mod.module);
         llvm::Function::arg_iterator iter = result->arg_begin();
         Value * coeff = iter++;
         /*Value * par_values =*/ iter++; // not used ...
         Value * data = iter;
-        emit_add_with_coeff(mod, coeff, data, h0, result, prefix);
+        LLVMContext & context = mod.module->getContext();
+        BasicBlock * BB = BasicBlock::Create(context, "entry", result);
+        BB = mod.emit_add_with_coeff(BB, coeff, data, h0);
+        IRBuilder<> Builder(context);
+        Builder.SetInsertPoint(BB);
+        Builder.CreateRetVoid();
         //mod.module->dump();
     }else{
         result = llvm_generic_codegen(hf, mod, prefix);
     }
-    llvm_verify(result, prefix);
+    result->addFnAttr(Attribute::AlwaysInline);
+    //llvm_verify(result, prefix);
     return result;
 }
 

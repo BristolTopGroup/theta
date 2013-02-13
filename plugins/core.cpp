@@ -10,6 +10,13 @@ using namespace std;
 
 fixed_poly::fixed_poly(const Configuration & ctx){
     Setting s = ctx.setting;
+    double relative_bb_uncertainty = 0.0;
+    if(s.exists("relative_bb_uncertainty")){
+    	relative_bb_uncertainty = s["relative_bb_uncertainty"];
+    	if(relative_bb_uncertainty < 0.0){
+    		throw ConfigurationException("relative_bb_uncertainty < 0.0 not allowed");
+    	}
+    }
     boost::shared_ptr<VarIdManager> vm = ctx.pm->get<VarIdManager>();
     ObsId obs_id = vm->get_obs_id(s["observable"]);
     int order = s["coefficients"].size() - 1;
@@ -18,33 +25,50 @@ fixed_poly::fixed_poly(const Configuration & ctx){
         ss << "Empty definition of coefficients for polynomial at path " << s["coefficients"].get_path();
         throw ConfigurationException(ss.str());
     }
-    size_t nbins = vm->get_nbins(obs_id);
+    const size_t nbins = vm->get_nbins(obs_id);
     pair<double, double> range = vm->get_range(obs_id);
     Histogram1D h(nbins, range.first, range.second);
+    Histogram1D h_unc = h;
     vector<double> coeffs(order + 1);
     for (int i = 0; i <= order; i++) {
         coeffs[i] = s["coefficients"][i];
     }
-    for (size_t i = 0; i < nbins; i++) {
-        double x = h.get_bincenter(i);
+    const double binwidth = (range.second - range.first) / nbins;
+    double x = range.first + 0.5 * binwidth;
+    for (size_t i = 0; i < nbins; i++, x+=binwidth) {
         double value = coeffs[order];
         for (int k = 0; k < order; k++) {
             value *= x;
             value += coeffs[order - k - 1];
         }
         h.set(i, value);
+		h_unc.set(i, relative_bb_uncertainty * value);
     }
     double norm_to = ctx.setting["normalize_to"];
-    double norm;
-    if ((norm = h.get_sum()) == 0.0) {
+    double norm = h.get_sum();
+    if (norm == 0.0) {
         throw ConfigurationException("Histogram specification is zero (can't normalize)");
     }
-    h *= norm_to / norm;
-    set_histo(Histogram1DWithUncertainties(h));
+    Histogram1DWithUncertainties h_wu;
+    if(relative_bb_uncertainty > 0.0){
+    	h_wu.set(h, h_unc);
+    }
+    else{
+    	h_wu.set(h);
+    }
+    h_wu *= norm_to / norm;
+    set_histo(h_wu);
 }
 
 fixed_gauss::fixed_gauss(const Configuration & ctx){
     Setting s = ctx.setting;
+    double relative_bb_uncertainty = 0.0;
+    if(s.exists("relative_bb_uncertainty")){
+    	relative_bb_uncertainty = s["relative_bb_uncertainty"];
+    	if(relative_bb_uncertainty < 0.0){
+    		throw ConfigurationException("relative_bb_uncertainty < 0.0 not allowed");
+    	}
+    }
     double width = s["width"];
     double mean = s["mean"];
     boost::shared_ptr<VarIdManager> vm = ctx.pm->get<VarIdManager>();
@@ -52,18 +76,28 @@ fixed_gauss::fixed_gauss(const Configuration & ctx){
     size_t nbins = vm->get_nbins(obs_id);
     pair<double, double> range = vm->get_range(obs_id);
     Histogram1D h(nbins, range.first, range.second);
+    Histogram1D h_unc = h;
     //fill the histogram:
     for (size_t i = 0; i < nbins; i++) {
         double d = (h.get_bincenter(i) - mean) / width;
-        h.set(i, exp(-0.5 * d * d));
+        double value = exp(-0.5 * d * d);
+        h.set(i, value);
+        h_unc.set(i, relative_bb_uncertainty * value);
     }
     double norm_to = ctx.setting["normalize_to"];
-    double norm;
-    if ((norm = h.get_sum()) == 0.0) {
+    double norm = h.get_sum();
+    if (norm == 0.0) {
         throw ConfigurationException("Histogram specification is zero (can't normalize)");
     }
-    h *= norm_to / norm;
-    set_histo(Histogram1DWithUncertainties(h));
+    Histogram1DWithUncertainties h_wu;
+	if(relative_bb_uncertainty > 0.0){
+		h_wu.set(h, h_unc);
+	}
+	else{
+		h_wu.set(h);
+	}
+	h_wu *= norm_to / norm;
+	set_histo(h_wu);
 }
 
 log_normal::log_normal(const Configuration & cfg){

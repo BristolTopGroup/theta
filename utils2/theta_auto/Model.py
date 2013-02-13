@@ -53,7 +53,7 @@ class Model(utils.Copyable):
     and one :class:`HistogramFunction` object. In addition, `model.distribution` is a :class:`Distribution` instance contains information
     about the prior of the nuisance parameters.
     
-    Usually, a Model instance is not constructed directly but rather aia the methods :func:`build_model_from_rootfile`
+    Usually, a Model instance is not constructed directly but rather via the methods :func:`build_model_from_rootfile`
     or :func:`higgs_datacard.build_model`. In general, the model should be manipulated through the methods of the Model class.
     However, it can become necessary to manipulate the instance vairables directly.
     """
@@ -559,21 +559,6 @@ class Function:
     def get_parameters(self):
         return self.factors.keys()
 
-# modifies l(!)
-def rebin_hlist(l, factor):
-    assert len(l) % factor == 0
-    new_len = len(l) / factor
-    new_l = [sum(l[factor*i:factor*(i+1)]) for i in range(new_len)]
-    while len(l) > new_len: del l[new_len]
-    l[0:new_len] = new_l
-
-def close_to(x1, x2):
-    # if one is zero, both should be:
-    if x1*x2 == 0: return x1==0.0 and x2==0.0
-    # otherwise: relative difference small:
-    return abs(x1-x2) / max(abs(x1), abs(x2)) < 1e-10
-
-
 class Histogram(object):
     """
     This class stores the x range and 1D data, and optionallt the (MC stat.) uncertainties. Its main
@@ -858,8 +843,8 @@ class GaussDistribution:
         
     def rename_parameter(self, old_name, new_name):
         if old_name not in self.parameters: return
-        self.parameters[self.parameters.index(old_name)] = new_name 
-    
+        self.parameters[self.parameters.index(old_name)] = new_name
+
 # product of 1d distributions
 class Distribution:
     def __init__(self):

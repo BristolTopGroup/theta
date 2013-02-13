@@ -11,7 +11,8 @@
 #include <map>
 
 
-typedef double (*t_model_get_prediction)(const double *, double *);
+typedef double (*t_model_evaluate)(const double *, double *);
+typedef double (*t_model_evaluate_unc)(const double *, double *, double*);
 
 class llvm_model_nll;
 
@@ -31,7 +32,8 @@ private:
     bool llvm_always;
     std::auto_ptr<theta::Distribution> rvobservable_distribution;
     
-    mutable t_model_get_prediction model_get_prediction;
+    mutable t_model_evaluate model_evaluate;
+    mutable t_model_evaluate_unc model_evaluate_unc;
     mutable std::auto_ptr<llvm_module> module;
     
     size_t nbins_total;
@@ -40,7 +42,7 @@ private:
 
     void set_prediction(const theta::ObsId & obs_id, boost::ptr_vector<theta::Function> & coeffs, boost::ptr_vector<theta::HistogramFunction> & histos);
     // generate and compile llvm, fill mode_get_prediction function pointer.
-    void generate_llvm() const;
+    void generate_llvm(bool with_uncertainties) const;
 
     template<typename HT>
     void get_prediction_impl(theta::DataT<HT> & result, const theta::ParValues & parameters) const;
@@ -88,13 +90,48 @@ private:
     boost::shared_ptr<theta::Distribution> override_distribution;
 
     theta::Histogram1D data_concatenated;
-    t_model_get_prediction model_get_prediction;
+    t_model_evaluate model_evaluate;
     //cached predictions:
     mutable theta::Histogram1D pred_concatenated;
     mutable std::vector<double> parameter_values;
     
-    llvm_model_nll(const llvm_model & m, const theta::Data & data, t_model_get_prediction model_get_prediction, size_t nbins_total);
- };
+    llvm_model_nll(const llvm_model & m, const theta::Data & data, t_model_evaluate model_evaluate, size_t nbins_total);
+};
+
+class llvm_model_nll_bb: public theta::NLLikelihood{
+friend class llvm_model;
+public:
+    using theta::Function::operator();
+    virtual double operator()(const theta::ParValues & values) const;
+
+    virtual void set_additional_term(const boost::shared_ptr<theta::Function> & term);
+    virtual void set_override_distribution(const boost::shared_ptr<theta::Distribution> & d);
+    virtual const theta::Distribution & get_parameter_distribution() const{
+        if(override_distribution) return *override_distribution;
+        else return model.get_parameter_distribution();
+    }
+private:
+    const llvm_model & model;
+
+    void fill_par_ids_vec();
+
+    std::vector<theta::ParId> par_ids_vec;
+
+    theta::ParValues rvobs_values;
+
+    boost::shared_ptr<theta::Function> additional_term;
+    boost::shared_ptr<theta::Distribution> override_distribution;
+
+    theta::Histogram1D data_concatenated;
+    t_model_evaluate_unc model_evaluate_unc;
+
+    //cached predictions:
+    mutable theta::Histogram1D pred_concatenated;
+    mutable theta::Histogram1D pred_unc2_concatenated;
+    mutable std::vector<double> parameter_values;
+
+    llvm_model_nll_bb(const llvm_model & m, const theta::Data & data, t_model_evaluate_unc model_evaluate_unc, size_t nbins_total);
+};
 
 #endif
 

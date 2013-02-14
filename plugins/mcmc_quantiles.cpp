@@ -1,5 +1,6 @@
 #include "plugins/mcmc_quantiles.hpp"
 #include "plugins/mcmc.hpp"
+#include "plugins/asimov_likelihood_widths.hpp"
 #include "interface/plugin.hpp"
 #include "interface/model.hpp"
 #include "interface/histogram.hpp"
@@ -12,7 +13,7 @@ using namespace theta;
 using namespace std;
 
 //the result class for the metropolisHastings routine.
-class MCMCPosteriorQuantilesResult{
+class MCMCPosteriorQuantilesResult: public MCMCResult{
     public:
         //ipar_ is the parameter of interest
         MCMCPosteriorQuantilesResult(size_t npar_, size_t ipar_, size_t n_iterations_): npar(npar_), ipar(ipar_), n_iterations(n_iterations_), n_iterations_total(0),
@@ -20,12 +21,12 @@ class MCMCPosteriorQuantilesResult{
             par_values.reserve(n_iterations);
         }
         
-        size_t getnpar() const{
+        virtual size_t getnpar() const{
             return npar;
         }
         
         //just save the parameter value we are interested in
-        void fill(const double * x, double, size_t n_){
+        virtual void fill(const double * x, double, size_t n_){
             n_iterations_total += n_;
             ++n_iterations_different;
             for(size_t i=0; i<n_; ++i){
@@ -59,15 +60,33 @@ class MCMCPosteriorQuantilesResult{
 
 void mcmc_quantiles::produce(const Data & data, const Model & model) {
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
-    
     if(!init || (re_init > 0 && itoy % re_init == 0)){
         try{
-            sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, additional_nll_term);
+            cout << "calculating matrix ... " << flush;
+            sqrt_cov = asimov_likelihood_matrix(model, override_parameter_distribution, additional_nll_term);
+            cout << "decomposing ... " << endl;
+            sqrt_cov.cholesky_decomposition();
+            cout << "done" << endl;
+            const Distribution & dist = override_parameter_distribution.get()? *override_parameter_distribution: model.get_parameter_distribution();
+            ParValues mode;
+            dist.mode(mode);
+            /*for(size_t i=0; i<m.get_n_rows(); ++i){
+                for(size_t j=0; j<m.get_n_cols(); ++j){
+                    cout << m(i,j) << " ";
+                }
+                cout << endl;
+            }
+            cout << endl;*/
+            //sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, additional_nll_term);
             //find the number of the parameter of interest:
-            ParIds pars = nll->get_parameters();
-            ipar=0;
-            for(ParIds::const_iterator it=pars.begin(); it!=pars.end(); ++it, ++ipar){
-                if(*it == par_id) break;
+            const ParIds & pars = nll->get_parameters();
+            startvalues.resize(pars.size());
+            size_t i = 0;
+            for(ParIds::const_iterator it=pars.begin(); it!=pars.end(); ++it, ++i){
+                startvalues[i] = mode.get(*it);
+                if(*it == par_id){
+                    ipar = i;
+                }
             }
             //now ipar has the correct value ...
             init = true;
@@ -79,8 +98,10 @@ void mcmc_quantiles::produce(const Data & data, const Model & model) {
     }
     ++itoy;
     
+
     MCMCPosteriorQuantilesResult result(nll->getnpar(), ipar, iterations);
-    metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
+    cout << nll->getnpar() << " " << result.getnpar() << " " << startvalues.size() << " " << sqrt_cov.get_n_rows() << endl;
+    metropolisHastings(*nll, result, *rnd_gen, mcmc_options(startvalues, iterations, burn_in), sqrt_cov);
     
     for(size_t i=0; i<quantiles.size(); ++i){
         products_sink->set_product(columns[i], result.get_quantile(quantiles[i]));

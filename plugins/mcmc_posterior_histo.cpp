@@ -11,7 +11,7 @@ using namespace std;
 namespace{
 
 //the result class for the metropolisHastings routine, saving the histograms
-class MCMCPosteriorHistoResult{
+class MCMCPosteriorHistoResult: public MCMCResult{
     public:
         //ipar_ is the parameter of interest
         MCMCPosteriorHistoResult(const vector<size_t> & ipars_, size_t npar_, const vector<size_t> & nbins,
@@ -45,7 +45,7 @@ class MCMCPosteriorHistoResult{
 };
 
 // the result class for the smoothed version:
-class MCMCPosteriorHistoResultSmoothed{
+class MCMCPosteriorHistoResultSmoothed: public MCMCResult{
 public:
     MCMCPosteriorHistoResultSmoothed(const vector<size_t> & ipars_, const vector<size_t> & nbins,
                                  const vector<double> & lower, const vector<double> & upper,
@@ -126,14 +126,14 @@ void mcmc_posterior_histo::produce(const Data & data, const Model & model) {
     
     if(!smooth){
         MCMCPosteriorHistoResult result(ipars, nll->getnpar(), nbins, lower, upper);
-        metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
+        metropolisHastings(*nll, result, *rnd_gen, mcmc_options(startvalues, iterations, burn_in), sqrt_cov);
         for(size_t i=0; i<parameters.size(); ++i){
             products_sink->set_product(columns[i], result.get_histo(i));
         }
     }
     else{
         MCMCPosteriorHistoResultSmoothed result(ipars, nbins, lower, upper, *nll);
-        metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
+        metropolisHastings(*nll, result, *rnd_gen, mcmc_options(startvalues, iterations, burn_in), sqrt_cov);
         for(size_t i=0; i<parameters.size(); ++i){
             products_sink->set_product(columns[i], result.get_histo(i));
         }

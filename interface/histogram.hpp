@@ -22,8 +22,8 @@ private:
     
 public:
     void swap(DoubleVector & other){
-    	std::swap(data, other.data);
-    	std::swap(n_data, other.n_data);
+        std::swap(data, other.data);
+        std::swap(n_data, other.n_data);
     }
     
     /// Create a new DoubleVector with \c n entries, all set to zero.
@@ -128,9 +128,9 @@ public:
     using DoubleVector::operator*=;
     
     void swap(Histogram1D & other){
-    	DoubleVector::swap(other);
-    	std::swap(xmin, other.xmin);
-    	std::swap(xmax, other.xmax);
+        DoubleVector::swap(other);
+        std::swap(xmin, other.xmin);
+        std::swap(xmax, other.xmax);
     }
 
     /** \brief Create an empty Histogram with \c bins bins with range (\c xmin, \c xmax )

@@ -26,4 +26,7 @@
 theta::ParValues asimov_likelihood_widths(const theta::Model & model, const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,
      const boost::shared_ptr<theta::Function> & additional_nll_term);
 
+theta::Matrix asimov_likelihood_matrix(const theta::Model & model, const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,
+                                const boost::shared_ptr<theta::Function> & additional_nll_term);
+
 #endif

@@ -9,6 +9,7 @@ namespace libconfig{
 }
 
 namespace theta{
+    class Matrix;
     class DoubleVector;
     class Histogram1D;
     class Histogram1DWithUncertainties;

@@ -1,6 +1,5 @@
 #include "plugins/mcmc_minimizer.hpp"
 #include "plugins/mcmc.hpp"
-#include "plugins/mcmc-result.hpp"
 #include "interface/plugin.hpp"
 #include "interface/model.hpp"
 #include "interface/histogram.hpp"
@@ -10,10 +9,10 @@ using namespace theta;
 using namespace std;
 
 //the result class for the metropolisHastings routine.
-class MCMCMinResult: public Result{
+class MCMCMinResult: public ResultMeanCov{
     public:
         //ipar_ is the parameter of interest
-        MCMCMinResult(size_t npar, const ParIds & pids_): Result(npar), n(0), n_different(0), pids(pids_), min_nll(numeric_limits<double>::infinity()){
+        MCMCMinResult(size_t npar, const ParIds & pids_): ResultMeanCov(npar), n(0), n_different(0), pids(pids_), min_nll(numeric_limits<double>::infinity()){
         }
                 
         virtual void fill2(const double * x, double nll, size_t n_){
@@ -61,8 +60,8 @@ MinimizationResult mcmc_minimizer::minimize(const Function & f, const ParValues 
         theta_assert(std::isfinite(sqrt_cov(i,i)));
     }
     for (int i = 0; i < bootstrap_mcmcpars; i++) {
-        Result res(n);
-        metropolisHastings(f, res, *rnd_gen, v_start, sqrt_cov, iterations, burn_in, true);
+        ResultMeanCov res(n);
+        metropolisHastings(f, res, *rnd_gen, mcmc_options(v_start, iterations, burn_in), sqrt_cov, true);
         if(res.getCount() < iterations / 2) {
             throw MinimizationException("during mcmcpars bootstrapping: more than 50% of the chain is infinite!");
         }
@@ -76,7 +75,7 @@ MinimizationResult mcmc_minimizer::minimize(const Function & f, const ParValues 
     if(!std::isfinite(first_nll)){
         throw MinimizationException("first nll value was not finite");
     }
-    metropolisHastings(f, result, *rnd_gen, v_start, sqrt_cov, iterations, burn_in);
+    metropolisHastings(f, result, *rnd_gen, mcmc_options(v_start, iterations, burn_in), sqrt_cov);
     //now step 2: call the after_minimizer:
     const ParValues & start2 = result.values_at_minimum();
     ParValues step2;

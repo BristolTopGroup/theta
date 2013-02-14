@@ -13,7 +13,7 @@ using namespace theta;
 using namespace std;
 
 //the result class for the metropolisHastings routine.
-class MCMCResultTextfile{
+class MCMCResultTextfile: public MCMCResult {
     public:
         MCMCResultTextfile(const vector<string> & parameter_names_, const string & filename): parameter_names(parameter_names_){
             outfile.open(filename.c_str(), ios_base::out | ios_base::trunc);
@@ -50,7 +50,7 @@ class MCMCResultTextfile{
 };
 
 
-class MCMCResultDatabase{
+class MCMCResultDatabase: public MCMCResult {
     public:
         MCMCResultDatabase(const vector<string> & parameter_names, Table & table_): npar(parameter_names.size()), table(table_){
             c_weight = table.add_column("weight", typeInt);
@@ -105,13 +105,13 @@ void mcmc_chain::produce(const Data & data, const Model & model) {
         ss << "chain_" << itoy;
         std::auto_ptr<Table> table = database->create_table(ss.str());
         MCMCResultDatabase result(parameter_names, *table);
-        metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
+        metropolisHastings(*nll, result, *rnd_gen, mcmc_options(startvalues, iterations, burn_in), sqrt_cov);
     }
     else{
         stringstream ss;
         ss << outfile_prefix << "_" << itoy << ".txt";
         MCMCResultTextfile result(parameter_names, ss.str());
-        metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
+        metropolisHastings(*nll, result, *rnd_gen, mcmc_options(startvalues, iterations, burn_in), sqrt_cov);
     }
 }
 

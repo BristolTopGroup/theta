@@ -11,7 +11,7 @@ using namespace theta;
 using namespace std;
 
 //the result class for the metropolisHastings routine.
-class MCMCMeanPredictionResult{
+class MCMCMeanPredictionResult: public MCMCResult{
     public:
         MCMCMeanPredictionResult(const Model & model_, const Function * additional_nll_term, const ObsIds & observables, size_t npar_): model(model_), npar(npar_), obs_ids(observables), n(0){
             par_ids = model.get_parameters();
@@ -106,7 +106,7 @@ void mcmc_mean_prediction::produce(const Data & data, const Model & model) {
     
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     MCMCMeanPredictionResult result(model, additional_nll_term.get(), observables, nll->getnpar());
-    metropolisHastings(*nll, result, *rnd_gen, startvalues, sqrt_cov, iterations, burn_in);
+    metropolisHastings(*nll, result, *rnd_gen, mcmc_options(startvalues, iterations, burn_in), sqrt_cov);
     
     size_t i=0;
     for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it, ++i){

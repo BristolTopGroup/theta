@@ -9,7 +9,7 @@ using namespace theta;
 using namespace std;
 
 //the result class for the metropolisHastings routine.
-class MCMCPosteriorRatioResult{
+class MCMCPosteriorRatioResult: public MCMCResult{
     public:
         MCMCPosteriorRatioResult(size_t npar_): npar(npar_), min_nll_value(numeric_limits<double>::infinity()), n_total(0){}
         
@@ -63,12 +63,12 @@ void mcmc_posterior_ratio::produce(const theta::Data & data, const theta::Model 
     
     //a. calculate s plus b:
     MCMCPosteriorRatioResult res_sb(nll->getnpar());
-    metropolisHastings(*nll, res_sb, *rnd_gen, startvalues_sb, sqrt_cov_sb, iterations, burn_in);
+    metropolisHastings(*nll, res_sb, *rnd_gen, mcmc_options(startvalues_sb, iterations, burn_in), sqrt_cov_sb);
     double nl_posterior_sb = res_sb.get_nl_average_posterior();
 
     //b. calculate b only:
     MCMCPosteriorRatioResult res_b(nll->getnpar());
-    metropolisHastings(*nll, res_b, *rnd_gen, startvalues_b, sqrt_cov_b, iterations, burn_in);
+    metropolisHastings(*nll, res_b, *rnd_gen, mcmc_options(startvalues_b, iterations, burn_in), sqrt_cov_b);
     double nl_posterior_b = res_b.get_nl_average_posterior();
 
     if(std::isnan(nl_posterior_sb) || std::isnan(nl_posterior_b)){

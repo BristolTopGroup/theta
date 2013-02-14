@@ -195,7 +195,7 @@ class TestRootModel(unittest.TestCase):
         
 class MCMCHighdimtest(unittest.TestCase):
    
-    
+    """
     def test_10d(self):
         model = Model()
         ndim = 10
@@ -210,6 +210,7 @@ class MCMCHighdimtest(unittest.TestCase):
         #print res
         self.assertTrue(abs(res[''][0.5][0]) < 0.03)
         self.assertTrue(abs(res['']['accrate'][0] - 0.28) < 0.05)
+    """
         
     def test_100d(self):
         model = Model()

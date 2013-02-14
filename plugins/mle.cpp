@@ -28,7 +28,8 @@ void mle::produce(const theta::Data & data, const theta::Model & model) {
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     if(not start_step_ranges_init){
         const Distribution & d = nll->get_parameter_distribution();
-        fill_mode_support(start, ranges, d);
+        ranges.set_from(d);
+        d.mode(start);
         step.set(asimov_likelihood_widths(model, override_parameter_distribution, additional_nll_term));
         start_step_ranges_init = true;
     }

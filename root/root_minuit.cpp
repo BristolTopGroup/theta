@@ -43,7 +43,7 @@ private:
 
 
 MinimizationResult root_minuit::minimize(const theta::Function & f, const theta::ParValues & start,
-        const theta::ParValues & steps, const std::map<theta::ParId, std::pair<double, double> > & ranges){
+        const theta::ParValues & steps, const Ranges & ranges){
     //I would like to re-use min. However, it horribly fails after very few uses with
     // unsigned int ROOT::Minuit2::MnUserTransformation::IntOfExt(unsigned int) const: Assertion `!fParameters[ext].IsFixed()' failed.
     // when calling SetFixedVariable(...).
@@ -58,9 +58,7 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
     ParIds parameters = f.get_parameters();
     int ivar=0;
     for(ParIds::const_iterator it=parameters.begin(); it!=parameters.end(); ++it, ++ivar){
-        std::map<theta::ParId, std::pair<double, double> >::const_iterator r_it = ranges.find(*it);
-        if(r_it==ranges.end()) throw invalid_argument("root_minuit::minimize: range not set for a parameter");
-        pair<double, double> range = r_it->second;
+        pair<double, double> range = ranges.get(*it);
         double def = start.get(*it);
         double step = steps.get(*it);
         stringstream ss;

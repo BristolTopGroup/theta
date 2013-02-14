@@ -82,6 +82,7 @@ private:
     //result columns: one per requested quantile:
     std::vector<theta::Column> columns;
     bool diag;
+    bool ortho;
     theta::Column c_accrate;
     
     //MCMC parameters:
@@ -89,6 +90,7 @@ private:
     unsigned int burn_in;
     theta::Matrix sqrt_cov;
     std::vector<double> startvalues;
+    std::vector<double> widths;
 };
 
 #endif

@@ -62,21 +62,22 @@ void mcmc_quantiles::produce(const Data & data, const Model & model) {
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     if(!init || (re_init > 0 && itoy % re_init == 0)){
         try{
-            cout << "calculating matrix ... " << flush;
-            sqrt_cov = asimov_likelihood_matrix(model, override_parameter_distribution, additional_nll_term);
-            cout << "decomposing ... " << endl;
-            sqrt_cov.cholesky_decomposition();
-            cout << "done" << endl;
+            if(ortho){
+                ParValues widths_ = asimov_likelihood_widths(model, override_parameter_distribution, additional_nll_term);
+                const ParIds & pars = nll->get_parameters();
+                widths.resize(pars.size());
+                size_t i = 0;
+                for(ParIds::const_iterator it=pars.begin(); it!=pars.end(); ++it, ++i){
+                    widths[i] = widths_.get(*it);
+                }
+            }
+            else{
+                sqrt_cov = asimov_likelihood_matrix(model, override_parameter_distribution, additional_nll_term);
+                sqrt_cov.cholesky_decomposition();
+            }
             const Distribution & dist = override_parameter_distribution.get()? *override_parameter_distribution: model.get_parameter_distribution();
             ParValues mode;
             dist.mode(mode);
-            /*for(size_t i=0; i<m.get_n_rows(); ++i){
-                for(size_t j=0; j<m.get_n_cols(); ++j){
-                    cout << m(i,j) << " ";
-                }
-                cout << endl;
-            }
-            cout << endl;*/
             //sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, additional_nll_term);
             //find the number of the parameter of interest:
             const ParIds & pars = nll->get_parameters();
@@ -100,8 +101,12 @@ void mcmc_quantiles::produce(const Data & data, const Model & model) {
     
 
     MCMCPosteriorQuantilesResult result(nll->getnpar(), ipar, iterations);
-    cout << nll->getnpar() << " " << result.getnpar() << " " << startvalues.size() << " " << sqrt_cov.get_n_rows() << endl;
-    metropolisHastings(*nll, result, *rnd_gen, mcmc_options(startvalues, iterations, burn_in), sqrt_cov);
+    if(ortho){
+        metropolisHastings_ortho(*nll, result, *rnd_gen, mcmc_options(startvalues, iterations, burn_in), widths);
+    }
+    else{
+        metropolisHastings(*nll, result, *rnd_gen, mcmc_options(startvalues, iterations, burn_in), sqrt_cov);
+    }
     
     for(size_t i=0; i<quantiles.size(); ++i){
         products_sink->set_product(columns[i], result.get_quantile(quantiles[i]));
@@ -124,7 +129,7 @@ void mcmc_quantiles::declare_products(){
 }
 
 mcmc_quantiles::mcmc_quantiles(const theta::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, get_name()),
-   init(false), par_id(cfg.pm->get<VarIdManager>()->get_par_id(cfg.setting["parameter"])), re_init(0), itoy(0), diag(false){
+   init(false), par_id(cfg.pm->get<VarIdManager>()->get_par_id(cfg.setting["parameter"])), re_init(0), itoy(0), diag(false), ortho(false){
     Setting s = cfg.setting;
     string parameter = s["parameter"];
     size_t n = s["quantiles"].size();
@@ -147,6 +152,9 @@ mcmc_quantiles::mcmc_quantiles(const theta::Configuration & cfg): Producer(cfg),
     }
     if(s.exists("diag")){
         diag = s["diag"];
+    }
+    if(s.exists("ortho")){
+        ortho = s["ortho"];
     }
     if(s.exists("re-init")){
         re_init = s["re-init"];

@@ -2,6 +2,7 @@
 #define MINIMIZER_HPP
 
 #include "interface/decls.hpp"
+#include "interface/distribution.hpp"
 #include "interface/variables.hpp"
 #include "interface/matrix.hpp"
 
@@ -87,7 +88,7 @@ namespace theta{
         }
         
         /// The parameter ranges. Guaranteed to contain all parameters of f.
-        const std::map<theta::ParId, std::pair<double, double> > & get_ranges() const{
+        const Ranges & get_ranges() const{
             return ranges;
         }
         
@@ -102,10 +103,10 @@ namespace theta{
         }
         
     private:
-        const theta::Function & f;
-        theta::ParValues start;
-        theta::ParValues step;
-        std::map<theta::ParId, std::pair<double, double> > ranges;
+        const Function & f;
+        ParValues start;
+        ParValues step;
+        Ranges ranges;
         Matrix matrix;
         
         void check_consistency() const;
@@ -139,7 +140,7 @@ namespace theta{
          * as constant and it is not varied during minimization.
          */
         virtual MinimizationResult minimize(const theta::Function & f, const theta::ParValues & start,
-                const theta::ParValues & step, const std::map<theta::ParId, std::pair<double, double> > & ranges) = 0;
+                const theta::ParValues & step, const Ranges & ranges) = 0;
         
         /** \brief Alternative minimize method with more information
          *

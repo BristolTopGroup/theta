@@ -33,49 +33,56 @@ private:
    const Function & f;
 };
 
+class asimov_data_nll: public Function{
+private:
+	Data asimov_data;
+	std::auto_ptr<NLLikelihood> nll;
+public:
+	asimov_data_nll(const theta::Model & model, const boost::shared_ptr<Distribution> & override_parameter_distribution,
+			const boost::shared_ptr<theta::Function> & additional_nll_term){
+		const Distribution & dist = override_parameter_distribution.get()? *override_parameter_distribution: model.get_parameter_distribution();
+		ParIds parameters = model.get_parameters();
+		ParValues mode;
+		dist.mode(mode);
+		model.get_prediction(asimov_data, mode);
 
-std::auto_ptr<NLLikelihood> get_asimov_nllikelihood(const theta::Model & model, const boost::shared_ptr<Distribution> & override_parameter_distribution, const boost::shared_ptr<theta::Function> & additional_nll_term){
-const Distribution & dist = override_parameter_distribution.get()? *override_parameter_distribution: model.get_parameter_distribution();
-    ParIds parameters = model.get_parameters();
-    ParValues mode;
-    dist.mode(mode);
-    Data asimov_data;
-    model.get_prediction(asimov_data, mode);
-    
-    const Distribution * rvobs_dist = model.get_rvobservable_distribution();
-    if(rvobs_dist){
-        rvobs_dist->mode(mode);
-        asimov_data.set_rvobs_values(ParValues(mode, model.get_rvobservables()));
-    }
-    std::auto_ptr<NLLikelihood> nll = model.get_nllikelihood(asimov_data);
-    //0 value has same semantics for NLLikelihood:
-    nll->set_override_distribution(override_parameter_distribution);
-    nll->set_additional_term(additional_nll_term);
-    if(additional_nll_term.get()){
-        parameters.insert_all(additional_nll_term->get_parameters());
-    }
-    theta_assert(dist.get_parameters() == parameters);
-    return nll;
-}
+		const Distribution * rvobs_dist = model.get_rvobservable_distribution();
+		if(rvobs_dist){
+			rvobs_dist->mode(mode);
+			asimov_data.set_rvobs_values(ParValues(mode, model.get_rvobservables()));
+		}
+		nll = model.get_nllikelihood(asimov_data);
+		//0 value has same semantics for NLLikelihood:
+		nll->set_override_distribution(override_parameter_distribution);
+		nll->set_additional_term(additional_nll_term);
+		if(additional_nll_term.get()){
+			parameters.insert_all(additional_nll_term->get_parameters());
+		}
+		theta_assert(dist.get_parameters() == parameters);
+		par_ids = nll->get_parameters();
+	}
 
-ParValues get_widths(const Distribution & dist, const theta::Function & nll){
-    ParValues mode;
-    dist.mode(mode);
+	double operator()(const ParValues & values) const{
+		return (*nll)(values);
+	}
+};
+
+ParValues get_widths(const ParValues & start, const Ranges & ranges, const theta::Function & nll){
     const ParIds & parameters = nll.get_parameters();
-    theta_assert(mode.contains_all(parameters));
-    double nll_at_min = nll(mode);
+    theta_assert(start.contains_all(parameters));
+    double nll_at_min = nll(start);
     ParValues result;
     int k=0;
     for(ParIds::const_iterator it=parameters.begin(); it!=parameters.end(); ++it, ++k){
         ParId pid = *it;
-        const double pid_mode = mode.get(pid);
-        std::pair<double, double> support = dist.support(pid);
+        const double pid_mode = start.get(pid);
+        std::pair<double, double> support = ranges.get(pid);
         theta_assert(support.first <= pid_mode && pid_mode <= support.second);
         if(support.first == support.second){
             result.set(pid, 0.0);
             continue;
         }
-        nll_mode_pid f(mode, pid, nll, nll_at_min + 0.5);
+        nll_mode_pid f(start, pid, nll, nll_at_min + 0.5);
         //if one end is finite, try to use it. Save whether the interval end is considered
         // "fl0", i.e. the interval end itself is finite but the function value there is invalid (< 0).
         bool low_is_fl0 = false, high_is_fl0 = false;
@@ -155,51 +162,7 @@ ParValues get_widths(const Distribution & dist, const theta::Function & nll){
 }
 
 
-class Ranges{
-   map<ParId, pair<double, double> > ranges_;
-public:
-   explicit Ranges(const map<ParId, pair<double, double> > & ranges): ranges_(ranges){
-      map<ParId, pair<double, double> >::const_iterator it = ranges.begin();
-      for(; it!=ranges.end(); ++it){
-         theta_assert(it->second.first <= it->second.second);
-      }
-   }
-   
-   explicit Ranges(const theta::Distribution & dist){
-       const ParIds & pars = dist.get_parameters();
-       for(ParIds::const_iterator it=pars.begin(); it!=pars.end(); ++it){
-           ranges_[*it] = dist.support(*it);
-           theta_assert(ranges_[*it].first <= ranges_[*it].second);
-       }
-   }
 
-   pair<double, double> get(const ParId & pid) const{
-      map<ParId, pair<double, double> >::const_iterator it = ranges_.find(pid);
-      if(it==ranges_.end()){
-         throw invalid_argument("no range set for this parid");
-      }
-      return it->second;
-   }
-
-   bool fixed(const ParId & pid) const{
-      map<ParId, pair<double, double> >::const_iterator it = ranges_.find(pid);
-      if(it==ranges_.end()){
-         throw invalid_argument("no range set for this parid");
-      }
-      return it->second.first == it->second.second;
-   }
-
-   // truncate the values to the ranges.
-   void trunc(ParValues & values) const{
-      for(map<ParId, pair<double, double> >::const_iterator it=ranges_.begin(); it!=ranges_.end(); ++it){
-         if(!values.contains(it->first)) continue;
-         double val = values.get(it->first);
-         if(val < it->second.first) val = it->second.first;
-         else if(val > it->second.second) val = it->second.second;
-         values.set(it->first, val);
-      }
-   }
-};
 
 
 const double eps = std::numeric_limits<double>::epsilon();
@@ -273,16 +236,16 @@ double eval_with_grad(const Function & f, const Ranges & ranges, const ParValues
 
 Matrix asimov_likelihood_matrix(const theta::Model & model, const boost::shared_ptr<Distribution> & override_parameter_distribution,
                                 const boost::shared_ptr<theta::Function> & additional_nll_term){
-    std::auto_ptr<NLLikelihood> nll = get_asimov_nllikelihood(model, override_parameter_distribution, additional_nll_term);
+    asimov_data_nll nll(model, override_parameter_distribution, additional_nll_term);
     const Distribution & dist = override_parameter_distribution.get()? *override_parameter_distribution: model.get_parameter_distribution();
-    const ParIds & parameters = nll->get_parameters();
+    const ParIds & parameters = nll.get_parameters();
     const Ranges ranges(dist);
     Matrix result(parameters.size(), parameters.size());
     ParValues mode;
     dist.mode(mode);
-    ParValues widths = get_widths(dist, *nll);
+    ParValues widths = get_widths(mode, ranges, nll);
     ParValues g0;
-    eval_with_grad(*nll, ranges, mode, widths, g0, 2);
+    eval_with_grad(nll, ranges, mode, widths, g0, 2);
     size_t i=0;
     for(ParIds::const_iterator it=parameters.begin(); it!=parameters.end(); ++it, ++i){
         const ParId & pid = *it;
@@ -305,21 +268,21 @@ Matrix asimov_likelihood_matrix(const theta::Model & model, const boost::shared_
         if(x0_minus != x0 and x0_plus != x0){
             h = x0_plus - x0_minus;
             vals.set(pid, x0_plus);
-            eval_with_grad(*nll, ranges, vals, widths, g_plus, 2);
+            eval_with_grad(nll, ranges, vals, widths, g_plus, 2);
             vals.set(pid, x0_minus);
-            eval_with_grad(*nll, ranges, vals, widths, g_minus, 2);
+            eval_with_grad(nll, ranges, vals, widths, g_minus, 2);
         }
         else{
             if(x0_plus != x0){
                 h = x0_plus - x0;
                 vals.set(pid, x0_plus);
-                eval_with_grad(*nll, ranges, vals, widths, g_plus, 2);
+                eval_with_grad(nll, ranges, vals, widths, g_plus, 2);
                 g_minus = g0;
             }
             else if(x0_minus != x0){
                 h = x0 - x0_minus;                
                 vals.set(pid, x0_minus);
-                eval_with_grad(*nll, ranges, vals, widths, g_minus, 2);
+                eval_with_grad(nll, ranges, vals, widths, g_minus, 2);
                 g_plus = g0;
             }
             else{
@@ -344,8 +307,11 @@ Matrix asimov_likelihood_matrix(const theta::Model & model, const boost::shared_
 ParValues asimov_likelihood_widths(const theta::Model & model, const boost::shared_ptr<Distribution> & override_parameter_distribution,
                                    const boost::shared_ptr<theta::Function> & additional_nll_term){
     const Distribution & dist = override_parameter_distribution.get()? *override_parameter_distribution: model.get_parameter_distribution();
-    std::auto_ptr<NLLikelihood> nll = get_asimov_nllikelihood(model, override_parameter_distribution, additional_nll_term);
-    return get_widths(dist, *nll);
+    asimov_data_nll nll(model, override_parameter_distribution, additional_nll_term);
+    ParValues mode;
+    dist.mode(mode);
+    Ranges ranges(dist);
+    return get_widths(mode, ranges, nll);
 }
 
 

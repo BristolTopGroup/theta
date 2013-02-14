@@ -515,9 +515,11 @@ void add_ordering_central_shortest(tto_ensemble & inp){
 
 
 void neyman_belt::add_ordering_fclike(tto_ensemble & ttos){
+    const Distribution & dist = model->get_parameter_distribution();
+    Ranges ranges(dist);
     ParValues mode;
-    std::map<theta::ParId, std::pair<double, double> > support;
-    fill_mode_support(mode, support, model->get_parameter_distribution());
+    dist.mode(mode);
+
     //get the set of true values of the poi:
     set<double> truth_values = ttos.get_truth_values();
     map<double, map<double, double> > truth_to__ts_to_ordering;

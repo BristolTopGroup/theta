@@ -56,7 +56,7 @@ public:
     mcmc_minimizer(const theta::Configuration & ctx);
     
     virtual theta::MinimizationResult minimize(const theta::Function & f, const theta::ParValues & start,
-                const theta::ParValues & step, const std::map<theta::ParId, std::pair<double, double> > & ranges);
+                const theta::ParValues & step, const theta::Ranges & ranges);
 private:
     std::auto_ptr<theta::Minimizer> after_minimizer;
     std::string name;

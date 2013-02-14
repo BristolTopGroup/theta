@@ -19,6 +19,7 @@ namespace theta{
     class ParameterDependentProducer;
     class ProductsSource;
     class Distribution;
+    class Ranges;
     class Database;
     class DatabaseInput;
     class Table;

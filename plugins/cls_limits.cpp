@@ -171,7 +171,7 @@ private:
     // for the maximum likelihood fit:
     bool start_step_ranges_init;
     theta::ParValues start, step;
-    std::map<theta::ParId, std::pair<double, double> > ranges;
+    theta::Ranges ranges;
 };
 
 // contains the (numerically derived) cls values and uncertainties as function of the truth value for a fixed ts value.
@@ -512,7 +512,8 @@ void data_filler::fill(Data & dat){
             std::auto_ptr<NLLikelihood> nll = model->get_nllikelihood(real_data);
             if(not start_step_ranges_init){
                 const Distribution & d = nll->get_parameter_distribution();
-                fill_mode_support(start, ranges, d);
+                d.mode(start);
+                ranges.set_from(d);
                 step.set(asimov_likelihood_widths(*model, boost::shared_ptr<theta::Distribution>(), boost::shared_ptr<theta::Function>()));
                 step.set(truth_parameter, 0.0);
                 start_step_ranges_init = true;
@@ -535,7 +536,7 @@ void data_filler::fill(Data & dat){
                 }
             }
             mystart.set(truth_parameter, truth_value);
-            ranges[truth_parameter] = make_pair(truth_value, truth_value);
+            ranges.set(truth_parameter, make_pair(truth_value, truth_value));
             try{
                 MinimizationResult minres = minimizer->minimize(*nll, mystart, step, ranges);
                 truth_to_nuisancevalues[truth_value].set(minres.values);

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from theta_auto.test_model import *
 
+clean_workdir()
+
 import unittest
 import time
 
@@ -206,8 +208,8 @@ class MCMCHighdimtest(unittest.TestCase):
             cov.append([1.0 if i==j else 0.0 for j in range(ndim)])
             model.distribution.set_distribution('p%d' % i, 'gauss', mean = 0.0, width = inf, range = (-inf, inf))
         model.additional_nll_term = NLGauss(parameters, mu, cov)        
-        res = bayesian_quantiles(model, 'toys:0.0', 1, quantiles = [0.5], signal_process_groups = {'': []}, parameter = 'p0', accrate = True, iterations = 50000)
-        #print res
+        res = bayesian_quantiles(model, 'toys:0.0', 1, quantiles = [0.5], signal_process_groups = {'': []}, parameter = 'p0', iterations = 50000)
+        print res
         self.assertTrue(abs(res[''][0.5][0]) < 0.03)
         self.assertTrue(abs(res['']['accrate'][0] - 0.28) < 0.05)
     """
@@ -221,12 +223,18 @@ class MCMCHighdimtest(unittest.TestCase):
         for i in range(ndim):
             cov.append([1.0 if i==j else 0.0 for j in range(ndim)])
             model.distribution.set_distribution('p%d' % i, 'gauss', mean = 0.0, width = inf, range = (-inf, inf))
-        model.additional_nll_term = NLGauss(parameters, mu, cov)        
-        res = bayesian_quantiles(model, 'toys:0.0', 1, quantiles = [0.5], signal_process_groups = {'': []}, parameter = 'p0', accrate = True, iterations = 50000)
+        model.additional_nll_term = NLGauss(parameters, mu, cov)
+        options = Options()
+        options.set('mcmc', 'diag', 'True')
+        res = bayesian_quantiles(model, 'toys:0.0', 10, quantiles = [0.5], signal_process_groups = {'': []}, parameter = 'p0', iterations = 50000, options = options)
         print res
-        self.assertTrue(abs(res[''][0.5][0]) < 0.1)
+        print get_mean_width(res[''][0.5])
+        options.set('mcmc', 'ortho', 'True')
+        res = bayesian_quantiles(model, 'toys:0.0', 10, quantiles = [0.5], signal_process_groups = {'': []}, parameter = 'p0', iterations = 50000, options = options)
+        print res
+        print get_mean_width(res[''][0.5])
+        #self.assertTrue(abs(res[''][0.5][0]) < 0.1)
         #self.assertTrue(abs(res['']['accrate'][0] - 0.28) < 0.05)
-        print res
     
 
 """

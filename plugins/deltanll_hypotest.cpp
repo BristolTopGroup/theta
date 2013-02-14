@@ -11,18 +11,6 @@
 
 using namespace theta;
 
-namespace{
-
-bool in_support(const ParValues & values, const std::map<theta::ParId, std::pair<double, double> > & support){
-    for(std::map<theta::ParId, std::pair<double, double> >::const_iterator it=support.begin(); it!=support.end(); ++it){
-        double val = values.get(it->first);
-        if(val < it->second.first || val > it->second.second) return false;
-    }
-    return true;
-}
-
-}
-
 void deltanll_hypotest::produce(const theta::Data & data, const theta::Model & model){
     if(not init){
         ParIds model_pars = model.get_parameters();
@@ -46,20 +34,16 @@ void deltanll_hypotest::produce(const theta::Data & data, const theta::Model & m
         theta_assert(!std::isnan(poi_value));
         //s+b first:
         nll->set_override_distribution(s_plus_b);
-        s_plus_b_support[*restrict_poi].first =  s_plus_b_support[*restrict_poi].second = poi_value;
+        s_plus_b_support.set(*restrict_poi, std::make_pair(poi_value, poi_value));
         s_plus_b_mode.set(*restrict_poi, poi_value);
         MinimizationResult minres = minimizer->minimize(*nll, s_plus_b_mode, s_plus_b_width, s_plus_b_support);
         nll_sb = minres.fval;
 
         //now b-only:
         nll->set_override_distribution(b_only);
-        b_only_support[*restrict_poi].second = poi_value;
-        if(in_support(minres.values, b_only_support)){
-            minres = minimizer->minimize(*nll, minres.values, b_only_width, b_only_support);
-        }
-        else{
-            minres = minimizer->minimize(*nll, b_only_mode, b_only_width, b_only_support);
-        }
+        b_only_support.set(*restrict_poi, std::make_pair(b_only_support.get(*restrict_poi).first, poi_value));
+        b_only_support.trunc(minres.values);
+        minres = minimizer->minimize(*nll, minres.values, b_only_width, b_only_support);
         nll_b = minres.fval;
         products_sink->set_product(c_poi, poi_value);
     }
@@ -70,13 +54,9 @@ void deltanll_hypotest::produce(const theta::Data & data, const theta::Model & m
         nll_b = minres.fval;
         // now s+b:
         nll->set_override_distribution(s_plus_b);
-        if(in_support(minres.values, s_plus_b_support)){
-            // start at the b-only minimum. This is more robust than starting at the original point again.
-            minres = minimizer->minimize(*nll, minres.values, s_plus_b_width, s_plus_b_support);
-        }
-        else{
-            minres = minimizer->minimize(*nll, s_plus_b_mode, s_plus_b_width, s_plus_b_support);
-        }
+        s_plus_b_support.trunc(minres.values);
+		// start at the b-only minimum. This is more robust than starting at the original point again.
+		minres = minimizer->minimize(*nll, minres.values, s_plus_b_width, s_plus_b_support);
         nll_sb = minres.fval;
     }
     
@@ -106,8 +86,10 @@ deltanll_hypotest::deltanll_hypotest(const theta::Configuration & cfg):
         if(s.exists("default_poi_value")) default_poi_value = s["default_poi_value"];
         poi_value = default_poi_value;
     }
-    fill_mode_support(s_plus_b_mode, s_plus_b_support, *s_plus_b);
-    fill_mode_support(b_only_mode, b_only_support, *b_only);
+    s_plus_b->mode(s_plus_b_mode);
+    s_plus_b_support.set_from(*s_plus_b);
+    b_only->mode(b_only_mode);
+    b_only_support.set_from(*b_only);
     if(not (s_plus_b->get_parameters()==b_only->get_parameters())){
         throw ConfigurationException("parameters of the distributions 'signal-plus-background' and 'background-only' do not match");
     }

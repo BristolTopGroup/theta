@@ -45,7 +45,7 @@ class MCMCMinResult: public ResultMeanCov{
 
 
 MinimizationResult mcmc_minimizer::minimize(const Function & f, const ParValues & start,
-                const ParValues & step, const map<ParId, pair<double, double> > & ranges){
+                const ParValues & step, const Ranges & ranges){
     const ParIds & pids = f.get_parameters();
     size_t n = pids.size();
     Matrix sqrt_cov(n,n);

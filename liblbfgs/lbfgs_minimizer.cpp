@@ -208,14 +208,15 @@ lbfgs_minimizer::lbfgs_minimizer(const theta::Configuration & cfg){
 }
 
 theta::MinimizationResult lbfgs_minimizer::minimize(const theta::Function & f, const theta::ParValues & start,
-                                   const theta::ParValues & step, const std::map<theta::ParId, std::pair<double, double> > & ranges){
+                                   const theta::ParValues & step, const Ranges & ranges){
     ptr_vector<par_trafo> trafos;
     vector<ParId> non_fixed_pars;
     ParValues fixed_values;
+    const ParIds & parameters = f.get_parameters();
     vector<pair<double, double> > ranges_nonfixed;
-    for(std::map<theta::ParId, std::pair<double, double> >::const_iterator it=ranges.begin(); it!=ranges.end(); ++it){
-        const ParId & pid = it->first;
-        const std::pair<double, double> & range = it->second;
+    for(ParIds::const_iterator it = parameters.begin(); it!=parameters.end(); ++it){
+        const ParId & pid = *it;
+        const std::pair<double, double> & range = ranges.get(pid);
         if(range.first == range.second){
             double val = start.get(pid);
             if(val != range.first){

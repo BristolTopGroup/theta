@@ -151,6 +151,57 @@ void metropolisHastings(const Function & nllikelihood, MCMCResult &res, Random &
     res.fill(x.get(), nll, weight);
 }
 
+
+void metropolisHastings_ortho(const theta::Function & nllikelihood, MCMCResult &res, theta::Random & rand, const mcmc_options & opts,
+                              const std::vector<double> & widths, bool ignore_inf_nll){
+    const size_t npar = opts.startvalues.size();
+    theta_assert(npar == res.getnpar());
+    theta_assert(npar == widths.size());
+    const ParIds & parameters = nllikelihood.get_parameters();
+    theta_assert(parameters.size() == npar);
+
+    // TODO: test, optimize
+    const double factor = 3;
+
+    //0. initialization:
+    boost::scoped_array<double> x(new double[npar]);
+    boost::scoped_array<double> x_new(new double[npar]);
+
+    //set the starting point:
+    std::copy(opts.startvalues.begin(), opts.startvalues.end(), &x[0]);
+    double nll = nllikelihood(x.get());
+    if(!std::isfinite(nll) and not ignore_inf_nll) throw Exception("first nll value was inf");
+    // if this exception is thrown, it means that the likelihood function at the start values was inf or NAN.
+    // One common reason for this is that the model produces a zero prediction in some bin where there is >0 data which should
+    // be avoided by the model (e.g., by filling in some small number in all bins with content zero).
+
+    const size_t iter = opts.burn_in + opts.iterations;
+    size_t weight = 1;
+    for (size_t it = 1; it < iter; it++) {
+        // randomly choose a dimension:
+        size_t index;
+        do{
+            index = rand.uniform() * npar;
+        }while(widths[index] == 0.0);
+        for (size_t i = 0; i < npar; i++) {
+            x_new[i] = x[i];
+        }
+        x_new[index] += rand.gauss(widths[index]) * factor;
+        double nll_new = nllikelihood(x_new.get());
+        if ((nll_new <= nll) || (rand.uniform() < exp(nll - nll_new))) {
+            if(it > opts.burn_in){
+                res.fill(x.get(), nll, weight);
+                weight = 1;
+            }
+            x.swap(x_new);
+            nll = nll_new;
+        } else if(it > opts.burn_in){
+            ++weight;
+        }
+    }
+    res.fill(x.get(), nll, weight);
+}
+
 void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
     size_t npar_reduced = cov.get_n_rows();
     size_t npar = npar_reduced;

@@ -69,6 +69,10 @@ use_llvm = False
         
 [main]
 n_threads = 1
+
+[mcmc]
+ortho = false
+diag = false
 """
         self.readfp(io.BytesIO(self.default_config))
         
@@ -282,17 +286,19 @@ class MleProducer(ProducerBase):
         
 class QuantilesProducer(ProducerBase):
     def __init__(self, model, signal_processes, override_distribution, signal_prior = 'flat', name = 'quant', parameter = 'beta_signal', quantiles = [0.16, 0.5, 0.84],
-    iterations = 10000, diag = False):
+    iterations = 10000):
         ProducerBase.__init__(self, model, signal_processes, override_distribution, name, signal_prior)
         self.parameter = parameter
         self.quantiles = quantiles
         self.iterations = iterations
-        self.diag = diag
         
     def get_cfg(self, options):
+        ortho = options.getboolean('mcmc', 'ortho')
+        diag = options.getboolean('mcmc', 'diag')
         result = {'type': 'mcmc_quantiles', 'parameter': self.parameter, 'quantiles': self.quantiles, 'iterations': self.iterations}
         result.update(self.get_cfg_base(options))
-        if self.diag: result['diag'] = True
+        if diag: result['diag'] = True
+        if ortho: result['ortho'] = True 
         return result
         
         

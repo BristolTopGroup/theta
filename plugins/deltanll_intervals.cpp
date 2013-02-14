@@ -17,7 +17,8 @@ void deltanll_intervals::produce(const theta::Data & data, const theta::Model & 
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     if(not start_step_ranges_init){
         const Distribution & d = nll->get_parameter_distribution();
-        fill_mode_support(start, ranges, d);
+        ranges.set_from(d);
+        d.mode(start);
         step.set(asimov_likelihood_widths(model, override_parameter_distribution, additional_nll_term));
         start_step_ranges_init = true;
     }
@@ -25,7 +26,7 @@ void deltanll_intervals::produce(const theta::Data & data, const theta::Model & 
     const double value_at_minimum = minres.values.get(pid);
     products_sink->set_product(c_maxl, value_at_minimum);
     ReducedNLL nll_r(*nll, pid, minres.values, re_minimize ? minimizer.get() : 0, start, step, ranges);
-    const pair<double, double> & range = ranges[pid];
+    const pair<double, double> & range = ranges.get(pid);
     for(size_t i=0; i < deltanll_levels.size(); ++i){
         nll_r.set_offset_nll(minres.fval + deltanll_levels[i]);
         //upper value: look for a parameter value with a sign flip:

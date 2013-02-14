@@ -106,7 +106,7 @@ void metropolisHastings(const theta::Function & nllikelihood, MCMCResult &res, t
 
 /// Same as metropolisHastings, but instead of multivariate Gaussian, go along the parameter axes always.
 void metropolisHastings_ortho(const theta::Function & nllikelihood, MCMCResult &res, theta::Random & rand, const mcmc_options & opts,
-                        const theta::ParValues & widths, bool ignore_inf_nll = false);
+                              const std::vector<double> & widths, bool ignore_inf_nll = false);
 
 /** \brief estimate the square root (cholesky decomposition) of the covariance matrix of the likelihood function
  *

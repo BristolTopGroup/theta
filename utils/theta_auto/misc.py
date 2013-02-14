@@ -652,6 +652,7 @@ def pl_intervals(model, input = 'toys:0', n = 100, signal_prior = 'flat', nuisan
             colnames.append('pli__lower%s' % cs)
             colnames.append('pli__upper%s' % cs)
         data = sql(sqlfile, 'select pli__maxl, %s from products' % (', '.join(colnames)))
+        if len(data)==0: raise RuntimeError, "no result (fit not coverged?)"
         first_row = True
         for row in data:
             result[sp_id]['mle'].append(row[0])

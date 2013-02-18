@@ -73,7 +73,7 @@
  *
  * Important: if switching smoothing on, the provided range has to be large enough to include the whole posterior.
  */
-class mcmc_posterior_histo: public theta::Producer, public theta::RandomConsumer{
+class mcmc_posterior_histo: public theta::Producer {
 public:
     /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     mcmc_posterior_histo(const theta::Configuration & ctx);
@@ -93,11 +93,7 @@ private:
     std::vector<double> lower, upper;
     std::vector<size_t> nbins;
     
-    //MCMC parameters:
-    unsigned int iterations;
-    unsigned int burn_in;
-    theta::Matrix sqrt_cov;
-    std::vector<double> startvalues;
+    std::auto_ptr<theta::MCMCStrategy> mcmc_strategy;
     
     bool smooth;
 };

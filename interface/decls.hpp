@@ -27,7 +27,9 @@ namespace theta{
     class ProductsTable;
     class LogTable;
     class RndInfoTable;
-        
+    
+    class MCMCStrategy;
+
     class Configuration;
     class Random;
     class VarIdManager;

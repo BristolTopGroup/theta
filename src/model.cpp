@@ -92,9 +92,9 @@ std::auto_ptr<NLLikelihood> default_model::get_nllikelihood(const Data & data) c
         throw invalid_argument("default_model::get_nllikelihood: real-values observables of model and data mismatch!");
     }
     if(bb_uncertainties){
-        return std::auto_ptr<NLLikelihood>(new default_model_bbadd_nll(*this, data, observables));
+        return std::auto_ptr<NLLikelihood>(new default_model_bbadd_nll(*this, data));
     }
-    return std::auto_ptr<NLLikelihood>(new default_model_nll(*this, data, observables));
+    return std::auto_ptr<NLLikelihood>(new default_model_nll(*this, data));
 }
 
 default_model::default_model(const Configuration & ctx): bb_uncertainties(false) {
@@ -138,6 +138,12 @@ default_model::default_model(const Configuration & ctx): bb_uncertainties(false)
         }
     }
     
+    // additional_nll_term:
+    if(ctx.setting.exists("additional_nll_term")){
+        additional_nll_term = PluginManager<Function>::build(Configuration(ctx, ctx.setting["additional_nll_term"]));
+        parameters.insert_all(additional_nll_term->get_parameters());
+    }
+    
     // parameter distribution:
     if(parameters.size() == 0){
         parameter_distribution.reset(new EmptyDistribution());
@@ -164,17 +170,8 @@ default_model::~default_model(){
 }
 
 /* default_model_nll */
-default_model_nll::default_model_nll(const default_model & m, const Data & dat, const ObsIds & obs): model(m),
-        data(dat), obs_ids(obs){
+default_model_nll::default_model_nll(const default_model & m, const Data & dat): model(m),  data(dat) {
     par_ids = model.get_parameters();
-}
-
-void default_model_nll::set_additional_term(const boost::shared_ptr<Function> & term){
-    additional_term = term;
-    par_ids = model.get_parameters();
-    if(additional_term.get()){
-         par_ids.insert_all(additional_term->get_parameters());
-    }
 }
 
 void default_model_nll::set_override_distribution(const boost::shared_ptr<Distribution> & d){
@@ -195,6 +192,7 @@ double default_model_nll::operator()(const ParValues & values) const{
     //2. get the prediction of the model:
     model.get_prediction(predictions, values);
     //3. the template likelihood    
+    const ObsIds & obs_ids = model.get_observables();
     for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
         const double * pred_data = predictions[*obsit].get_data();
         const double * data_data = data[*obsit].get_data();
@@ -208,6 +206,7 @@ double default_model_nll::operator()(const ParValues & values) const{
         result += rvobs_dist->eval_nl(all_values);
     }
     //5. The additional likelihood terms, if set:
+    const Function * additional_term = model.get_additional_nll_term();
     if(additional_term){
        result += (*additional_term)(values);
     }
@@ -215,7 +214,8 @@ double default_model_nll::operator()(const ParValues & values) const{
 }
 
 // bbadd
-default_model_bbadd_nll::default_model_bbadd_nll(const default_model & m, const Data & dat, const ObsIds & obs): default_model_nll(m, dat, obs){
+default_model_bbadd_nll::default_model_bbadd_nll(const default_model & m, const Data & dat):
+     default_model_nll(m, dat){
 }
 
 double default_model_bbadd_nll::operator()(const ParValues & values) const{
@@ -231,6 +231,7 @@ double default_model_bbadd_nll::operator()(const ParValues & values) const{
     //2. get the prediction of the model, with uncertainties:
     model.get_prediction(predictions_wu, values);
     //3. the template likelihood. This is the only thing different w.r.t. the "non-bb" version ...
+    const ObsIds & obs_ids = model.get_observables();
     for(ObsIds::const_iterator obsit=obs_ids.begin(); obsit!=obs_ids.end(); obsit++){
         const Histogram1DWithUncertainties & pred_obs = predictions_wu[*obsit];
         const Histogram1D & data_obs = data[*obsit];
@@ -266,6 +267,7 @@ double default_model_bbadd_nll::operator()(const ParValues & values) const{
         result += rvobs_dist->eval_nl(all_values);
     }
     //5. The additional likelihood terms, if set:
+    const Function * additional_term = model.get_additional_nll_term();
     if(additional_term){
         result += (*additional_term)(values);
     }

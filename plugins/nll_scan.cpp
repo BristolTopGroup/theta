@@ -1,6 +1,6 @@
 #include "plugins/nll_scan.hpp"
-#include "plugins/asimov_likelihood_widths.hpp"
 #include "plugins/reduced_nll.hpp"
+#include "interface/asimov-utils.hpp"
 #include "interface/plugin.hpp"
 #include "interface/histogram.hpp"
 #include "interface/distribution.hpp"
@@ -16,7 +16,7 @@ void nll_scan::produce(const Data & data, const Model & model) {
         const Distribution & d = nll->get_parameter_distribution();
         m_ranges.set_from(d);
         d.mode(m_start);
-        m_step.set(asimov_likelihood_widths(model, override_parameter_distribution, additional_nll_term));
+        m_step.set(asimov_likelihood_widths(model, override_parameter_distribution));
         start_step_ranges_init = true;
     }
     MinimizationResult minres = minimizer->minimize(*nll, m_start, m_step, m_ranges);

@@ -23,9 +23,7 @@ def bayesian_quantiles(model, input, n, quantiles = [0.95], signal_process_group
    options = None, parameter = 'beta_signal', iterations = 10000):
     if signal_process_groups is None: signal_process_groups = model.signal_process_groups
     if options is None: options = Options()
-    colnames = ['quant__quant%05d' % int(q*10000 + 0.5) for q in quantiles]
-    diag = options.getboolean('mcmc', 'diag')
-    if diag: colnames.append('quant__accrate')
+    colnames = ['quant__quant%05d' % int(q*10000 + 0.5) for q in quantiles] + ['quant__accrate']
     result = {}
     for spid, signal_processes in signal_process_groups.iteritems():
         p = QuantilesProducer(model, signal_processes, nuisance_constraint, signal_prior, parameter = parameter, quantiles = quantiles, iterations = iterations)
@@ -35,7 +33,7 @@ def bayesian_quantiles(model, input, n, quantiles = [0.95], signal_process_group
         res = r.get_products(colnames)
         result[spid] = {}
         for i, q in enumerate(quantiles): result[spid][q] = res[colnames[i]]
-        if diag: result[spid]['accrate'] = res['quant__accrate']
+        result[spid]['accrate'] = res['quant__accrate']
     return result
     
     

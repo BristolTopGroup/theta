@@ -63,13 +63,9 @@ protected:
  * a Model. Every Producer belongs to exactly one Run, which calls its produce method (typically
  * repeatedly on some pseudo data).
  *
- * Common to all producers are the settings "override-parameter-distribution" and "additional-nll-term".
- * The former is a distribution for all model parameters to be used for the likelihood function instead
- * of the ones from the model. The latter is a Function to add to the negative log-likelihood such as external
- * constraints or priors which cannot be expressed as parameter distributions.
- * 
- * The override-parameter-distribution, if given, must be defined for all parameters the model and the additional-nll-term
- * depend on.
+ * Common to all producers is the settings "override-parameter-distribution", which is 
+ * a distribution for all model parameters to be used for the likelihood function instead
+ * of the ones from the model.
  */
 class Producer: public ProductsSource{
 public:
@@ -111,7 +107,6 @@ protected:
     std::auto_ptr<NLLikelihood> get_nllikelihood(const Data & data, const Model & model);
     
     boost::shared_ptr<theta::Distribution> override_parameter_distribution;
-    boost::shared_ptr<theta::Function> additional_nll_term;
 };
 
 /** \brief Base class for Producers whose result depend on parameter values

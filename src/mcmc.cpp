@@ -1,17 +1,11 @@
-#include "plugins/mcmc.hpp"
-#include "plugins/asimov_likelihood_widths.hpp"
+#include "interface/mcmc.hpp"
 #include "interface/utils.hpp"
+#include "interface/asimov-utils.hpp"
 #include "interface/distribution.hpp"
 #include "interface/model.hpp"
 #include "interface/random.hpp"
-
-#include <algorithm>
-#include <limits>
-
-#include <iostream>
-#include <iomanip>
-#include <cstdio>
-#include <sstream>
+#include "interface/plugin.hpp"
+#include "interface/plugin.tcc"
 
 using namespace std;
 using namespace theta;
@@ -80,18 +74,18 @@ Matrix ResultMeanCov::getCov() const {
 }
 
 
-    
-void metropolisHastings(const Function & nllikelihood, MCMCResult &res, Random & rand, const mcmc_options & opts,
-                        const Matrix & sqrt_cov, bool ignore_inf_nll) {
+void theta::metropolis_hastings_multigauss(const theta::Function & nllikelihood, const MCMCOptions & opts, MCMCResult & res, theta::Random & rand, const theta::Matrix & sqrt_cov){
+    theta_assert(opts.iterations > 0);
     const size_t npar = opts.startvalues.size();
-    if(npar != sqrt_cov.get_n_rows() || npar!=sqrt_cov.get_n_cols() || npar!=nllikelihood.get_parameters().size() || npar!=res.getnpar())
+    if(npar != sqrt_cov.get_n_rows() || npar!=sqrt_cov.get_n_cols() || npar!=nllikelihood.get_parameters().size() || npar!=res.getnpar()){
         throw std::invalid_argument("metropolisHastings: dimension/size of arguments mismatch");
+    }
     size_t npar_reduced = npar;
     for(size_t i=0; i<npar; i++){
         if(sqrt_cov(i,i)==0) --npar_reduced;
     }
     theta_assert(npar_reduced > 0);
-    double factor = 2.38 / sqrt(npar_reduced);
+    double factor = 2.38 / sqrt(npar_reduced) * opts.factor;
 
     //keep the lower triangle   L    of the sqrt_cov to multiply that with deltaX:
     boost::scoped_array<double> lm(new double[npar * (npar + 1) / 2]);
@@ -112,7 +106,7 @@ void metropolisHastings(const Function & nllikelihood, MCMCResult &res, Random &
     //set the starting point:
     std::copy(opts.startvalues.begin(), opts.startvalues.end(), &x[0]);
     double nll = nllikelihood(x.get());
-    if(!std::isfinite(nll) and not ignore_inf_nll) throw Exception("first nll value was inf");
+    if(!std::isfinite(nll) and not opts.ignore_inf_nll_start) throw Exception("first nll value was inf");
     // if this exception is thrown, it means that the likelihood function at the start values was inf or NAN.
     // One common reason for this is that the model produces a zero prediction in some bin where there is >0 data which should
     // be avoided by the model (e.g., by filling in some small number in all bins with content zero).
@@ -152,57 +146,7 @@ void metropolisHastings(const Function & nllikelihood, MCMCResult &res, Random &
 }
 
 
-void metropolisHastings_ortho(const theta::Function & nllikelihood, MCMCResult &res, theta::Random & rand, const mcmc_options & opts,
-                              const std::vector<double> & widths, bool ignore_inf_nll){
-    const size_t npar = opts.startvalues.size();
-    theta_assert(npar == res.getnpar());
-    theta_assert(npar == widths.size());
-    const ParIds & parameters = nllikelihood.get_parameters();
-    theta_assert(parameters.size() == npar);
-
-    // TODO: test, optimize
-    const double factor = 3;
-
-    //0. initialization:
-    boost::scoped_array<double> x(new double[npar]);
-    boost::scoped_array<double> x_new(new double[npar]);
-
-    //set the starting point:
-    std::copy(opts.startvalues.begin(), opts.startvalues.end(), &x[0]);
-    double nll = nllikelihood(x.get());
-    if(!std::isfinite(nll) and not ignore_inf_nll) throw Exception("first nll value was inf");
-    // if this exception is thrown, it means that the likelihood function at the start values was inf or NAN.
-    // One common reason for this is that the model produces a zero prediction in some bin where there is >0 data which should
-    // be avoided by the model (e.g., by filling in some small number in all bins with content zero).
-
-    const size_t iter = opts.burn_in + opts.iterations;
-    size_t weight = 1;
-    for (size_t it = 1; it < iter; it++) {
-        // randomly choose a dimension:
-        size_t index;
-        do{
-            index = rand.uniform() * npar;
-        }while(widths[index] == 0.0);
-        for (size_t i = 0; i < npar; i++) {
-            x_new[i] = x[i];
-        }
-        x_new[index] += rand.gauss(widths[index]) * factor;
-        double nll_new = nllikelihood(x_new.get());
-        if ((nll_new <= nll) || (rand.uniform() < exp(nll - nll_new))) {
-            if(it > opts.burn_in){
-                res.fill(x.get(), nll, weight);
-                weight = 1;
-            }
-            x.swap(x_new);
-            nll = nll_new;
-        } else if(it > opts.burn_in){
-            ++weight;
-        }
-    }
-    res.fill(x.get(), nll, weight);
-}
-
-void get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
+void theta::get_cholesky(const Matrix & cov, Matrix & result, int expect_reduced){
     size_t npar_reduced = cov.get_n_rows();
     size_t npar = npar_reduced;
     result.reset(npar, npar);
@@ -265,21 +209,19 @@ bool jump_rates_converged(const vector<double> & jump_rates){
 }
 
 
-Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & startvalues,
-                    const boost::shared_ptr<theta::Distribution> & override_parameter_distribution,
-                    const boost::shared_ptr<theta::Function> & additional_nll_term){
+Matrix theta::get_sqrt_cov2(Random & rnd, const Model & model, const boost::shared_ptr<theta::Distribution> & override_parameter_distribution){
     const size_t max_passes = 50;
-    const size_t iterations = 8000;
+    
     ParIds parameters = model.get_parameters();
-    if(additional_nll_term){
-        parameters.insert_all(additional_nll_term->get_parameters());
-    }
     const size_t n = parameters.size();
     Matrix sqrt_cov(n, n);
     Matrix cov(n, n);
-    startvalues.resize(n);
+    MCMCOptions options;
+    options.startvalues.resize(n);
+    options.iterations = 8000;
+    options.burn_in = options.iterations / 10;
     
-    ParValues widths = asimov_likelihood_widths(model, override_parameter_distribution, additional_nll_term);
+    ParValues widths = asimov_likelihood_widths(model, override_parameter_distribution);
     
     size_t k = 0;
     int n_fixed_parameters = 0;
@@ -292,7 +234,7 @@ Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & st
     ParIds fixed_pars;
     for(ParIds::const_iterator it = parameters.begin(); it!=parameters.end(); ++it, ++k){
         double width = widths.get(*it) * 2.38 / sqrt(n);
-        startvalues[k] = pv_start.get(*it);
+        options.startvalues[k] = pv_start.get(*it);
         if(width==0.0){
             ++n_fixed_parameters;
             fixed_pars.insert(*it);
@@ -304,14 +246,14 @@ Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & st
     
     std::auto_ptr<NLLikelihood> p_nll = model.get_nllikelihood(asimov_data);
     p_nll->set_override_distribution(override_parameter_distribution);
-    p_nll->set_additional_term(additional_nll_term);
     NLLikelihood & nll = *p_nll;
     vector<double> jump_rates;
     jump_rates.reserve(max_passes);
     for (size_t i = 0; i < max_passes; i++) {
         ResultMeanCov res(n);
-        metropolisHastings(nll, res, rnd, mcmc_options(startvalues, iterations, iterations/10), sqrt_cov);
-        startvalues = res.getMeans();
+        metropolis_hastings_multigauss(nll, options, res, rnd, sqrt_cov);
+        // note: do not change start values; we already are at the minimum of the asimov likelihood ...
+        //options.startvalues = res.getMeans();
         cov = res.getCov();
         get_cholesky(cov, sqrt_cov, static_cast<int>(n) - n_fixed_parameters);
         jump_rates.push_back(static_cast<double>(res.getCountDifferent()) / res.getCount());
@@ -326,3 +268,55 @@ Matrix get_sqrt_cov2(Random & rnd, const Model & model, std::vector<double> & st
     return sqrt_cov;
 }
 
+
+/* MCMCStrategy */
+MCMCStrategy::~MCMCStrategy(){}
+
+MCMCStrategy::MCMCStrategy(const Configuration & cfg): RandomConsumer(cfg, static_cast<string>(cfg.setting["name"])){
+    options.iterations = cfg.setting["iterations"];
+    options.ignore_inf_nll_start = false;
+    if(cfg.setting.exists("burn-in")){
+        options.burn_in = cfg.setting["burn-in"];
+    }
+    else{
+        options.burn_in = options.iterations / 10;
+    }
+    if(cfg.setting.exists("ignore_inf_nll_start")){
+        options.ignore_inf_nll_start = cfg.setting["ignore_inf_nll_start"];
+    }
+    if(cfg.setting.exists("factor")){
+        options.factor = cfg.setting["factor"];
+    }
+}
+
+REGISTER_PLUGIN_BASETYPE(MCMCStrategy);
+
+std::auto_ptr<MCMCStrategy> theta::construct_mcmc_strategy(const Configuration & producer_cfg, const std::string setting_key){
+    if(producer_cfg.setting.exists(setting_key)){
+        return PluginManager<MCMCStrategy>::build(Configuration(producer_cfg, producer_cfg.setting[setting_key]));
+    }
+    else{
+        return std::auto_ptr<MCMCStrategy>(new asimov_mcmc_cov(producer_cfg));
+    }
+}
+
+
+/* asimov_mcmc_cov */
+asimov_mcmc_cov::asimov_mcmc_cov(const theta::Configuration & cfg): MCMCStrategy(cfg){
+}
+
+void asimov_mcmc_cov::init(const theta::Model & model, const boost::shared_ptr<theta::Distribution> & override_parameter_distribution){
+    const Distribution & dist = override_parameter_distribution.get()? *override_parameter_distribution : model.get_parameter_distribution();    
+    ParValues pv_start;
+    dist.mode(pv_start);
+    options.startvalues.resize(dist.get_parameters().size());
+    pv_start.fill(&options.startvalues[0], dist.get_parameters());
+    sqrt_cov = get_sqrt_cov2(*rnd_gen, model, override_parameter_distribution);
+}
+
+
+void asimov_mcmc_cov::run_mcmc(const theta::Function & nllikelihood, MCMCResult &res) const{
+    metropolis_hastings_multigauss(nllikelihood, options, res, *rnd_gen, sqrt_cov);
+}
+
+REGISTER_PLUGIN(asimov_mcmc_cov)

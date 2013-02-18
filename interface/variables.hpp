@@ -291,6 +291,28 @@ namespace theta {
            }
         }
         
+        /** \brief Fill double array with current values
+         *
+         * This method filld the parameter \c data_out with the current parameter values.
+         * The conversion from ParId to indices is defined via par_ids, as usual. data_out
+         * has to be reserved for at least par_ids.size() values.
+         * 
+         * In case a value is not set, an invalid_argument exception is thrown.
+         */
+        void fill(double * data_out, const ParIds & par_ids) const{
+            size_t i=0;
+            for(ParIds::const_iterator it=par_ids.begin(); it!=par_ids.end(); ++it, ++i){
+                double val;
+                if(it->id >= values.size() || std::isnan(val = values[it->id])){
+                    fail_get(*it);
+                }
+                else{ // we don't really need the else, as fail_get does not return. But the compiler doesn't know that, so to get rid of
+                    // uninitilized warnings ...
+                    data_out[i] = val;
+                }
+            }
+        }
+        
         /** \brief Constructor initializing the values according to an existing ParValues instance, only using the given parameters
          *
          * Set the values according to rhs, but only those parameters given in \c pids.

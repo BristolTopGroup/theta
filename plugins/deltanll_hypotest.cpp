@@ -1,5 +1,5 @@
 #include "plugins/deltanll_hypotest.hpp"
-#include "plugins/asimov_likelihood_widths.hpp"
+#include "interface/asimov-utils.hpp"
 #include "interface/plugin.hpp"
 #include "interface/minimizer.hpp"
 #include "interface/histogram.hpp"
@@ -17,8 +17,8 @@ void deltanll_hypotest::produce(const theta::Data & data, const theta::Model & m
         if(not (s_plus_b->get_parameters() == model_pars) or not (b_only->get_parameters() == model_pars)){
             throw std::invalid_argument("parameters in s+b / b only distributions do not coincide with model parameters");
         }
-        s_plus_b_width.set(asimov_likelihood_widths(model, s_plus_b, additional_nll_term));
-        b_only_width.set(asimov_likelihood_widths(model, b_only, additional_nll_term));
+        s_plus_b_width.set(asimov_likelihood_widths(model, s_plus_b));
+        b_only_width.set(asimov_likelihood_widths(model, b_only));
         init = true;
     }
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);

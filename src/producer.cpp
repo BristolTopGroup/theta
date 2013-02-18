@@ -67,9 +67,6 @@ Producer::Producer(const Configuration & cfg, const std::string & name_): Produc
     if(cfg.setting.exists("override-parameter-distribution")){
         override_parameter_distribution = PluginManager<Distribution>::build(Configuration(cfg, cfg.setting["override-parameter-distribution"]));
     }
-    if(cfg.setting.exists("additional-nll-term")){
-        additional_nll_term = PluginManager<Function>::build(Configuration(cfg, cfg.setting["additional-nll-term"]));
-    }
 }
 
 Producer::~Producer(){}
@@ -78,9 +75,6 @@ std::auto_ptr<NLLikelihood> Producer::get_nllikelihood(const Data & data, const 
     std::auto_ptr<NLLikelihood> nll = model.get_nllikelihood(data);
     if(override_parameter_distribution){
         ParIds pars = model.get_parameters();
-        if(additional_nll_term.get()){
-            pars.insert_all(additional_nll_term->get_parameters());
-        }
         if(!(override_parameter_distribution->get_parameters()==pars)){
             std::stringstream ss;
             ss << "Producer " + get_name() + ": override-parameter-distribution must define exactly the parameter models and those of"
@@ -89,7 +83,6 @@ std::auto_ptr<NLLikelihood> Producer::get_nllikelihood(const Data & data, const 
         }
         nll->set_override_distribution(override_parameter_distribution);
     }
-    nll->set_additional_term(additional_nll_term);
     return nll;
 }
 

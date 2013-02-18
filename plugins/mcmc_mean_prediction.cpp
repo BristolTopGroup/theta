@@ -1,5 +1,5 @@
 #include "plugins/mcmc_mean_prediction.hpp"
-#include "plugins/mcmc.hpp"
+#include "interface/mcmc.hpp"
 #include "interface/plugin.hpp"
 #include "interface/model.hpp"
 #include "interface/histogram.hpp"
@@ -13,11 +13,8 @@ using namespace std;
 //the result class for the metropolisHastings routine.
 class MCMCMeanPredictionResult: public MCMCResult{
     public:
-        MCMCMeanPredictionResult(const Model & model_, const Function * additional_nll_term, const ObsIds & observables, size_t npar_): model(model_), npar(npar_), obs_ids(observables), n(0){
+        MCMCMeanPredictionResult(const Model & model_, const ObsIds & observables, size_t npar_): model(model_), npar(npar_), obs_ids(observables), n(0){
             par_ids = model.get_parameters();
-            if(additional_nll_term){
-                par_ids.insert_all(additional_nll_term->get_parameters());
-            }
             theta_assert(par_ids.size() == npar);
             nll_min = std::numeric_limits<double>::infinity();
         }
@@ -94,8 +91,7 @@ class MCMCMeanPredictionResult: public MCMCResult{
 void mcmc_mean_prediction::produce(const Data & data, const Model & model) {
     if(!init){
         try{
-            //get the covariance for average data:
-            sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, additional_nll_term);
+            mcmc_strategy->init(model, override_parameter_distribution);
             init = true;
         }
         catch(Exception & ex){
@@ -105,8 +101,8 @@ void mcmc_mean_prediction::produce(const Data & data, const Model & model) {
     }
     
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
-    MCMCMeanPredictionResult result(model, additional_nll_term.get(), observables, nll->getnpar());
-    metropolisHastings(*nll, result, *rnd_gen, mcmc_options(startvalues, iterations, burn_in), sqrt_cov);
+    MCMCMeanPredictionResult result(model, observables, nll->getnpar());
+    mcmc_strategy->run_mcmc(*nll, result);
     
     size_t i=0;
     for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it, ++i){
@@ -118,20 +114,9 @@ void mcmc_mean_prediction::produce(const Data & data, const Model & model) {
     }
 }
 
-
-void mcmc_mean_prediction::declare_products(const boost::shared_ptr<VarIdManager> & vm){
-    for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
-        c_mean.push_back(products_sink->declare_product(*this, vm->get_name(*it) + "_mean", theta::typeHisto));
-        c_width.push_back(products_sink->declare_product(*this, vm->get_name(*it) + "_width", theta::typeHisto));
-        c_best.push_back(products_sink->declare_product(*this, vm->get_name(*it) + "_best", theta::typeHisto));
-    }
-}
-
-mcmc_mean_prediction::mcmc_mean_prediction(const theta::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, get_name()),
-        init(false){
+mcmc_mean_prediction::mcmc_mean_prediction(const theta::Configuration & cfg): Producer(cfg), init(false){
     boost::shared_ptr<VarIdManager> vm = cfg.pm->get<VarIdManager>();
     Setting s = cfg.setting;
-    
     size_t n = s["observables"].size();
     if(n==0){
         throw ConfigurationException("list 'observables' is empty");
@@ -139,14 +124,12 @@ mcmc_mean_prediction::mcmc_mean_prediction(const theta::Configuration & cfg): Pr
     for(size_t i=0; i<n; ++i){
         observables.insert(vm->get_obs_id(s["observables"][i]));
     }
-    iterations = s["iterations"];
-    if(s.exists("burn-in")){
-        burn_in = s["burn-in"];
+    mcmc_strategy = construct_mcmc_strategy(cfg);
+    for(ObsIds::const_iterator it=observables.begin(); it!=observables.end(); ++it){
+        c_mean.push_back(products_sink->declare_product(*this, vm->get_name(*it) + "_mean", theta::typeHisto));
+        c_width.push_back(products_sink->declare_product(*this, vm->get_name(*it) + "_width", theta::typeHisto));
+        c_best.push_back(products_sink->declare_product(*this, vm->get_name(*it) + "_best", theta::typeHisto));
     }
-    else{
-        burn_in = iterations / 10;
-    }
-    declare_products(vm);
 }
 
 REGISTER_PLUGIN(mcmc_mean_prediction)

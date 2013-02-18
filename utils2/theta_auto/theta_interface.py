@@ -71,8 +71,8 @@ use_llvm = False
 n_threads = 1
 
 [mcmc]
-ortho = false
-diag = false
+strategy = asimov_mcmc_cov
+stepsize_factor = None
 """
         self.readfp(io.BytesIO(self.default_config))
         
@@ -293,12 +293,12 @@ class QuantilesProducer(ProducerBase):
         self.iterations = iterations
         
     def get_cfg(self, options):
-        ortho = options.getboolean('mcmc', 'ortho')
-        diag = options.getboolean('mcmc', 'diag')
-        result = {'type': 'mcmc_quantiles', 'parameter': self.parameter, 'quantiles': self.quantiles, 'iterations': self.iterations}
+        strategy = options.get('mcmc', 'strategy')
+        stepsize_factor = options.get('mcmc', 'stepsize_factor')
+        result = {'type': 'mcmc_quantiles', 'parameter': self.parameter, 'quantiles': self.quantiles}
         result.update(self.get_cfg_base(options))
-        if diag: result['diag'] = True
-        if ortho: result['ortho'] = True 
+        result['mcmc_strategy'] = {'type': strategy, 'name': self.name + "_mcs", 'iterations': self.iterations}
+        if stepsize_factor != 'None':  result['mcmc_strategy']['factor'] = float(stepsize_factor)
         return result
         
         

@@ -12,7 +12,7 @@
 #include "interface/model.hpp"
 #include "interface/distribution.hpp"
 #include "interface/random-utils.hpp"
-#include "plugins/asimov_likelihood_widths.hpp"
+#include "interface/asimov-utils.hpp"
 
 #include <fstream>
 #include <iomanip>
@@ -514,7 +514,7 @@ void data_filler::fill(Data & dat){
                 const Distribution & d = nll->get_parameter_distribution();
                 d.mode(start);
                 ranges.set_from(d);
-                step.set(asimov_likelihood_widths(*model, boost::shared_ptr<theta::Distribution>(), boost::shared_ptr<theta::Function>()));
+                step.set(asimov_likelihood_widths(*model, boost::shared_ptr<theta::Distribution>()));
                 step.set(truth_parameter, 0.0);
                 start_step_ranges_init = true;
             }
@@ -1120,7 +1120,7 @@ void cls_limits::run_set_limits(){
     // 0. determine signal width
     double signal_width = limit_hint.second - limit_hint.first;
     if(!std::isfinite(limit_hint.first) || !std::isfinite(limit_hint.second)){
-        ParValues widths = asimov_likelihood_widths(*model, boost::shared_ptr<Distribution>(), boost::shared_ptr<Function>());
+        ParValues widths = asimov_likelihood_widths(*model, boost::shared_ptr<Distribution>());
         signal_width = widths.get(truth_parameter);
         debug_out << "signal_width = " << signal_width << "\n";
         if(signal_width <= 0.0){

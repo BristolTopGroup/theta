@@ -1,7 +1,7 @@
 #include "plugins/deltanll_intervals.hpp"
 #include "plugins/reduced_nll.hpp"
-#include "plugins/secant.hpp"
-#include "plugins/asimov_likelihood_widths.hpp"
+#include "interface/secant.hpp"
+#include "interface/asimov-utils.hpp"
 #include "interface/plugin.hpp"
 #include "interface/minimizer.hpp"
 #include "interface/histogram.hpp"
@@ -19,7 +19,7 @@ void deltanll_intervals::produce(const theta::Data & data, const theta::Model & 
         const Distribution & d = nll->get_parameter_distribution();
         ranges.set_from(d);
         d.mode(start);
-        step.set(asimov_likelihood_widths(model, override_parameter_distribution, additional_nll_term));
+        step.set(asimov_likelihood_widths(model, override_parameter_distribution));
         start_step_ranges_init = true;
     }
     MinimizationResult minres = minimizer->minimize(*nll, start, step, ranges);

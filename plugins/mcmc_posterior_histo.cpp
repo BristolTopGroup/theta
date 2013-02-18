@@ -1,5 +1,5 @@
 #include "plugins/mcmc_posterior_histo.hpp"
-#include "plugins/mcmc.hpp"
+#include "interface/mcmc.hpp"
 #include "interface/plugin.hpp"
 #include "interface/model.hpp"
 #include "interface/histogram.hpp"
@@ -103,11 +103,9 @@ private:
 
 void mcmc_posterior_histo::produce(const Data & data, const Model & model) {
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
-    
     if(!init){
         try{
-            //get the covariance for average data:
-            sqrt_cov = get_sqrt_cov2(*rnd_gen, model, startvalues, override_parameter_distribution, additional_nll_term);
+            mcmc_strategy->init(model, override_parameter_distribution);
             //find ipars:
             ParIds nll_pars = nll->get_parameters();
             ipars.resize(parameters.size());
@@ -126,22 +124,21 @@ void mcmc_posterior_histo::produce(const Data & data, const Model & model) {
     
     if(!smooth){
         MCMCPosteriorHistoResult result(ipars, nll->getnpar(), nbins, lower, upper);
-        metropolisHastings(*nll, result, *rnd_gen, mcmc_options(startvalues, iterations, burn_in), sqrt_cov);
+        mcmc_strategy->run_mcmc(*nll, result);
         for(size_t i=0; i<parameters.size(); ++i){
             products_sink->set_product(columns[i], result.get_histo(i));
         }
     }
     else{
         MCMCPosteriorHistoResultSmoothed result(ipars, nbins, lower, upper, *nll);
-        metropolisHastings(*nll, result, *rnd_gen, mcmc_options(startvalues, iterations, burn_in), sqrt_cov);
+        mcmc_strategy->run_mcmc(*nll, result);
         for(size_t i=0; i<parameters.size(); ++i){
             products_sink->set_product(columns[i], result.get_histo(i));
         }
     }
 }
 
-mcmc_posterior_histo::mcmc_posterior_histo(const theta::Configuration & cfg): Producer(cfg), RandomConsumer(cfg, get_name()),
-        init(false), smooth(false){
+mcmc_posterior_histo::mcmc_posterior_histo(const theta::Configuration & cfg): Producer(cfg), init(false), smooth(false){
     Setting s = cfg.setting;
     boost::shared_ptr<VarIdManager> vm = cfg.pm->get<VarIdManager>();
     size_t n = s["parameters"].size();
@@ -152,20 +149,14 @@ mcmc_posterior_histo::mcmc_posterior_histo(const theta::Configuration & cfg): Pr
         nbins.push_back(static_cast<unsigned int>(s["histo_" + parameter_name]["nbins"]));
         lower.push_back(s["histo_" + parameter_name]["range"][0]);
         upper.push_back(s["histo_" + parameter_name]["range"][1]);
-    } 
-    iterations = s["iterations"];
-    if(s.exists("burn-in")){
-        burn_in = s["burn-in"];
     }
-    else{
-        burn_in = iterations / 10;
-    }
+    mcmc_strategy = construct_mcmc_strategy(cfg);
     if(s.exists("smooth")){
         smooth = s["smooth"];
     }
     for(size_t i=0; i<parameters.size(); ++i){
-		columns.push_back(products_sink->declare_product(*this, "posterior_" + parameter_names[i], theta::typeHisto));
-	}
+        columns.push_back(products_sink->declare_product(*this, "posterior_" + parameter_names[i], theta::typeHisto));
+    }
 }
 
 REGISTER_PLUGIN(mcmc_posterior_histo)

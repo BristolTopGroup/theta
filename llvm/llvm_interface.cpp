@@ -49,6 +49,11 @@ void dump_info(double d, int i){
 	std::cout << "dump_info: " << i << " " << d << std::endl;
 }
 
+/*
+void llvm_module::emit_dump(llvm::Value * d_, llvm::Value * int_, IRBuilder<> & Builder){
+    Builder.CreateCall2(f_dump_info, d_, int_);
+}*/
+
 
 // create the module function
 // inline void add_with_coeff(double coeff, double * data_out, const double * data_in, int n);
@@ -165,11 +170,6 @@ BasicBlock * llvm_module::emit_add_with_coeff(BasicBlock * BB_in, Value * coeff,
 	}
 	return BB_in;
 }
-
-/*
-void llvm_module::emit_dump(llvm::Value * d_, llvm::Value * int_, IRBuilder<> & Builder){
-	Builder.CreateCall2(f_dump_info, d_, int_);
-}*/
 
 BasicBlock * llvm_module::emit_multiply(BasicBlock * BB_in, Value * coeff, Value * histo_, size_t n){
 	LLVMContext & context = module->getContext();
@@ -446,23 +446,19 @@ void llvm_module::optimize(){
     pm.add(createFunctionInliningPass());
     pm.add(createCFGSimplificationPass());
     //TODO: find out good combinations ...
-    pm.add(createIndVarSimplifyPass());
-    pm.add(createLoopUnrollPass());
-
+    //pm.add(createPromoteMemoryToRegisterPass());
     //pm.add(createInstructionCombiningPass());
-
-    /*pm.add(createLoopSimplifyPass());
-    pm.add(createLoopStrengthReducePass());
-
-    pm.add(createBBVectorizePass());
-
-    pm.add(createLoopInstSimplifyPass());*/
-
-
+    //pm.add(createIndVarSimplifyPass());
+    //pm.add(createLoopUnrollPass());
+    //pm.add(createInstructionCombiningPass());
+    //pm.add(createLoopSimplifyPass());
+    //pm.add(createLoopStrengthReducePass());
+    //pm.add(createBBVectorizePass());
+    //pm.add(createLoopInstSimplifyPass());
     //pm.add(createGVNPass());
     //pm.add(createInstructionSimplifierPass());
-    pm.add(createAggressiveDCEPass());
-    pm.add(createGlobalDCEPass());
+    pm.add(createDeadCodeEliminationPass());
+    pm.add(createCodeGenPreparePass());
     pm.run(*module);
 }
 

@@ -37,7 +37,6 @@ private:
     llvm::Function * f_dump_info;
 
     void emit_add_with_coeff_function();
-    llvm::BasicBlock * append_bb(llvm::Function * f, const std::string & name);
 
 public:
     // making the module public is probably nor very nice. On the other hand, re-inventing and proxying
@@ -68,8 +67,9 @@ public:
     // emits code which normalizes the given histogram:
     // 1. truncates values below zero
     // 2. optionally multiplies with an overall factor such that the sum of the elements
-    //    is the given double.
-    llvm::BasicBlock * emit_normalize_histo(llvm::BasicBlock * in, llvm::Value * histo_, size_t n, const boost::optional<double> & normalize_to);
+    //    is the given double. In this case, sets the coefficient coeff to the coefficient used in the normalization.
+    llvm::BasicBlock * emit_normalize_histo(llvm::BasicBlock * in, llvm::Value * histo_, size_t n,
+            const boost::optional<double> & normalize_to, llvm::Value *& coeff);
 
     // emit code in the BasicBlock to multiply the given histogram with the given coefficient.
     llvm::BasicBlock * emit_multiply(llvm::BasicBlock * in, llvm::Value * coeff, llvm::Value * histo_, size_t n);

@@ -87,6 +87,9 @@ class Model(utils.Copyable):
         self.observables[obs] = (xmin, xmax, nbins)
     
     def rename_observable(self, current_name, new_name):
+        """
+        Rename the observables (channel) to the new name.
+        """
         assert current_name in self.observables
         self.observables[new_name] = self.observables[current_name]
         del self.observables[current_name]
@@ -373,7 +376,7 @@ class Model(utils.Copyable):
 
         
     
-    def get_parameters(self, signal_processes, include_additional_nll = False):
+    def get_parameters(self, signal_processes):
         """
         Get the set of parameters the model predictions depends on. In general, this depends on
         which processes are considered as signal, therefore this has to be specified in the
@@ -395,7 +398,7 @@ class Model(utils.Copyable):
                 for par in histo_pars: result.add(par)
                 for par in coeff_pars: result.add(par)
         if len(signal_processes) > 0: result.add('beta_signal')
-        if include_additional_nll and self.additional_nll_term is not None:
+        if self.additional_nll_term is not None:
             result.update(self.additional_nll_term.get_parameters())
         return result
     
@@ -413,7 +416,7 @@ class Model(utils.Copyable):
     # options supported: use_llvm (default: False)
     #
     # signal_prior_cfg is the theta config dictionary
-    def get_cfg2(self, signal_processes, signal_prior_cfg, options):
+    def get_cfg(self, signal_processes, signal_prior_cfg, options):
         result = {}
         if options.getboolean('model', 'use_llvm'): result['type'] = 'llvm_model'
         for sp in signal_processes:
@@ -436,23 +439,7 @@ class Model(utils.Copyable):
         if len(rvobservables) > 0:
             result['rvobs-distribution'] = self.rvobs_distribution.get_cfg(rvobservables)
         if self.bb_uncertainties: result['bb_uncertainties'] = True
-        return result
-        
-        
-    def get_cfg(self, signal_processes = [], **options):
-        result = {}
-        if options.get('use_llvm', False): result['type'] = 'llvm_model'
-        for sp in signal_processes:
-            assert sp in self.signal_processes
-        for o in self.observable_to_pred:
-            result[o] = {}
-            for proc in self.observable_to_pred[o]:
-                if proc in self.signal_processes and proc not in signal_processes: continue
-                result[o][proc] = {'histogram': self.observable_to_pred[o][proc]['histogram'].get_cfg(),
-                     'coefficient-function': self.observable_to_pred[o][proc]['coefficient-function'].get_cfg()}
-                if proc in signal_processes:
-                    result[o][proc]['coefficient-function']['factors'].append('beta_signal')
-        if self.bb_uncertainties: result['bb_uncertainties'] = True
+        if self.additional_nll_term: result['additional_nll_term'] = self.additional_nll_term.get_cfg()
         return result
 
 
@@ -470,8 +457,7 @@ class Function:
        
     where ``p`` are parameters.
     """
-    
-    
+        
     def __init__(self):
         self.value = 1.0
         self.factors = {} # map par_name -> theta cfg dictionary
@@ -559,7 +545,7 @@ class Function:
     def get_parameters(self):
         return self.factors.keys()
 
-class Histogram(object):
+class Histogram(object, utils.Copyable):
     """
     This class stores the x range and 1D data, and optionallt the (MC stat.) uncertainties. Its main
     use is in :class:`HistogramFunction` and as data histograms in :class:`Model`.
@@ -567,15 +553,43 @@ class Histogram(object):
     Histograms are immutable: methods such as `scale` return the new Histogram instead of modifying
     the present instance.
     """
-    def __init__(self, xmin, xmax, values, uncertainties = None, name = None):
+    
+    def __init__(self, xmin, xmax, values, uncertainties = None, name = None, x_low = None):
+        """
+        Constructor.
+        
+        If given, x_low is an array of lower bin borders in case of non-equidistant binning. It overrides
+        the value of xmin.
+        """
         self.xmin = xmin
         self.xmax = xmax
         self.values = values
         self.name = name
         # in case of non-equidistant binning:
         self.x_low = None
-        if uncertainties is not None: assert len(values) == len(uncertainties)
-        self.uncertainties = uncertainties
+        if uncertainties is not None:
+            assert len(values) == len(uncertainties)
+            self.uncertainties = uncertainties
+        else:
+            self.uncertainties = None
+        if x_low is not None:
+            assert len(x_low) == len(self.values)
+            assert max(x_low) < self.xmax
+            self.xmin = min(x_low)
+            self.x_low = x_low
+            
+            
+    def is_compatible(self, other):
+        """
+        Returns whether or not this histogram has the same range and binning as other.
+        """
+        res = xmin, xmax, len(values) == other.xmin, other.xmax, len(other.values)
+        if not res: return False
+        if x_low is not None:
+            if other.x_low is None: return False
+            for xl1, xl2 in zip(x_low, other.x_low):
+                if xl1 != xl2: return False
+        return True
         
     def get_uncertainties(self):
         """
@@ -608,13 +622,7 @@ class Histogram(object):
     
     def get_x_low(self, ibin):
         if self.x_low is not None: return self.x_low[ibin]
-        else: return self.xmin + (self.xmax - self.xmin) / len(self.values) * ibin
-        
-    def set_x_low(self, x_low):
-        assert len(x_low) == len(self.values)
-        assert max(x_low) < self.xmax
-        self.xmin = min(x_low)
-        self.x_low = x_low
+        else: return self.xmin + (self.xmax - self.xmin) / len(self.values) * ibin        
     
     def get_cfg(self, include_error = True):
         result = {'type': 'direct_data_histo', 'range': [self.xmin, self.xmax], 'nbins': len(self.values), 'data': self.values}
@@ -623,28 +631,19 @@ class Histogram(object):
     
     def get_name(self): return self.name
     
-    def copy(self):
-        uncs = None if self.uncertainties is None else self.uncertainties[:]
-        h = Histogram(self.xmin, self.xmax, self.values[:], uncs, self.name)
-        if self.x_low is not None:
-            h.set_x_low(self.x_low[:])
-        return h
-    
     def strip_uncertainties(self):
-        h = Histogram(self.xmin, self.xmax, self.values, None, self.name)
-        if self.x_low is not None: h.set_x_low(self.x_low)
+        h = Histogram(self.xmin, self.xmax, self.values, None, self.name, x_low = self.x_low)
         return h
     
     def scale(self, factor, new_name = None):
         uncs = None if self.uncertainties is None else array.array('d', [v * abs(factor) for v in self.uncertainties])
-        h = Histogram(self.xmin, self.xmax, array.array('d', [v * factor for v in self.values]), uncs, new_name)
-        if self.x_low is not None: h.set_x_low(self.x_low)
+        h = Histogram(self.xmin, self.xmax, array.array('d', [v * factor for v in self.values]), uncs, new_name, x_low = self.x_low)
         return h
         
     # calculate self + coeff * other_h and return the result as new Histogram (does not modify self).
     def add(self, coeff, other_h):
-        assert (self.xmin, self.xmax, len(self.values)) == (other_h.xmin, other_h.xmax, len(other_h.values))
-        result = Histogram(self.xmin, self.xmax, self.values[:])
+        assert self.is_compatible(other_h)
+        result = Histogram(self.xmin, self.xmax, self.values[:], x_low = self.x_low)
         for i in range(len(self.values)):
             result.values[i] += coeff * other_h.values[i]
         if self.uncertainties is None:
@@ -653,7 +652,6 @@ class Histogram(object):
         else:
             if other_h.uncertainties is None: result.uncertainties = self.uncertainties[:]
             else: result.uncertainties = array.array('d', [math.sqrt(u**2 + v**2 * coeff**2) for u,v in zip(self.uncertainties, other_h.uncertainties)])
-        if self.x_low is not None: result.set_x_low(self.x_low)
         return result
         
 
@@ -817,6 +815,9 @@ class HistogramFunction:
     
 
 class GaussDistribution:
+    """
+    A multivariate Gauss distribution with known mean and covariance.
+    """
     def __init__(self, parameters, mu, covariance, ranges = None):
         n = len(parameters)
         assert n== len(mu) and n==len(covariance)
@@ -937,18 +938,23 @@ class Distribution:
         return result
 
 
-# return a Distribution object in which all parameters are fixed to their default values, using the Distribution
-# template_dist.
+
 def get_fixed_dist(template_dist):
+    """
+    return a Distribution object in which all parameters are fixed to their default values, using the Distribution template_dist.
+    """
     result = Distribution()
     for p in template_dist.get_parameters():
         val = template_dist.get_distribution(p)['mean']
         result.set_distribution(p, 'gauss', val, 0.0, [val, val])
     return result
 
-# return a Distribution in which all parameters are fixed to the value given in par_values; par_values
-# is a dictionary (parameter name) -> (parameter value)
+
 def get_fixed_dist_at_values(par_values):
+    """
+    return a Distribution object in which all parameters are fixed to the value given in par_values; par_values
+    is a dictionary (parameter name) -> (parameter value)
+    """
     result = Distribution()
     for p in par_values:
         val = par_values[p]

@@ -35,6 +35,7 @@ inline bool close_to_relative(double a, double b){
  * scale > 0 must hold.
  */
 inline bool close_to(double a, double b, double scale){
+   if(scale==0.0) return a==b;
    return fabs(a-b) / scale < 1e-15;
 }
 

@@ -188,13 +188,20 @@ llvm::Function * llvm_cubiclinear_histomorph::llvm_codegen(llvm_module & mod, co
 		normalize_to = h0_sum;
 	}
 	// truncate llvm_h_p at zero:
-	BB = mod.emit_normalize_histo(BB, llvm_h_p, nbins, normalize_to);
+	llvm::Value * coeff_to_norm = 0;
+	BB = mod.emit_normalize_histo(BB, llvm_h_p, nbins, normalize_to, coeff_to_norm);
+	if(normalize_to_nominal){
+	    theta_assert(coeff_to_norm!=0);
+	}
 	Builder.SetInsertPoint(BB);
-	//TODO: replace with emit_add_with_coeff ...
-	Builder.CreateCall4(add_with_coeff, coeff, data, llvm_h_p, ConstantInt::get(i32_t, nbins));
-	Builder.CreateRetVoid();
-	//mod.module->dump();
-	//verifyModule(*mod.module, llvm::PrintMessageAction);
+	BB = mod.emit_add_with_coeff(BB, coeff, data, llvm_h_p, nbins);
+	Builder.SetInsertPoint(BB);
+	if(normalize_to_nominal){
+	    Builder.CreateRet(coeff_to_norm);
+	}
+	else{
+	    Builder.CreateRet(ConstantFP::get(double_t, 1.0));
+	}
 	return F;
 }
 

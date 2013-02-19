@@ -166,7 +166,7 @@ namespace theta {
         coeffs_type coeffs;
         std::auto_ptr<Distribution> parameter_distribution;
         std::auto_ptr<Distribution> rvobservable_distribution;
-        boost::shared_ptr<Function> additional_nll_term;
+        std::auto_ptr<Function> additional_nll_term;
         
         bool bb_uncertainties;
         

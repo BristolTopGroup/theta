@@ -1,6 +1,7 @@
 #include "llvm/llvm_model.hpp"
 #include "interface/log2_dot.hpp"
 #include "interface/plugin.hpp"
+#include "interface/utils.hpp"
 #include "interface/distribution.hpp"
 
 #include <iostream>
@@ -13,18 +14,13 @@
 
 #include "llvm/Support/IRBuilder.h"
 
-// for dump_module:
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Assembly/PrintModulePass.h"
-#include "llvm/PassManager.h"
-
 using namespace std;
 using namespace theta;
 using namespace llvm;
 using namespace theta::utils;
 
 namespace {
-    // conversion utilities fom theta to llvm data structures: the first three are for
+    // conversion utilities from theta to llvm data structures: the first three are for
     // converting data / histograms
     size_t get_total_nbins(const ObsIds & oids, const VarIdManager & vm){
         size_t total_nbins = 0;
@@ -41,7 +37,10 @@ namespace {
         size_t offset = 0;
         for(ObsIds::const_iterator it=oids.begin(); it!=oids.end(); ++it){
             size_t nbins = dat[*it].get_nbins();
-            memcpy(h_concat.get_data() + offset, dat[*it].get_data(), nbins * sizeof(double));
+            utils::copy_fast(h_concat.get_data() + offset, dat[*it].get_data(), nbins);
+            if(nbins % 2){
+                theta_assert(*(h_concat.get_data() + offset + nbins) == 0);
+            }
             offset += nbins;
             if(offset % 2) ++offset;
         }
@@ -54,7 +53,7 @@ namespace {
             size_t nbins = vm.get_nbins(*it);
             const std::pair<double, double> & range = vm.get_range(*it);
             d[*it] = Histogram1D(nbins, range.first, range.second);
-            memcpy(d[*it].get_data(), h_concat.get_data() + offset, nbins * sizeof(double));
+            utils::copy_fast(d[*it].get_data(), h_concat.get_data() + offset, nbins);
             if(nbins % 2){
                 theta_assert(*(h_concat.get_data() + offset + nbins) == 0);
             }
@@ -183,7 +182,7 @@ void llvm_model::get_prediction_impl(DataT<HT> & result, const ParValues & param
         const ObsId & oid = h_it->first;
         histos_type::const_mapped_reference hfs = *(h_it->second);
         coeffs_type::const_mapped_reference h_coeffs = *(c_it->second);
-        theta_assert(hfs.size() > 0 && hfs.size() == h_coeffs.size());
+        //theta_assert(hfs.size() > 0 && hfs.size() == h_coeffs.size());
         // overwrite result[oid] with first term:
         hfs[0].apply_functor(copy_to<HT>(result[oid]), parameters);
         result[oid] *= h_coeffs[0](parameters);
@@ -245,14 +244,14 @@ Histogram1D get_uncertainty2_histo(const theta::HistogramFunction & f_){
 	}
 }
 
-void dump_module(llvm::Module & module, const std::string & fname){
+/*void dump_module(llvm::Module & module, const std::string & fname){
 	PassManager pm;
 	std::string err;
 	raw_ostream * os = new raw_fd_ostream(fname.c_str(), err);
 	if(!err.empty()) throw invalid_argument("could not open module file " + fname);
 	pm.add(createPrintModulePass(os, true));
 	pm.run(module);
-}
+}*/
 }
 
 // the generated function is
@@ -261,7 +260,7 @@ void dump_module(llvm::Module & module, const std::string & fname){
 //    void model_evaluate_unc(const double * par_values, double * data, double * data_unc2);  -- for with_uncertainties = true
 // where data and data_unc2 must both be set to zero prior to calling this function.
 void llvm_model::generate_llvm(bool with_uncertainties) const {
-    module.reset(new llvm_module(parameters));
+    if(!module.get()) module.reset(new llvm_module(parameters));
     LLVMContext & context = module->module->getContext();
     Type * double_t = Type::getDoubleTy(context);
     Type * i32_t = Type::getInt32Ty(context);
@@ -275,7 +274,7 @@ void llvm_model::generate_llvm(bool with_uncertainties) const {
     	arg_types.resize(2);
     }
     FunctionType * FT = FunctionType::get(void_t, arg_types, false);
-    // note: has to be externally linke dto prevent the optimizer from optimizing it away completely ... :-)
+    // note: has to be linked externally to prevent the optimizer from optimizing it away completely ...
     llvm::Function * F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "model_evaluate" + suffix, module->module);
     llvm::Function::arg_iterator iter = F->arg_begin();
     // the function parameters:
@@ -307,10 +306,12 @@ void llvm_model::generate_llvm(bool with_uncertainties) const {
             llvm::Function * coeff_function = create_llvm_function(&h_coeffs[i], *module, prefix);
             Value * coeff = Builder.CreateCall(coeff_function, par_values, "coeff");
             llvm::Function * histo_function = create_llvm_histogram_function(&h_functions[i], *module, prefix);
-            Builder.CreateCall3(histo_function, coeff, par_values, data_iobs);
+            llvm::Value * c = Builder.CreateCall3(histo_function, coeff, par_values, data_iobs);
             if(with_uncertainties){
-            	Value * coeff2 = Builder.CreateFMul(coeff, coeff, "coeff2");
-            	BB = module->emit_add_with_coeff(BB, coeff2, data_unc2_iobs, get_uncertainty2_histo(h_functions[i]));
+            	Value * coeff2 = Builder.CreateFMul(coeff, coeff, "c2");
+            	Value * coeff3 = Builder.CreateFMul(coeff2, c, "c3");
+            	Value * coeff4 = Builder.CreateFMul(coeff3, c, "c4");
+            	BB = module->emit_add_with_coeff(BB, coeff4, data_unc2_iobs, get_uncertainty2_histo(h_functions[i]));
             	Builder.SetInsertPoint(BB);
             }
         }
@@ -318,22 +319,7 @@ void llvm_model::generate_llvm(bool with_uncertainties) const {
         if(obs_offset % 2) ++obs_offset;
     }
     Builder.CreateRetVoid();
-    // TODO: get rid of this verifyModule call.
-    /*cout << "verifying module" << endl;
-    module->module->dump();
-    if(verifyModule(*(module->module), llvm::PrintMessageAction)){
-    	cout << "module verification failed; module:" << endl;
-    	//module->module->dump();
-    	throw invalid_argument("module verify failed");
-    }
-    else{
-    	cout << "module verification passed";
-    }*/
-    dump_module(*module->module, "model.llvm");
     module->optimize();
-    dump_module(*module->module, "model-optimized.llvm");
-    //cout << "\n\nafter optimization:\n\n";
-    //module->module->dump();
     if(with_uncertainties){
     	model_evaluate_unc = reinterpret_cast<t_model_evaluate_unc>(module->getFunctionPointer(F));
     }
@@ -361,8 +347,8 @@ std::auto_ptr<NLLikelihood> llvm_model::get_nllikelihood(const Data & data) cons
 }
 
 
-llvm_model::llvm_model(const Configuration & ctx): vm(*ctx.pm->get<VarIdManager>()),
- llvm_always(false), model_evaluate(0), model_evaluate_unc(0), bb_uncertainties(false){
+llvm_model::llvm_model(const Configuration & ctx, bool llvm_always_): vm(*ctx.pm->get<VarIdManager>()),
+ llvm_always(llvm_always_), model_evaluate(0), model_evaluate_unc(0), bb_uncertainties(false){
     Setting s = ctx.setting;
     if(s.exists("bb_uncertainties")){
         bb_uncertainties =  s["bb_uncertainties"];
@@ -443,18 +429,8 @@ llvm_model_nll::llvm_model_nll(const llvm_model & m, const Data & dat, t_model_e
     theta::Function::par_ids = model.get_parameters();
     fill_par_ids_vec();
     get_concatenated_from_data(data_concatenated, dat, model.get_observables());
-    pred_concatenated = Histogram1D(data_concatenated.size(), pred_concatenated.get_xmin(), pred_concatenated.get_xmax());
+    pred_concatenated = Histogram1D(data_concatenated.size(), 0, 1);
     rvobs_values = dat.get_rvobs_values();
-}
-
-void llvm_model_nll::set_additional_term(const boost::shared_ptr<theta::Function> & term){
-    additional_term = term;
-    par_ids = model.get_parameters();
-    if(additional_term.get()){
-         const ParIds & pids = additional_term->get_parameters();
-         par_ids.insert_all(pids);
-    }
-    fill_par_ids_vec();
 }
 
 void llvm_model_nll::set_override_distribution(const boost::shared_ptr<Distribution> & d){
@@ -486,6 +462,7 @@ double llvm_model_nll::operator()(const ParValues & values) const{
         result += rvobs_dist->eval_nl(all_values);
     }
     //5. The additional likelihood terms, if set:
+    const Function * additional_term = model.get_additional_nll_term();
     if(additional_term){
        result += (*additional_term)(values);
     }
@@ -512,15 +489,6 @@ llvm_model_nll_bb::llvm_model_nll_bb(const llvm_model & m, const Data & dat, t_m
     rvobs_values = dat.get_rvobs_values();
 }
 
-void llvm_model_nll_bb::set_additional_term(const boost::shared_ptr<theta::Function> & term){
-    additional_term = term;
-    par_ids = model.get_parameters();
-    if(additional_term.get()){
-         const ParIds & pids = additional_term->get_parameters();
-         par_ids.insert_all(pids);
-    }
-    fill_par_ids_vec();
-}
 
 void llvm_model_nll_bb::set_override_distribution(const boost::shared_ptr<Distribution> & d){
     override_distribution = d;
@@ -574,6 +542,7 @@ double llvm_model_nll_bb::operator()(const ParValues & values) const{
         result += rvobs_dist->eval_nl(all_values);
     }
     //5. The additional likelihood terms, if set:
+    const Function * additional_term = model.get_additional_nll_term();
     if(additional_term){
        result += (*additional_term)(values);
     }

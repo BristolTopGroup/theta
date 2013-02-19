@@ -42,6 +42,8 @@ const std::map<std::string, std::pair<Column, data_type> > & ProductsSink::get_n
     return name_to_column_type;
 }
 
+NullProductsSink::~NullProductsSink(){}
+
 
 const std::string & ProductsSource::get_name() const{
    return name;

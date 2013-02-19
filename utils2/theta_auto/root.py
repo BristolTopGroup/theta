@@ -34,8 +34,7 @@ class rootfile:
             values = array.array('d', [th1.GetBinContent(i) for i in range(1, nbins+1)])
             uncertainties = array.array('d', [th1.GetBinError(i) for i in range(1, nbins+1)]) if include_uncertainties else None
             x_low  = [th1.GetBinLowEdge(i) for i in range(1, nbins+1)]
-        h = Histogram(xmin, xmax, values, uncertainties, th1.GetName())
-        h.set_x_low(x_low)
+        h = Histogram(xmin, xmax, values, uncertainties, th1.GetName(), x_low = x_low)
         return h
   
     # get all templates as dictionary (histogram name) --> Histogram instance

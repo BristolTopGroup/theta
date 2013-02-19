@@ -562,7 +562,8 @@ BOOST_AUTO_TEST_CASE(model_bb_unc){
 	llvm_m->get_prediction(llvm_d_wu, values);
 	BOOST_CHECK(d_wu[obs0].get_uncertainty(nbins0 / 2) == 0.0);
 	BOOST_CHECK(d_wu[obs1].get_uncertainty(nbins1 / 2) > 0.0);
-	double scale = d_wu[obs0].get_values().get_sum() / nbins0;
+	//double scale = d_wu[obs0].get_values().get_sum() / nbins0;
+	double scale = 0;
 	BOOST_CHECK(close_to(d_wu[obs0], llvm_d_wu[obs0], scale));
 	BOOST_CHECK(close_to(d_wu[obs1], llvm_d_wu[obs1], scale));
 	// again, to verify "overwriting" is working:
@@ -614,16 +615,16 @@ BOOST_AUTO_TEST_CASE(model_bb_unc){
 	auto_ptr<NLLikelihood> nll = m->get_nllikelihood(d_asimov);
 	BOOST_CHECKPOINT("likelihood llvm model");
 	auto_ptr<NLLikelihood> llvm_nll = llvm_m->get_nllikelihood(d_asimov);
-	// sample a few points:
+	// sample a few points, also extreme ones: +-30 "sigma":
+	const double range = 30.0;
 	for(int i=0; i<10; ++i){
-		values.set(delta0, rnd.uniform() * 20.0 - 10.0);
-		values.set(delta1, rnd.uniform() * 20.0 - 10.0);
-		values.set(rv_delta0, rnd.uniform() * 20.0 - 10.0);
-		values.set(rv_delta1, rnd.uniform() * 20.0 - 10.0);
+		values.set(delta0, rnd.uniform() * 2 * range - range);
+		values.set(delta1, rnd.uniform() * 2 * range - range);
+		values.set(rv_delta0, rnd.uniform() * 2 * range - range);
+		values.set(rv_delta1, rnd.uniform() * 2 * range - range);
 		double l1 = (*nll)(values);
 		double l2 = (*llvm_nll)(values);
-		//cout << l1 << " " << l2 << " diff="<< (l1 - l2) << endl;
-		BOOST_CHECK(close_to_relative(l1, l2));
+		BOOST_CHECK_EQUAL(l1,l2);
 	}
 
 }// itest

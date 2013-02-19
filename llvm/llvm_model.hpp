@@ -31,6 +31,7 @@ private:
     std::auto_ptr<theta::Distribution> parameter_distribution;
     bool llvm_always;
     std::auto_ptr<theta::Distribution> rvobservable_distribution;
+    std::auto_ptr<theta::Function> additional_nll_term;
     
     mutable t_model_evaluate model_evaluate;
     mutable t_model_evaluate_unc model_evaluate_unc;
@@ -48,17 +49,23 @@ private:
     void get_prediction_impl(theta::DataT<HT> & result, const theta::ParValues & parameters) const;
     
  public:
-    llvm_model(const theta::Configuration & cfg);
+    llvm_model(const theta::Configuration & cfg, bool llvm_always = false);
     //the pure virtual functions:
     virtual void get_prediction(theta::Data & result, const theta::ParValues & parameters) const;
     virtual void get_prediction(theta::DataWithUncertainties & result, const theta::ParValues & parameters) const;
     virtual std::auto_ptr<theta::NLLikelihood> get_nllikelihood(const theta::Data & data) const;
     
+
+
     virtual const theta::Distribution & get_parameter_distribution() const {
        return *parameter_distribution;
     }
     virtual ~llvm_model();
     
+    virtual const theta::Function * get_additional_nll_term() const{
+        return additional_nll_term.get();
+    }
+
     virtual const theta::Distribution * get_rvobservable_distribution() const{
           return rvobservable_distribution.get();
     }
@@ -71,7 +78,6 @@ public:
     using theta::Function::operator();
     virtual double operator()(const theta::ParValues & values) const;
     
-    virtual void set_additional_term(const boost::shared_ptr<theta::Function> & term);
     virtual void set_override_distribution(const boost::shared_ptr<theta::Distribution> & d);
     virtual const theta::Distribution & get_parameter_distribution() const{
         if(override_distribution) return *override_distribution;
@@ -85,8 +91,6 @@ private:
     std::vector<theta::ParId> par_ids_vec;
     
     theta::ParValues rvobs_values;
-    
-    boost::shared_ptr<theta::Function> additional_term;
     boost::shared_ptr<theta::Distribution> override_distribution;
 
     theta::Histogram1D data_concatenated;
@@ -104,7 +108,6 @@ public:
     using theta::Function::operator();
     virtual double operator()(const theta::ParValues & values) const;
 
-    virtual void set_additional_term(const boost::shared_ptr<theta::Function> & term);
     virtual void set_override_distribution(const boost::shared_ptr<theta::Distribution> & d);
     virtual const theta::Distribution & get_parameter_distribution() const{
         if(override_distribution) return *override_distribution;
@@ -118,8 +121,6 @@ private:
     std::vector<theta::ParId> par_ids_vec;
 
     theta::ParValues rvobs_values;
-
-    boost::shared_ptr<theta::Function> additional_term;
     boost::shared_ptr<theta::Distribution> override_distribution;
 
     theta::Histogram1D data_concatenated;

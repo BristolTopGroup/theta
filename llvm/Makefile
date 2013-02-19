@@ -13,7 +13,7 @@ all: ../lib/llvm-plugins.so
 	@$(LINK_SO) $(shell llvm-config-3.1 --libfiles all) #nativecodegen engine scalaropts ipo)
 
 test: .bin/test.o ../lib/llvm-plugins.so
-	@$(LINK_EXE)
+	@$(LINK_EXE) ../lib/core-plugins.so
 
 clean-subdir:
 	@rm -f ../lib/llvm-plugins.so

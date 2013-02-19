@@ -173,8 +173,6 @@ public:
         }
     }
     
-    void operator*=(const Histogram1DWithUncertainties & other);
-    
     void operator+=(const Histogram1DWithUncertainties & other){
         values += other.values;
         if(other.nontrivial_unc){
@@ -190,8 +188,6 @@ public:
             sq_uncertainties.add_with_coeff(c * c, other.sq_uncertainties);
         }
     }
-
-    void operator*=(const Histogram1D & other);
     
     void operator+=(const Histogram1D & other){
         values += other;

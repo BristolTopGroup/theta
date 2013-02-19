@@ -25,7 +25,6 @@ namespace theta {
      *   <li>ProductsSink "default" where the producers  and other ProductSources write their results</li>
      *   <li>int "runid"</li>
      *   <li>RndInfoTable "default"</li>
-     *   <li>int "seed_offset"</li>
      * </ul>
      */
     class Configuration{

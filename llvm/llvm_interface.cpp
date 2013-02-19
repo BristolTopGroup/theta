@@ -61,7 +61,7 @@ void llvm_module::emit_add_with_coeff_function(){
     arg_types[1] = arg_types[2] = double_->getPointerTo();
     arg_types[3] = i32_;
     FunctionType * FT = FunctionType::get(void_, arg_types, false);
-    llvm::Function * F = llvm::Function::Create(FT, llvm::Function::PrivateLinkage, "add_with_coeff", module);
+    llvm::Function * F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "add_with_coeff", module);
     F->addFnAttr(Attribute::InlineHint);
     llvm::Function::arg_iterator iter = F->arg_begin();
     Argument * coeff = iter++;
@@ -128,6 +128,7 @@ BasicBlock * llvm_module::emit_add_with_coeff(BasicBlock * BB_in, Value * coeff,
 	IRBuilder<> Builder(context);
 	Builder.SetInsertPoint(BB_in);
 	const size_t n = h.size();
+	theta_assert(n>0);
 	if(n==1){
 		Value * data_o = Builder.CreateBitCast(data_out, double_->getPointerTo(), "data_out");
 		Value * p_data0 = Builder.CreateGEP(data_o, ConstantInt::get(i32_, 0));
@@ -163,7 +164,6 @@ BasicBlock * llvm_module::emit_add_with_coeff(BasicBlock * BB_in, Value * coeff,
 		Builder.CreateCall4(add_with_coeff, coeff, data_out, gv_data_conv, ConstantInt::get(i32_, h.size()));
 	}
 	return BB_in;
-	//Builder.CreateRetVoid();
 }
 
 /*
@@ -207,7 +207,7 @@ BasicBlock * llvm_module::emit_multiply(BasicBlock * BB_in, Value * coeff, Value
 }
 
 
-BasicBlock * llvm_module::emit_normalize_histo(llvm::BasicBlock * BB_in, Value * histo_, size_t n, const boost::optional<double> & normalize_to){
+BasicBlock * llvm_module::emit_normalize_histo(llvm::BasicBlock * BB_in, Value * histo_, size_t n, const boost::optional<double> & normalize_to, llvm::Value *& coeff){
 	LLVMContext & context = module->getContext();
 	IRBuilder<> Builder(context);
 	llvm::Function * f = BB_in->getParent();
@@ -301,45 +301,35 @@ BasicBlock * llvm_module::emit_normalize_histo(llvm::BasicBlock * BB_in, Value *
 		Value * sum = Builder.CreateLoad(sum_p);
 		Value * sum_gt0 = Builder.CreateFCmpOGT(sum, ConstantFP::get(double_, 0.0), "sum_gt0");
 		BasicBlock * bb_gt0 = BasicBlock::Create(context, "bb_gt0", f);
+		BasicBlock * bb_lt0 = BasicBlock::Create(context, "bb_lt0", f);
 		BasicBlock * bb_exit = BasicBlock::Create(context, "bb_exit", f);
-		Builder.CreateCondBr(sum_gt0, bb_gt0, bb_exit);
+		Builder.CreateCondBr(sum_gt0, bb_gt0, bb_lt0);
 
 		Builder.SetInsertPoint(BB = bb_gt0);
 		Value * coeff_p = Builder.CreateAlloca(double_, ConstantInt::get(i32_, 1), "coeff_p");
 		Builder.CreateStore(ConstantFP::get(double_, *normalize_to), coeff_p);
-		Value * coeff = Builder.CreateLoad(coeff_p);
-		coeff = Builder.CreateFDiv(coeff, sum);
-		BB = emit_multiply(BB, coeff, histo, n);
+		Value * vcoeff = Builder.CreateLoad(coeff_p);
+		vcoeff = Builder.CreateFDiv(vcoeff, sum);
+		BB = bb_gt0 = emit_multiply(BB, vcoeff, histo, n);
 		Builder.SetInsertPoint(BB);
 		Builder.CreateBr(bb_exit); // closes BB = bb_gt0
 
-		BB = bb_exit;
+		Builder.SetInsertPoint(bb_lt0);
+		Builder.CreateBr(bb_exit); // closes bb_lt0
+
+		Builder.SetInsertPoint(BB = bb_exit);
+		llvm::PHINode * phi_coeff = Builder.CreatePHI(double_, 2);
+		phi_coeff->addIncoming(vcoeff, bb_gt0);
+		phi_coeff->addIncoming(ConstantFP::get(double_, 0.0), bb_lt0);
+		coeff = phi_coeff;
 	}
 	return BB;
 }
-/*
-llvm::BasicBlock * llvm_module::append_bb(llvm::Function * f, const std::string & name){
-	if(f->empty()){
-		BasicBlock * result = BasicBlock::Create(module->getContext(), name, f);
-		return result;
-	}
-	else{
-		BasicBlock * previous_bb = &f->back();
-		BasicBlock * result = BasicBlock::Create(module->getContext(), name, f);
-		if(previous_bb->getTerminator()==0){
-			LLVMContext & context = module->getContext();
-			IRBuilder<> Builder(context);
-			Builder.SetInsertPoint(previous_bb);
-			Builder.CreateBr(result);
-		}
-		return result;
-	}
-}*/
+
 
 BasicBlock * llvm_module::emit_copy_ddata(BasicBlock * BB_in, Value * dest_, Value * src_, size_t n){
 	LLVMContext & context = module->getContext();
 	IRBuilder<> Builder(context);
-	//BasicBlock * BB_entry = append_bb(f, "copy_ddata_entry");
 	BasicBlock * BB = BB_in;
 	llvm::Function * f = BB_in->getParent();
 	Builder.SetInsertPoint(BB);
@@ -423,7 +413,7 @@ llvm_module::llvm_module(const ParIds & pids_): pids(pids_), pid_to_index(create
    void * handle = dlopen(0, 0);
    bool amd_exp_available = handle && dlsym(handle, "amd_exp");
    llvm::Function * f_exp = llvm::Function::Create(FT_exp, llvm::Function::ExternalLinkage, amd_exp_available?"amd_exp":"exp", module);
-   llvm::Function * f_exp_function = llvm::Function::Create(FT_exp, llvm::Function::PrivateLinkage, "exp_function", module);
+   llvm::Function * f_exp_function = llvm::Function::Create(FT_exp, llvm::Function::ExternalLinkage, "exp_function", module);
    {
 	   IRBuilder<> Builder(context);
 	   BasicBlock * BB = BasicBlock::Create(context, "entry", f_exp_function);
@@ -432,6 +422,7 @@ llvm_module::llvm_module(const ParIds & pids_): pids(pids_), pid_to_index(create
 	   Builder.CreateRet(ret);
    }
    f_exp_function->addFnAttr(Attribute::AlwaysInline);
+   theta_assert(module->getFunction("exp_function") != 0);
    emit_add_with_coeff_function();
 }
 
@@ -485,11 +476,10 @@ void llvm_module::optimize(){
 llvm::FunctionType * get_ft_hf_add_with_coeff(llvm_module & mod){
     LLVMContext & context = mod.module->getContext();
     Type * double_t = Type::getDoubleTy(context);
-    Type * void_t = Type::getVoidTy(context);
     std::vector<Type*> arg_types(3);
     arg_types[0] = double_t;
     arg_types[1] = arg_types[2] = double_t->getPointerTo();
-    return FunctionType::get(void_t, arg_types, false);
+    return FunctionType::get(double_t, arg_types, false);
 }
 
 llvm::FunctionType * get_ft_function_evaluate(llvm_module & mod){
@@ -551,6 +541,7 @@ llvm::Function * llvm_generic_codegen(const theta::HistogramFunction * hf, llvm_
     llvm::Function * llvm_codegen_hf_add_with_coeff = mod.module->getFunction("codegen_hf_add_with_coeff");
     Type * p_char_t = Type::getInt8Ty(context)->getPointerTo();
     Type * i64_t = Type::getInt64Ty(context);
+    Type * double_t = Type::getDoubleTy(context);
     BasicBlock * BB = BasicBlock::Create(context, "entry", F);
     Builder.SetInsertPoint(BB);
     llvm::Function::arg_iterator iter = F->arg_begin();
@@ -561,7 +552,7 @@ llvm::Function * llvm_generic_codegen(const theta::HistogramFunction * hf, llvm_
     Value * hfptr = Builder.CreateBitCast(ConstantInt::get(i64_t, reinterpret_cast<unsigned long>(hf)), p_char_t);
     Value *Args[] = { mod_, hfptr, coeff, par_values, data };
     Builder.Insert(CallInst::Create(llvm_codegen_hf_add_with_coeff, ArrayRef<Value*>(Args, Args+5)), "");
-    Builder.CreateRetVoid();
+    Builder.CreateRet(ConstantFP::get(double_t, 1.0));
     return F;
 }
 
@@ -595,11 +586,12 @@ llvm::Function * create_llvm_histogram_function(const theta::HistogramFunction *
         /*Value * par_values =*/ iter++; // not used ...
         Value * data = iter;
         LLVMContext & context = mod.module->getContext();
+        Type * double_t = Type::getDoubleTy(context);
         BasicBlock * BB = BasicBlock::Create(context, "entry", result);
         BB = mod.emit_add_with_coeff(BB, coeff, data, h0);
         IRBuilder<> Builder(context);
         Builder.SetInsertPoint(BB);
-        Builder.CreateRetVoid();
+        Builder.CreateRet(ConstantFP::get(double_t, 1.0));
         //mod.module->dump();
     }else{
         result = llvm_generic_codegen(hf, mod, prefix);

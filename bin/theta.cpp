@@ -72,7 +72,7 @@ public:
         next_update = now + btime::milliseconds(50);
     }
 
-    MyProgressListener(): stdout_fd(1), done(0), total(0), n_error(0), is_tty(isatty(stdout_fd)),
+    MyProgressListener(): stdout_fd(theta::out_fd), done(0), total(0), n_error(0), is_tty(isatty(stdout_fd)),
       chars_written(0), next_update(btime::microsec_clock::local_time()) {
         if(!is_tty) return;
         //disable terminal echoing; we don't expect any input.

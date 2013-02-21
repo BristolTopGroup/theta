@@ -2,6 +2,7 @@
 #define MODEL_HPP
 
 #include "interface/decls.hpp"
+#include "interface/atomic.hpp"
 #include "interface/variables.hpp"
 #include "interface/phys.hpp"
 #include "interface/data.hpp"
@@ -256,13 +257,18 @@ namespace theta {
             else return model.get_parameter_distribution();
         }
         
+        static uint64_t get_n_eval(){
+            return atomic_get(&n_eval);
+        }
         
     protected:
         const default_model & model;
         const Data & data;
+        static atomic_int n_eval;
         boost::shared_ptr<Distribution> override_distribution;
         
         default_model_nll(const default_model & m, const Data & data);
+        
     private:
         //cached predictions:
         mutable Data predictions;

@@ -1,21 +1,12 @@
-// fallback implementation for log2_dot.s which is implemented specifically for 64-bit architectures
-
 #include "interface/log2_dot.hpp"
-#include <cstddef>
+#include "interface/utils.hpp"
+
 #include <limits>
 #include <math.h>
 
-#include "interface/utils.hpp"
+using namespace std;
 
-double log2_dot(const double * x, const double * y, unsigned int n){
-    double result = 0.0;
-    for(size_t i=0; i<n; ++i){
-        result += y[i] * log2(x[i]);
-    }
-    return result;
-}
-
-double template_nllikelihood(const double * data, const double * pred, unsigned int n){
+double theta::template_nllikelihood(const double * data, const double * pred, unsigned int n){
    double result = 0.0;
    for(unsigned int i=0; i<n; ++i){
         result += pred[i];
@@ -24,9 +15,32 @@ double template_nllikelihood(const double * data, const double * pred, unsigned 
                  result -= data[i] * theta::utils::log(pred[i]);
              }
          }else if(data[i] > 0.0){
-             return std::numeric_limits<double>::infinity();
+             return numeric_limits<double>::infinity();
          }
     }
     return result;
 }
 
+
+
+double theta::template_pchisquare(const double * data, const double * pred, unsigned int n){
+    double result = 0.0;
+    for(unsigned int  i=0; i<n; ++i){
+        const double n = data[i];
+        const double mu = pred[i];
+        if(mu > 0){
+            if(n > 0){
+                result += n * utils::log(n / mu) + mu - n;
+            }
+            else{
+                result += mu;
+            }
+        }
+        else if(n > 0){
+            result = numeric_limits<double>::infinity();
+            break;
+        }
+    }
+    result *= 2;
+    return result;
+}

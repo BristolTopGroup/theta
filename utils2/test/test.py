@@ -6,7 +6,7 @@ from theta_auto.test_model import *
 import unittest
 import time
 
-config.suppress_info = False
+config.suppress_info = True
 one_sigma = 0.6827
 
 class TestMle(unittest.TestCase):
@@ -116,7 +116,7 @@ class TestBayes(unittest.TestCase):
         res1 = bayesian_quantiles(self.model, 'data', 100, quantiles = [0.95], options = options)
         time1 = time.time() - t0
         quants1 = sorted(res1['s'][0.95])
-        print "real time elapsed: ", time0, time1
+        #print "real time elapsed: ", time0, time1
         #print "expected limits: ", quants0[len(quants0) / 2], quants1[len(quants1) / 2]
 
         

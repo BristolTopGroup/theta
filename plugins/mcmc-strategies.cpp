@@ -9,6 +9,9 @@
 using namespace theta;
 
 //TODO: rewrite more generally by using policy pattern with templates ...
+//TODO: also implement the combine-like ortho in which some parameters are always stepped, but only one of the others ...
+///   this could be done by a more general framework which would make steps in different directions with different probability.
+//    Current ortho would be 1/n for each of the n axes. New would be 1.0 for beta_signal and 1/n for each of the n nuisance parameters.
 
 // oneatatime:
 // - if true, the parameter value is changed only along one (randomly selected) axis in which the step size is non zero. In this case, the

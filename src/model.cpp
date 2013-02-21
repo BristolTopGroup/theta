@@ -170,6 +170,8 @@ default_model::~default_model(){
 }
 
 /* default_model_nll */
+atomic_int default_model_nll::n_eval;
+
 default_model_nll::default_model_nll(const default_model & m, const Data & dat): model(m),  data(dat) {
     par_ids = model.get_parameters();
 }
@@ -180,6 +182,7 @@ void default_model_nll::set_override_distribution(const boost::shared_ptr<Distri
 
 
 double default_model_nll::operator()(const ParValues & values) const{
+    atomic_inc(&n_eval);
     double result = 0.0;
     //1. the model prior first, because if we are out of bounds, we should not evaluate
     //   the likelihood of the templates ...
@@ -219,6 +222,7 @@ default_model_bbadd_nll::default_model_bbadd_nll(const default_model & m, const 
 }
 
 double default_model_bbadd_nll::operator()(const ParValues & values) const{
+    atomic_inc(&n_eval);
     double result = 0.0;
     //1. the model prior first, because if we are out of bounds, we should not evaluate
     //   the likelihood of the templates ...

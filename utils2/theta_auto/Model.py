@@ -43,8 +43,6 @@ def evaluate_prediction(model, par_values, include_signal = True, observables = 
 #
 # notes:
 # * the coefficients should be chosen such that their mean / most probable value is 1.0 as this is assumed e.g. in model_summary
-
-
 class Model(utils.Copyable):
     """
     The statistical model specifies the predicted event yields *λ_ci* for all channels *c* and bins *i*, as a function of the model

@@ -1,4 +1,5 @@
 #include "plugins/mle.hpp"
+#include "interface/log2_dot.hpp"
 #include "interface/asimov-utils.hpp"
 #include "interface/plugin.hpp"
 #include "interface/model.hpp"
@@ -77,31 +78,14 @@ void mle::produce(const theta::Data & data, const theta::Model & model) {
     }
     if(write_pchi2){
         const ObsIds & obs = data.get_observables();
-        DataWithUncertainties pred;
+        Data pred;
         model.get_prediction(pred, minres.values);
         double pchi2 = 0.0;
         for(ObsIds::const_iterator it=obs.begin(); it!=obs.end(); ++it){
             const Histogram1D & data_o = data[*it];
-            const Histogram1DWithUncertainties & pred_o = pred[*it];
-            //data_o.check_compatibility(pred_o);
-            for(size_t i=0; i<data_o.get_nbins(); ++i){
-                const double n = data_o.get(i);
-                const double mu = pred_o.get_value(i);
-                if(mu > 0){
-                    if(n > 0){
-                        pchi2 += n * utils::log(n / mu) + mu - n;
-                    }
-                    else{
-                        pchi2 += mu;
-                    }
-                }
-                else if(n > 0){
-                    pchi2 = numeric_limits<double>::infinity();
-                    break;
-                }
-            }
+            const Histogram1D & pred_o = pred[*it];
+            pchi2 += template_pchisquare(data_o.get_data(), pred_o.get_data(), data_o.size());
         }
-        pchi2 *= 2;
         products_sink->set_product(c_pchi2, pchi2);
     }
 }

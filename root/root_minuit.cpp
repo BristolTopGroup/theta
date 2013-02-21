@@ -109,16 +109,13 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
     
     //4. minimize. In case of failure, try harder. Discard all output generated in min->Minimize.
     bool success;
-    {
-        //theta::utils::discard_output d_o(true);
-        success = min->Minimize();
-        if(!success){
-            for(int i=1; i<=n_retries; i++){
-                success = min->Minimize();
-                if(success) break;
-            }
+    success = min->Minimize();
+    if(!success){
+        for(int i=1; i<=n_retries; i++){
+            success = min->Minimize();
+            if(success) break;
         }
-    } // d_o is destroyed, output resumed.
+    }
 
     //5. do error handling
     if(not success){

@@ -178,16 +178,12 @@ double eval_with_grad(const Function & f, const Ranges & ranges, const ParValues
         theta_assert(s > 0.0);
         double x0_plus = x0 + s * epsilon;
         double x0_minus = x0 - s * epsilon;
-	//cout << "pid(" << pid << ") = ";
-	//printf("%.8g; step = %.8g; plus = %.8g; minus = %.8g; range = %.8g--%.8g\n", x0, s, x0_plus, x0_minus, range.first, range.second);
         ParValues vals(values);
         if(x0_plus > range.second){
             x0_plus = x0;
-	    //printf("truncating above\n");
         }
         if(x0_minus < range.first){
             x0_minus = x0;
-	    //printf("truncating below\n");
         }
         double fplus, fminus;
         volatile double h;
@@ -215,7 +211,6 @@ double eval_with_grad(const Function & f, const Ranges & ranges, const ParValues
                 throw invalid_argument("relative parameter range is to small");
             }
         }
-        //printf("fplus = %.8g; fminus = %.8g; fplus - fminus = %.8g; h = %.8g\n", fplus, fminus, fplus - fminus, h);
         grad.set(pid, (fplus - fminus) / h);
     }
     return f0;
@@ -289,7 +284,6 @@ Matrix theta::asimov_likelihood_matrix(const theta::Model & model, const boost::
             double fpp = 0.5 * (g_plus.get(*it2) - g_minus.get(*it2)) / h;
             result(i,j) += fpp;
             result(j,i) += fpp;
-            //printf("hessian(%d,%d) = %.8g\n", i, j, 2 * fpp);
         }
     }
     // covariance is the inverse of the hessian:

@@ -6,6 +6,7 @@
 #include "interface/distribution.hpp"
 #include "interface/variables-utils.hpp"
 #include "interface/model.hpp"
+#include "interface/log2_dot.hpp"
 
 #include <sstream>
 
@@ -24,12 +25,12 @@ void deltanll_hypotest::produce(const theta::Data & data, const theta::Model & m
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
 
     double nll_sb, nll_b;
+    
+    ParValues sb_values;
 
     // For more robustness, try to fit the more restrictive model first, then the other one, starting at the same parameter values, if possible.
     // This is hard to tell in general, but usually, the b-only model is more restrictive.
     // In case of restrict_poi however, s+b is more restrictive, so switch fitting in that case.
-    // It's
-
     if(restrict_poi){
         theta_assert(!std::isnan(poi_value));
         //s+b first:
@@ -38,6 +39,7 @@ void deltanll_hypotest::produce(const theta::Data & data, const theta::Model & m
         s_plus_b_mode.set(*restrict_poi, poi_value);
         MinimizationResult minres = minimizer->minimize(*nll, s_plus_b_mode, s_plus_b_width, s_plus_b_support);
         nll_sb = minres.fval;
+        sb_values = minres.values;
 
         //now b-only:
         nll->set_override_distribution(b_only);
@@ -55,14 +57,27 @@ void deltanll_hypotest::produce(const theta::Data & data, const theta::Model & m
         // now s+b:
         nll->set_override_distribution(s_plus_b);
         s_plus_b_support.trunc(minres.values);
-		// start at the b-only minimum. This is more robust than starting at the original point again.
-		minres = minimizer->minimize(*nll, minres.values, s_plus_b_width, s_plus_b_support);
+        // start at the b-only minimum. This is more robust than starting at the original point again.
+        minres = minimizer->minimize(*nll, minres.values, s_plus_b_width, s_plus_b_support);
         nll_sb = minres.fval;
+        sb_values = minres.values;
     }
     
     products_sink->set_product(c_nll_sb, nll_sb);
     products_sink->set_product(c_nll_b, nll_b);
     products_sink->set_product(c_nll_diff, nll_b - nll_sb);
+    if(write_pchi2){
+        const ObsIds & obs = data.get_observables();
+        Data pred;
+        model.get_prediction(pred, sb_values);
+        double pchi2 = 0.0;
+        for(ObsIds::const_iterator it=obs.begin(); it!=obs.end(); ++it){
+            const Histogram1D & data_o = data[*it];
+            const Histogram1D & pred_o = pred[*it];
+            pchi2 += template_pchisquare(data_o.get_data(), pred_o.get_data(), data_o.size());
+        }
+        products_sink->set_product(c_pchi2, pchi2);
+    }
 }
 
 void deltanll_hypotest::set_parameter_values(const theta::ParValues & values){
@@ -73,7 +88,7 @@ void deltanll_hypotest::set_parameter_values(const theta::ParValues & values){
 
 
 deltanll_hypotest::deltanll_hypotest(const theta::Configuration & cfg):
-        ParameterDependentProducer(cfg), init(false) {
+        ParameterDependentProducer(cfg), init(false), write_pchi2(false){
     Setting s = cfg.setting;
     minimizer = theta::PluginManager<Minimizer>::build(theta::Configuration(cfg, s["minimizer"]));
     s_plus_b = theta::PluginManager<Distribution>::build(theta::Configuration(cfg, s["signal-plus-background-distribution"]));
@@ -88,6 +103,9 @@ deltanll_hypotest::deltanll_hypotest(const theta::Configuration & cfg):
     }
     s_plus_b->mode(s_plus_b_mode);
     s_plus_b_support.set_from(*s_plus_b);
+    if(s.exists("write_pchi2")){
+        write_pchi2 = s["write_pchi2"];
+    }
     b_only->mode(b_only_mode);
     b_only_support.set_from(*b_only);
     if(not (s_plus_b->get_parameters()==b_only->get_parameters())){
@@ -98,6 +116,9 @@ deltanll_hypotest::deltanll_hypotest(const theta::Configuration & cfg):
     c_nll_diff = products_sink->declare_product(*this, "nll_diff", theta::typeDouble);
     if(restrict_poi){
        c_poi = products_sink->declare_product(*this, "poi", theta::typeDouble);
+    }
+    if(write_pchi2){
+       c_pchi2 = products_sink->declare_product(*this, "pchi2", theta::typeDouble);
     }
 }
 

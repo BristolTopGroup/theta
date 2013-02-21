@@ -292,9 +292,6 @@ public:
         double ts_b_width = get_quantile(truth_to_ts_b, truth, 0.84) - get_quantile(truth_to_ts_b, truth, 0.16);
         // this is a 5sigma cutoff ...
         double ts_diff_cutoff = 2.5 * max(ts_b_width + ts_epsilon, ts_sb_width + ts_epsilon);
-        /*theta::cout << "ts medians: " << ts_sb_median << "; " << ts_b_median << endl;
-        theta::cout << "ts diff cutoff: " << ts_diff_cutoff << endl;
-        theta::cout << "ts value: " << ts_value << endl;*/
         return fabs(ts_value - ts_sb_median) > ts_diff_cutoff && fabs(ts_value - ts_b_median) > ts_diff_cutoff;
     }
     

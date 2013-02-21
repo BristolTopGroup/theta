@@ -48,7 +48,8 @@ def make_data(model, input, n, signal_process_groups = None, nuisance_prior_toys
 
 
 
-def deltanll(model, input, n, signal_process_groups = None, nuisance_constraint = None, nuisance_prior_toys = None, signal_prior = 'flat', options = None, run_theta = True, seed = None, lhclike_beta_signal = None):
+def deltanll(model, input, n, signal_process_groups = None, nuisance_constraint = None, nuisance_prior_toys = None, signal_prior = 'flat', options = None,
+  run_theta = True, seed = None, lhclike_beta_signal = None, pchi2 = False):
     """
     Calculate the delta-log-likelihood test statistic suitable for signal search for ``input``. The test statistic is
     
@@ -70,11 +71,12 @@ def deltanll(model, input, n, signal_process_groups = None, nuisance_constraint 
     * ``lhclike_beta_signal`` - if not ``None``, it should be a floating point value for the LHC-like test statistic evalaution; it is the value of beta_signal tested; the
       beta_signal parameter is fixed to this value in the likelihood ratio calculation. If ``None``, the restrictions commonly used for a signal search are used:
       beta_signal=0 for the background-only  (null hypoythesis) case and a flat prior for beta_signal > 0.0 for the signal+background (alternative hypothesis) case.
-    
+    * ``pchi2'': If true, also calculates and returns the pseudo-chi2 value for the s+b fit fore ach toy, using the result key
       
     The return value is a nested python dictionary. The first-level key is the signal process group id (see :ref:`what_is_signal`). The value depends on ``run_theta``:
     
-    * in case ``run_theta`` is ``True``, the value is a list of delta-log-likelihood values, one per toy
+    * in case ``run_theta`` is ``True``, the value is a dictionary with the keys "dnll" containing a list of delta-log-likelihood values. If
+      ``pchi2'' is true, it also contains a key ``pchi2'' with the chi2 values.
     * if ``run_theta`` is ``False``, the value is an instance of the ``Run`` class
     """
     if signal_process_groups is None: signal_process_groups = model.signal_process_groups
@@ -82,22 +84,25 @@ def deltanll(model, input, n, signal_process_groups = None, nuisance_constraint 
     result = {}
     for spid, signal_processes in signal_process_groups.iteritems():
         if lhclike_beta_signal is not None:
-            pdnll = DeltaNllHypotest(model, signal_processes, nuisance_constraint, restrict_poi = 'beta_signal', restrict_poi_value = lhclike_beta_signal, signal_prior_sb = 'flat', signal_prior_b = 'flat')
+            pdnll = DeltaNllHypotest(model, signal_processes, nuisance_constraint, restrict_poi = 'beta_signal',
+                           restrict_poi_value = lhclike_beta_signal, signal_prior_sb = 'flat', signal_prior_b = 'flat')
         else:
-            pdnll = DeltaNllHypotest(model, signal_processes, nuisance_constraint)
+            pdnll = DeltaNllHypotest(model, signal_processes, nuisance_constraint, write_pchi2 = pchi2)
         r = Run(model, signal_processes, signal_prior = signal_prior, input = input, n = n,
              producers = [pdnll], nuisance_prior_toys = nuisance_prior_toys, seed = seed)
         if not run_theta:
             result[spid] = r
         else:
             r.run_theta(options)
-            data = r.get_products(['dnll__nll_diff'])
-            result[spid] = data['dnll__nll_diff']
+            cols = ['dnll__nll_diff']
+            if pchi2: cols += ['dnll__pchi2']
+            data = r.get_products(cols)
+            result[spid] = {'dnll': data['dnll__nll_diff']}
+            if pchi2: result[spid]['pchi2'] = data['dnll__pchi2']
     return result
 
 
-
-def pvalue_bkgtoys_runs(model, signal_process_groups = None, n_runs = 10, n = 10000, nuisance_constraint = None, nuisance_prior_toys = None, seed_min = 1):
+def pvalue_bkgtoys_runs(model, signal_process_groups = None, n_runs = 10, n = 10000, nuisance_constraint = None, nuisance_prior_toys = None, seed_min = 1, pchi2 = False):
     """
     Prepare Run instances for 'background-only' toys for p-value determination with ``pvalue``.
     
@@ -130,7 +135,7 @@ def pvalue_bkgtoys_runs(model, signal_process_groups = None, n_runs = 10, n = 10
     result = {}
     for i_run in range(n_runs):
         res = deltanll(model, 'toys:0.0', n, signal_process_groups = signal_process_groups, nuisance_constraint = nuisance_constraint,
-            nuisance_prior_toys = nuisance_prior_toys, run_theta = False, seed = seed_min + i_run)
+            nuisance_prior_toys = nuisance_prior_toys, run_theta = False, seed = seed_min + i_run, pchi2 = pchi2)
         for spid in res:
             if not spid in result: result[spid] = []
             result[spid].append(res[spid])
@@ -183,7 +188,7 @@ def pvalue(model, input, n, signal_process_groups = None, nuisance_constraint = 
 #   debug_method('data', ts_single)   -- the ts value for data
 #   debug_method('bkg', ts_list)    -- the ts value for background-only toys (using input="toys:0.0").
 def discovery(model, spid = None, use_data = True, Z_error_max = 0.05, maxit = 100, n = 10000, input_expected = 'toys:1.0', n_expected = 1000,
-   nuisance_constraint = None, nuisance_prior_toys_bkg = None, options = None, verbose = True, debug_method = None):
+   nuisance_constraint = None, nuisance_prior_toys_bkg = None, options = None, verbose = True, debug_method = None, chi2_trunc = 0.0):
     """
     Determine p-value / "N sigma" from tail distribution of background-only test statistic.
 
@@ -210,14 +215,24 @@ def discovery(model, spid = None, use_data = True, Z_error_max = 0.05, maxit = 1
     signal_process_groups = {spid : model.signal_process_groups[spid]}
     if options is None: options = Options()
     
-    ts_sorted = deltanll(model, signal_process_groups = signal_process_groups, nuisance_constraint = nuisance_constraint, input = input_expected, n = n_expected, options = options)[spid]
+    pchi2 = chi2_trunc > 0.0
+    res = deltanll(model, signal_process_groups = signal_process_groups, nuisance_constraint = nuisance_constraint,
+                   input = input_expected, n = n_expected, pchi2 = pchi2, options = options)[spid]
+    ts_sorted = res['dnll']
     ts_sorted.sort()
+    if chi2_trunc > 0.0:
+        chi2s = res['pchi2']
+        chi2s.sort()
+        chi2_threshold = chi2s[int(-len(chi2s) * chi2_trunc)]
     if debug_method is not None: debug_method('expected', ts_sorted)
     expected = (ts_sorted[int(0.5 * len(ts_sorted))], ts_sorted[int(0.16 * len(ts_sorted))], ts_sorted[int(0.84 * len(ts_sorted))])
     del ts_sorted
     
     if use_data:
-        observed = deltanll(model, signal_process_groups = signal_process_groups, nuisance_constraint = nuisance_constraint, input = 'data', n = 1, options = options)[spid][0]
+        res = deltanll(model, signal_process_groups = signal_process_groups, nuisance_constraint = nuisance_constraint, input = 'data', n = 1, options = options)[spid]
+        observed = res['dnll'][0]
+        if chi2_trunc > 0.0 and res['pchi2'][0] > chi2_threshold:
+            raise RuntimeError, "chi2 value on data too bad. No p-value on data available."
         if debug_method is not None: debug_method('data', observed)
         
     
@@ -231,9 +246,15 @@ def discovery(model, spid = None, use_data = True, Z_error_max = 0.05, maxit = 1
     for seed in range(1, maxit + 1):
         # only create only one run, so seed is never re-used.
         run = pvalue_bkgtoys_runs(model, signal_process_groups = signal_process_groups, n_runs = 1, n = n, nuisance_constraint = nuisance_constraint,
-            nuisance_prior_toys = nuisance_prior_toys_bkg, seed_min = seed)[spid][0]
+            nuisance_prior_toys = nuisance_prior_toys_bkg, seed_min = seed, pchi2 = pchi2)[spid][0]
         run.run_theta(options)
-        ts_bkgonly = run.get_products(['dnll__nll_diff'])['dnll__nll_diff']
+        if pchi2:
+            res = run.get_products(['dnll__nll_diff', 'dnll__pchi2'])
+            ts_bkgonly = [dnll for dnll, pchi2 in zip(res['dnll__nll_diff'], res['dnll__pchi2']) if pchi2 < chi2_threshold]
+            if verbose: print "keeping %d / %d background-only toys according to chi2 threshold." % (len(ts_bkgonly), len(res['dnll__pchi2']))
+        else:
+            res = run.get_products(['dnll__nll_diff'])
+            ts_bkgonly = res['dnll__nll_diff']
         if debug_method is not None: debug_method('bkg', ts_bkgonly)
         max_Z_error = 0.0
         expected_Z = [[0,0],[0,0],[0,0]]

@@ -5,7 +5,10 @@
 #include "interface/model.hpp"
 #include "interface/random.hpp"
 #include "interface/plugin.hpp"
+#include "interface/redirect_stdio.hpp"
 #include "interface/plugin.tcc"
+
+#include <iostream>
 
 using namespace std;
 using namespace theta;
@@ -260,9 +263,9 @@ Matrix theta::get_sqrt_cov2(Random & rnd, const Model & model, const boost::shar
         if(jump_rates_converged(jump_rates)) break;
     }
     if(jump_rates.size()==max_passes){
-        cout << "WARNING in get_sqrt_cov: covariance estimate did not really converge; jump rates were: ";
+        theta::out << "WARNING in get_sqrt_cov: covariance estimate did not really converge; jump rates were: ";
         for(size_t i=0; i<max_passes; ++i){
-            cout << jump_rates[i] << "; ";
+            theta::out << jump_rates[i] << "; ";
         }
     }
     return sqrt_cov;

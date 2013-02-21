@@ -338,10 +338,11 @@ class PliProducer(ProducerBase):
         
         
 class DeltaNllHypotest(ProducerBase):
-    def __init__(self, model, signal_processes, override_distribution = None, name = 'dnll', restrict_poi = None, restrict_poi_value = None, signal_prior_sb = 'flat', signal_prior_b = 'fix:0.0'):
+    def __init__(self, model, signal_processes, override_distribution = None, name = 'dnll', restrict_poi = None, restrict_poi_value = None, signal_prior_sb = 'flat', signal_prior_b = 'fix:0.0', write_pchi2 = False):
         ProducerBase.__init__(self, model, signal_processes, override_distribution = None, name = name, signal_prior = None)
         self.minimizer = Minimizer(need_error = False)
         self.restrict_poi = restrict_poi
+        self.write_pchi2 = write_pchi2
         self.restrict_poi_value = restrict_poi_value
         self.add_submodule(self.minimizer)
         if override_distribution is not None: dist = Distribution.merge(model.distribution, override_distribution)
@@ -359,7 +360,9 @@ class DeltaNllHypotest(ProducerBase):
         
         
     def get_cfg(self, options):
-        result = {'type': 'deltanll_hypotest', 'minimizer': self.minimizer.get_cfg(options), 'background-only-distribution': self.b_distribution_cfg, 'signal-plus-background-distribution': self.sb_distribution_cfg}
+        result = {'type': 'deltanll_hypotest', 'minimizer': self.minimizer.get_cfg(options),
+           'background-only-distribution': self.b_distribution_cfg, 'signal-plus-background-distribution': self.sb_distribution_cfg}
+        if self.write_pchi2: result['write_pchi2'] = True
         result.update(self.get_cfg_base(options))
         if 'override-parameter-distribution' in result: del result['override-parameter-distribution']
         if self.restrict_poi is not None: result['restrict_poi'] = self.restrict_poi

@@ -106,12 +106,12 @@ public:
     }
     
     Histogram1D get_uncertainty2_histogram() const{
-    	if(nontrivial_unc){
-    		return Histogram1D(xmin, xmax, sq_uncertainties);
-    	}
-    	else{
-    		return Histogram1D(get_nbins(), xmin, xmax);
-    	}
+        if(nontrivial_unc){
+            return Histogram1D(xmin, xmax, sq_uncertainties);
+        }
+        else{
+            return Histogram1D(get_nbins(), xmin, xmax);
+        }
     }
 
     // setting uncertainty to NAN leaves it unchanged.

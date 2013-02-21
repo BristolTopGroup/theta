@@ -41,22 +41,6 @@ double phi_inverse(double p);
  */
 int roots_quad(double & x1, double & x2, double b, double c);
 
-
-/** \brief redirect the standard output stream to /dev/null
- *
- * Upon construction, redirects standard output (and optionally standard error) to /dev/null.
- * Restores original state upon destruction.
- * 
- * This is useful to temporarily prevent output (e.g., from library calls).
- */
-class discard_output{
-public:
-    discard_output(bool discard_stderr = false);
-    ~discard_output();
-private:
-    int stdout_dup, stderr_dup;
-};
-
 /** \brief The lngamma function
  *
  * Forwards to the boost implementation which is thread save (note that

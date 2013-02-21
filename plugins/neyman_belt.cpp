@@ -563,10 +563,7 @@ void neyman_belt::add_ordering_fclike(tto_ensemble & ttos){
     new_ensemble.reserve(ttos.size());
     for(set<double>::const_iterator truth_it=truth_values.begin(); truth_it!=truth_values.end(); ++truth_it){
         const double truth = *truth_it;
-        //cout << "starting interpolation for truth " << truth << endl;
-        //cout << "getting range for interpolation" << endl;
         tto_ensemble::tto_range r_interpolation = ensemble_for_interpolation.get_ttos(truth, tto_ensemble::sorted_by_ts);
-        //cout << "getting range" << endl;
         tto_ensemble::tto_range tto_range = ttos.get_ttos(truth, tto_ensemble::sorted_by_ts);
         theta_assert(distance(tto_range.first, tto_range.second) >= 2);
         tto_ensemble::const_tto_iterator it1 = r_interpolation.first;
@@ -650,7 +647,6 @@ void neyman_belt::run(){
     truth_range.first = *truth_values.begin();
     truth_range.second = *truth_values.rbegin();
     progress_total = truth_values.size() * cls.size();
-    //cout << "ordering" << endl;
     if(ordering_rule=="lower" || ordering_rule=="upper"){
         add_ordering_lu(ttos, ordering_rule);
     }
@@ -667,7 +663,6 @@ void neyman_belt::run(){
        truth_values = ttos.get_truth_values();
     }
     
-    //cout << "intervals" << endl;
     //find intervals:
     std::auto_ptr<Table> belt_table = output_database->create_table("belt");
     Column c_truth = belt_table->add_column("truth", typeDouble);

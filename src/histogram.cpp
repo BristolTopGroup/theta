@@ -7,6 +7,7 @@
 #include <sstream>
 #include <limits>
 #include <new>
+#include <malloc.h>
 
 using namespace theta;
 using std::invalid_argument;
@@ -21,11 +22,11 @@ namespace{
       //for the add_fast routine, which might use SSE optimizations, we need this alignment. And
       // while we at it, we should make sure double is as expected:
       BOOST_STATIC_ASSERT(sizeof(double)==8);
-      int err = posix_memalign(reinterpret_cast<void**>(&result), 16, sizeof(double) * n);
-      if(err!=0){
+      result = reinterpret_cast<double*>(memalign(2 * sizeof(double), sizeof(double) * n)); // note: while it is not guaranteed that we can call "free" on the result, that's ok for most systems.
+      if(result==0){
         throw std::bad_alloc();
       }
-      //set the extra allocated double to zero to make sure no time-consuming garbage is there ...
+      //set the extra allocated double to zero by convention.
       if(n_orig % 2) result[n-1] = 0.0;
       return result;
    }
@@ -35,6 +36,7 @@ namespace{
       free(data);
    }
 }
+
 
 DoubleVector::DoubleVector(size_t n): data(0), n_data(n){
     if(n_data > 0){
@@ -50,22 +52,20 @@ DoubleVector::~DoubleVector(){
 DoubleVector::DoubleVector(const DoubleVector & rhs): data(0), n_data(rhs.n_data){
    if(n_data > 0){
        data = allocate_doubles(n_data);
-       memcpy(data, rhs.data, sizeof(double) * n_data);
+       std::copy(rhs.data, rhs.data + n_data, data);
    }
 }
 
-void DoubleVector::operator=(const DoubleVector & rhs){
-    if(&rhs == this) return;
-    if(n_data != rhs.n_data){
-        free_doubles(data);
-        if(rhs.n_data > 0)
-            data = allocate_doubles(rhs.n_data);
-        else
-            data = 0;
-        n_data = rhs.n_data;
+
+void DoubleVector::realloc(size_t n){
+    if(n == n_data) return;
+    free_doubles(data);
+    if(n > 0){
+        data = allocate_doubles(n);
+    }else{
+        data = 0;
     }
-    if(n_data > 0)
-       memcpy(data, rhs.data, sizeof(double) * n_data);
+    n_data = n;
 }
 
 Histogram1D::Histogram1D(size_t b, double x_min, double x_max) : DoubleVector(b), xmin(x_min), xmax(x_max) {

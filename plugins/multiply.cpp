@@ -1,6 +1,6 @@
 #include "plugins/multiply.hpp"
 #include "interface/plugin.hpp"
-#include <iostream>
+#include "interface/redirect_stdio.hpp"
 
 using namespace theta;
 using namespace std;
@@ -9,7 +9,7 @@ multiply::multiply(const Configuration & cfg): literal_factor(1.0){
     boost::shared_ptr<VarIdManager> vm = cfg.pm->get<VarIdManager>();
     string type = cfg.setting["type"];
     if(type == "mult"){
-        cout << "Warning: function plugin with type='mult' is obsolete. Use type='multiply' instead and adapt configuration accordingly (see documentation; in particular use 'factors' setting instead of 'parameters')." << endl;
+        theta::out << "Warning: function plugin with type='mult' is obsolete. Use type='multiply' instead and adapt configuration accordingly (see documentation; in particular use 'factors' setting instead of 'parameters')." << endl;
         //compatibility mode: search for "parameters", instead of "factors"
         size_t n = cfg.setting["parameters"].size();
         for(size_t i=0; i<n; ++i){
@@ -45,11 +45,13 @@ multiply::multiply(const Configuration & cfg): literal_factor(1.0){
 
 double multiply::operator()(const ParValues & v) const{
     double result = literal_factor;
-    for(size_t i=0; i<v_pids.size(); ++i){
-        result *= v.get_unchecked(v_pids[i]);
+    std::vector<theta::ParId>::const_iterator it_end = v_pids.end();
+    for(std::vector<theta::ParId>::const_iterator it = v_pids.begin(); it!= it_end; ++it){
+        result *= v.get_unchecked(*it);
     }
-    for(size_t i=0; i<functions.size(); ++i){
-        result *= functions[i](v);
+    boost::ptr_vector<theta::Function>::const_iterator fit_end = functions.end();
+    for(boost::ptr_vector<theta::Function>::const_iterator fit = functions.begin(); fit != fit_end; ++fit){
+        result *= (*fit)(v);
     }
     return result;
 }

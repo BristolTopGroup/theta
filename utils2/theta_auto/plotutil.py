@@ -4,7 +4,9 @@
 import matplotlib
 # note: some matplotlib backends are broken and cause segfaults in fig.save.
 # try commenting out and in the use of Cairo in case of problems ...
-matplotlib.use('Cairo')
+#try:
+#matplotlib.use('Cairo')
+#except ImportError: pass
 
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
@@ -15,7 +17,7 @@ import matplotlib.patches
 from scipy import interpolate
 import numpy as np
 
-import math
+import math, StringIO
 
 def add_xlabel(axes, text, *args, **kwargs):
     label = axes.set_xlabel(text, size='large', ha='right', *args, **kwargs)
@@ -27,17 +29,51 @@ def add_ylabel(axes, text, *args, **kwargs):
     label.set_position((-0.03, 1.0))
     return label
 
-# plotdata represents the data of a single curve in a plot, including drawing options, legend, etc.
 class plotdata:
-    def __init__(self, color = '#000000', legend = None, as_function = False, lw = 2):
+    """
+    Class holding (x,y) data and formatting information for plotting (1D-)histograms and functions.
+    
+    :ivar x: array of x values. For Histograms, these are the lower bin borders.
+    :ivar xmax: The maximum x value for Histograms.
+    :ivar y: array of y values
+    :ivar yerrors: array of errors in y or ``None`` if there are no y errors
+    :ivar xerrors: array of x errors or ``None`` if there are no x errors
+    :ivar bands: array of bands to draw. A single band is a thre-tuple ``(ymin, ymax, color)`` where ``ymin`` and ``ymax`` are arrays of y values and color is a matplotlib color directive, e.g. "#rrggbb".
+    
+    :ivar as_function: ``True`` if the data should be displayed as function. Otherwise, it will be drawn as histogram
+    :ivar color: The color used for drawing the line
+    :ivar fmt: matplotlib format string for the line. Default is "-", i.e., a solid line.
+    :ivar lw: line width for the line
+    :ivar legend: The legend string or ``None`` in case no legend should be drawn
+    :ivar fill_color: color to be used for filling. The default ``None`` does not draw a filled area
+    :ivar fill_xrange: a tuple ``(xmin, xmax)`` which should be filled with fill_color. Currently only implemented for histograms.
+    :ivar yerrors_mode: a string specifying how errors are displayed. The default "bars" will draw error bars. Currently, the only other option is "area" which draws a shaded area instead, which is useful if the errors are so small (or points so dense in x-direction) that the error bars would overlap.
+    :ivar capsize: cap size to use for y error bars (default: 1.5)
+    """
+    
+    def __init__(self, color = '#000000', legend = None, as_function = False, lw = 2, legend_order = 0):
         self.x = []
         self.y = []
+        self.xmax = None # required only for one-binned histograms ...
         self.legend = legend
+        self.legend_order = legend_order
         self.yerrors = None
+        # capsize for the error bars:
+        self.capsize = 1.5
+        # how to draw the yerrors; valid are "bars" for error bars (using color, capsize and lw), 'bars0' to also show the marker for y values of 0,
+        # or 'area' to draw only a shaded area.
+        self.yerrors_mode = 'bars'
+        self.yerrors_fill_alpha = 0.5
         self.xerrors = None
+        # filling will be done only is fill_color is not None
         self.fill_color = None
+        # in case filling is done, the x value range to fill. The default "None"
+        # is to fill everything (i.e., whole x-range). Otherwise, specify tuple (xmin, xmax) here.
+        self.fill_xrange = None
+        self.fill_to_y = 0.0
         self.color = color
         self.marker = 'None'
+        self.markersize = 1.0
         self.lw = lw
         self.fmt = '-'
         # an array of bands; a band is a three-tuple (y1, y2, color). y1 and y2 are 
@@ -50,32 +86,73 @@ class plotdata:
         self.draw_histo = True
         self.draw_line = True
         
-    # make a histogram of the given values
-    def histogram(self, values, xmin, xmax, nbins, errors = False):
+    # create new data by making a histogram from xmin to xmax with nbins from the given values
+    # which should be a iterable yielding floats.
+    # If errors is True, yerrors is set to sqrt(n) in each bin.
+    # if include_uoflow is True, values under (over) the range are inserted in the first (last) bin.
+    def histogram(self, values, xmin, xmax, nbins, errors = False, include_uoflow = False):
         xmin, xmax = float(xmin), float(xmax)
+        self.xmax = xmax
         self.x = [xmin + (xmax - xmin) / nbins * i for i in range(nbins)]
         self.y = [0.0] * nbins
-        if errors: self.yerrors = [0.0] * nbins
         for v in values:
             ibin = int((v - xmin) / (xmax - xmin) * nbins)
-            if ibin < 0 or ibin >= nbins: continue
+            if not include_uoflow:
+                if ibin < 0 or ibin >= nbins: continue
+            else:
+                if ibin < 0: ibin = 0
+                if ibin >= nbins: ibin = nbins-1
             self.y[ibin] += 1
-            if errors: self.yerrors[ibin] += 1
-        if errors: self.yerrors = map(math.sqrt, self.yerrors)
+        if errors: self.yerrors = map(math.sqrt, self.y)
+        
+    # add the values in values to the current histogram, i.e. increments y[ibin] by 1
+    # for the corresponding bin for each v in values.
+    def histogram_add(self, values, include_uoflow = False):
+        xmin, xmax, nbins = self.x[0], self.xmax, len(self.x)
+        if len(self.y) == 0: self.y = [0.0] * nbins
+        assert len(self.y) == nbins
+        for v in values:
+            ibin = int((v - xmin) / (xmax - xmin) * nbins)
+            if not include_uoflow:
+                if ibin < 0 or ibin >= nbins: continue
+            else:
+                if ibin < 0: ibin = 0
+                if ibin >= nbins: ibin = nbins-1
+            self.y[ibin] += 1
+        
 
-    # scale all y values by factor
     def scale_y(self, factor):
+        """
+        Scale all y values by the given factor. Also scales the y-values in the bands; y errors are not scaled.
+        """
         self.y = [y*factor for y in self.y]
         if self.bands is None: return
         for band in self.bands:
             band[0][:] = [y * factor for y in band[0]]
             band[1][:] = [y * factor for y in band[1]]
 
-    # set data according to the "histo triple" h = (xmin, xmax, data)
+    def scale_x(self, factor):
+        """ Scale all x-values by the given factor, including xmax.
+        """
+        self.x = [x*factor for x in self.x]
+        self.xmax *= factor
+
+    # set data according to the "histo triple" h = (xmin, xmax, data) or Histogram instance
     def histo_triple(self, h):
         binwidth = (h[1] - h[0]) / len(h[2])
         self.x = [h[0] + i * binwidth for i in range(len(h[2]))]
         self.y = h[2][:]
+        self.xmax = h[1]
+        
+    def set_histogram(self, histo):
+        """
+        Set the variables x, xmax, y, yerrors from ``histo``. ``histo`` should be an instance of :class:`theta_auto.Histogram`.
+        """
+        self.xmax = histo.get_xmax()
+        self.x = [histo.get_x_low(i) for i in range(histo.get_nbins())]
+        self.y = histo.get_values()
+        self.yerrors = histo.get_uncertainties()
+        self.xerrors = None
     
     # replace x, y and bands by a smoothed version, obtained by cubic interpolation
     # evaluated n times more points than original
@@ -87,10 +164,11 @@ class plotdata:
     # in case more control is needed, make the smoothing outside and re-set the x,y values.
     #
     # should only be used in cases self.as_function = True
-    def smooth(self, n = 3, s = None, relunc = 0.05):
+    def smooth(self, n = 3, s = None, relunc = 0.05, miny_factor = 0.0):
         oldx = self.x[:]
         # assume a 5% uncertainty for the smoothing
-        tck = interpolate.splrep(oldx, self.y, w = [1 / (relunc * self.y[i]) for i in range(len(oldx))], s = s)
+        y_average = sum(self.y) / len(self.y)
+        tck = interpolate.splrep(oldx, self.y, w = [1 / (relunc * max(self.y[i], y_average * miny_factor)) for i in range(len(oldx))], s = s)
         self.x = list(np.linspace(min(self.x), max(self.x), n * len(self.x)))
         self.y = interpolate.splev(self.x, tck)
         if self.bands is None: return
@@ -100,24 +178,45 @@ class plotdata:
             tck = interpolate.splrep(oldx, band[1], w = [1 / (relunc * band[1][i]) for i in range(len(oldx))], s = s)
             band[1][:] = interpolate.splev(self.x, tck)
         
-    # ofile is a string (filename) or a handle to an open file
     def write_txt(self, ofile):
+        """
+        Write the content in a text file.
+        
+        :param ofile: The output file, either as string or an open file handle
+        
+        One line is written per (x,y) point. The first line is a comment line starting with "#" explaining the fields. The general data layout is::
+        
+          x y yerror band0ymin band0ymax band1ymin band1ymax ...
+          
+        where in general some entries are missing if not available.
+        """
         if type(ofile)==str: ofile = open(ofile, 'w')
         ofile.write('# x; y')
+        if self.yerrors is not None: ofile.write('; yerror')
         if self.bands is not None:
             for k in range(len(self.bands)):
                 ofile.write('; band %d low; band %d high' % (k, k))
         ofile.write("\n")
         for i in range(len(self.x)):
             ofile.write("%10.5g %10.5g " % (self.x[i], self.y[i]))
+            if self.yerrors is not None:
+                ofile.write("%10.5g " % self.yerrors[i])
             if self.bands is not None:
                 for k in range(len(self.bands)):
                     ofile.write("%10.5g %10.5g" % (self.bands[k][0][i], self.bands[k][1][i]))
             ofile.write("\n")
+            
+    # printing support, similar to write_txt, but in a string. Note that this might cxhange in the future; it's mainly for
+    # quick inspection in the script by the user. Use write_txt to be safe.
+    def __str__(self):
+        sio = StringIO.StringIO()
+        self.write_txt(sio)
+        return sio.getvalue()
     
-    # infile is the filename
     def read_txt(self, infile):
-        # values is a list of lines in the file; each line is a list of floats
+        """
+        Read data from a file produced by :meth:`write_txt`. This replaces the instance variables x, y, yerrors and bands.
+        """
         values = []
         for line in file(infile):
             if len(line) == 0: continue
@@ -128,46 +227,58 @@ class plotdata:
                 if len(values[0]) != len(line_values): raise RuntimeError, "number of values given is inconsistent!"
             values.append(line_values)
         n_values = len(values[0])
-        assert n_values % 2 == 0, "invalid number of values (has to be even)"
+        have_yerrors = (n_values % 2 == 1)
         # read x, y values:
         self.x = [row[0] for row in values]
         self.y = [row[1] for row in values]
+        if have_yerrors:
+            self.yerrors = [row[2] for row in values]
+        else:
+            self.yerrors = None
+        self.xerrors = None
         # read bands:
         n_bands = (n_values - 2) / 2
         self.bands = []
         colors = ['#ffff00', '#00ff00']
+        yerror_offset = 0
+        if have_yerrors: yerror_offset = 1
         for i in range(n_bands):
-            band = ([row[2+2*i] for row in values], [row[3+2*i] for row in values], colors[i % len(colors)])
+            band = ([row[2+2*i +  yerror_offset] for row in values], [row[3+2*i  + yerror_offset] for row in values], colors[i % len(colors)])
             self.bands.append(band)
         
-        
-
-## \brief Make a plot and write it to an output file
-#
-#
-# histos is a list / tuple of plotdata instances, xlabel and ylabel are lables for the axes, outname is the output filename.
-#
-# logx and logy control whether the x/y-scale should be logarithmic.
-#
-# If set, ax_modifier should be a function / callable. It will be called with the matplotlib Axes instance as only argument.
-# This can be used for arbitrary mainulation, such as adding other objects to the plot, etc.
-#
-# title_ul and title_ur are strings shown on the upper left and upper right of the plot, resp.
-#
-# extra_legend_items is a list of extra items to add to the legend, as tuple (handle, lable) where handle is a matplotlib Artist
-# and label the legend string. As special case, we also allow handle to be a string in which case it is assumed to encode a color.
-# For other cases, see matplotlib legend guide for details.
-#
-# xmin, xmax, ymin, ymax control the region shown in the plot. the default is to determine the region automatically (by matplotblib)
 def plot(histos, xlabel, ylabel, outname = None, logy = False, logx = False, ax_modifier=None, title_ul=None, title_ur = None,
-extra_legend_items = [], xmin = None, xmax=None, ymin=None, ymax=None, legend_args = {}, fig = None):
+ extra_legend_items = [], xmin = None, xmax=None, ymin=None, ymax=None, legend_args = {}, fig = None, figsize_cm = (15, 12), fontsize = 10, axes_creation_args = {}):
+    """
+    Plot the given :class:`plotutil.plotdata` objects. Many drawing options are controlled by those instances; see documentation there.
+    
+    :param histos: A list of :class:`plotutil.plotdata` instances or a single instance
+    :param xlabel: The label for the x axis. Latex is allowed in $$-signs
+    :param ylabel: The label for the y axis. Latex is allowed in $$-signs
+    :param outname: name of the output file; the file extension will be used to guess the file type (by matplotlib); typical choices are ".pdf" and ".png".
+    :param logy: use log-scale in y direction
+    :param logx: use log scale in x direction
+    :param ax_modifier: function called with the matplotlib.Axes object as argument. Allows to perform additional manipulation in case you need to "extend" this method
+    :param title_ul: Title for the upper left corner. Can be either a string or a list of strings. A list of strings will be displayed as multiple lines.
+    :param title_ur: Title for the upper right corner. Unlike ``title_ul``, only a single string is allowed
+    :param extra_legend_items: allows to specify extra items for the legend. It is a list of two-tuples ``(handle, legend)`` where ``handle`` is a matplotlib object to use to draw the legend and ``legend`` is the string to be drawn
+    :param xmin: The minimum x value to draw
+    :param xmax: The maximum x value to draw
+    :param ymin: The minimum y value to draw
+    :param ymax: The maximum y value to draw
+    :param figsize_cm: The figure size in cm as tuple ``(width, height)``
+    :param fontsize: The font size in points
+    """
+    #extra_legend_items = extra_legend_items[:]
+    legend_items = []
     cm = 1.0/2.54
-    fsize = 15*cm, 12*cm
-    fp = fm.FontProperties(size=10)
+    fsize = figsize_cm[0]*cm, figsize_cm[1]*cm
+    fp = fm.FontProperties(size = fontsize)
     if fig is None:
         fig = plt.figure(figsize = fsize)
-    ax = fig.add_axes((0.15, 0.15, 0.8, 0.75))
-    if logy:  ax.set_yscale('log')
+    axes_creation_args = dict(axes_creation_args) # make copy to prevent next line from modifying argument.
+    rect = axes_creation_args.pop('rect', (0.15, 0.15, 0.8, 0.75))
+    ax = fig.add_axes(rect, **axes_creation_args)
+    if logy: ax.set_yscale('log')
     if logx: ax.set_xscale('log')
     add_xlabel(ax, xlabel, fontproperties=fp)
     add_ylabel(ax, ylabel, fontproperties=fp)
@@ -176,16 +287,23 @@ extra_legend_items = [], xmin = None, xmax=None, ymin=None, ymax=None, legend_ar
             yoffset = 1.02
             for s in title_ul:
                 ax.text(0.0 if yoffset>1 else 0.02, yoffset, s, transform = ax.transAxes, ha='left', va = 'bottom' if yoffset > 1 else 'top')
-                yoffset -= 0.05
+                yoffset -= fontsize * 1.0 / (72 * fsize[1]) * 1.5
         else:
             ax.text(0.0, 1.02, title_ul, transform = ax.transAxes, ha='left', va='bottom')
     if title_ur is not None: ax.text(1.0, 1.02, title_ur, transform = ax.transAxes, ha='right', va='bottom')
     draw_legend = False
+    if isinstance(histos, plotdata): histos = [histos]
     for histo in histos:
+        legend_added = False
         assert len(histo.x)==len(histo.y), "number of x,y coordinates not the same for '%s'" % histo.legend
         if histo.legend: draw_legend = True
         # allow empty "dummy" plots which have legend but no content:
-        if len(histo.x)==0: continue
+        if len(histo.x)==0:
+            if histo.fill_color is not None:
+                legend_items.append((histo.legend_order, matplotlib.patches.Rectangle((0, 0), 1, 1, fc=histo.fill_color, ec=histo.color, lw=histo.lw), histo.legend))
+            else:
+                legend_items.append((histo.legend_order, matplotlib.lines.Line2D((0, 1, 2), (0, 0, 0), color=histo.color, lw=histo.lw), histo.legend))
+            continue
         if histo.bands is not None:
             for band in histo.bands:
                 if histo.bands_fill:
@@ -197,45 +315,103 @@ extra_legend_items = [], xmin = None, xmax=None, ymin=None, ymax=None, legend_ar
                     ys.append(ys[0])
                     ax.plot(xs, ys, lw=histo.band_lw, color=band[2])
         if not histo.as_function:
-            # histo.x is assumed to contain the lower bin edges in this case ...
-            if len(histo.x) >= 2:  x_binwidth = histo.x[1] - histo.x[0]
-            else: x_binwidth = 1.0
-            # if histo.yerrors is set, draw with errorbars, shifted by 1/2 binwidth ...
-            if histo.yerrors is not None:
-               new_x = [x + 0.5 * x_binwidth for x in histo.x]
-               ax.errorbar(new_x, histo.y, histo.yerrors, label=histo.legend, ecolor = histo.color, marker='o', ms = 2, capsize = 0, fmt = None)
             if histo.yerrors is None or histo.draw_histo:
                new_x = [histo.x[0]]
                for x in histo.x[1:]: new_x += [x]*2
-               new_x += [histo.x[-1] + x_binwidth]
+               new_x += [histo.xmax]
                new_y = []
                for y in histo.y: new_y += [y]*2
                if logy and ymin is not None:
                     for i in range(len(new_y)): new_y[i] = max(new_y[i], ymin)
                if histo.fill_color is not None:
-                   ax.fill_between(new_x, new_y, [0] * len(new_y), lw=histo.lw, label=histo.legend, color=histo.color, facecolor = histo.fill_color)
+                    if histo.fill_xrange is None:
+                        ax.fill_between(new_x, new_y, [0] * len(new_y), lw=histo.lw, color=histo.color, facecolor = histo.fill_color)
+                        legend_items.append((histo.legend_order, matplotlib.patches.Rectangle((0, 0), 1, 1, fc=histo.fill_color, ec=histo.color, lw=histo.lw), histo.legend))
+                    else:
+                        x_clipped = [histo.fill_xrange[0]]
+                        y_clipped = []
+                        for x,y in zip(new_x, new_y):
+                            if x >= histo.fill_xrange[0]:
+                                if len(y_clipped)==0: y_clipped.append(y)
+                                if x <= histo.fill_xrange[1]:
+                                    x_clipped.append(x)
+                                    y_clipped.append(y)
+                                else:
+                                    x_clipped.append(histo.fill_xrange[1])
+                                    y_clipped.append(y_clipped[-1])
+                                    break
+                        ax.fill_between(x_clipped, y_clipped, [histo.fill_to_y] * len(y_clipped), lw=0, color=None, facecolor = histo.fill_color)
+                        ax.plot(new_x, new_y, histo.fmt, lw=histo.lw, color=histo.color)
+                        legend_items.append((histo.legend_order, matplotlib.patches.Rectangle((0, 0), 1, 1, fc=histo.fill_color, ec=histo.color, lw=histo.lw), histo.legend))
+                        #legend_items.append((histo.legend_order, matplotlib.lines.Line2D((0, 1, 2), (0, 0, 0), color=histo.color, lw=histo.lw), histo.legend))
                else:
-                   ax.plot(new_x, new_y, histo.fmt, lw=histo.lw, label=histo.legend, color=histo.color)
-               #ax.bar(map(lambda x: x - 0.5  * x_binwidth, histo.x), histo.y, width=x_binwidth, color=histo.color, label=histo.legend, ec=histo.color)
+                   ax.plot(new_x, new_y, histo.fmt, lw=histo.lw, color=histo.color)
+                   legend_items.append((histo.legend_order, matplotlib.lines.Line2D((0, 1, 2), (0, 0, 0), color=histo.color, lw=histo.lw, ls = histo.fmt), histo.legend))
+               legend_added = True
+            # if histo.yerrors is set, draw with errorbars, shifted by 1/2 binwidth ...
+            if histo.yerrors is not None:
+                if histo.yerrors_mode.startswith('bars'):
+                    if histo.xmax is None: raise RuntimeError, "need xmax in histogram for y errors"
+                    low_x = histo.x + [histo.xmax]
+                    x_centers = [0.5 * (low_x[i] + low_x[i+1]) for i in range(len(histo.x))]
+                    ys = histo.y
+                    yerrors = histo.yerrors
+                    if histo.yerrors_mode != 'bars0':
+                        x_new, y_new, ye_new = [], [], []
+                        for x,y,ye in zip(x_centers, ys, yerrors):
+                            if y != 0:
+                                x_new.append(x)
+                                y_new.append(y)
+                                ye_new.append(ye)
+                        x_centers, ys, yerrors = x_new, y_new, ye_new
+                    ax.plot(x_centers, ys, marker = histo.marker, markersize=histo.markersize, ls='None', mew = 0.0, mfc = histo.color)
+                    ax.errorbar(x_centers, ys, yerrors, ecolor = histo.color, capsize = histo.capsize, lw = histo.lw, fmt = None)
+                    if not legend_added:
+                        legend_items.append((histo.legend_order, matplotlib.lines.Line2D((0, 1, 2), (0, 0, 0), color=histo.color, marker=histo.marker, markevery=(1,10), mew=0.0, markersize=histo.markersize, lw=histo.lw), histo.legend))
+                        legend_added = True
+                else:
+                    new_x = [histo.x[0]]
+                    for x in histo.x[1:]: new_x += [x]*2
+                    new_x += [histo.xmax]
+                    new_y_low, new_y_high = [], []
+                    for y, ye in zip(histo.y, histo.yerrors):
+                        new_y_low += [y - ye]*2
+                        new_y_high += [y + ye]*2
+                    ax.fill_between(new_x, new_y_high, new_y_low, lw=histo.lw, color = histo.color, facecolor = histo.fill_color, alpha = histo.yerrors_fill_alpha)
+                    if not legend_added:
+                        legend_items.append((histo.legend_order, matplotlib.patches.Rectangle((0, 0), 1, 1, fc=histo.fill_color, ec=histo.color, lw=histo.lw, alpha = histo.yerrors_fill_alpha), histo.legend))
+                        legend_added = True
         else:
             if histo.yerrors is not None:
-                lw = histo.lw
-                if histo.draw_line is False: lw = 0
-                ax.errorbar(histo.x, histo.y, histo.yerrors, elinewidth = histo.lw, lw=lw, label=histo.legend, color=histo.color, marker=histo.marker)
+                if histo.yerrors_mode == 'bars':
+                    lw = histo.lw
+                    if histo.draw_line is False: lw = 0
+                    ax.errorbar(histo.x, histo.y, histo.yerrors, elinewidth = histo.lw, lw=lw, label=histo.legend, color=histo.color, marker=histo.marker, markersize=histo.markersize)                    
+                elif histo.yerrors_mode == 'area':
+                    y_high = [y + yerror for (y, yerror) in zip(histo.y, histo.yerrors)]
+                    y_low = [y - yerror for (y, yerror) in zip(histo.y, histo.yerrors)]
+                    ax.fill_between(histo.x, y_high, y_low, lw = histo.lw, color = histo.color, facecolor = histo.fill_color, alpha = histo.yerrors_fill_alpha)
+                else:
+                    raise RuntimeError, "yerrors_mode='%s' for as_function=True not supported!" % histo.yerrors_mode
             else:
-                ax.plot(histo.x, histo.y, histo.fmt, lw=histo.lw, label=histo.legend, color=histo.color, marker=histo.marker)
+                if histo.fill_color is not None:
+                    ax.fill_between(histo.x, histo.y, [histo.fill_to_y] * len(histo.y), lw=histo.lw, label=histo.legend, color=histo.color, facecolor = histo.fill_color)
+                else:
+                    ax.plot(histo.x, histo.y, histo.fmt, lw=histo.lw, color=histo.color, marker=histo.marker, markersize=histo.markersize)
+                    legend_items.append((histo.legend_order, matplotlib.lines.Line2D((0, 1, 2), (0, 0, 0), color=histo.color, ls = histo.fmt, lw=histo.lw), histo.legend))
+    legend_items = [(h,l) for (o,h,l) in sorted(legend_items, cmp = lambda x,y: cmp(x[0], y[0]))]
     if draw_legend:
         handles, labels = ax.get_legend_handles_labels()
         handles = handles[:]
         labels = labels[:]
-        for h, l in extra_legend_items:
+        for h, l in  legend_items + extra_legend_items:
             labels.append(l)
             if type(h)==str:
                 h = matplotlib.patches.Rectangle((0, 0), 1, 1, fc=h)
             handles.append(h)
-        ax.legend(handles, labels, prop = fp, **legend_args)
-    if ax.get_legend() is not None:
-        map(lambda line: line.set_lw(1.5), ax.get_legend().get_lines())
+        ax.legend(handles, labels, prop = fp, numpoints = 1, **legend_args)
+    #if ax.get_legend() is not None:
+    #    map(lambda line: line.set_lw(1.5), ax.get_legend().get_lines())
 
     if ymin!=None:
         ax.set_ylim(ymin=ymin)
@@ -243,7 +419,11 @@ extra_legend_items = [], xmin = None, xmax=None, ymin=None, ymax=None, legend_ar
         ax.set_ylim(ymax=ymax)
     if xmin!=None:
         ax.set_xlim(xmin=xmin)
-    if xmax!=None:
+    if xmax is None:
+        if len(histos) > 0:
+            xmax = max([max(pd.x) for pd in histos])
+            xmax = max([xmax] + [pd.xmax for pd in histos if pd.xmax is not None])
+    if xmax is not None:
         ax.set_xlim(xmax=xmax)
     
     if ax_modifier!=None: ax_modifier(ax)
@@ -254,4 +434,18 @@ def make_stack(pdatas):
     for i in range(len(pdatas)):
         for j in range(i+1, len(pdatas)):
             pdatas[i].y = map(lambda x: x[0] + x[1], zip(pdatas[i].y, pdatas[j].y))
+            if pdatas[i].yerrors is not None and pdatas[j].yerrors is not None:
+                pdatas[i].yerrors = map(lambda x: math.sqrt(x[0]**2 + x[1]**2), zip(pdatas[i].yerrors, pdatas[j].yerrors))
+
+
+def scatter_ax_m(x, y, xycol = None, s = 8):
+   if xycol is not None:
+       if type(xycol)==str:
+           color = xycol
+       else:
+           color = [xycol(xv, yv) for xv, yv in zip(x,y)]
+   else:
+       color = '#000000'
+   return lambda ax: (ax.scatter(x,y, color = color, s = s))
+
 

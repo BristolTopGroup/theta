@@ -7,8 +7,8 @@ using namespace std;
 using namespace theta;
 
 namespace{
-    std::string format_notfound(const Setting & s, const string & name){
-        return "did not find the setting at path '" + s.get_path() + "." + name + "'";
+    std::string format_error(const Setting & s, const string & name, const string & message){
+        return "While accessing setting at path '" + s.get_path() + "." + name + "': " + message;
     }
     
     std::string format_wrongtype(const Setting & s,  const Setting::Type & expected_type){
@@ -49,13 +49,15 @@ std::string Setting::type_to_string(const Type & type){
     throw logic_error("type_to_string internal error");
 }
 
-Setting::Setting(const SettingImplementation * impl_this_, const SettingImplementation * impl_root_, const boost::shared_ptr<SettingUsageRecorder> & rec_): impl_this(impl_this_), impl_root(impl_root_), rec(rec_){}
+Setting::Setting(const SettingImplementation * impl_this_, const SettingImplementation * impl_root_, const boost::shared_ptr<SettingUsageRecorder> & rec_, const string & original_name_):
+   impl_this(impl_this_), impl_root(impl_root_), original_name(original_name_), rec(rec_){}
+   
 Setting::Setting(std::auto_ptr<SettingImplementation> & impl_root_, const boost::shared_ptr<SettingUsageRecorder> & rec_): sp_impl_root(impl_root_), rec(rec_){
     impl_this = impl_root = sp_impl_root.get();
 }
 
 Setting::operator bool() const{
-    rec->markAsUsed(get_path());
+    if(rec)rec->markAsUsed(get_path());
     try{
         return *impl_this;
     }
@@ -65,7 +67,7 @@ Setting::operator bool() const{
 }
 
 Setting::operator std::string() const{
-    rec->markAsUsed(get_path());
+    if(rec)rec->markAsUsed(get_path());
     try{
         return *impl_this;
     }
@@ -75,7 +77,7 @@ Setting::operator std::string() const{
 }
 
 Setting::operator long int() const{
-    rec->markAsUsed(get_path());
+    if(rec)rec->markAsUsed(get_path());
     try{
         return *impl_this;
     }
@@ -85,7 +87,7 @@ Setting::operator long int() const{
 }
 
 Setting::operator int() const{
-    rec->markAsUsed(get_path());
+    if(rec)rec->markAsUsed(get_path());
     try{
         long int res = static_cast<long int>(*impl_this);
         if(res > numeric_limits<long int>::max()){
@@ -99,7 +101,7 @@ Setting::operator int() const{
 }
 
 Setting::operator unsigned int() const{
-    rec->markAsUsed(get_path());
+    if(rec)rec->markAsUsed(get_path());
     try{
         long int res = static_cast<long int>(*impl_this);
         if(res > numeric_limits<unsigned int>::max() || res < 0){
@@ -113,7 +115,7 @@ Setting::operator unsigned int() const{
 }
 
 Setting::operator double() const{
-    rec->markAsUsed(get_path());
+    if(rec)rec->markAsUsed(get_path());
     try{
         return *impl_this;
     }
@@ -123,7 +125,7 @@ Setting::operator double() const{
 }
 
 double Setting::get_double_or_inf() const {
-    rec->markAsUsed(get_path());
+    if(rec)rec->markAsUsed(get_path());
     if(get_type()==TypeFloat) return *this;
     string infstring = *this;
     if(infstring == "inf" || infstring == "+inf") return numeric_limits<double>::infinity();
@@ -132,11 +134,12 @@ double Setting::get_double_or_inf() const {
 }
 
 size_t Setting::size() const{
-    rec->markAsUsed(get_path());
+    if(rec)rec->markAsUsed(get_path());
     return impl_this->size();
 }
 
 Setting Setting::resolve_link(const SettingImplementation * setting, const SettingImplementation * root, const boost::shared_ptr<SettingUsageRecorder> & rec){
+    string original_name = setting->get_name();
     try{
         std::string next_path;
         //hard-code maximum redirection level of 10:
@@ -151,15 +154,15 @@ Setting Setting::resolve_link(const SettingImplementation * setting, const Setti
                     next_path.erase(0, dotpos+1);
                 }while(next_path.size());
             }
-            if(s->get_type() != Setting::TypeString) return Setting(s, root, rec);
+            if(s->get_type() != Setting::TypeString) return Setting(s, root, rec, original_name);
             std::string link = *s;
             if(link.size()==0 || link[0]!='@'){
-                return Setting(s, root, rec);
+                return Setting(s, root, rec, original_name);
             }
             link.erase(0, 1);
             next_path = link;
             //mark any intermediate link as used:
-            rec->markAsUsed(s->get_path());
+            if(rec)rec->markAsUsed(s->get_path());
         }
     }
     catch(Exception & ex){
@@ -176,23 +179,39 @@ Setting Setting::resolve_link(const SettingImplementation * setting, const Setti
 
 Setting Setting::operator[](int i) const{
     try{
-        rec->markAsUsed(get_path());
+        if(rec)rec->markAsUsed(get_path());
         return Setting::resolve_link(&((*impl_this)[i]), impl_root, rec);
+    }
+    catch(const Exception & ex){
+        stringstream ss;
+        ss << "[" << i << "]";
+        throw ConfigurationException(format_error(*this, ss.str(), ex.message));
+    }
+    catch(std::exception & ex){
+        stringstream ss;
+        ss << "[" << i << "]";
+        throw ConfigurationException(format_error(*this, ss.str(), ex.what()));
     }
     catch(...){
         stringstream ss;
         ss << "[" << i << "]";
-        throw ConfigurationException(format_notfound(*this, ss.str()));
+        throw ConfigurationException(format_error(*this, ss.str(), "unknown exception"));
     }
 }
 
 Setting Setting::operator[](const std::string & name) const{
     try{
-        rec->markAsUsed(get_path());
+        if(rec)rec->markAsUsed(get_path());
         return Setting::resolve_link(&((*impl_this)[name]), impl_root, rec);
     }
+    catch(const Exception & ex){
+        throw ConfigurationException(format_error(*this, name, ex.message));
+    }
+    catch(std::exception & ex){
+        throw ConfigurationException(format_error(*this, name, ex.what()));
+    }
     catch(...){
-        throw ConfigurationException(format_notfound(*this, name));
+        throw ConfigurationException(format_error(*this, name, "unknown exception"));
     }
 }
 
@@ -201,6 +220,7 @@ bool Setting::exists(const std::string & path) const{
 }
 
 std::string Setting::get_name() const{
+    if(original_name != "") return original_name;
     return impl_this->get_name();
 }
 
@@ -282,7 +302,8 @@ bool LibconfigSetting::exists(const std::string & path) const{
 }
 
 std::string LibconfigSetting::get_name() const{
-    return setting->getName();
+    const char * res = setting->getName();
+    return res == 0 ? "": res;
 }
 
 std::string LibconfigSetting::get_path() const{

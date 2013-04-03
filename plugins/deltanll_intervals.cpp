@@ -1,7 +1,7 @@
 #include "plugins/deltanll_intervals.hpp"
 #include "plugins/reduced_nll.hpp"
-#include "plugins/secant.hpp"
-#include "plugins/asimov_likelihood_widths.hpp"
+#include "interface/secant.hpp"
+#include "interface/asimov-utils.hpp"
 #include "interface/plugin.hpp"
 #include "interface/minimizer.hpp"
 #include "interface/histogram.hpp"
@@ -17,15 +17,16 @@ void deltanll_intervals::produce(const theta::Data & data, const theta::Model & 
     std::auto_ptr<NLLikelihood> nll = get_nllikelihood(data, model);
     if(not start_step_ranges_init){
         const Distribution & d = nll->get_parameter_distribution();
-        fill_mode_support(start, ranges, d);
-        step.set(asimov_likelihood_widths(model, override_parameter_distribution, additional_nll_term));
+        ranges.set_from(d);
+        d.mode(start);
+        step.set(asimov_likelihood_widths(model, override_parameter_distribution));
         start_step_ranges_init = true;
     }
     MinimizationResult minres = minimizer->minimize(*nll, start, step, ranges);
     const double value_at_minimum = minres.values.get(pid);
     products_sink->set_product(c_maxl, value_at_minimum);
     ReducedNLL nll_r(*nll, pid, minres.values, re_minimize ? minimizer.get() : 0, start, step, ranges);
-    const pair<double, double> & range = ranges[pid];
+    const pair<double, double> & range = ranges.get(pid);
     for(size_t i=0; i < deltanll_levels.size(); ++i){
         nll_r.set_offset_nll(minres.fval + deltanll_levels[i]);
         //upper value: look for a parameter value with a sign flip:
@@ -111,8 +112,8 @@ deltanll_intervals::deltanll_intervals(const theta::Configuration & cfg): Produc
     }
     deltanll_levels.resize(clevels.size());
     for(size_t i=0; i<clevels.size(); ++i){
-        if(clevels[i] < 0.0) throw invalid_argument("deltanll_intervals: clevel < 0 not allowed.");
-        if(clevels[i] >= 1.0) throw invalid_argument("deltanll_intervals: clevel >= 1.0 not allowed.");
+        if(clevels[i] < 0.0) throw invalid_argument("clevel < 0 not allowed.");
+        if(clevels[i] >= 1.0) throw invalid_argument("clevel >= 1.0 not allowed.");
         deltanll_levels[i] = utils::phi_inverse((1+clevels[i])/2);
         deltanll_levels[i] *= deltanll_levels[i]*0.5;
     }

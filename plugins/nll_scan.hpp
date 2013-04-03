@@ -4,6 +4,7 @@
 #include "interface/variables.hpp"
 #include "interface/database.hpp"
 #include "interface/producer.hpp"
+#include "interface/distribution.hpp"
 
 #include <string>
 
@@ -51,22 +52,22 @@
 class nll_scan: public theta::Producer{
 public:
 
-    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
+    /// Constructor used by the plugin system to build an instance from settings in a configuration file
     nll_scan(const theta::Configuration & cfg);
     virtual void produce(const theta::Data & data, const theta::Model & model);
     
 private:
-    //boost::shared_ptr<theta::VarIdManager> vm;
     theta::ParId pid;
     double start, stop, step;
     unsigned int n_steps;
     bool re_minimize;
     
     //minimizer stuff:
+    bool adaptive_startvalues;
     std::auto_ptr<theta::Minimizer> minimizer;
     bool start_step_ranges_init;
     theta::ParValues m_start, m_step;
-    std::map<theta::ParId, std::pair<double, double> > m_ranges;
+    theta::Ranges m_ranges;
     
 
     //table columns:

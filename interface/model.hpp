@@ -2,6 +2,7 @@
 #define MODEL_HPP
 
 #include "interface/decls.hpp"
+#include "interface/atomic.hpp"
 #include "interface/variables.hpp"
 #include "interface/phys.hpp"
 #include "interface/data.hpp"
@@ -39,6 +40,9 @@ namespace theta {
      *    };
      * 
      *    bb_uncertainties = true; // optional, default is false, which does not include MC uncertainties
+     * 
+     *    additional_nll_term = { // optional. If given, must be a Function specification to add to the negative log likelihood
+     *    };
      * };
      *
      * //see fixed_poly documentation for details; can also use any other HistogramFunction here.
@@ -121,6 +125,16 @@ namespace theta {
         virtual const Distribution & get_parameter_distribution() const = 0;
         
         
+        /** \brief Return the additional term for the negative log-likelihood, if any.
+         * 
+         * If no additional nll term is defined, a null pointer is returned.
+         * 
+         * The memory of the returned pointer belong to the model, it is valid as long as the
+         * model lives.
+         */
+        virtual const Function * get_additional_nll_term() const = 0;
+        
+        
         /** \brief Return the distribution for the real-valued observables, if any.
          *
          * If none is defined, a null-pointer is returned.
@@ -138,44 +152,65 @@ namespace theta {
         ObsIds observables;
     };
     
-    
     /** \brief The default model in theta
+     * 
+     * Declared here to allow extension via deriving from it.
      */
     class default_model: public Model{
-    private:
-        //The problem of std::map<ObsId, ptr_vector<Function> > is that
-        // this requires ptr_vector to be copy-constructible which in turn
-        // requires Function to have a new_clone function ...
-        //in order to save rewrite, typedef the coeffs and histos map types ...
-        typedef boost::ptr_map<ObsId, boost::ptr_vector<HistogramFunction> > histos_type;
-        typedef boost::ptr_map<ObsId, boost::ptr_vector<Function> > coeffs_type;
-        histos_type histos;
-        coeffs_type coeffs;
+    protected:
+        struct hdim{
+            size_t nbins;
+            double xmin, xmax;
+        };
+        
+        // flattened histogramfunctions and coeffs:
+        boost::ptr_vector<HistogramFunction> hfs;
+        boost::ptr_vector<Function> coeffs;
+        // for each observable, save the last index into hfs / coeffs:
+        std::vector<std::pair<ObsId, size_t> > last_indices;
+        std::vector<hdim> histo_dimensions; // same size as last_indices
+
         std::auto_ptr<Distribution> parameter_distribution;
         std::auto_ptr<Distribution> rvobservable_distribution;
+        std::auto_ptr<Function> additional_nll_term;
         
         bool bb_uncertainties;
-        
+        bool robust_nll;
+
+    private:
         void set_prediction(const ObsId & obs_id, boost::ptr_vector<Function> & coeffs, boost::ptr_vector<HistogramFunction> & histos);
         template<typename HT>
         void get_prediction_impl(DataT<HT> & result, const ParValues & parameters) const;
         
-     public:
-        default_model(const Configuration & cfg);
+    public:
+        explicit default_model(const Configuration & cfg);
         virtual void get_prediction(DataWithUncertainties & result, const ParValues & parameters) const;
         virtual void get_prediction(Data & result, const ParValues & parameters) const;
         virtual std::auto_ptr<NLLikelihood> get_nllikelihood(const Data & data) const;
         
+        virtual const Function * get_additional_nll_term() const{
+            return additional_nll_term.get();
+        }
+        
         virtual const Distribution & get_parameter_distribution() const {
-           return *parameter_distribution;
+            return *parameter_distribution;
         }
         
         virtual const Distribution * get_rvobservable_distribution() const{
             return rvobservable_distribution.get();
         }
         
+        const std::vector<std::pair<ObsId, size_t> > & get_last_indices() const{
+            return last_indices;
+        }
+        
         virtual ~default_model();  
     };
+    
+
+    /// A counter for the number of likelihood evaluations.
+    extern atomic_int n_nll_eval;
+    
 
     /** \brief Function object of a negative log likelihood of a model, given data.
      *
@@ -192,14 +227,6 @@ namespace theta {
     class NLLikelihood: public Function {
         
     public:
-        /** \brief Set the additional term for the negative log-likelihood
-         *
-         * The result of the function evaluation will add these function values.
-         *
-         * This can be used as additional constraints / priors for the likelihood function or
-         * external information.
-         */
-        virtual void set_additional_term(const boost::shared_ptr<Function> & term) = 0;
         
         /** \brief Set an alternate prior distribution for the parameters
          *
@@ -217,12 +244,11 @@ namespace theta {
         
         /** \brief Returns the currently set parameter distribution used in the likelihood evaluation
          * 
-         * This is either the distribution from the model, or, if set_override_distribution has been called,
+         * This is either the distribution from the model, or -- if set_override_distribution has been called --
          * the Distribution instance given there.
          * 
          * The returned Distribution reference depends exactly on the model parameters (which is the
          * same as getParameters()).
-         * 
          */
         virtual const Distribution & get_parameter_distribution()const = 0;
         
@@ -233,50 +259,6 @@ namespace theta {
             return par_ids.size();
         }
     };
-    
-    
-    class default_model_nll: public NLLikelihood{
-    friend class default_model;
-    public:
-        using Function::operator();
-        virtual double operator()(const ParValues & values) const;
-        
-        virtual void set_additional_term(const boost::shared_ptr<Function> & term);
-        virtual void set_override_distribution(const boost::shared_ptr<Distribution> & d);
-        virtual const Distribution & get_parameter_distribution() const{
-            if(override_distribution) return *override_distribution;
-            else return model.get_parameter_distribution();
-        }
-        
-        
-    protected:
-        const default_model & model;
-        const Data & data;
-
-        const ObsIds obs_ids;
-        
-        boost::shared_ptr<Function> additional_term;
-        boost::shared_ptr<Distribution> override_distribution;
-
-        
-        
-        default_model_nll(const default_model & m, const Data & data, const ObsIds & obs);
-    private:
-        //cached predictions:
-        mutable Data predictions;
-    };
-     
-     // includes additive Barlow-Beeston uncertainties, where the extra nuisance parameters of this method (1 per bin) have been "profiled out".
-     class default_model_bbadd_nll: public default_model_nll {
-     friend class default_model;
-     public:
-         using Function::operator();
-         virtual double operator()(const ParValues & values) const;
-         
-     private:
-         default_model_bbadd_nll(const default_model & m, const Data & data, const ObsIds & obs);
-         mutable DataWithUncertainties predictions_wu;
-     };
 }
 
 #endif

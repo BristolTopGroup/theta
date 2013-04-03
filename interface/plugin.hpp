@@ -19,16 +19,13 @@ namespace theta {
      * the most important being \c setting, which is the setting group from the configuration file
      * for which this plugin class should be created.
      *
-     * The standard proporties in the PropertyMap are:
+     * The standard properties in the PropertyMap are:
      * <ul>
      *   <li>VarIdManager "default" to get information about variables</li>
      *   <li>ProductsSink "default" where the producers  and other ProductSources write their results</li>
      *   <li>int "runid"</li>
      *   <li>RndInfoTable "default"</li>
-     *   <li>int "seed_offset"</li>
      * </ul>
-     *
-     * Apart from the ProductsSink, none of these properties must be used beyond the initialisation.
      */
     class Configuration{
     public:
@@ -39,9 +36,9 @@ namespace theta {
         /// The setting in the configuration file from which to build the instance
         Setting setting;
 
-        /** \brief Construct Configuration by specifying all data members
+        /** \brief Construct Configuration from the root setting
          */
-        Configuration(const Setting & setting_);
+        explicit Configuration(const Setting & root_setting);
 
         /** \brief Copy elements from another Configuration, but replace Configuration::setting
          *
@@ -49,12 +46,16 @@ namespace theta {
          */
         Configuration(const Configuration & cfg, const Setting & setting_);
     };
+    
+    // convert the string cfg.setting[key] to a ParId, using cfg.pm->get<VarIdManager>().
+    // This is useful for many producers, as ParId does not have a default constructor.
+    theta::ParId get_parameter(const Configuration & cfg, const std::string & key);
 
 
     template<typename> class PluginManager;
     /** \brief Class used internally for the PluginManager
      *
-     * You usually do not have to care about it, as this is a detail handeled by the REGISTER_PLUGIN macro.
+     * You usually do not have to care about it, as this is a detail handled by the REGISTER_PLUGIN macro.
      *
      * This is the abstract factory class for a certain \c base_type. For each \c base_type, there
      * is an instance of PluginManager&lt;base_type&gt; which will save pointers to all currently registered
@@ -81,18 +82,13 @@ namespace theta {
          }
      };
 
-     //helper macros for REGISTER_PLUGIN
-     #define CONCAT(a,b) CONCAT2(a,b)
-     #define CONCAT2(a,b) a ## b
-
      /* define a template specialization of abstract_factory<base_type> which constructs the desired type
      */
-     #define REGISTER_PLUGIN_NAME(type,name) namespace { class CONCAT(factory,__LINE__): public theta::factory<type::base_type>{ \
-     public:\
+     #define REGISTER_PLUGIN_NAME(type,name) namespace { struct factory__##type##name : public theta::factory<type::base_type>{ \
      virtual std::auto_ptr<type::base_type> build(const theta::Configuration & cfg){return std::auto_ptr<type::base_type>(new type(cfg)); }\
      virtual std::string get_typename(){ return #name ;}\
-     CONCAT(factory,__LINE__)(){reg();}\
-     }; CONCAT(factory,__LINE__) CONCAT(factory_instance,__LINE__);}
+     factory__##type##name (){reg();}\
+     } factory_instance__##type##name;}
 
      #define REGISTER_PLUGIN(type) REGISTER_PLUGIN_NAME(type, type)
      #define REGISTER_PLUGIN_DEFAULT(type) REGISTER_PLUGIN_NAME(type, default) 
@@ -123,20 +119,22 @@ namespace theta {
 
         /** \brief Use the registered factories to build an instance from a configuration settings block.
          *
-         * This will go through all registered plugin and use the factory with the matching name.
+         * This will go through all registered plugin and use the factory with the matching name and use this
+         * factory to construct the instance.
          *
          * The lookup rules for finding out the name are:
          * <ol>
-         *   <li>If type is non-empty, this is used as plugin name.</li>
-         *   <li>Use the string in cfg.setting["type"], if it is set; otherwise, use the string "default". Using this string, 
-         *      call the currently set PluginBuilder. Usually, this will eventually call this build method again with a non-empty
-         *      \c type argument.</li>
+         *   <li>If using \c build_type, the name given in \c type ise used as plugin name directly.</li>
+         *   <li>If using \c build, the string in cfg.setting["type"] is used if set; otherwise, use the string "default" is used.
+         *      Using this string, the currently set PluginBuilder is called. Usually, this will eventually call \c build_type.
+         * </li>
          * </ol>
          *
          * The default PluginBuilder just uses the typename as determined in 2. to lookup the plugin.
          */
-        static std::auto_ptr<product_type> build(const Configuration & cfg, const std::string & type = "");
-        
+        static std::auto_ptr<product_type> build(const Configuration & cfg);
+        static std::auto_ptr<product_type> build_type(const Configuration & cfg, const std::string & type);
+
         static void set_plugin_builder(std::auto_ptr<PluginBuilder<product_type> > & b);
         
         // revert to default builder

@@ -4,27 +4,41 @@
 using namespace std;
 using namespace theta;
 
+namespace{
+    template<typename HT, typename HT2>
+    void add_with_coeff2(HT & t, double c1, const HT2 & v1, double c2, const HT2 & v2){
+        t.add_with_coeff(c1, v1);
+        t.add_with_coeff(c2, v2);
+    }
+
+    template<>
+    void add_with_coeff2<Histogram1D, Histogram1D>(Histogram1D & t, double c1, const Histogram1D & v1, double c2, const Histogram1D & v2){
+        t.add_with_coeff2(c1, v1, c2, v2);
+    }
+}
+
 template<typename HT>
 void cubiclinear_histomorph::add_morph_terms(HT & t, const ParValues & values) const{
     const size_t n_sys = hplus_diff.size();
     for (size_t isys = 0; isys < n_sys; isys++) {
-        const double delta = values.get(vid[isys]) * parameter_factors[isys];
+        const double delta = values.get_unchecked(vid[isys]) * parameter_factors[isys];
         if(delta==0.0) continue;
-        //linear extrpolation beyond 1 sigma:
+        //linear extrapolation beyond 1 sigma:
         if(fabs(delta) > 1){
             const Histogram1D & t_sys = delta > 0 ? hplus_diff[isys] : hminus_diff[isys];
             t.add_with_coeff(fabs(delta), t_sys);
         }
         else{
             //cubic interpolation:
-            diff_total = diff[isys];
-            diff_total *= 0.5 * delta;
-            diff_total.add_with_coeff(delta * delta - 0.5 * pow(fabs(delta), 3), sum[isys]);
-            t += diff_total;
+            const double d2 = delta * delta;
+            const double d3 = d2 * fabs(delta);
+            add_with_coeff2(t, 0.5*delta, diff[isys], d2 - 0.5 * d3, sum[isys]);
         }
     }
     double h_sum = 0.0;
-    for(size_t i=0; i < t.get_nbins(); ++i){
+    const size_t n = t.get_nbins();
+#ifndef __SSE2__
+    for(size_t i=0; i < n; ++i){
         double val = t.get(i);
         if(val < 0.0){
             t.set(i, 0.0);
@@ -33,21 +47,35 @@ void cubiclinear_histomorph::add_morph_terms(HT & t, const ParValues & values) c
             h_sum += val;
         }
     }
+#else
+    double * hdata = t.get_data();
+    const __m128d zero = _mm_setzero_pd();
+    __m128d sum = zero;
+    for(size_t i=0; i < n; i+=2){
+        __m128d data = _mm_load_pd(hdata + i);
+        __m128d truncated = _mm_max_pd(data, zero);
+        _mm_store_pd(hdata + i, truncated);
+        sum = _mm_add_pd(sum, truncated);
+    }
+    double sa[2];
+    _mm_storeu_pd(sa, sum);
+    h_sum = sa[0] + sa[1];
+#endif
     if(normalize_to_nominal && h_sum > 0.0){
        t *= h0_sum / h_sum;
     }
 }
 
-void cubiclinear_histomorph::apply_functor(const functor<Histogram1DWithUncertainties> & f, const ParValues & values) const{
+void cubiclinear_histomorph::add_with_coeff_to(Histogram1DWithUncertainties & hres, double coeff, const ParValues & values) const{
     h_wu = h0_wu;
     add_morph_terms(h_wu, values);
-    f(h_wu);
+    hres.add_with_coeff(coeff, h_wu);
 }
 
-void cubiclinear_histomorph::apply_functor(const functor<Histogram1D> & f, const ParValues & values) const{
+void cubiclinear_histomorph::add_with_coeff_to(Histogram1D & hres, double coeff, const ParValues & values) const{
     h = h0;
     add_morph_terms(h, values);
-    f(h);
+    hres.add_with_coeff(coeff, h);
 }
 
 void cubiclinear_histomorph::get_histogram_dimensions(size_t & nbins, double & xmin, double & xmax) const{
@@ -94,10 +122,9 @@ cubiclinear_histomorph::cubiclinear_histomorph(const Configuration & ctx): norma
             parameter_factors[i] = ctx.setting["parameter_factors"][i];
         }
     }
-    h0_sum = 0;
-    for(size_t i=0; i < h0.get_nbins(); ++i){
-        h0_sum += h0.get(i);
-    }
+    h0_sum = h0.get_sum();
+    h = h0;
+    h_wu = h0_wu;
 }
 
 REGISTER_PLUGIN(cubiclinear_histomorph)

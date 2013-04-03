@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-import config, sqlite3, os.path, glob, re, array, math
+import config, sqlite3, os.path, glob, re, array, math, copy
 import scipy.stats
 import Model
 from plotutil import *
 import Report
+import numpy.linalg
 
 inf = float("inf")
 cl_1sigma = 0.68268949213708585
@@ -30,6 +31,53 @@ def get_x_to_sp(spgids, **options):
 
 
 def make_tuple(*args): return tuple(args)
+
+# given (x,y) points of a function find the x value where the maximum of the data is taken.
+# Uses quadratic interpolation with the three points around the maximum to make the result more accurate.
+# If the interpolated maximum is found outside the x range, the returned x value will at the smallest / largest x value.
+# Only works well for non-noisy data.
+# xs must be monotonically increasing.
+#
+# returns tuple (x,y) of the estimated position of the maximum
+def findmax_xy(xs, ys):
+    assert len(xs) == len(ys)
+    assert len(xs) >= 3
+    maxy = -float("inf")
+    maxi = 0
+    for i in range(len(xs)):
+        if ys[i] > maxy:
+            maxy = ys[i]
+            maxi = i
+    if maxi==0: imin, imax = 0, 3
+    elif maxi==len(xs)-1: imin, imax = len(xs)-3, len(xs)
+    else: imin, imax = maxi-1, maxi+2
+    xleft, x0, xright = xs[imin:imax]
+    yleft, y0, yright = ys[imin:imax]
+    a,b,c = numpy.linalg.solve([[xleft**2, xleft, 1], [x0**2, x0, 1], [xright**2, xright, 1]], [yleft, y0, yright])
+    if a>=0: return xs[maxi], ys[maxi]
+    xmin = -b/(2*a)
+    return xmin, a * xmin**2 + b * xmin + c
+
+# findmax_xy wrapper for Histogram; uses the bin center as x values.
+def findmax_h(h):
+    x_borders = [h.get_x_low(ibin) for ibin in range(h.get_nbins())] + [h.get_xmax()]
+    xs = map(lambda r: 0.5 * (r[0] + r[1]), zip(x_borders[:-1], x_borders[1:]))
+    return findmax_xy(xs, h.get_values())
+
+
+
+class Copyable:
+    def copy(self):
+        return copy.deepcopy(self)
+
+
+# count how often predicate evaluates to true on iterable
+def count(pred, iterable):
+    result = 0
+    for i in iterable:
+        if pred(i): result += 1
+    return result
+    
 
 def reldiff(d1, d2):
     return abs(d1 - d2) / max(abs(d1), abs(d2))
@@ -65,9 +113,15 @@ def get_trunc_mean_width(l):
 
    
 def p_to_Z(p_value):
-   return -scipy.stats.norm.ppf(p_value)
+    """
+    Convert a p-value to a Z value (number of sigma), using the definition of a one-sided Gaussian integral.
+    """
+    return -scipy.stats.norm.ppf(p_value)
    
 def Z_to_p(z_value):
+    """
+    Convert a Z-value to a p-value; inverse of :meth:`p_to_Z`
+    """
     return scipy.stats.norm.sf(z_value)
     
 def get_p(n, n0):
@@ -97,7 +151,7 @@ def extract_number(s):
 # include_band is a boolean indicating whether to also include the +-1sigma and +-2sigma bands, or only the median line.
 #
 # options:
-# - signalprocess_to_value: a dictionary mapping signal process name to values to be used as x axis for the band plot. As default, the first integer
+# - spid_to_xvalue: a dictionary mapping signal process name to values to be used as x axis for the band plot. As default, the first integer
 #     in the signal process name is used for the x axis value.
 #
 # returns one plotutil.plotdata instance containing the 'observed' (or median expected) limit and 'expected' bands.
@@ -177,7 +231,10 @@ def report_limit_band_plot(expected_limits, observed_limits, name, shortname, wr
                 result_table.set_column('exp1', '%.3g--%.3g' % (expected_limits.bands[1][0][i], expected_limits.bands[1][1][i]))
                 result_table.set_column('exp2', '%.3g--%.3g' % (expected_limits.bands[0][0][i], expected_limits.bands[0][1][i]))
             if observed_limits is not None:
-                result_table.set_column('obs', '%.3g +- %.3g' % (observed_limits.y[i], observed_limits.yerrors[i]))
+                if observed_limits.yerrors is not None:
+                    result_table.set_column('obs', '%.3g +- %.3g' % (observed_limits.y[i], observed_limits.yerrors[i]))
+                else:
+                    result_table.set_column('obs', '%.3g' % observed_limits.y[i])
             result_table.add_row()
         config.report.add_html(result_table.html())
     plot(plots, 'signal process', 'upper limit', os.path.join(plotsdir, 'limit_band_plot-%s.png' % shortname), extra_legend_items=extra_legend_items)

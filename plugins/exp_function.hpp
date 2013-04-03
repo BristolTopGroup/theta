@@ -27,9 +27,12 @@
  */
 class exp_function: public theta::Function{
 private:
-    std::vector<theta::ParId> v_pids;
-    std::vector<double> lambdas_plus, lambdas_minus;
-    size_t n;
+    std::vector<theta::ParId> v_pids_pm;
+    std::vector<double> lambdas_plusminus;
+    
+    // symmetric:
+    std::vector<theta::ParId> v_pids_s;
+    std::vector<double> lambdas_s;
 
 public:
     /// constructor for the plugin system

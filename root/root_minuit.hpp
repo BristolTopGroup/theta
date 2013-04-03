@@ -7,30 +7,25 @@
 
 #include "interface/minimizer.hpp"
 
-/** \brief Minimizer using the MINUIT minimizer from root
+/** \brief Minimizer using the MINUIT2 minimizer from root
  *
  * Configuration with a setting like:
  * \code
  * {
  *  type = "root_minuit";
  *
- *  printlevel = 1; // optional. Default is 0
  *  method = "simplex"; //optional. Default is "migrad"
- *  tolerance = 0.001; //optional. Default is 1e-6
+ *  tolerance_factor = 0.1; //optional. Default is 1
  *  max_iterations = 10000; // optional. Default as in ROOT::Minuit2
  *  max_function_calls = 100000; //optional. Default as in ROOT::Minuit2
  *  n_retries = 10; // optional; the default is 2
  * }
  * \endcode
  *
- * \c printlevel is the verbosity level of the minimizer. The default of 0 does not print anything.
- *  Increase this value in case you are debugging a problem and suspect that it has to do with the minimization.
- *  The value is passed to ROOT::Minuit2::Minuit2Minimizer::SetPrintLevel().
- *
  * \c method must be either "simplex" or "migrad". Refer to the MINUIT documentation on details of these methods.
  *
- * \c tolerance is the Tolerance as should be documented in ROOT::Minuit2::Minuit2Minimizer::SetTolerance.
- *  Default is 1e-6 which is the default in ROT 5.27/5.28 (and probably more ROOT versions).
+ * \c tolerance_factor is the factor with which the defasult ROOT value is multiplied (see ROOT::Minuit2::Minuit2Minimizer::SetTolerance).
+ * The default value is 1, i.e. the ROOT default value is used.
  *
  * \c max_iterationc and \c max_function_calls are the according settings of ROOT::Minuit2::Minuit2Minimizer.
  *
@@ -58,12 +53,11 @@ public:
      * code returned by ROOT::Minuit2::Minuit2Minimizer::Status().
      */
     virtual theta::MinimizationResult minimize(const theta::Function & f, const theta::ParValues & start,
-            const theta::ParValues & step, const std::map<theta::ParId, std::pair<double, double> > & ranges);
+            const theta::ParValues & step, const theta::Ranges & ranges);
 private:
     
     ROOT::Minuit2::EMinimizerType type;
-    double tolerance;
-    int printlevel;
+    double tolerance_factor;
     int max_iterations, max_function_calls, n_retries;
 };
 

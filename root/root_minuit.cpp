@@ -25,12 +25,12 @@ public:
 
     virtual double DoEval(const double * x) const{
         for(size_t i=0; i<ndim; ++i){
-            if(isnan(x[i])){
+            if(std::isnan(x[i])){
                throw MinimizationException("minuit called likelihood function with NAN argument!");
             }
         }
         double result = f(x);
-        if(isinf(result)){
+        if(std::isinf(result)){
            throw MinimizationException("function to minimize was infinity during minimization");
         }
         return result;
@@ -43,13 +43,13 @@ private:
 
 
 MinimizationResult root_minuit::minimize(const theta::Function & f, const theta::ParValues & start,
-        const theta::ParValues & steps, const std::map<theta::ParId, std::pair<double, double> > & ranges){
+        const theta::ParValues & steps, const Ranges & ranges){
     //I would like to re-use min. However, it horribly fails after very few uses with
     // unsigned int ROOT::Minuit2::MnUserTransformation::IntOfExt(unsigned int) const: Assertion `!fParameters[ext].IsFixed()' failed.
     // when calling SetFixedVariable(...).
     //Using a "new" one every time seems very wastefull, but it seems to work ...
     std::auto_ptr<ROOT::Minuit2::Minuit2Minimizer> min(new ROOT::Minuit2::Minuit2Minimizer(type));
-    min->SetPrintLevel(printlevel);
+    //min->SetPrintLevel(0);
     if(max_function_calls > 0) min->SetMaxFunctionCalls(max_function_calls);
     if(max_iterations > 0) min->SetMaxIterations(max_iterations);
     MinimizationResult result;
@@ -58,9 +58,7 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
     ParIds parameters = f.get_parameters();
     int ivar=0;
     for(ParIds::const_iterator it=parameters.begin(); it!=parameters.end(); ++it, ++ivar){
-        std::map<theta::ParId, std::pair<double, double> >::const_iterator r_it = ranges.find(*it);
-        if(r_it==ranges.end()) throw invalid_argument("root_minuit::minimize: range not set for a parameter");
-        pair<double, double> range = r_it->second;
+        pair<double, double> range = ranges.get(*it);
         double def = start.get(*it);
         double step = steps.get(*it);
         stringstream ss;
@@ -72,8 +70,8 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
         if(step == 0.0){
             min->SetFixedVariable(ivar, name, def);
         }
-        else if(isinf(range.first)){
-            if(isinf(range.second)){
+        else if(std::isinf(range.first)){
+            if(std::isinf(range.second)){
                 min->SetVariable(ivar, name, def, step);
             }
             else{
@@ -81,7 +79,7 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
             }
         }
         else{
-            if(isinf(range.second)){
+            if(std::isinf(range.second)){
                 min->SetLowerLimitedVariable(ivar, name, def, step, range.first + fabs(range.first) * 0.001);
             }
             else{ // both ends are finite
@@ -100,23 +98,24 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
     min->SetFunction(minuit_f);
 
     //3. setup tolerance
-    min->SetTolerance(tolerance);
+    double root_tol = min->Tolerance();
+    if(root_tol == 0.01){
+        root_tol *= 0.1;
+    }
+    min->SetTolerance(tolerance_factor * root_tol);
     //3.a. error definition. Unfortunately, SetErrorDef in ROOT is not documented, so I had to guess.
     // 0.5 seems to work somehow.
     min->SetErrorDef(0.5);
     
     //4. minimize. In case of failure, try harder. Discard all output generated in min->Minimize.
     bool success;
-    {
-        theta::utils::discard_output d_o(true);
-        success = min->Minimize();
-        if(!success){
-            for(int i=1; i<=n_retries; i++){
-                success = min->Minimize();
-                if(success) break;
-            }
+    success = min->Minimize();
+    if(!success){
+        for(int i=1; i<=n_retries; i++){
+            success = min->Minimize();
+            if(success) break;
         }
-    } // d_o is destroyed, output resumed.
+    }
 
     //5. do error handling
     if(not success){
@@ -173,40 +172,40 @@ MinimizationResult root_minuit::minimize(const theta::Function & f, const theta:
     return result;
 }
 
-root_minuit::root_minuit(const Configuration & cfg): tolerance(1e-6), printlevel(0),
+root_minuit::root_minuit(const Configuration & cfg): tolerance_factor(1),
         max_iterations(0), max_function_calls(0), n_retries(2) {
-       gErrorIgnoreLevel = kFatal + 1;
-       if(cfg.setting.exists("printlevel")){
-           printlevel = cfg.setting["printlevel"];
-       }
-       if(cfg.setting.exists("max_iterations")){
-          max_iterations = cfg.setting["max_iterations"];
-       }
-       if(cfg.setting.exists("max_function_calls")){
-          max_iterations = cfg.setting["max_function_calls"];
-       }
-       if(cfg.setting.exists("n_retries")){
-          n_retries = cfg.setting["n_retries"];
-       }
-       string method = "migrad";
-       if(cfg.setting.exists("method")){
-           method = (string)cfg.setting["method"];
-       }
-       if(method=="migrad"){
-            type = ROOT::Minuit2::kMigrad;
-       }
-       else if(method == "simplex"){
-           type = ROOT::Minuit2::kSimplex;
-       }
-       else{
-           stringstream s;
-           s << "invalid method '" << method << "' (allowed are only 'migrad' and 'simplex')";
-           throw ConfigurationException(s.str());
-       }       
-       if(cfg.setting.exists("tolerance")){
-           tolerance = cfg.setting["tolerance"];
-       }
-   }
+    gErrorIgnoreLevel = kFatal + 1;
+    if(cfg.setting.exists("max_iterations")){
+        max_iterations = cfg.setting["max_iterations"];
+    }
+    if(cfg.setting.exists("max_function_calls")){
+        max_iterations = cfg.setting["max_function_calls"];
+    }
+    if(cfg.setting.exists("n_retries")){
+        n_retries = cfg.setting["n_retries"];
+    }
+    string method = "migrad";
+    if(cfg.setting.exists("method")){
+        method = (string)cfg.setting["method"];
+    }
+    if(method=="migrad"){
+        type = ROOT::Minuit2::kMigrad;
+    }
+    else if(method == "simplex"){
+        type = ROOT::Minuit2::kSimplex;
+    }
+    else{
+        stringstream s;
+        s << "invalid method '" << method << "' (allowed are only 'migrad' and 'simplex')";
+        throw ConfigurationException(s.str());
+    }       
+    if(cfg.setting.exists("tolerance_factor")){
+        tolerance_factor = cfg.setting["tolerance_factor"];
+        if(tolerance_factor <= 0){
+            throw ConfigurationException("tolerance_factor is <= 0.0; this is not allowed");
+        }
+    }
+}
 
 REGISTER_PLUGIN(root_minuit)
 

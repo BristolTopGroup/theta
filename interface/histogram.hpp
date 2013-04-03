@@ -4,9 +4,10 @@
 #include "interface/decls.hpp"
 #include "interface/utils.hpp"
 #include <cstring>
+#include <vector>
 
 namespace theta{
-    
+
 /** \brief Container for a vector of doubles
  * 
  * Container for a vector of doubles, with some common operations, to be used
@@ -30,8 +31,17 @@ public:
     /// Destructor
     ~DoubleVector();
     
-    /// Assignment operator
-    void operator=(const DoubleVector & rhs);
+    /// Assignment
+    void operator=(const DoubleVector & rhs){
+        if(&rhs == this) return;
+        if(n_data != rhs.n_data){
+            realloc(rhs.n_data);
+        }
+        utils::copy_fast(data, rhs.data, n_data);
+    }
+    
+    /// reallocate (unitialized!) to new size n
+    void realloc(size_t n);
     
     /// Set all values to the given value
     void set_all_values(double value){
@@ -53,6 +63,11 @@ public:
         utils::add_fast_with_coeff(data, rhs.data, c, n_data);
     }
     
+    // calculate this += c1*v1 + c2*v2
+    void add_with_coeff2(double c1, const DoubleVector & v1, double c2, const DoubleVector & v2){
+    	utils::add_fast_with_coeff2(data, v1.data, c1, v2.data, c2, n_data);
+    }
+
     /// The current number of stored values
     size_t size() const{
         return n_data;
@@ -96,7 +111,7 @@ public:
     }
     ///@}
 };
-
+    
 
 /** \brief A Histogram class holding binned, 1D data, without overflow and underflow bins.
  *
@@ -116,7 +131,7 @@ private:
 public:
     
     using DoubleVector::operator*=;
-    
+
     /** \brief Create an empty Histogram with \c bins bins with range (\c xmin, \c xmax )
      */
     explicit Histogram1D(size_t bins=0, double xmin=0, double xmax=1);
@@ -139,9 +154,8 @@ public:
     }
 
     /** \brief Add weight to the bin corresponding to xvalue
-     *
-     * In case of xvalue &lt; xmin, \c weigt is added to the underflow bin 0.
-     * If xvalue &gt; xmax, \c weight is added to bin nbins+1.
+     * 
+     * filling xvalues outside of the range will have no effect.
      */
     void fill(double xvalue, double weight);
 
@@ -176,6 +190,14 @@ public:
     /// Set all values to 0.0
     // provided for compatibility with DataT
     void reset(){
+        set_all_values(0.0);
+    }
+    
+    /// Set to a zero Histogram with the given bin number and range
+    void reset(size_t nbins, double xmin_, double xmax_){
+        realloc(nbins);
+        xmin = xmin_;
+        xmax = xmax_;
         set_all_values(0.0);
     }
     

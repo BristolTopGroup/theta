@@ -3,8 +3,9 @@ include ../Makefile.options
 deps := .bin/merge.d .bin/theta.d
 
 include ../Makefile.rules
+-include Makefile.local
 
-all: merge theta
+all: theta
 
 
 merge: .bin/merge.o

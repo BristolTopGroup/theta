@@ -24,6 +24,40 @@ def simple_counting(s, n_obs, b=0.0, b_uncertainty=0.0, s2 = None):
         model.set_histogram_function('obs', 'b', hf_b)
         if b_uncertainty > 0: model.add_lognormal_uncertainty('bunc', 1.0 * b_uncertainty / b, 'b')
     return model
+    
+    
+# signals are the signal yields, backgrounds are the background yields
+# b_uncertainty1, b_uncertainty2 and b_uncertainty3 are either None or an array
+# of *relative* background uncertainties in the channels.
+def multichannel_counting(signals, n_obs = None, backgrounds = None, b_uncertainty1 = None, b_uncertainty2 = None, b_uncertainty3 = None, obsnames = None):
+    n = len(signals)
+    assert n_obs is None or n==len(n_obs)
+    assert backgrounds is None or n==len(backgrounds)
+    model = Model()
+    for i in range(n):
+        if obsnames is None: obsname = 'obs%d' % i
+        else: obsname = obsnames[i]
+        if n_obs is not None: model.set_data_histogram(obsname, Histogram(0.0, 1.0, [float(n_obs[i])]))
+        hf_s = HistogramFunction()
+        hf_s.set_nominal_histo(Histogram(0.0, 1.0, [float(signals[i])]))
+        model.set_histogram_function(obsname, 's', hf_s)
+        
+        if backgrounds is None: continue
+        hf_b = HistogramFunction()
+        hf_b.set_nominal_histo(Histogram(0.0, 1.0, [float(backgrounds[i])]))
+        model.set_histogram_function(obsname, 'b', hf_b)
+        for pname, b_uncertainty in zip(('bunc1', 'bunc2', 'bunc3'), (b_uncertainty1, b_uncertainty2, b_uncertainty3)):
+            if b_uncertainty is None: continue
+            assert len(b_uncertainty) == n
+            unc = float(b_uncertainty[i])
+            if unc != 0.0:
+                if unc == float("inf"):
+                    model.add_lognormal_uncertainty(pname, 1.0, 'b', obsname)
+                    model.distribution.set_distribution_parameters(pname, width = float("inf"))
+                else:
+                    model.add_lognormal_uncertainty(pname, unc, 'b', obsname)
+    model.set_signal_processes('s*')
+    return model
 
 
 # returns a model in one bin with the given background. b_plus and b_minus are the background yields at +1sigma and -1sigma
@@ -69,7 +103,7 @@ def template_counting_bb(s, s_uncertainty, n_obs):
     return model
 
 
-# a gaussian signal (mean 50, width 20) over flat background on a range 0--100, with 100 bins no data.
+# a gaussian "signal" distribution (mean s_mean, width s_sigma) over flat background on a range 0--100, with 100 bins; no observed data.
 # b_uncertainty is the (absolute!) uncertainty on the background yield, which will be handeled with a log-normal.
 def gaussoverflat(s, b, b_uncertainty = 0.0, s_mean = 50.0, s_sigma = 20., obs_suffix = ''):
     model = Model()    
@@ -106,5 +140,7 @@ def bernstein_model(n, n_events_total = 1000, nbins = 100):
         hf.set_nominal_histo(Histogram(0.0, 1.0, data))
         model.set_histogram_function('obs', 'proc%d' % nu, hf)
         model.add_lognormal_uncertainty('proc%d_unc' % nu, 1.0, 'proc%d' % nu)
-	model.distribution.set_distribution_parameters('proc%d_unc' % nu, width = float("inf"))
+        model.distribution.set_distribution_parameters('proc%d_unc' % nu, width = float("inf"))
+    # we do not have any signal, so create one empty signal process group:
+    model.signal_process_groups = {'': []}
     return model

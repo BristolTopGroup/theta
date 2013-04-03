@@ -20,6 +20,7 @@
  *  observable = "mass";
  *  normalize_to = 1.0;
  *  coefficients = [1.0, 2.0, 5.0];
+ *  relative_bb_uncertainty = 0.1; // optional, default is 0.0
  * };
  * \endcode
  *
@@ -31,10 +32,11 @@
  *
  * \c coefficients is an array (or list) of floating point values which define the polynomial, starting at x^0. The example above defines
  *  a polynomial 1 + 2*x + 5*x^2
+ *
+ *  \c relative_bb_uncertainty is the relative bin-by-bin uncertainty. The default is 0.0, i.e., no uncertainties.
  */
 class fixed_poly: public theta::ConstantHistogramFunction{
 public:
-    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
     fixed_poly(const theta::Configuration & cfg);
 };
 
@@ -48,6 +50,7 @@ public:
  *  normalize_to = 1.0;
  *  mean = 1.0;
  *  width = 0.2;
+ *  relative_bb_uncertainty = 0.1; // optional, default is 0.0
  * };
  * \endcode
  *
@@ -58,10 +61,11 @@ public:
  * \c normalize_to is the sum of bin contents the returned histogram should have
  *
  * \c mean and \c width are the mean value and standard deviation for the distribution to construct.
+ *
+ *  \c relative_bb_uncertainty is the relative bin-by-bin uncertainty. The default is 0.0, i.e., no uncertainties.
  */
 class fixed_gauss: public theta::ConstantHistogramFunction{
 public:
-    /// \brief Constructor used by the plugin system to build an instance from settings in a configuration file
    fixed_gauss(const theta::Configuration & cfg);
 };
 
@@ -257,6 +261,9 @@ class gauss: public theta::Distribution{
         theta::Matrix sqrt_cov; //required for sampling
         theta::Matrix inverse_cov;//required for density evaluation
         std::vector<std::pair<double, double> > ranges;
+
+        // temporary variables for sampling:
+        mutable std::vector<double> x, x_trafo;
 };
 
 /** \brief A one-dimensional gauss-distribution
@@ -295,6 +302,7 @@ class gauss1d: public theta::Distribution{
         double mu;
         double sigma;
         boost::optional<theta::ParId> mu_pid;
+        theta::ParId pid;
         std::pair<double, double> range;
 };
 
@@ -344,6 +352,7 @@ private:
  *   model = "@some-model-path";
  *   dice_poisson = false; // optional; default is true
  *   dice_template_uncertainties = false; // optional; default is true
+ *   dice_rvobs = false; // optional; default is true
  *   override-parameter-distribution = "@some-dist"; // optional
  *   parameters-for-nll = { p1 = 0.0; p2 = 1.0; p3 = "diced_value"; }; //optional; assuming p1, p2, p3 are parameters
  *   rnd_gen = { seed = 123; }; // optional
@@ -359,6 +368,8 @@ private:
  *
  * \c dice_template_uncertainties controls whether there will be a random smearing of the templates within their uncertainties prior to sampling pseudo data;
  *    see below for details.
+ *
+ * \c dice_rvobs controls whether or not to dice the real-valued observables.
  *
  * \c override-parameter-distribution is an optional setting overriding the distribution from which parameter values are drawn, see below. It
  *     has to provide exactly the same parameters as the model.
@@ -415,6 +426,7 @@ private:
     
     bool dice_poisson;
     bool dice_template_uncertainties;
+    bool dice_rvobs;
 
 };
 

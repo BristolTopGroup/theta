@@ -41,7 +41,7 @@ RandomConsumer::RandomConsumer(const theta::Configuration & cfg, const std::stri
        // clock resolution interval, use a static counter:
        static int rnd_id = 0;
        seed = seed * 33 + rnd_id;
-       ++rnd_id; // concurrency note: even if access is parallelized, and "++rnd_id" does not work correctly, this is not crucial for correct behaviour.
+       ++rnd_id;
        // to avoid clashes in case of batch system usage with jobs starting in the same clock resolution
        // interval, also use the hostname for the seed.
        //Note that we should use a length of "HOST_NAME_MAX + 1" here, however, HOST_NAME_MAX is not defined on
@@ -61,9 +61,15 @@ RandomConsumer::RandomConsumer(const theta::Configuration & cfg, const std::stri
    }
    rnd_gen.reset(new Random(rnd_source));
    int runid = *(cfg.pm->get<int>("runid"));
-   seed += runid - 1 ;
+   // note: for runid = 1, do not change the seed.
+   // For runid > 1, change the seed by a large value to prevent multithreading jobs from using consecutive seeds.
+   // This allows e.g. to have many .cfg files for "background-only" toys with consecutive seeds
+   // in a multithreaded setup without seed collissions.
+   seed += (runid - 1) * 14657;
    rnd_gen->set_seed(seed);
-   cfg.pm->get<RndInfoTable>()->append(runid, name, seed);
+   if(cfg.pm->exists<RndInfoTable>()){
+       cfg.pm->get<RndInfoTable>()->append(runid, name, seed);
+   }
 }
 
 RandomConsumer::~RandomConsumer(){}

@@ -398,7 +398,7 @@ namespace theta {
         }
 
         /// fast replacement for get which does not perform boundary checking
-        double get_unchecked(const ParId & pid) const{
+        const double & get_unchecked(const ParId & pid) const{
             return values[pid.id];
         }
 

@@ -60,7 +60,7 @@ private:
     //cached predictions:
     mutable Data predictions;
 };
-     
+
 // includes additive Barlow-Beeston uncertainties, where the extra nuisance parameters of this method (1 per bin) have been "profiled out".
 class default_model_bbadd_nll: public default_model_nll {
 friend class theta::default_model;
@@ -134,6 +134,10 @@ void default_model::get_prediction(DataWithUncertainties & result, const ParValu
 
 void default_model::get_prediction(Data & result, const ParValues & parameters) const {
     get_prediction_impl<Histogram1D>(result, parameters);
+}
+
+void default_model::get_prediction_with_derivative(const ObsId & oid, Histogram1D & h, std::map<ParId, Histogram1D> & der, const ParValues & parameters) const{
+    throw invalid_argument("not implemented yet");
 }
 
 std::auto_ptr<NLLikelihood> default_model::get_nllikelihood(const Data & data) const{

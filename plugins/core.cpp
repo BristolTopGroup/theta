@@ -471,6 +471,15 @@ double product_distribution::eval_nl(const ParValues & values) const{
     return result;
 }
 
+double product_distribution::eval_nl_with_derivative(const theta::ParValues & values, theta::ParValues & derivative) const{
+    double result = 0.0;
+    const boost::ptr_vector<Distribution>::const_iterator end=distributions.end();
+    for(boost::ptr_vector<Distribution>::const_iterator it=distributions.begin(); it!=end; ++it){
+        result += it->eval_nl_with_derivative(values, derivative);
+    }
+    return result;
+}
+
 const std::pair<double, double> & product_distribution::support(const ParId & p) const{
     map<ParId, size_t>::const_iterator it = parid_to_index.find(p);
     if(it==parid_to_index.end()) throw invalid_argument("product_distribution::support: invalid ParId");

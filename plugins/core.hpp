@@ -333,6 +333,7 @@ public:
     virtual void sample(theta::ParValues & result, theta::Random & rnd) const;
     virtual void mode(theta::ParValues & result) const;
     virtual double eval_nl(const theta::ParValues & values) const;
+    virtual double eval_nl_with_derivative(const theta::ParValues & values, theta::ParValues & derivative) const;
     virtual const std::pair<double, double> & support(const theta::ParId & p) const;
     
 

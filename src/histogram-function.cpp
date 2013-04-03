@@ -7,6 +7,10 @@ REGISTER_PLUGIN_BASETYPE(theta::HistogramFunction);
 
 using namespace theta;
 
+void HistogramFunction::eval_and_add_derivatives(Histogram1D & result, std::map<ParId, Histogram1D> & derivatives, double coeff, const ParValues & values) const{
+    throw Exception("not implemented for " + demangle(typeid(this).name()));
+}
+
 void ConstantHistogramFunction::add_with_coeff_to(Histogram1D & hres, double coeff, const ParValues & values) const{
     hres.add_with_coeff(coeff, h);
 }

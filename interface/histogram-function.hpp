@@ -31,6 +31,13 @@ namespace theta {
         virtual void add_with_coeff_to(Histogram1DWithUncertainties & h, double coeff, const ParValues & values) const = 0;
         virtual void add_with_coeff_to(Histogram1D & h, double coeff, const ParValues & values) const = 0;
         //@}
+        
+        /*
+         * Calculate
+         * result = hf(values)   and
+         * derivatives[pid] += coeff * d / dpid   hf(values)    for all pid in get_parameters()
+         */
+        virtual void eval_and_add_derivatives(Histogram1D & result, std::map<ParId, Histogram1D> & derivatives, double coeff, const ParValues & values) const;
 
         /** \brief Returns the parameters which this HistogramFunction depends on.
          */

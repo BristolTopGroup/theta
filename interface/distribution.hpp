@@ -115,6 +115,7 @@ namespace theta{
         virtual void mode(ParValues & result) const{}
         virtual const std::pair<double, double> & support(const ParId & p) const;
         virtual double eval_nl(const ParValues & values) const { return 0.0;}
+        virtual double eval_nl_with_derivative(const ParValues & values, ParValues & derivative) const{return 0.0; }
         virtual ~EmptyDistribution();
     };
 

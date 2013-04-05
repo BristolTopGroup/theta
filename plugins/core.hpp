@@ -138,6 +138,7 @@ public:
     virtual void mode(theta::ParValues & result) const;
     virtual double eval_nl(const theta::ParValues & values) const;
     virtual const std::pair<double, double> & support(const theta::ParId&) const;
+    virtual double eval_nl_with_derivative(const theta::ParValues & values, theta::ParValues & derivative) const;
     
 private:
     theta::ParValues values;
@@ -194,6 +195,7 @@ public:
     virtual void mode(theta::ParValues & result) const;
     virtual double eval_nl(const theta::ParValues & values) const;
     virtual const std::pair<double, double> & support(const theta::ParId&) const;
+    virtual double eval_nl_with_derivative(const theta::ParValues & values, theta::ParValues & derivative) const;
     ///@}
     
     

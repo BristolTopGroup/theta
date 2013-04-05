@@ -213,7 +213,7 @@ namespace theta {
     
 
     /// A counter for the number of likelihood evaluations.
-    extern atomic_int n_nll_eval;
+    extern atomic_int n_nll_eval, n_nll_eval_with_derivative;
     
 
     /** \brief Function object of a negative log likelihood of a model, given data.
